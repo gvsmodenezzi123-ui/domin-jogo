@@ -73,7 +73,7 @@ describe('controle de ritmo', () => {
     expect(s.roundResult).toMatchObject({ kind: 'tranca', reason: 'passes' });
     // menor soma vence: jogador tem 15 pontos, Tio Zé tem 44
     expect(s.roundResult.winner).toBe('player');
-    expect(s.hearts.tioZe).toBe(4);
+    expect(s.hearts.tioZe).toBe(s.maxHearts.tioZe - 1);
     expect(s.nextStarter).toBe('player');
   });
 

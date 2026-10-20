@@ -1,6 +1,7 @@
+import { RIVALS } from '../data/rivals.js';
 import { DAMAGE } from '../engine/dominoLogic.js';
-import { TioZeAvatar } from './OpponentHeader.jsx';
 import PixelSprite from './PixelSprite.jsx';
+import RivalAvatar from './RivalAvatar.jsx';
 import { LAMP, LAMP_PALETTE } from './sprites.js';
 
 function isStandalone() {
@@ -34,15 +35,15 @@ export default function TitleScreen({ onStart, onSecretTap, devUnlocked = false 
       </div>
 
       <div className="relative flex flex-col items-center">
-        <TioZeAvatar mood="smug" pixel={7} />
+        <RivalAvatar rival={RIVALS.tioZe} mood="smug" pixel={7} />
         <h1 className="title-logo mt-5 font-pixel text-[34px] leading-none" onClick={onSecretTap}>
           BUXARIA
         </h1>
         <p className="mt-3 font-pixel text-[9px] tracking-widest text-bone-300">
-          DUELO DE DOMINÓ · PATCH 0.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          DUELO DE DOMINÓ · PATCH 0.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
         <p className="mt-4 max-w-[300px] font-term text-xl leading-tight text-bone-200">
-          O Tio Zé te espera debaixo da lâmpada. Cada batida custa sangue.
+          O Tio Zé abre a mesa. Depois dele, o boteco inteiro quer te quebrar.
         </p>
       </div>
 
@@ -57,7 +58,7 @@ export default function TitleScreen({ onStart, onSecretTap, devUnlocked = false 
           <li>Tranca (menor soma)</li>
           <li className="text-right text-blood-400">−{DAMAGE.tranca}♥</li>
           <li className="col-span-2 mt-1 text-bone-300">Pontas somando múltiplo de 5: +$3. Compra: 1ª grátis, 2ª $3, 3ª 1♥.</li>
-          <li className="col-span-2 text-bone-300">Vença rodadas para achar talismãs (até 4). Pedras de ouro, rubi, cristal, chumbo e fantasma têm poderes.</li>
+          <li className="col-span-2 text-bone-300">Zere os corações do rival para vencer a partida. Entre partidas, a Loja Clandestina vende talismãs e pedras de grife.</li>
         </ul>
         <button type="button" data-tone="brass" className="btn-pixel w-full text-[12px]" onClick={onStart}>
           SENTAR À MESA

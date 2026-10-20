@@ -2,7 +2,7 @@ import { RELICS } from '../data/relics.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 
-/** Barbante no Dedo: você vê as 2 pedras de cima do dorme e fica com uma. */
+/** Barbante Mágico: você vê as pedras de cima do dorme e fica com uma. */
 export default function DrawChoice({ options, onPick }) {
   const relic = RELICS.barbante;
   return (
@@ -12,15 +12,15 @@ export default function DrawChoice({ options, onPick }) {
           <PixelSprite rows={relic.icon} palette={relic.palette} pixel={3} />
         </div>
         <h2 id="draw-choice-title" className="mt-2 font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">
-          BARBANTE NO DEDO
+          {relic.name.toUpperCase()}
         </h2>
-        <p className="mt-2 font-term text-lg leading-tight text-bone-300">Escolha uma. A outra volta pro fundo do dorme.</p>
-        <div className="mt-4 flex items-end justify-center gap-7">
+        <p className="mt-2 font-term text-lg leading-tight text-bone-300">Escolha uma. As outras voltam pro fundo do dorme.</p>
+        <div className="mt-4 flex items-end justify-center gap-5">
           {options.map((tile) => (
             <DominoTile
               key={tile.id}
               values={[tile.a, tile.b]}
-              unit={38}
+              unit={options.length > 2 ? 32 : 38}
               depth={3}
               enhancement={tile.enhancement}
               onClick={() => onPick(tile.id)}

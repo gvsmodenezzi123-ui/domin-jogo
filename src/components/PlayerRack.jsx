@@ -1,13 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import { computeFan } from './handFan.js';
-import { CoinCount } from './OpponentHeader.jsx';
+import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import { COIN, COIN_PALETTE } from './sprites.js';
 
 /** Altura da área do leque (px). */
-const FAN_HEIGHT = 160;
+const FAN_HEIGHT = 150;
 /** Distância da base do leque até o rodapé (as pedras das pontas descem até aqui). */
 const FAN_BASE = 26;
 /** Quanto a pedra selecionada sobe para fora do leque (-translate-y-6). */
@@ -66,7 +67,8 @@ const SIDE_BUTTON = {
  * Mão do jogador em leque flutuante sobre o feltro, HUD (corações, moedas) e as
  * ações: comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
  * No modo descarte (Giz de Sinuca) qualquer pedra pode ser tocada e os botões
- * viram PULAR / DESCARTAR.
+ * viram PULAR / DESCARTAR. Logo acima do leque fica a SUA hotbar de talismãs.
+ * Segurar uma pedra aprimorada (ou um talismã) mostra o balão com o efeito.
  */
 export default function PlayerRack({
   hand,
@@ -91,6 +93,14 @@ export default function PlayerRack({
   onDiscard,
   onSkipDiscard,
   onSecretTap,
+  relics = [],
+  relicFlashes,
+  spentRelics,
+  canUndo = false,
+  onUndo,
+  devUnlocked = false,
+  onOpenDev,
+  press,
 }) {
   const [areaRef, width] = useWidth();
   const { unit, spots } = computeFan(hand.length, width);
@@ -124,6 +134,30 @@ export default function PlayerRack({
         </div>
       </div>
 
+      <div className="flex h-[34px] items-center gap-2 px-3 pt-1">
+        <Hotbar
+          relics={relics}
+          size={30}
+          flashes={relicFlashes}
+          spent={spentRelics}
+          ready={canUndo ? ['relogio'] : []}
+          press={press}
+          label="Seus talismãs"
+        />
+        <div className="ml-auto flex items-center gap-2">
+          {canUndo && (
+            <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={onUndo}>
+              DESFAZER
+            </button>
+          )}
+          {devUnlocked && (
+            <button type="button" className="dev-chip" onClick={onOpenDev} aria-label="Abrir painel de testes">
+              DEV
+            </button>
+          )}
+        </div>
+      </div>
+
       <div ref={areaRef} className="relative mx-1" style={{ height: FAN_HEIGHT }}>
         {hand.map((tile, i) => {
           const spot = spots[i];
@@ -135,6 +169,7 @@ export default function PlayerRack({
           return (
             <div
               key={tile.id}
+              {...(tile.enhancement && press ? press({ kind: 'tile', tile }) : {})}
               className="hand-slot absolute"
               style={{
                 left: `calc(50% + ${spot.x - unit / 2}px)`,
@@ -166,6 +201,8 @@ export default function PlayerRack({
                       playable={playable && !selected}
                       dimmed={active && !playable}
                       disabled={!active || !playable}
+                      // desabilitada não recebe toque: o toque longo cai no slot de baixo
+                      className={!active || !playable ? 'pointer-events-none' : ''}
                       onClick={() => onSelectTile(tile)}
                     />
                   </div>

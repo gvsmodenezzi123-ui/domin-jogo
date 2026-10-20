@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.2
+# Buxaria — Patch 0.3
 
 Duelo 1x1 tático de **dominó roguelike** contra o Tio Zé, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -53,12 +53,65 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.3: run roguelike, Loja Clandestina e rivais
+
+### A run
+- Você começa com o baralho de 28 pedras **100% comum** e sem talismãs, contra o **Tio Zé**.
+- Uma **partida** é vencida zerando os corações do rival (3 na maioria; o Tião Navalha tem 5,
+  o Beto Cigano 4). Seus 5 corações voltam cheios a cada partida; perder uma partida acaba a run.
+- Vencer paga **$8** (o Tião paga +$4, o Beto +$15) e abre a **Loja Clandestina do Boteco**.
+- Moedas, talismãs e o seu baralho passam de uma partida para a outra.
+
+### Baralho próprio (`state.decks`)
+As pedras de grife compradas **substituem** a comum no seu baralho: ele continua com 28. Quando
+a pedra cai na sua mão (distribuição ou compra), ela vem aprimorada; se cair na mão do rival, é a
+comum dele. O rival tem o baralho dele (o Tião Navalha começa com um [4|6] de Chumbo).
+
+### Loja Clandestina (`src/components/Shop.jsx`, `src/engine/shop.js`)
+- Saldo, sua hotbar em **modo venda** (toque num talismã → "VENDER POR $X?").
+- **3 talismãs** e **2 peças de grife** sorteados ("[4|2] de Ouro substitui o seu [4|2] comum").
+- **Reembaralhar** por $3. Hotbar cheia: "HOTBAR CHEIA! VENDA UM TALISMÃ ANTES DE COMPRAR OUTRO".
+- Mostra o próximo adversário e o botão **PRÓXIMO ADVERSÁRIO**.
+
+### Raridades (`src/data/rarities.js`)
+
+| Raridade | Cor | Preço | Revenda | Talismãs | Peças |
+| --- | --- | --- | --- | --- | --- |
+| Comum | verde | $4–6 | $2 | Cinzeiro, Borracha, Caneca, Giz | — |
+| Raro | azul | $7–10 | $4 | Olho de Vidro, Dado Viciado, Chave de Fenda, Bucha de Aço | Ouro |
+| Lendário | roxo | $12–16 | $7 | Dedal, Espelho, Carteira, Anel | Cristal, Chumbo |
+| Mítico | dourado/sangue | $18–25 | $10 | Mão Grande, Relógio Quebrado, Barbante Mágico (vê 3, escolhe 1) | Rubi, Fantasma |
+
+### Toque longo (350 ms)
+Segure uma pedra aprimorada da mão, um talismã (seu, do rival ou da loja) ou uma peça de grife:
+aparece um balão com nome, raridade e efeito. Soltar fecha. Toque rápido continua jogando.
+
+### Mesa espelhada
+- **Sua hotbar** logo acima do leque (com DESFAZER do Relógio e o botão DEV, se liberado).
+- **Bancada do rival** no próprio feltro (sem madeira): retrato, hotbar 2x2 dele, corações, moedas,
+  dorme e a mão dele flutuando virada para baixo, ~27% menor, com as pedras reveladas de frente.
+
+### Rivais (`src/data/rivals.js`)
+
+| Rival | Corações | Começa com | Estilo |
+| --- | --- | --- | --- |
+| Tio Zé | 3 | — | o clássico (abre a run) |
+| Seu Arlindo, o Velho Truqueiro | 3 | Chave de Fenda | solta buchas logo no começo |
+| Dona Neide, a Rainha da Tranca | 3 | Dedal de Chumbo | defensiva, iguala pontas e tranca |
+| Marcão do Guincho | 3 | Cinzeiro de Bar | pesado e agressivo, força você a comprar |
+| Tião Navalha | 5 | um [4|6] de Chumbo no baralho | malandro, caça múltiplo de 5 |
+| Beto Cigano (mítico, raro) | 4 | Anel do Bicheiro | joga rápido, blefa nas falas, pote alto |
+
+Os talismãs valem para o **dono**: o Cinzeiro do Marcão paga ele quando VOCÊ compra ou passa,
+o Dedal da Neide tira o SEU coração, o Anel do Beto cobra de você. A IA usa pesos por rival
+(`style` em `rivals.js`, aplicados em `scoreMove`).
+
 ## Patch 0.2: talismãs, peças aprimoradas e painel DEV
 
 ### Peças aprimoradas (`src/data/enhancedTiles.js`)
 
-O aprimoramento fica na pedra (`tile.enhancement`) e vai junto para a mesa. Só as suas pedras
-são aprimoradas. A cada rodada, uma pedra da sua mão nasce aprimorada (sorteio).
+O aprimoramento fica na pedra (`tile.enhancement`) e vai junto para a mesa. Desde o 0.3 elas
+vêm da Loja Clandestina e substituem a comum no baralho de quem comprou (ver acima).
 
 | Pedra | Visual | Efeito |
 | --- | --- | --- |
@@ -75,26 +128,26 @@ resultado da rodada e no painel DEV. Na mesa, a ponta congelada aparece em ferro
 
 ### Talismãs (`src/data/relics.js`)
 
-Até 4, na faixa logo abaixo do painel do Tio Zé. Toque num talismã para ver nome, raridade e efeito.
-Vencer uma rodada com slot livre dá um talismã sorteado (comum 6 : rara 3 : lendária 1).
+Até 4 na sua hotbar (acima do leque). Segure um talismã para ver nome, raridade e efeito.
+Desde o 0.3 eles são comprados na Loja Clandestina (raridades e preços na tabela acima).
 
-| Talismã | Raridade | Efeito |
-| --- | --- | --- |
-| Caneca de Chopp | comum | jogar bucha não gasta a vez |
-| Olho de Vidro | comum | revela as 2 pedras mais altas do Tio Zé |
-| Borracha Escolar | comum | 1x por rodada, encaixe com 1 número de diferença |
-| Cinzeiro de Bar | comum | +$2 cada vez que o Tio Zé compra ou passa |
-| Dado Viciado | comum | começa a rodada com pelo menos 2 pedras de 6 |
-| Barbante no Dedo | comum | ao comprar, vê 2 e escolhe 1 (a outra vai pro fundo do dorme) |
-| Giz de Sinuca | comum | fechar múltiplo de 5 deixa descartar 1 pedra pro fundo do dorme |
-| Chave de Fenda | comum | suas buchas valem 0 na tranca |
-| Dedal de Chumbo | rara | Tio Zé comprou/passou 2 vezes seguidas: −1 coração |
-| Espelho Retrovisor | rara | mostra a pedra que o Tio Zé acabou de comprar |
-| Anel do Bicheiro | rara | pontas iguais depois da sua jogada: Tio Zé −$3 (ou −1 coração sem dinheiro) |
-| Bucha de Aço | rara | a [0\|0] encaixa em qualquer ponta |
-| Carteira Recheada | rara | +1 de dano na batida a cada $15 que você tem |
-| Mão Grande | lendária | batida com o Tio Zé de 4+ pedras: dano dobrado |
-| Relógio Quebrado | lendária | 1x por rodada, botão DESFAZER: a última pedra do Tio Zé volta pra mão dele e a vez é sua |
+| Talismã | Efeito |
+| --- | --- |
+| Caneca de Chopp | jogar bucha não gasta a vez |
+| Olho de Vidro | revela as 2 pedras mais altas do rival |
+| Borracha Escolar | 1x por rodada, encaixe com 1 número de diferença |
+| Cinzeiro de Bar | +$2 cada vez que o rival compra ou passa |
+| Dado Viciado | começa a rodada com pelo menos 2 pedras de 6 |
+| Barbante Mágico | ao comprar, vê 3 e escolhe 1 (as outras vão pro fundo do dorme) |
+| Giz de Sinuca | fechar múltiplo de 5 deixa descartar 1 pedra pro fundo do dorme |
+| Chave de Fenda | suas buchas valem 0 na tranca |
+| Dedal de Chumbo | o rival comprou/passou 2 vezes seguidas: −1 coração |
+| Espelho Retrovisor | mostra a pedra que o rival acabou de comprar |
+| Anel do Bicheiro | pontas iguais depois da sua jogada: rival −$3 (ou −1 coração sem dinheiro) |
+| Bucha de Aço | a [0\|0] encaixa em qualquer ponta |
+| Carteira Recheada | +1 de dano na batida a cada $15 que você tem |
+| Mão Grande | batida com o rival de 4+ pedras: dano dobrado |
+| Relógio Quebrado | 1x por rodada, botão DESFAZER: a última pedra do rival volta pra mão dele e a vez é sua |
 
 Cada talismã é dado + ganchos puros (`rules`, `onDeal`, `onPlayerPlay`, `extraTurn`, `onTioZeMiss`,
 `batidaDamage`, `trancaTileValue`, `drawOptions`, `reveal`, `ability`). O reducer chama os ganchos
@@ -107,12 +160,13 @@ Escolhas que dependem de você (Barbante, Giz) travam o jogo em `state.pending` 
 ### Painel DEV (`src/components/DevPanel.jsx`)
 
 Secreto: **3 toques em "VOCÊ"** durante o duelo (ou 3 toques no título BUXARIA, que libera um botão
-"DEV" discreto na faixa dos talismãs). O Tio Zé espera com o painel aberto.
+"DEV" discreto ao lado da sua hotbar e na loja). O rival espera com o painel aberto.
 
 - **Gerar pedra:** lado A e B (0–6) + aprimoramento → ADICIONAR À MÃO (puxa do dorme ou do Tio Zé;
   se a pedra já estiver na mesa, cria uma cópia).
 - **Talismãs:** toque para equipar/remover na hora (máximo 4).
-- **Recursos:** +10 moedas, resetar vidas, −1 vida do Tio Zé, esvaziar a mão dele, limpar a mesa,
+- **Rival da partida:** troca o adversário (recomeça a partida) e **VENCER PARTIDA** (vai direto à loja).
+- **Recursos:** +10 moedas, resetar vidas, −1 vida do rival, esvaziar a mão dele, limpar a mesa,
   forçar tranca (contagem imediata).
 
 ## Arquitetura
@@ -126,21 +180,27 @@ src/
     gameReducer.js    estado do duelo e transições; emite eventos com `seq`
     powers.js         relíquias/peças aprimoradas aplicadas ao estado (regras, ganchos, revelações)
     effects.js        transições pequenas compartilhadas (moedas, dano direto, avisos)
+    shop.js           vitrine da loja, bloqueios de compra, valor de revenda
     gameFeedback.js   eventos → banner, falas e humor do Tio Zé, dica do jogador
     audioSynth.js     sintetizador Web Audio puro: efeitos, trilha de bossa e ambiência de bar
   data/
+    rarities.js       comum, raro, lendário, mítico (cor, revenda, peso no sorteio)
     enhancedTiles.js  as 5 peças aprimoradas (dados + ganchos)
-    relics.js         os 15 talismãs (dados, ícones 12x12 em pixel art, ganchos)
+    relics.js         os 15 talismãs (dados, ícones 12x12 em pixel art, ganchos por dono)
+    rivals.js         Tio Zé + 5 rivais (retratos 16x16, falas, estilo de jogo)
   ai/
     tioZeAI.js        decisão do Tio Zé + delay reflexivo de 700ms + falas
   components/
     DominoTile.jsx    pedra de osso envelhecido, chanfro 3D, pips em CSS Grid
     TableBoard.jsx    feltro verde-musgo, vinheta da lâmpada, caminho em "U"
-    OpponentHeader.jsx painel do Tio Zé (avatar pixel art, corações, pedras viradas, dorme)
     PlayerRack.jsx    mão em leque flutuante, seleção de pedras e botões de ação
     handFan.js        geometria do leque (posição, inclinação e descida de cada pedra)
     PauseMenu.jsx     pausa: continuar, som, sair do duelo
-    RelicBar.jsx      4 slots de talismã com tooltip e botão do Relógio
+    RivalBench.jsx    o outro lado da mesa: retrato, hotbar e mão do rival
+    RivalHand.jsx     leque do rival (virado, menor, pedras reveladas de frente)
+    Hotbar.jsx        4 slots de talismã (seu, do rival, da loja)
+    Shop.jsx          Loja Clandestina do Boteco
+    InfoBalloon.jsx   balão do toque longo (useLongPress.js)
     ProcToasts.jsx    avisos quando um talismã ou pedra dispara
     DrawChoice.jsx    escolha da compra (Barbante no Dedo)
     DevPanel.jsx      painel de testes secreto
@@ -155,7 +215,8 @@ scripts/generate-icons.mjs   gera os PNGs (sem dependências)
 ```
 
 **Fluxo de dados:** a UI despacha ações (`PLAY`, `DRAW`, `DRAW_PICK`, `PASS`, `DISCARD`,
-`SKIP_DISCARD`, `UNDO`, `TIO_ZE_ACT`, `START_DUEL`, `NEXT_ROUND`, `DEV`) para um reducer puro. Toda
+`SKIP_DISCARD`, `UNDO`, `TIO_ZE_ACT`, `START_DUEL` (nova run), `NEXT_ROUND`, `OPEN_SHOP`,
+`SHOP_BUY_RELIC`, `SHOP_BUY_TILE`, `SHOP_SELL_RELIC`, `SHOP_REROLL`, `NEXT_MATCH`, `DEV`) para um reducer puro. Toda
 aleatoriedade (o baralho embaralhado e a `seed` dos sorteios) entra pela ação, então o motor é
 determinístico e testável. O reducer emite eventos (`tilePlaced`, `bonus5`,
 `heartLost`, `roundEnd`...) e o `App` transforma cada um em som, tremida e banner.

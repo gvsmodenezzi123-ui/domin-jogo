@@ -1,20 +1,26 @@
 /**
- * Estado do duelo e transições. Reducer puro: toda aleatoriedade (o baralho
- * embaralhado e a `seed` dos sorteios da campanha) chega pronta dentro da ação.
+ * Estado da run e transições. Reducer puro: toda aleatoriedade (o baralho
+ * embaralhado e a `seed` da run) chega pronta dentro da ação.
  *
- * Fases: 'title' → 'playing' → 'roundOver' → 'playing' ... → 'gameOver'
+ * Fases:
+ *   'title' → 'playing' ⇄ 'roundOver' → 'matchWon' → 'shop' → 'playing' (próximo rival) ...
+ *                                     ↘ 'gameOver' (você zerou: fim da run)
+ *
+ * Uma RUN é uma sequência de PARTIDAS, cada uma contra um rival. A partida acaba
+ * quando alguém zera os corações; vencer abre a Loja Clandestina. Moedas, talismãs
+ * e o seu baralho (pedras aprimoradas compradas) passam de uma partida para outra;
+ * seus corações voltam cheios a cada partida.
  *
  * Efeitos colaterais (som, banners, falas) não acontecem aqui: o reducer emite
  * eventos em `state.events`, cada um com um `seq` crescente, e a UI reage.
  *
- * Patch 0.2: relíquias (`state.relics`), peças aprimoradas (`tile.enhancement`),
- * efeitos da rodada (`state.fx`) e escolhas que travam o jogo até você decidir
- * (`state.pending`: escolher a compra do Barbante, descartar com o Giz).
+ * Cadeiras: 'player' (você) e 'tioZe' (o rival da partida, qualquer que seja).
  */
 
 import { buildTioZeView, decideTioZeAction } from '../ai/tioZeAI.js';
-import { ENHANCEMENTS, ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
-import { RELICS, RELIC_SLOTS, getRelic } from '../data/relics.js';
+import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
+import { RELICS, RELIC_SLOTS, getRelic, markUsed } from '../data/relics.js';
+import { FIRST_RIVAL, RIVALS, getRival, pickNextRival } from '../data/rivals.js';
 import {
   DAMAGE,
   MAX_HEARTS,
@@ -23,7 +29,6 @@ import {
   boardTilesInOrder,
   classifyBatida,
   createEmptyBoard,
-  createSeededRng,
   dealFromDeck,
   endsSum,
   findOpening,
@@ -34,19 +39,19 @@ import {
   getValidSides,
   isDouble,
   isMultipleOfFive,
-  makeTile,
   placeTile,
   resolveTranca,
   tileId as canonicalId,
 } from './dominoLogic.js';
-import { directDamage, emit, gainCoins, patchFx, proc } from './effects.js';
+import { directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
 import {
   applyBatidaDamage,
+  canUndo,
+  dressTile,
   drawOptionsFor,
   enhancedTilesInPlay,
   hasRelic,
-  pickNaturalEnhancement,
-  pickRelicReward,
+  plainTiles,
   relicExtraTurn,
   requiredOpeningFor,
   rulesFor,
@@ -54,33 +59,40 @@ import {
   trancaRulesFor,
   trancaTileValues,
 } from './powers.js';
+import { REROLL_COST, buildShop, relicBuyBlock, sellPriceOf, shopRng, tileBuyBlock } from './shop.js';
 
 export const SEATS = Object.freeze(['player', 'tioZe']);
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
-/** Efeitos que valem só dentro de uma rodada. */
+/** Moedas por partida vencida (mais o bônus do rival, ver `prizeBonus`). */
+export const MATCH_PRIZE = 8;
+
+const bySeat = (player, tioZe) => ({ player, tioZe });
+
+/** Efeitos que valem só dentro de uma rodada, separados por cadeira. */
 export function createRoundFx() {
   return {
-    frozenSides: [], // Chumbo: pontas que o Tio Zé não pode usar na vez dele
-    wild: null, // Cristal: { tileId, sides } — curinga só na sua próxima jogada
-    rubyArmed: false, // Rubi: dano se o Tio Zé comprar/passar logo em seguida
-    tioZeMisses: 0, // compras/passes seguidos do Tio Zé (Dedal de Chumbo)
-    borrachaUsed: false,
-    relogioUsed: false,
-    undo: null, // Relógio: como a mesa estava antes da última jogada do Tio Zé
-    lastTioZeDraw: null, // Espelho Retrovisor
+    frozen: bySeat([], []), // pontas que cada lado não pode usar na próxima vez (Chumbo do adversário)
+    wild: null, // { seat, tileId, sides }: curinga do Cristal, só na próxima jogada do dono
+    ruby: null, // cadeira que toma dano se comprar/passar em seguida (Rubi do adversário)
+    misses: bySeat(0, 0), // compras/passes seguidos (Dedal de Chumbo)
+    used: bySeat([], []), // talismãs de uso único já gastos na rodada (Borracha, Relógio)
+    undo: null, // Relógio: como estava antes da última jogada do rival
+    lastDraw: bySeat(null, null), // última pedra comprada (Espelho Retrovisor)
   };
 }
 
 export function createInitialState() {
+  const rival = getRival(FIRST_RIVAL);
   return {
     phase: 'title',
     round: 0,
     board: createEmptyBoard(),
     boneyard: [],
-    hands: { player: [], tioZe: [] },
-    hearts: { player: MAX_HEARTS, tioZe: MAX_HEARTS },
-    coins: { player: STARTING_COINS, tioZe: STARTING_COINS },
+    hands: bySeat([], []),
+    hearts: bySeat(MAX_HEARTS, rival.hearts),
+    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
+    coins: bySeat(STARTING_COINS, rival.coins),
     turn: 'player',
     drawsThisTurn: 0,
     consecutivePasses: 0,
@@ -90,8 +102,12 @@ export function createInitialState() {
     duelWinner: null,
     lastPlay: null,
     memory: { playerMissing: [] },
-    stats: { roundsWon: { player: 0, tioZe: 0 }, coinsEarned: 0 },
-    relics: [],
+    stats: { roundsWon: bySeat(0, 0), coinsEarned: 0, matchesWon: 0 },
+    relics: bySeat([], []),
+    decks: bySeat({}, {}), // { tileId: aprimoramento } — as pedras trocadas no baralho de cada lado
+    rivalId: rival.id,
+    run: { match: 0, history: [] },
+    shop: null,
     fx: createRoundFx(),
     pending: null,
     seed: null,
@@ -100,33 +116,11 @@ export function createInitialState() {
   };
 }
 
-/** Gerador da rodada para sorteios da campanha (null em duelo sem seed). */
-function roundRng(state, salt) {
-  if (state.seed === null || state.seed === undefined) return null;
-  return createSeededRng((state.seed ^ Math.imul(state.round + 1, 0x9e3779b1) ^ Math.imul(salt, 0x85ebca6b)) >>> 0);
-}
-
-const isCopyId = (id) => id.includes('#');
-
-/** Pedra "limpa" para devolver ao dorme (sem aprimoramento; cópias do painel DEV somem). */
-function plainTiles(tiles) {
-  return tiles.filter((t) => !isCopyId(t.id)).map((t) => makeTile(t.a, t.b));
-}
+const tone = (seat) => (seat === 'player' ? 'player' : 'enemy');
 
 // ---------------------------------------------------------------------------
-// Rodada
+// Partida e rodada
 // ---------------------------------------------------------------------------
-
-function rollNaturalEnhancement(state) {
-  const rng = roundRng(state, 1);
-  if (!rng) return state;
-  const pick = pickNaturalEnhancement(state.hands.player, rng);
-  if (!pick) return state;
-  const player = state.hands.player.map((t, i) => (i === pick.index ? { ...t, enhancement: pick.enhancement } : t));
-  const next = { ...state, hands: { ...state.hands, player } };
-  const name = ENHANCEMENTS[pick.enhancement].name.split(' ')[0].toUpperCase();
-  return proc(next, { source: 'tile', id: pick.enhancement, text: `PEDRA DE ${name} NA MÃO` });
-}
 
 function startRound(state, deck) {
   const { hands, boneyard } = dealFromDeck(deck);
@@ -146,8 +140,16 @@ function startRound(state, deck) {
     fx: createRoundFx(),
     pending: null,
   };
-  next = runRelicHook(next, 'onDeal'); // Dado Viciado
-  next = rollNaturalEnhancement(next);
+  // Dado Viciado mexe nas pedras ainda comuns; depois cada lado "veste" as suas
+  next = runRelicHook(next, 'player', 'onDeal');
+  next = runRelicHook(next, 'tioZe', 'onDeal');
+  next = {
+    ...next,
+    hands: {
+      player: next.hands.player.map((t) => dressTile(next, 'player', t)),
+      tioZe: next.hands.tioZe.map((t) => dressTile(next, 'tioZe', t)),
+    },
+  };
 
   let starter = state.nextStarter;
   let openingTileId = null;
@@ -160,23 +162,57 @@ function startRound(state, deck) {
   return emit(next, { type: 'roundStart', round: next.round, starter, openingTileId });
 }
 
-/** Prêmio da campanha: talismã novo depois de cada rodada que você vence. */
-function grantRewardRelic(state) {
-  const rng = roundRng(state, 2);
-  if (!rng) return state;
-  const id = pickRelicReward(state, rng);
-  if (!id) return state;
-  const next = { ...state, relics: [...state.relics, id], roundResult: { ...state.roundResult, reward: id } };
-  return emit(next, { type: 'relicGained', id });
+/** Nova partida contra `rivalId`: corações cheios, rival com os talismãs e o baralho dele. */
+function startMatch(state, rivalId, deck, { advance = true } = {}) {
+  const rival = getRival(rivalId);
+  let next = {
+    ...state,
+    rivalId: rival.id,
+    run: advance
+      ? { match: state.run.match + 1, history: [...state.run.history, rival.id] }
+      : { ...state.run, history: [...state.run.history.slice(0, -1), rival.id] },
+    relics: { ...state.relics, tioZe: [...rival.relics] },
+    decks: { ...state.decks, tioZe: { ...rival.deck } },
+    hearts: bySeat(MAX_HEARTS, rival.hearts),
+    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
+    coins: { ...state.coins, tioZe: rival.coins },
+    round: 0,
+    nextStarter: null,
+    duelWinner: null,
+    roundResult: null,
+    shop: null,
+  };
+  next = emit(next, { type: 'duelStart', rivalId: rival.id, match: next.run.match });
+  return startRound(next, deck);
+}
+
+/** Alguém zerou: se foi o rival, você vence a partida (prêmio e loja); se foi você, a run acaba. */
+function endMatch(state, winner) {
+  if (winner === 'player') {
+    const prize = MATCH_PRIZE + getRival(state.rivalId).prizeBonus;
+    let next = {
+      ...state,
+      phase: 'matchWon',
+      duelWinner: 'player',
+      nextStarter: null,
+      pending: null,
+      stats: { ...state.stats, matchesWon: state.stats.matchesWon + 1 },
+    };
+    next = gainCoins(next, 'player', prize, 'prize');
+    next = { ...next, roundResult: next.roundResult ? { ...next.roundResult, prize } : next.roundResult };
+    return emit(next, { type: 'duelEnd', winner: 'player', prize });
+  }
+  const next = { ...state, phase: 'gameOver', duelWinner: 'tioZe', nextStarter: null, pending: null };
+  return emit(next, { type: 'duelEnd', winner: 'tioZe' });
 }
 
 function finishRound(state, result) {
   let next = { ...state, pending: null };
-  if (result.winner === 'player') {
-    // Ouro: bônus por pedra de ouro na mão ou na mesa
-    for (const tile of enhancedTilesInPlay(next)) {
+  if (result.winner) {
+    // Ouro: bônus por pedra de ouro do vencedor na mão ou na mesa
+    for (const tile of enhancedTilesInPlay(next, result.winner)) {
       const enhancement = getEnhancement(tile.enhancement);
-      if (enhancement.onRoundWin) next = enhancement.onRoundWin(next, { tile });
+      if (enhancement.onRoundWin) next = enhancement.onRoundWin(next, { tile, owner: result.winner, foe: other(result.winner) });
     }
   }
   next = emit({ ...next, roundResult: result }, { type: 'roundEnd', result });
@@ -193,15 +229,11 @@ function finishRound(state, result) {
   };
   next = emit({ ...next, hearts, stats }, { type: 'heartLost', who: loser, amount: result.damage, reason: result.kind });
 
-  if (hearts[loser] === 0) {
-    next = { ...next, phase: 'gameOver', duelWinner: result.winner, nextStarter: null };
-    return emit(next, { type: 'duelEnd', winner: result.winner });
-  }
-  if (result.winner === 'player') next = grantRewardRelic(next);
+  if (hearts[loser] === 0) return endMatch(next, result.winner);
   return { ...next, phase: 'roundOver', nextStarter: result.winner };
 }
 
-/** Alguém zerou os corações no meio da rodada (dano direto): o duelo acaba na hora. */
+/** Alguém zerou os corações no meio da rodada (dano direto): a partida acaba na hora. */
 function checkKnockout(state) {
   const loser = SEATS.find((seat) => state.hearts[seat] <= 0);
   if (!loser) return null;
@@ -220,9 +252,8 @@ function checkKnockout(state) {
     ...state.stats,
     roundsWon: { ...state.stats.roundsWon, [winner]: state.stats.roundsWon[winner] + 1 },
   };
-  let next = emit({ ...state, pending: null, roundResult: result, stats }, { type: 'roundEnd', result });
-  next = { ...next, phase: 'gameOver', duelWinner: winner, nextStarter: null };
-  return emit(next, { type: 'duelEnd', winner });
+  const next = emit({ ...state, pending: null, roundResult: result, stats }, { type: 'roundEnd', result });
+  return endMatch(next, winner);
 }
 
 function trancaResult(state, reason) {
@@ -252,22 +283,37 @@ function canAct(state, actor) {
   return state.phase === 'playing' && SEATS.includes(actor) && state.turn === actor && !state.pending;
 }
 
-/** Passa a vez. Quando a vez do Tio Zé termina, o Chumbo derrete; quando a sua termina, o Relógio perde a chance. */
+/** Passa a vez. O Chumbo que travava quem jogou derrete; quando a SUA vez termina, o Relógio perde a chance. */
 function endTurn(state, from) {
-  const fx =
-    from === 'tioZe' ? { ...state.fx, frozenSides: [] } : { ...state.fx, undo: null };
+  const fx = {
+    ...state.fx,
+    frozen: { ...state.fx.frozen, [from]: [] },
+    undo: from === 'player' ? null : state.fx.undo,
+  };
   return { ...state, turn: other(from), fx };
 }
 
-/** O Tio Zé comprou ou passou: Rubi, Cinzeiro, Dedal, Espelho. */
-function afterTioZeMiss(state, ctx) {
-  let next = patchFx(state, { tioZeMisses: state.fx.tioZeMisses + 1 });
-  if (next.fx.rubyArmed) {
-    next = directDamage(patchFx(next, { rubyArmed: false }), 'tioZe', 1, 'rubi');
-    next = proc(next, { source: 'tile', id: 'rubi', text: 'RUBI: −1♥ NO TIO ZÉ' });
+/** `seat` comprou ou passou: Rubi do adversário, e os talismãs do adversário (Cinzeiro, Dedal, Espelho). */
+function afterMiss(state, seat, ctx) {
+  const { fx } = state;
+  let next = patchFx(state, {
+    misses: { ...fx.misses, [seat]: fx.misses[seat] + 1 },
+    lastDraw: ctx.kind === 'draw' && ctx.tileId ? { ...fx.lastDraw, [seat]: ctx.tileId } : fx.lastDraw,
+  });
+  if (next.fx.ruby === seat) {
+    next = directDamage(patchFx(next, { ruby: null }), seat, 1, 'rubi');
+    next = proc(next, {
+      source: 'tile',
+      id: 'rubi',
+      text: seat === 'tioZe' ? 'RUBI: −1♥ NO RIVAL' : 'RUBI DELE: −1♥ EM VOCÊ',
+      tone: tone(other(seat)),
+      owner: other(seat),
+    });
   }
-  return runRelicHook(next, 'onTioZeMiss', ctx);
+  return runRelicHook(next, other(seat), 'onFoeMiss', ctx);
 }
+
+const diff = (after, before) => bySeat(after.player - before.player, after.tioZe - before.tioZe);
 
 // ---------------------------------------------------------------------------
 // Ações de jogo
@@ -284,8 +330,9 @@ function playTile(state, { actor, tileId, side }) {
   const placement = getPlacement(tile, state.board, side, rules);
   if (!placement) return state;
 
+  const foe = other(actor);
   const endsBefore = getOpenEnds(state.board);
-  const board = placeTile(state.board, tile, side, rules);
+  const board = placeTile(state.board, tile, side, rules, { by: actor });
   const newHand = hand.filter((t) => t.id !== tile.id);
 
   let memory = state.memory;
@@ -303,18 +350,13 @@ function playTile(state, { actor, tileId, side }) {
     lastPlay: { by: actor, tileId: tile.id, side },
     memory,
   };
-  if (actor === 'player') {
-    // sua jogada gasta o curinga do Cristal e fecha a janela do Relógio
-    next = patchFx(next, { wild: null, undo: null });
-  } else {
-    next = patchFx(next, {
-      rubyArmed: false,
-      tioZeMisses: 0,
-      undo: state.board.root
-        ? { board: state.board, hand, coins: state.coins.tioZe, lastPlay: state.lastPlay, tileId: tile.id }
-        : null,
-    });
-  }
+  const { fx } = state;
+  next = patchFx(next, {
+    misses: { ...fx.misses, [actor]: 0 },
+    ruby: fx.ruby === actor ? null : fx.ruby, // o alvo do Rubi jogou: desarma
+    wild: fx.wild?.seat === actor ? null : fx.wild, // o curinga do Cristal vale só para a próxima jogada do dono
+    undo: actor === 'player' ? null : fx.undo,
+  });
   next = emit(next, {
     type: 'tilePlaced',
     by: actor,
@@ -338,36 +380,39 @@ function playTile(state, { actor, tileId, side }) {
     });
   }
 
+  const ctx = { tile, side, placement, endsAfter: getOpenEnds(board), multipleOfFive };
+  const enhancement = getEnhancement(tile.enhancement);
+  if (enhancement?.onPlay) next = enhancement.onPlay(next, { ...ctx, owner: actor, foe });
+  next = runRelicHook(next, actor, 'onPlay', ctx);
+
   let extraTurn = null;
-  if (actor === 'player') {
-    const ctx = { tile, side, placement, endsAfter: getOpenEnds(board), multipleOfFive };
-    const enhancement = getEnhancement(tile.enhancement);
-    if (enhancement?.onPlay) next = enhancement.onPlay(next, ctx);
-    next = runRelicHook(next, 'onPlayerPlay', ctx);
-    if (enhancement?.extraTurn) extraTurn = { source: 'tile', id: enhancement.id, text: 'FANTASMA: JOGUE DE NOVO' };
-    else {
-      const relicId = relicExtraTurn(next, ctx);
-      if (relicId) extraTurn = { source: 'relic', id: relicId, text: `${RELICS[relicId].short}: JOGUE DE NOVO` };
-    }
-    const knockout = checkKnockout(next);
-    if (knockout) return knockout;
+  if (enhancement?.extraTurn) {
+    extraTurn = { id: enhancement.id, source: 'tile', label: 'FANTASMA' };
+  } else {
+    const relicId = relicExtraTurn(next, actor, ctx);
+    if (relicId) extraTurn = { id: relicId, source: 'relic', label: RELICS[relicId].short };
   }
+
+  const knockout = checkKnockout(next);
+  if (knockout) return knockout;
 
   if (newHand.length === 0) {
     const kind = classifyBatida(tile, endsBefore);
-    let damage = DAMAGE[kind];
-    if (actor === 'player') {
-      const boosted = applyBatidaDamage(next, damage);
-      for (const step of boosted.steps) {
-        next = proc(next, { source: 'relic', id: step.id, text: `${RELICS[step.id].short}: DANO ${step.before}→${step.after}` });
-      }
-      damage = boosted.damage;
+    const boosted = applyBatidaDamage(next, actor, DAMAGE[kind]);
+    for (const step of boosted.steps) {
+      next = proc(next, {
+        source: 'relic',
+        id: step.id,
+        text: `${RELICS[step.id].short}: DANO ${step.before}→${step.after}`,
+        tone: tone(actor),
+        owner: actor,
+      });
     }
     return finishRound(next, {
       kind,
       winner: actor,
-      loser: other(actor),
-      damage,
+      loser: foe,
+      damage: boosted.damage,
       baseDamage: DAMAGE[kind],
       reason: 'batida',
       lastTileId: tile.id,
@@ -378,7 +423,25 @@ function playTile(state, { actor, tileId, side }) {
   const tranca = checkTranca(next);
   if (tranca) return tranca;
 
-  if (extraTurn) return proc(next, extraTurn);
+  // Relógio Quebrado: guarda como a mesa estava e o que essa jogada do rival mudou
+  if (actor === 'tioZe' && state.board.root && next.boneyard === state.boneyard) {
+    next = patchFx(next, {
+      undo: {
+        tileId: tile.id,
+        board: state.board,
+        hand,
+        lastPlay: state.lastPlay,
+        consecutivePasses: state.consecutivePasses,
+        fx: { ...state.fx, undo: null },
+        delta: { coins: diff(next.coins, state.coins), hearts: diff(next.hearts, state.hearts) },
+      },
+    });
+  }
+
+  if (extraTurn) {
+    const text = actor === 'player' ? `${extraTurn.label}: JOGUE DE NOVO` : `${extraTurn.label} DELE: JOGA DE NOVO`;
+    return proc(next, { source: extraTurn.source, id: extraTurn.id, text, tone: tone(actor), owner: actor });
+  }
   return endTurn(next, actor);
 }
 
@@ -407,24 +470,23 @@ function drawTile(state, { actor }) {
   const heartCost = (s) =>
     cost.type === 'heart' ? emit(s, { type: 'heartLost', who: actor, amount: cost.amount, reason: 'draw' }) : s;
 
-  // Barbante no Dedo: vê 2 e escolhe (a escolha chega em DRAW_PICK)
-  const options = actor === 'player' ? Math.min(drawOptionsFor(state), state.boneyard.length) : 1;
+  // Barbante Mágico: vê várias e escolhe (a escolha chega em DRAW_PICK)
+  const options = Math.min(drawOptionsFor(state, actor), state.boneyard.length);
   if (options >= 2) {
-    const picks = state.boneyard.slice(0, options);
+    const picks = state.boneyard.slice(0, options).map((t) => dressTile(state, actor, t));
     next = { ...next, boneyard: state.boneyard.slice(options), pending: { type: 'drawChoice', options: picks, cost } };
-    next = emit(next, { type: 'drawPeek', by: actor, count: options, cost });
-    return heartCost(next);
+    next = heartCost(emit(next, { type: 'drawPeek', by: actor, count: options, cost }));
+    next = afterMiss(next, actor, { kind: 'draw', tileId: null });
+    return checkKnockout(next) ?? next;
   }
 
-  const [tile, ...boneyard] = state.boneyard;
+  const [raw, ...boneyard] = state.boneyard;
+  const tile = dressTile(state, actor, raw);
   next = { ...next, boneyard, hands: { ...next.hands, [actor]: [...next.hands[actor], tile] } };
   next = heartCost(emit(next, { type: 'drawTile', by: actor, tileId: tile.id, cost }));
-
-  if (actor === 'tioZe') {
-    next = afterTioZeMiss(patchFx(next, { lastTioZeDraw: tile.id }), { kind: 'draw', tileId: tile.id });
-    const knockout = checkKnockout(next);
-    if (knockout) return knockout;
-  }
+  next = afterMiss(next, actor, { kind: 'draw', tileId: tile.id });
+  const knockout = checkKnockout(next);
+  if (knockout) return knockout;
   return checkTranca(next) ?? next;
 }
 
@@ -438,7 +500,7 @@ function pickDrawn(state, { tileId }) {
     ...state,
     pending: null,
     hands: { ...state.hands, player: [...state.hands.player, chosen] },
-    boneyard: [...state.boneyard, ...back], // a outra volta para o fundo do dorme
+    boneyard: [...state.boneyard, ...plainTiles(back)], // as outras voltam para o fundo do dorme
   };
   next = emit(next, { type: 'drawTile', by: 'player', tileId: chosen.id, cost: pending.cost, picked: true });
   return checkTranca(next) ?? next;
@@ -454,11 +516,9 @@ function passTurn(state, { actor, intent }) {
     memory: actor === 'player' ? rememberPlayerMissing(state) : state.memory,
   };
   next = emit(next, { type: 'pass', by: actor, intent: intent ?? null });
-  if (actor === 'tioZe') {
-    next = afterTioZeMiss(next, { kind: 'pass' });
-    const knockout = checkKnockout(next);
-    if (knockout) return knockout;
-  }
+  next = afterMiss(next, actor, { kind: 'pass' });
+  const knockout = checkKnockout(next);
+  if (knockout) return knockout;
   if (consecutivePasses >= 2) return finishRound(next, trancaResult(next, 'passes'));
   return endTurn(next, actor);
 }
@@ -483,21 +543,28 @@ function skipDiscard(state) {
   return { ...state, pending: null };
 }
 
-/** Relógio Quebrado: a última pedra do Tio Zé volta para a mão dele e a vez continua sua. */
+/** Relógio Quebrado: a última pedra do rival volta para a mão dele, o que ela causou é desfeito e a vez continua sua. */
 function undoTioZePlay(state) {
-  if (!canAct(state, 'player') || !hasRelic(state, 'relogio') || state.fx.relogioUsed || !state.fx.undo) return state;
+  if (!canUndo(state)) return state;
   const undo = state.fx.undo;
+  const back = (now, delta, cap) =>
+    bySeat(
+      Math.max(0, Math.min(cap?.player ?? Infinity, now.player - delta.player)),
+      Math.max(0, Math.min(cap?.tioZe ?? Infinity, now.tioZe - delta.tioZe)),
+    );
   let next = {
     ...state,
     board: undo.board,
     hands: { ...state.hands, tioZe: undo.hand },
-    coins: { ...state.coins, tioZe: undo.coins },
+    coins: back(state.coins, undo.delta.coins),
+    hearts: back(state.hearts, undo.delta.hearts, state.maxHearts),
     lastPlay: undo.lastPlay,
     consecutivePasses: 0,
+    fx: { ...undo.fx, misses: state.fx.misses, lastDraw: state.fx.lastDraw, used: state.fx.used, undo: null },
   };
-  next = patchFx(next, { undo: null, relogioUsed: true });
+  next = markUsed(next, 'player', 'relogio');
   next = emit(next, { type: 'undo', tileId: undo.tileId });
-  return proc(next, { source: 'relic', id: 'relogio', text: 'RELÓGIO: JOGADA DESFEITA' });
+  return proc(next, { source: 'relic', id: 'relogio', text: 'RELÓGIO: JOGADA DESFEITA', tone: 'player', owner: 'player' });
 }
 
 function tioZeAct(state) {
@@ -520,12 +587,72 @@ function tioZeAct(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Loja Clandestina (src/engine/shop.js monta a vitrine)
+// ---------------------------------------------------------------------------
+
+function openShop(state) {
+  if (state.phase !== 'matchWon') return state;
+  const nextRivalId = pickNextRival(shopRng(state, 0, 1), state.rivalId);
+  const next = { ...state, phase: 'shop', shop: { ...buildShop(state, 0), nextRivalId } };
+  return emit(next, { type: 'shopOpen', nextRivalId });
+}
+
+function buyRelic(state, { index }) {
+  if (state.phase !== 'shop') return state;
+  const offer = state.shop.relics[index];
+  if (relicBuyBlock(state, offer)) return state;
+  let next = loseCoins(state, 'player', offer.price, 'shop');
+  next = {
+    ...next,
+    relics: { ...next.relics, player: [...next.relics.player, offer.id] },
+    shop: { ...next.shop, relics: next.shop.relics.map((o, i) => (i === index ? { ...o, sold: true } : o)) },
+  };
+  return emit(next, { type: 'shopBuy', kind: 'relic', id: offer.id, price: offer.price });
+}
+
+/** A pedra de grife substitui a comum no SEU baralho (continua com 28). */
+function buyTile(state, { index }) {
+  if (state.phase !== 'shop') return state;
+  const offer = state.shop.tiles[index];
+  if (tileBuyBlock(state, offer)) return state;
+  let next = loseCoins(state, 'player', offer.price, 'shop');
+  next = {
+    ...next,
+    decks: { ...next.decks, player: { ...next.decks.player, [offer.tileId]: offer.enhancement } },
+    shop: { ...next.shop, tiles: next.shop.tiles.map((o, i) => (i === index ? { ...o, sold: true } : o)) },
+  };
+  return emit(next, { type: 'shopBuy', kind: 'tile', id: offer.tileId, enhancement: offer.enhancement, price: offer.price });
+}
+
+function sellRelic(state, { id }) {
+  if (state.phase !== 'shop' || !hasRelic(state, 'player', id)) return state;
+  const price = sellPriceOf(id);
+  let next = { ...state, relics: { ...state.relics, player: state.relics.player.filter((r) => r !== id) } };
+  next = gainCoins(next, 'player', price, 'sell');
+  return emit(next, { type: 'shopSell', id, price });
+}
+
+function rerollShop(state) {
+  if (state.phase !== 'shop' || state.coins.player < REROLL_COST) return state;
+  let next = loseCoins(state, 'player', REROLL_COST, 'reroll');
+  const rerolls = state.shop.rerolls + 1;
+  next = { ...next, shop: { ...buildShop(next, rerolls), nextRivalId: state.shop.nextRivalId } };
+  return emit(next, { type: 'shopReroll', rerolls });
+}
+
+function nextMatch(state, { deck, rivalId }) {
+  if (state.phase !== 'shop') return state;
+  const id = rivalId && RIVALS[rivalId] ? rivalId : state.shop.nextRivalId;
+  return startMatch(state, id, deck);
+}
+
+// ---------------------------------------------------------------------------
 // Painel DEV (src/components/DevPanel.jsx)
 // ---------------------------------------------------------------------------
 
-const DEV_PLAYING_ONLY = new Set(['addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca']);
+const DEV_PLAYING_ONLY = new Set(['addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch']);
 
-/** Põe [a|b] na sua mão: puxa do dorme ou do Tio Zé; se a pedra estiver na mesa, cria uma cópia. */
+/** Põe [a|b] na sua mão: puxa do dorme ou do rival; se a pedra estiver na mesa, cria uma cópia. */
 function devAddTile(state, { a, b, enhancement }) {
   const lo = Math.min(a, b);
   const hi = Math.max(a, b);
@@ -546,18 +673,15 @@ function devAddTile(state, { a, b, enhancement }) {
     player = [...player, make(id)];
     if (openingTileId === id) openingTileId = null;
   } else {
-    const taken = new Set([
-      ...boardTilesInOrder(state.board),
-      ...player,
-      ...tioZe,
-      ...(state.pending?.options ?? []),
-    ].map((t) => t.id));
+    const taken = new Set(
+      [...boardTilesInOrder(state.board), ...player, ...tioZe, ...(state.pending?.options ?? [])].map((t) => t.id),
+    );
     let n = 2;
     while (taken.has(`${id}#${n}`)) n += 1;
     player = [...player, make(`${id}#${n}`)];
   }
   let next = { ...state, hands: { player, tioZe }, boneyard, openingTileId };
-  // a mão do Tio Zé mudou: o "antes" guardado pelo Relógio não vale mais
+  // a mão do rival mudou: o "antes" guardado pelo Relógio não vale mais
   if (tioZe !== state.hands.tioZe) next = patchFx(next, { undo: null });
   return emit(next, { type: 'dev', op: 'addTile', tileId: id, enhancement: enh });
 }
@@ -571,18 +695,26 @@ function devAction(state, action) {
       return devAddTile(state, action);
     case 'toggleRelic': {
       if (!getRelic(action.id)) return state;
-      const owned = state.relics.includes(action.id);
-      if (!owned && state.relics.length >= RELIC_SLOTS) return state;
-      const relics = owned ? state.relics.filter((id) => id !== action.id) : [...state.relics, action.id];
-      return emit({ ...state, relics }, { type: 'dev', op, id: action.id, on: !owned });
+      const owned = state.relics.player.includes(action.id);
+      if (!owned && state.relics.player.length >= RELIC_SLOTS) return state;
+      const player = owned ? state.relics.player.filter((id) => id !== action.id) : [...state.relics.player, action.id];
+      return emit({ ...state, relics: { ...state.relics, player } }, { type: 'dev', op, id: action.id, on: !owned });
     }
     case 'addCoins':
       return gainCoins(state, 'player', action.amount ?? 10, 'dev');
     case 'resetHearts':
-      return emit({ ...state, hearts: { player: MAX_HEARTS, tioZe: MAX_HEARTS } }, { type: 'dev', op });
+      return emit({ ...state, hearts: { ...state.maxHearts } }, { type: 'dev', op });
     case 'damageTioZe': {
       const next = directDamage(state, 'tioZe', 1, 'dev');
       return checkKnockout(next) ?? next;
+    }
+    case 'winMatch': {
+      const next = directDamage(state, 'tioZe', state.hearts.tioZe, 'dev');
+      return checkKnockout(next) ?? next;
+    }
+    case 'setRival': {
+      if (!RIVALS[action.rivalId] || !action.deck) return state;
+      return startMatch({ ...state, pending: null }, action.rivalId, action.deck, { advance: state.run.match === 0 });
     }
     case 'emptyTioZeHand': {
       const hand = state.hands.tioZe;
@@ -605,7 +737,7 @@ function devAction(state, action) {
         openingTileId: null,
         consecutivePasses: 0,
       };
-      next = patchFx(next, { frozenSides: [], wild: null, undo: null });
+      next = patchFx(next, { frozen: bySeat([], []), wild: null, undo: null });
       return emit(next, { type: 'dev', op });
     }
     case 'forceTranca':
@@ -618,16 +750,18 @@ function devAction(state, action) {
 export function gameReducer(state, action) {
   switch (action.type) {
     case 'START_DUEL': {
+      // começa uma RUN nova: baralho 100% comum e sem talismãs (os testes podem passar extras)
       const relics = (action.relics ?? []).filter((id) => getRelic(id)).slice(0, RELIC_SLOTS);
       const fresh = {
         ...createInitialState(),
-        relics,
+        relics: bySeat(relics, []),
+        decks: bySeat({ ...(action.playerDeck ?? {}) }, {}),
         seed: Number.isFinite(action.seed) ? action.seed >>> 0 : null,
         seq: state.seq,
         events: state.events,
       };
-      const next = emit(fresh, { type: 'duelStart' });
-      return startRound(next, action.deck);
+      const next = emit(fresh, { type: 'runStart' });
+      return startMatch(next, action.rivalId && RIVALS[action.rivalId] ? action.rivalId : FIRST_RIVAL, action.deck);
     }
     case 'NEXT_ROUND':
       if (state.phase !== 'roundOver') return state;
@@ -648,6 +782,18 @@ export function gameReducer(state, action) {
       return undoTioZePlay(state);
     case 'TIO_ZE_ACT':
       return tioZeAct(state);
+    case 'OPEN_SHOP':
+      return openShop(state);
+    case 'SHOP_BUY_RELIC':
+      return buyRelic(state, action);
+    case 'SHOP_BUY_TILE':
+      return buyTile(state, action);
+    case 'SHOP_SELL_RELIC':
+      return sellRelic(state, action);
+    case 'SHOP_REROLL':
+      return rerollShop(state);
+    case 'NEXT_MATCH':
+      return nextMatch(state, action);
     case 'DEV':
       return devAction(state, action);
     case 'RETURN_TO_TITLE':

@@ -1,52 +1,83 @@
 /**
  * Ponte entre o estado do duelo e os dados de src/data/: quais regras extras
- * valem para cada lado, como rodar os ganchos das relíquias e o que a UI
- * pode revelar. Tudo puro.
+ * valem para cada lado, como rodar os ganchos dos talismãs de cada dono, como
+ * "vestir" as pedras com o baralho de cada um e o que a sua tela pode revelar.
+ * Tudo puro.
+ *
+ * Cadeiras: 'player' (você) e 'tioZe' (a cadeira do rival da partida; o nome
+ * ficou do Patch 0.1, quando o Tio Zé era o único adversário).
  */
 
-import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
-import { RARITIES, RELICS, RELIC_IDS, RELIC_SLOTS, getRelic } from '../data/relics.js';
-import { BASE_RULES, boardTilesInOrder, endTileId, pipSum } from './dominoLogic.js';
+import { getEnhancement } from '../data/enhancedTiles.js';
+import { RELICS, getRelic, isUsed } from '../data/relics.js';
+import { BASE_RULES, boardTilesInOrder, endTileId, makeTile, pipSum } from './dominoLogic.js';
 
-export const hasRelic = (state, id) => state.relics.includes(id);
+export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
-export const equippedRelics = (state) => state.relics.map(getRelic).filter(Boolean);
+export const relicsOf = (state, seat) => (state.relics[seat] ?? []).map(getRelic).filter(Boolean);
 
-/** Pontas que ainda são curinga do Cristal (somem se o Tio Zé cobrir a pedra). */
-export function wildSidesFor(state) {
+export const hasRelic = (state, seat, id) => (state.relics[seat] ?? []).includes(id);
+
+// ---------------------------------------------------------------------------
+// Baralho de cada lado
+// ---------------------------------------------------------------------------
+
+/**
+ * A pedra como ela é no baralho de `seat`: a versão aprimorada se o dono tiver
+ * trocado a comum por ela, senão a comum. Cópias do painel DEV ficam como estão.
+ */
+export function dressTile(state, seat, tile) {
+  if (tile.id.includes('#')) return tile;
+  const enhancement = state.decks?.[seat]?.[tile.id];
+  return enhancement ? { id: tile.id, a: tile.a, b: tile.b, enhancement } : makeTile(tile.a, tile.b);
+}
+
+/** Pedras voltando para o dorme ficam comuns (cópias do painel DEV somem). */
+export function plainTiles(tiles) {
+  return tiles.filter((t) => !t.id.includes('#')).map((t) => makeTile(t.a, t.b));
+}
+
+// ---------------------------------------------------------------------------
+// Regras de encaixe
+// ---------------------------------------------------------------------------
+
+/** Pontas que ainda são curinga do Cristal de `seat` (somem se o rival cobrir a pedra). */
+export function wildSidesFor(state, seat = 'player') {
   const wild = state.fx?.wild;
-  if (!wild || !state.board.root) return [];
+  if (!wild || wild.seat !== seat || !state.board.root) return [];
   return wild.sides.filter((side) => endTileId(state.board, side) === wild.tileId);
 }
 
-/** Regras de encaixe de cada lado neste momento. */
-export function rulesFor(state, seat) {
-  if (seat === 'tioZe') {
-    const frozen = state.fx?.frozenSides ?? [];
-    return frozen.length ? { frozenSides: frozen } : BASE_RULES;
-  }
+/**
+ * Regras de encaixe de `seat` agora: talismãs do dono (Borracha, Bucha de Aço),
+ * curinga do Cristal e pontas travadas pelo Chumbo do adversário.
+ */
+export function rulesFor(state, seat, { frozen = true } = {}) {
   let rules = BASE_RULES;
-  for (const relic of equippedRelics(state)) {
-    const extra = relic.rules?.(state);
+  for (const relic of relicsOf(state, seat)) {
+    const extra = relic.rules?.(state, seat);
     if (extra) rules = { ...rules, ...extra };
   }
-  const wildSides = wildSidesFor(state);
+  const wildSides = wildSidesFor(state, seat);
   if (wildSides.length) rules = { ...rules, wildSides };
+  const frozenSides = frozen ? (state.fx?.frozen?.[seat] ?? []) : [];
+  if (frozenSides.length) rules = { ...rules, frozenSides };
   return rules;
 }
 
-/**
- * Poderes que valem para decidir se a mesa trancou de vez: os seus (relíquias,
- * curinga) contam; o congelamento do Chumbo não, porque passa no fim da vez.
- */
+/** Poderes que valem para decidir se a mesa trancou de vez (o Chumbo passa no fim da vez, então não conta). */
 export function trancaRulesFor(state) {
-  return { player: rulesFor(state, 'player'), tioZe: BASE_RULES };
+  return { player: rulesFor(state, 'player', { frozen: false }), tioZe: rulesFor(state, 'tioZe', { frozen: false }) };
 }
 
-/** Valor de cada pedra na contagem da tranca (Chave de Fenda). */
+/** Valor de cada pedra na contagem da tranca (Chave de Fenda), por lado. */
 export function trancaTileValues(state) {
-  const relic = equippedRelics(state).find((r) => r.trancaTileValue);
-  return relic ? { player: relic.trancaTileValue } : {};
+  const values = {};
+  for (const seat of ['player', 'tioZe']) {
+    const relic = relicsOf(state, seat).find((r) => r.trancaTileValue);
+    if (relic) values[seat] = relic.trancaTileValue;
+  }
+  return values;
 }
 
 /** Pedra que o lado é obrigado a usar para abrir a mesa (só se ele tiver a pedra). */
@@ -55,35 +86,42 @@ export function requiredOpeningFor(state, seat) {
   return state.hands[seat].some((t) => t.id === state.openingTileId) ? state.openingTileId : null;
 }
 
-/** Roda um gancho em todas as relíquias equipadas, na ordem dos slots. */
-export function runRelicHook(state, hook, ctx) {
+// ---------------------------------------------------------------------------
+// Ganchos
+// ---------------------------------------------------------------------------
+
+/** Roda um gancho nos talismãs de `seat`, na ordem dos slots. */
+export function runRelicHook(state, seat, hook, ctx = {}) {
   let next = state;
-  for (const id of state.relics) {
+  for (const id of state.relics[seat] ?? []) {
     const fn = RELICS[id]?.[hook];
-    if (typeof fn === 'function') next = fn(next, ctx);
+    if (typeof fn === 'function') next = fn(next, { ...ctx, owner: seat, foe: other(seat) });
   }
   return next;
 }
 
-/** Relíquia que dá vez extra nessa jogada (ou null). */
-export function relicExtraTurn(state, ctx) {
-  return equippedRelics(state).find((r) => r.extraTurn?.(state, ctx))?.id ?? null;
+/** Talismã de `seat` que dá vez extra nessa jogada (ou null). */
+export function relicExtraTurn(state, seat, ctx) {
+  const full = { ...ctx, owner: seat, foe: other(seat) };
+  return relicsOf(state, seat).find((r) => r.extraTurn?.(state, full))?.id ?? null;
 }
 
-/** Quantas pedras você vê ao comprar (Barbante no Dedo: 2). */
-export function drawOptionsFor(state) {
-  return Math.max(1, ...equippedRelics(state).map((r) => r.drawOptions ?? 1));
+/** Quantas pedras você vê ao comprar (Barbante Mágico: 3). Rivais compram normal. */
+export function drawOptionsFor(state, seat) {
+  if (seat !== 'player') return 1;
+  return Math.max(1, ...relicsOf(state, seat).map((r) => r.drawOptions ?? 1));
 }
 
-/** Dano da sua batida depois das relíquias (somas antes, multiplicações depois). */
-export function applyBatidaDamage(state, base) {
-  const relics = equippedRelics(state)
+/** Dano da batida de `seat` depois dos talismãs (somas antes, multiplicações depois). */
+export function applyBatidaDamage(state, seat, base) {
+  const ctx = { owner: seat, foe: other(seat) };
+  const relics = relicsOf(state, seat)
     .filter((r) => r.batidaDamage)
     .sort((p, q) => (p.order ?? 0) - (q.order ?? 0));
   let damage = base;
   const steps = [];
   for (const relic of relics) {
-    const after = relic.batidaDamage(damage, state);
+    const after = relic.batidaDamage(damage, state, ctx);
     if (after !== damage) {
       steps.push({ id: relic.id, before: damage, after });
       damage = after;
@@ -92,10 +130,15 @@ export function applyBatidaDamage(state, base) {
   return { damage, steps };
 }
 
-/** Pedras aprimoradas suas que contam "na mão ou na mesa". */
-export function enhancedTilesInPlay(state) {
-  return [...state.hands.player, ...boardTilesInOrder(state.board)].filter((t) => getEnhancement(t.enhancement));
+/** Pedras aprimoradas de `seat` que contam "na mão ou na mesa" (Ouro). */
+export function enhancedTilesInPlay(state, seat) {
+  const onBoard = boardTilesInOrder(state.board).filter((t) => t.by === seat);
+  return [...state.hands[seat], ...onBoard].filter((t) => getEnhancement(t.enhancement));
 }
+
+// ---------------------------------------------------------------------------
+// O que a sua tela mostra
+// ---------------------------------------------------------------------------
 
 /** O Relógio Quebrado pode ser usado agora? */
 export function canUndo(state) {
@@ -103,17 +146,17 @@ export function canUndo(state) {
     state.phase === 'playing' &&
     state.turn === 'player' &&
     !state.pending &&
-    hasRelic(state, 'relogio') &&
-    !state.fx.relogioUsed &&
+    hasRelic(state, 'player', 'relogio') &&
+    !isUsed(state, 'player', 'relogio') &&
     Boolean(state.fx.undo)
   );
 }
 
-/** Pedras da mão do Tio Zé que você enxerga (Olho de Vidro, Espelho Retrovisor). */
+/** Pedras da mão do rival que você enxerga (Olho de Vidro, Espelho Retrovisor). */
 export function revealedTioZeTiles(state) {
   const hand = state.hands.tioZe;
   const shown = new Map();
-  for (const relic of equippedRelics(state)) {
+  for (const relic of relicsOf(state, 'player')) {
     if (relic.reveal?.topTiles) {
       hand
         .slice()
@@ -121,45 +164,29 @@ export function revealedTioZeTiles(state) {
         .slice(0, relic.reveal.topTiles)
         .forEach((t) => shown.set(t.id, t));
     }
-    if (relic.reveal?.lastDraw && state.fx.lastTioZeDraw) {
-      const drawn = hand.find((t) => t.id === state.fx.lastTioZeDraw);
+    const lastDraw = state.fx.lastDraw?.tioZe;
+    if (relic.reveal?.lastDraw && lastDraw) {
+      const drawn = hand.find((t) => t.id === lastDraw);
       if (drawn) shown.set(drawn.id, drawn);
     }
   }
   return [...shown.values()];
 }
 
-/** Marcas nas pontas abertas: 'frozen' (Chumbo, vale para o Tio Zé) ou 'wild' (Cristal, vale para você). */
+/**
+ * Marcas nas pontas abertas:
+ *   'frozen'  o rival não pode jogar ali na vez dele (seu Chumbo)
+ *   'blocked' você não pode jogar ali nesta vez (Chumbo do rival)
+ *   'wild'    curinga do seu Cristal
+ */
 export function endMarksFor(state) {
   const marks = {};
   if (!state.board.root) return marks;
-  for (const side of state.fx.frozenSides) marks[side] = 'frozen';
-  for (const side of wildSidesFor(state)) marks[side] = marks[side] ? 'both' : 'wild';
+  for (const side of state.fx.frozen.tioZe) marks[side] = 'frozen';
+  for (const side of state.fx.frozen.player) marks[side] = 'blocked';
+  for (const side of wildSidesFor(state, 'player')) marks[side] = marks[side] === 'blocked' ? 'blocked' : 'wild';
   return marks;
 }
 
-// ---------------------------------------------------------------------------
-// Sorteios da campanha (só em duelos com `seed`; os testes jogam sem)
-// ---------------------------------------------------------------------------
-
-/** Talismã sorteado como prêmio (raridade pesa: comum 6, rara 3, lendária 1). */
-export function pickRelicReward(state, rng) {
-  const pool = RELIC_IDS.filter((id) => !state.relics.includes(id));
-  if (!pool.length || state.relics.length >= RELIC_SLOTS) return null;
-  const weight = (id) => RARITIES[RELICS[id].rarity].weight;
-  const total = pool.reduce((sum, id) => sum + weight(id), 0);
-  let roll = rng() * total;
-  for (const id of pool) {
-    roll -= weight(id);
-    if (roll < 0) return id;
-  }
-  return pool[pool.length - 1];
-}
-
-/** Uma pedra da sua mão ganha um aprimoramento sorteado. */
-export function pickNaturalEnhancement(hand, rng) {
-  if (!hand.length) return null;
-  const index = Math.floor(rng() * hand.length);
-  const enhancement = ENHANCEMENT_IDS[Math.floor(rng() * ENHANCEMENT_IDS.length)];
-  return { index, enhancement };
-}
+/** Talismãs de `seat` já usados nesta rodada (aparecem apagados na hotbar). */
+export const spentRelicsOf = (state, seat) => state.fx.used[seat];

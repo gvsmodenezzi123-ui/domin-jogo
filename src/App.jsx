@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
 import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
-import OpponentHeader from './components/OpponentHeader.jsx';
+import InfoBalloon from './components/InfoBalloon.jsx';
 import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
 import ProcToasts, { TOAST_ROW_PX } from './components/ProcToasts.jsx';
-import RelicBar from './components/RelicBar.jsx';
+import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
+import Shop from './components/Shop.jsx';
 import TableBoard from './components/TableBoard.jsx';
 import TitleScreen from './components/TitleScreen.jsx';
+import { useLongPress } from './components/useLongPress.js';
 import { useProcToasts } from './components/useProcToasts.js';
 import { useTripleTap } from './components/useTripleTap.js';
+import { getEnhancement } from './data/enhancedTiles.js';
+import { getRelic } from './data/relics.js';
+import { getRival } from './data/rivals.js';
 import { audio } from './engine/audioSynth.js';
 import {
   FULL_SET,
@@ -30,10 +35,18 @@ import {
   deriveTioZeSpeech,
 } from './engine/gameFeedback.js';
 import { createInitialState, gameReducer } from './engine/gameReducer.js';
-import { canUndo, endMarksFor, requiredOpeningFor, revealedTioZeTiles, rulesFor } from './engine/powers.js';
+import {
+  canUndo,
+  endMarksFor,
+  requiredOpeningFor,
+  revealedTioZeTiles,
+  rulesFor,
+  spentRelicsOf,
+} from './engine/powers.js';
+import { sellPriceOf } from './engine/shop.js';
 
 const newDeck = () => shuffle(FULL_SET);
-/** Semente dos sorteios da campanha (pedra aprimorada por rodada, talismã de prêmio). */
+/** Semente da run: sorteia a vitrine da loja e o próximo rival. */
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const DEV_KEY = 'buxaria:dev';
@@ -107,11 +120,10 @@ function runEventFx(ev, shell, table) {
       break;
     case 'drawTile':
     case 'drawPeek':
+    case 'shopReroll':
       at(() => audio.drawTile());
       break;
     case 'pass':
-      at(() => audio.passKnock());
-      break;
     case 'discard':
       at(() => audio.passKnock());
       break;
@@ -121,14 +133,17 @@ function runEventFx(ev, shell, table) {
     case 'coins':
       if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev') at(() => audio.coin());
       break;
+    case 'shopBuy':
+      at(() => audio.purchase());
+      break;
+    case 'shopOpen':
+      at(() => audio.relicChime('info'));
+      break;
     case 'proc':
       at(() => audio.relicChime(ev.tone));
       break;
     case 'undo':
       at(() => audio.rewind());
-      break;
-    case 'relicGained':
-      setTimeout(() => audio.relicChime('player'), 1500);
       break;
     case 'dev':
       at(() => audio.click());
@@ -157,19 +172,49 @@ function runEventFx(ev, shell, table) {
   }
 }
 
-/** Último disparo de cada talismã no duelo atual: o slot pisca quando muda. */
+/** Último disparo de cada talismã na partida atual, por dono: o slot pisca quando muda. */
 function deriveRelicFlashes(events) {
-  const flashes = {};
+  const flashes = { player: {}, tioZe: {} };
   for (const ev of events) {
-    if (ev.type === 'duelStart') for (const key of Object.keys(flashes)) delete flashes[key];
-    if (ev.type === 'proc' && ev.source === 'relic') flashes[ev.id] = ev.seq;
+    if (ev.type === 'duelStart') {
+      flashes.player = {};
+      flashes.tioZe = {};
+    }
+    if (ev.type === 'proc' && ev.source === 'relic') flashes[ev.owner === 'tioZe' ? 'tioZe' : 'player'][ev.id] = ev.seq;
   }
   return flashes;
 }
 
+const tileName = (tileId) => {
+  const [a, b] = tileId.split('#')[0].split('-');
+  return `[${a}|${b}]`;
+};
+
+/** Conteúdo do balão do toque longo. */
+function inspectInfo(payload, state, rival) {
+  if (payload.kind === 'tile' || payload.kind === 'offerTile') {
+    const tileId = payload.kind === 'tile' ? payload.tile.id : payload.tileId;
+    const enhancement = getEnhancement(payload.kind === 'tile' ? payload.tile.enhancement : payload.enhancement);
+    if (!enhancement) return null;
+    return {
+      title: `${tileName(tileId)} DE ${enhancement.name.toUpperCase()}`,
+      rarity: enhancement.rarity,
+      description: enhancement.description,
+      extra: payload.kind === 'offerTile' ? `SUBSTITUI O SEU ${tileName(tileId)} COMUM` : null,
+    };
+  }
+  const relic = getRelic(payload.id);
+  if (!relic) return null;
+  let extra = null;
+  if (payload.owner === 'tioZe') extra = `DE ${rival.name.toUpperCase()}: O EFEITO É DELE, CONTRA VOCÊ`;
+  else if (payload.owner === 'shop') extra = `PREÇO: $${relic.price}`;
+  else if (state.phase === 'shop') extra = `VENDE POR $${sellPriceOf(relic.id)}`;
+  return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
+}
+
 /**
- * Loop principal: segura o estado do duelo, agenda o Tio Zé, converte eventos
- * em som/feedback e liga os componentes.
+ * Loop principal: segura o estado da run, agenda o rival, converte eventos
+ * em som/feedback e liga os componentes (mesa, loja, painel DEV).
  */
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
@@ -178,17 +223,19 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devUnlocked, setDevUnlocked] = useState(readDevFlag);
   const [devOpen, setDevOpen] = useState(false);
+  const [inspect, setInspect] = useState(null);
   const { toasts, push: pushToast, clear: clearToasts } = useProcToasts();
   const shellRef = useRef(null);
   const tableRef = useRef(null);
   const processedSeq = useRef(0);
+  const rival = getRival(state.rivalId);
 
-  // Tio Zé: cada mudança de estado na vez dele agenda a próxima ação (700ms).
+  // Rival: cada mudança de estado na vez dele agenda a próxima ação (cada um tem seu tempo).
   // Ele espera com o menu ou o painel DEV abertos e enquanto você decide
   // (escolha do Barbante, descarte do Giz).
   useEffect(() => {
     if (menuOpen || devOpen || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
-    return scheduleTioZeTurn(dispatch);
+    return scheduleTioZeTurn(dispatch, getRival(state.rivalId).reflexMs);
   }, [state, menuOpen, devOpen]);
 
   // Efeitos colaterais dos eventos novos.
@@ -214,6 +261,13 @@ export default function App() {
       window.removeEventListener('pointerdown', resume);
     };
   }, []);
+
+  // Toque longo: balão com o efeito da pedra/talismã; soltar fecha.
+  const startInspect = useCallback((payload, rect) => setInspect({ payload, rect }), []);
+  const endInspect = useCallback(() => setInspect(null), []);
+  const press = useLongPress(startInspect, endInspect);
+  const balloonInfo = inspect ? inspectInfo(inspect.payload, state, rival) : null;
+  const balloon = balloonInfo ? { ...balloonInfo, rect: inspect.rect } : null;
 
   const playing = state.phase === 'playing';
   const pending = playing ? state.pending : null;
@@ -245,14 +299,13 @@ export default function App() {
   const undoReady = canUndo(state);
 
   const banner = useMemo(() => deriveBanner(state.events), [state.events]);
-  const speech = useMemo(() => deriveTioZeSpeech(state.events), [state.events]);
+  const speech = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
   const relicFlashes = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
   const mood = deriveTioZeMood(state);
   const tioZeHurtKey = deriveHurtKey(state.events, 'tioZe');
   const playerHurtKey = deriveHurtKey(state.events, 'player');
   const revealed = revealedTioZeTiles(state);
   const endMarks = endMarksFor(state);
-  const spentRelics = [state.fx.borrachaUsed && 'borracha', state.fx.relogioUsed && 'relogio'].filter(Boolean);
 
   const hint = buildPlayerHint({
     state,
@@ -328,7 +381,7 @@ export default function App() {
     dispatch({ type: 'UNDO' });
   };
 
-  const startDuel = () => {
+  const startRun = () => {
     audio.unlock();
     audio.startAmbience();
     audio.startMusic();
@@ -342,6 +395,23 @@ export default function App() {
     audio.click();
     setSelectedId(null);
     dispatch({ type: 'NEXT_ROUND', deck: newDeck() });
+  };
+
+  const openShop = useCallback(() => {
+    setSelectedId(null);
+    dispatch({ type: 'OPEN_SHOP' });
+  }, []);
+
+  const shopAction = (action) => {
+    audio.click();
+    dispatch(action);
+  };
+
+  const nextMatch = () => {
+    audio.click();
+    setSelectedId(null);
+    clearToasts();
+    dispatch({ type: 'NEXT_MATCH', deck: newDeck() });
   };
 
   const backToMenu = () => {
@@ -384,31 +454,61 @@ export default function App() {
 
   const devAction = (action) => {
     setSelectedId(null);
-    dispatch(action);
-    // a tranca forçada abre o resultado da rodada: fecha o painel para ver
-    if (action.op === 'forceTranca') setDevOpen(false);
+    // trocar de rival recomeça a partida: precisa de um baralho novo
+    dispatch(action.op === 'setRival' ? { ...action, deck: newDeck() } : action);
+    if (action.op === 'setRival') clearToasts();
+    // tranca forçada e vitória abrem o resultado: fecha o painel para ver
+    if (action.op === 'forceTranca' || action.op === 'winMatch') setDevOpen(false);
   };
 
   if (state.phase === 'title') {
     return (
       <div className="app-shell h-full">
-        <TitleScreen onStart={startDuel} onSecretTap={titleSecretTap} devUnlocked={devUnlocked} />
+        <TitleScreen onStart={startRun} onSecretTap={titleSecretTap} devUnlocked={devUnlocked} />
+      </div>
+    );
+  }
+
+  const devPanel = devOpen && <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} />;
+
+  if (state.phase === 'shop') {
+    return (
+      <div ref={shellRef} className="app-shell h-full">
+        <Shop
+          state={state}
+          press={press}
+          onBuyRelic={(index) => shopAction({ type: 'SHOP_BUY_RELIC', index })}
+          onBuyTile={(index) => shopAction({ type: 'SHOP_BUY_TILE', index })}
+          onSell={(id) => shopAction({ type: 'SHOP_SELL_RELIC', id })}
+          onReroll={() => shopAction({ type: 'SHOP_REROLL' })}
+          onNext={nextMatch}
+        />
+        {devUnlocked && (
+          <button type="button" className="dev-chip fixed right-3 z-[60]" style={{ top: 'max(env(safe-area-inset-top), 10px)' }} onClick={() => setDevOpen(true)}>
+            DEV
+          </button>
+        )}
+        <InfoBalloon info={balloon} />
+        {devPanel}
       </div>
     );
   }
 
   const ends = getOpenEnds(state.board);
-  const roundFinished = state.phase === 'roundOver' || state.phase === 'gameOver';
+  const roundFinished = state.phase === 'roundOver' || state.phase === 'matchWon' || state.phase === 'gameOver';
 
   return (
     <div ref={shellRef} className="app-shell flex h-full flex-col overflow-hidden">
-      <OpponentHeader
+      <RivalBench
+        rival={rival}
         hearts={state.hearts.tioZe}
-        maxHearts={MAX_HEARTS}
+        maxHearts={state.maxHearts.tioZe}
         coins={state.coins.tioZe}
-        handCount={state.hands.tioZe.length}
+        hand={state.hands.tioZe}
         revealed={revealed}
         boneyardCount={state.boneyard.length}
+        relics={state.relics.tioZe}
+        flashes={relicFlashes.tioZe}
         isTurn={playing && state.turn === 'tioZe'}
         mood={mood}
         hurtKey={tioZeHurtKey}
@@ -417,21 +517,12 @@ export default function App() {
         muted={muted}
         onToggleMute={toggleMute}
         onOpenMenu={openMenu}
-      />
-
-      <RelicBar
-        relics={state.relics}
-        flashes={relicFlashes}
-        spent={spentRelics}
-        canUndo={undoReady}
-        onUndo={handleUndo}
-        devUnlocked={devUnlocked}
-        onOpenDev={() => setDevOpen(true)}
+        press={press}
       />
 
       <TableBoard
         board={state.board}
-        roundKey={state.round}
+        roundKey={`${state.run.match}:${state.round}`}
         playableSides={selectedSides}
         onPlaySide={handlePlaySide}
         banner={banner}
@@ -465,6 +556,14 @@ export default function App() {
         onDiscard={handleDiscard}
         onSkipDiscard={handleSkipDiscard}
         onSecretTap={gameSecretTap}
+        relics={state.relics.player}
+        relicFlashes={relicFlashes.player}
+        spentRelics={spentRelicsOf(state, 'player')}
+        canUndo={undoReady}
+        onUndo={handleUndo}
+        devUnlocked={devUnlocked}
+        onOpenDev={() => setDevOpen(true)}
+        press={press}
       />
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
@@ -472,12 +571,21 @@ export default function App() {
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
       {roundFinished && (
-        <RoundOverlay state={state} onNext={nextRound} onRestart={startDuel} onMenu={backToMenu} />
+        <RoundOverlay
+          state={state}
+          rival={rival}
+          onNext={nextRound}
+          onShop={openShop}
+          autoShop={!menuOpen && !devOpen}
+          onRestart={startRun}
+          onMenu={backToMenu}
+        />
       )}
 
       {menuOpen && <PauseMenu muted={muted} onToggleMute={toggleMute} onResume={closeMenu} onQuit={backToMenu} />}
 
-      {devOpen && <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} />}
+      <InfoBalloon info={balloon} />
+      {devPanel}
     </div>
   );
 }

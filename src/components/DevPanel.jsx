@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
-import { RARITIES, RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
+import { getRarity } from '../data/rarities.js';
+import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
+import { RIVALS, RIVAL_IDS } from '../data/rivals.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 
@@ -23,7 +25,7 @@ function PipPicker({ label, value, onChange }) {
 
 /**
  * Painel de testes (secreto). Abre com 3 toques em "VOCÊ" (ou no título da tela
- * inicial, que libera o botão DEV na faixa dos talismãs). O Tio Zé espera
+ * inicial, que libera o botão DEV ao lado da sua hotbar). O rival espera
  * enquanto o painel está aberto.
  */
 export default function DevPanel({ state, onAction, onClose }) {
@@ -32,7 +34,9 @@ export default function DevPanel({ state, onAction, onClose }) {
   const [enhancement, setEnhancement] = useState('nenhuma');
   const playing = state.phase === 'playing';
   const dev = (op, extra = {}) => onAction({ type: 'DEV', op, ...extra });
-  const full = state.relics.length >= RELIC_SLOTS;
+  const mine = state.relics.player;
+  const full = mine.length >= RELIC_SLOTS;
+  const inMatch = state.phase !== 'shop';
 
   return (
     <div className="overlay-backdrop fixed inset-0 z-[80] flex items-end justify-center" role="dialog" aria-modal="true" aria-labelledby="dev-title">
@@ -46,7 +50,7 @@ export default function DevPanel({ state, onAction, onClose }) {
               PAINEL DEV
             </h2>
             <p className="mt-1 font-term text-base leading-none text-bone-400">
-              rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'Tio Zé'} · {state.phase}
+              partida {state.run.match} · rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'rival'} · {state.phase}
             </p>
           </div>
           <button type="button" className="btn-pixel btn-mini" onClick={onClose}>
@@ -99,18 +103,18 @@ export default function DevPanel({ state, onAction, onClose }) {
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-relics">
           <h3 id="dev-relics" className="dev-label">
-            TALISMÃS {state.relics.length}/{RELIC_SLOTS}
+            TALISMÃS {mine.length}/{RELIC_SLOTS}
           </h3>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {RELIC_IDS.map((id) => {
               const relic = RELICS[id];
-              const on = state.relics.includes(id);
+              const on = mine.includes(id);
               return (
                 <button
                   key={id}
                   type="button"
                   className="dev-relic"
-                  style={{ '--rarity': RARITIES[relic.rarity].color }}
+                  style={{ '--rarity': getRarity(relic.rarity).color }}
                   aria-pressed={on}
                   disabled={!on && full}
                   title={relic.description}
@@ -122,6 +126,30 @@ export default function DevPanel({ state, onAction, onClose }) {
               );
             })}
           </div>
+        </section>
+
+        <section className="dev-section mt-3 pt-3" aria-labelledby="dev-rival">
+          <h3 id="dev-rival" className="dev-label">
+            RIVAL DA PARTIDA
+          </h3>
+          <label className="mt-1 block">
+            <span className="sr-only">Trocar rival</span>
+            <select
+              className="dev-select"
+              value={state.rivalId}
+              disabled={!inMatch}
+              onChange={(e) => onAction({ type: 'DEV', op: 'setRival', rivalId: e.target.value })}
+            >
+              {RIVAL_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {RIVALS[id].name} — {RIVALS[id].title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" data-tone="brass" className="btn-pixel mt-2 w-full" disabled={!playing} onClick={() => dev('winMatch')}>
+            VENCER PARTIDA (IR PRA LOJA)
+          </button>
         </section>
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-res">
@@ -136,10 +164,10 @@ export default function DevPanel({ state, onAction, onClose }) {
               RESETAR VIDAS
             </button>
             <button type="button" data-tone="blood" className="btn-pixel" disabled={!playing} onClick={() => dev('damageTioZe')}>
-              −1 VIDA TIO ZÉ
+              −1 VIDA RIVAL
             </button>
             <button type="button" className="btn-pixel" disabled={!playing} onClick={() => dev('emptyTioZeHand')}>
-              ESVAZIAR MÃO DO TIO ZÉ
+              ESVAZIAR MÃO DO RIVAL
             </button>
             <button type="button" className="btn-pixel" disabled={!playing} onClick={() => dev('clearBoard')}>
               LIMPAR MESA

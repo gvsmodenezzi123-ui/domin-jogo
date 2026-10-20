@@ -375,6 +375,16 @@ export class AudioSynth {
     this.noiseBurst({ t, peak: 0.03, decay: 0.18, filter: { type: 'highpass', freq: 6500 }, room: 0.3 });
   }
 
+  /** Compra na loja: gaveta do caixa abrindo + moedas. */
+  purchase() {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    this.noiseBurst({ t, peak: 0.22, decay: 0.05, filter: { type: 'bandpass', freq: 1800, q: 1.2 }, room: 0.3 });
+    this.tone({ t, type: 'triangle', freq: 180, freqEnd: 120, peak: 0.25, attack: 0.002, decay: 0.08 });
+    this.tone({ t: t + 0.07, freq: 2093, peak: 0.12, attack: 0.002, decay: 0.3, room: 0.4 });
+    this.tone({ t: t + 0.13, freq: 2637, peak: 0.11, attack: 0.002, decay: 0.42, room: 0.45 });
+  }
+
   /** Relógio Quebrado: a jogada volta no tempo (varredura de trás pra frente). */
   rewind() {
     if (!this.canPlay()) return;

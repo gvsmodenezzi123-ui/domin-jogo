@@ -3,7 +3,7 @@
  * banner de múltiplo de 5, falas e humor do Tio Zé, e a dica do jogador.
  */
 
-import { pickTioZeLine } from '../ai/tioZeAI.js';
+import { pickRivalLine } from '../data/rivals.js';
 import { BASE_RULES, getOpenEnds, getPlacement, getValidSides } from './dominoLogic.js';
 import { requiredOpeningFor } from './powers.js';
 
@@ -53,7 +53,9 @@ function lineKindFor(ev) {
     case 'duelEnd':
       return ev.winner === 'tioZe' ? 'duelWin' : 'duelLose';
     case 'heartLost':
-      return ev.who === 'tioZe' && DIRECT_HURT.has(ev.reason) ? 'hurtRelic' : null;
+      if (!DIRECT_HURT.has(ev.reason)) return null;
+      // dano direto: ele reclama quando sofre, provoca quando é você
+      return ev.who === 'tioZe' ? 'hurtRelic' : 'winRound';
     case 'undo':
       return 'undo';
     default:
@@ -61,15 +63,15 @@ function lineKindFor(ev) {
   }
 }
 
-/** Fala mais recente do Tio Zé dentro do duelo atual. */
-export function deriveTioZeSpeech(events) {
+/** Fala mais recente do rival dentro da partida atual (cada rival tem as suas). */
+export function deriveTioZeSpeech(events, rivalId = 'tioZe') {
   const duelStart = lastSeqOf(events, 'duelStart');
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const ev = events[i];
     if (ev.seq <= duelStart) break;
     const kind = lineKindFor(ev);
     if (kind) {
-      const text = pickTioZeLine(kind, ev.seq);
+      const text = pickRivalLine(rivalId, kind, ev.seq);
       if (text) return { key: ev.seq, text };
     }
   }

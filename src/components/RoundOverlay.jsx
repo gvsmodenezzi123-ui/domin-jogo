@@ -1,9 +1,9 @@
-import { RARITIES, getRelic } from '../data/relics.js';
+import { useEffect } from 'react';
 import { DAMAGE, MAX_HEARTS, handSum } from '../engine/dominoLogic.js';
+import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
-import { CoinCount, TioZeAvatar } from './OpponentHeader.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
-import PixelSprite from './PixelSprite.jsx';
+import RivalAvatar from './RivalAvatar.jsx';
 
 const KIND_TITLE = {
   normal: 'BATIDA!',
@@ -27,6 +27,9 @@ const TRANCA_REASON = {
   forcada: 'Forçada pelo painel DEV.',
 };
 
+/** Depois de vencer a partida a loja abre sozinha (ou no botão). */
+const AUTO_SHOP_MS = 4200;
+
 function MiniHand({ tiles, label, points }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -42,79 +45,101 @@ function MiniHand({ tiles, label, points }) {
   );
 }
 
-/** Talismã que caiu do bolso do Tio Zé depois da rodada. */
-function RewardCard({ id }) {
-  const relic = getRelic(id);
-  if (!relic) return null;
-  const rarity = RARITIES[relic.rarity];
-  return (
-    <div className="reward-card mt-3 flex gap-3 px-3 py-2.5 text-left" style={{ '--rarity': rarity.color }}>
-      <span className="shrink-0 pt-0.5">
-        <PixelSprite rows={relic.icon} palette={relic.palette} pixel={3} />
-      </span>
-      <div className="min-w-0">
-        <p className="font-pixel text-[7px] text-bone-300">TALISMÃ ACHADO</p>
-        <p className="mt-1 font-pixel text-[9px] leading-snug text-bone-50">{relic.name.toUpperCase()}</p>
-        <p className="mt-1 font-pixel text-[7px]" style={{ color: rarity.color }}>
-          {rarity.label}
-        </p>
-        <p className="mt-1 font-term text-base leading-tight text-bone-200">{relic.description}</p>
-      </div>
-    </div>
-  );
+function subtitleFor(result, rival) {
+  const playerWon = result.winner === 'player';
+  if (result.kind === 'nocaute') return KNOCKOUT_CAUSE[result.reason] ?? (playerWon ? `${rival.name} caiu antes da batida.` : 'Você caiu.');
+  if (!result.winner) return 'Empate na contagem. Ninguém sangra.';
+  if (result.kind === 'tranca') return playerWon ? 'Menor soma é sua.' : `Menor soma é de ${rival.name}.`;
+  return playerWon ? 'Você bateu.' : `${rival.name} bateu.`;
 }
 
-/** Resultado da rodada (ou do duelo, quando alguém zerou os corações). */
-export default function RoundOverlay({ state, onNext, onRestart, onMenu }) {
+/**
+ * Resultado da rodada, da partida (vitória → loja) ou da run (você zerou).
+ */
+export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = true, onRestart, onMenu }) {
   const { roundResult: result, phase, hands, hearts, coins, stats } = state;
+  const matchWon = phase === 'matchWon';
+
+  useEffect(() => {
+    if (!matchWon || !autoShop) return undefined;
+    const timer = setTimeout(onShop, AUTO_SHOP_MS);
+    return () => clearTimeout(timer);
+  }, [matchWon, autoShop, onShop]);
+
   if (!result) return null;
-  const gameOver = phase === 'gameOver';
+  const runOver = phase === 'gameOver';
   const playerWon = result.winner === 'player';
   const tie = !result.winner;
-
-  let subtitle;
-  if (result.kind === 'nocaute') subtitle = KNOCKOUT_CAUSE[result.reason] ?? (playerWon ? 'O Tio Zé caiu antes da batida.' : 'Você caiu.');
-  else if (tie) subtitle = 'Empate na contagem. Ninguém sangra.';
-  else if (result.kind === 'tranca') subtitle = playerWon ? 'Menor soma é sua.' : 'Menor soma é do Tio Zé.';
-  else subtitle = playerWon ? 'Você bateu.' : 'O Tio Zé bateu.';
-
+  const subtitle = subtitleFor(result, rival);
   const damage = result.damage || 0;
   const boosted = result.baseDamage && damage > result.baseDamage;
+  const name = rival.name.toUpperCase();
 
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="round-title">
       <div className="overlay-card max-h-[94%] w-full max-w-[360px] overflow-y-auto px-4 py-5 text-center">
-        {gameOver ? (
+        {matchWon && (
           <>
             <div className="mx-auto mb-3 w-fit">
-              <TioZeAvatar mood={state.duelWinner === 'player' ? 'hurt' : 'smug'} pixel={5} />
+              <RivalAvatar rival={rival} mood="hurt" pixel={5} />
             </div>
-            <h2 id="round-title" className={`font-pixel text-[18px] leading-snug text-shadow-pixel ${state.duelWinner === 'player' ? 'text-brass-300' : 'text-blood-400'}`}>
-              {state.duelWinner === 'player' ? 'VOCÊ QUEBROU O TIO ZÉ' : 'O TIO ZÉ TE QUEBROU'}
+            <p className="font-pixel text-[8px] text-bone-400">PARTIDA {state.run.match} VENCIDA</p>
+            <h2 id="round-title" className="mt-2 font-pixel text-[16px] leading-snug text-brass-300 text-shadow-pixel">
+              VOCÊ QUEBROU {name}
             </h2>
             <p className="mt-2 font-term text-xl text-bone-200">
               {KIND_TITLE[result.kind]} {subtitle}
             </p>
-            <dl className="mx-auto mt-4 grid max-w-[240px] grid-cols-2 gap-y-1 text-left font-term text-lg">
-              <dt className="text-bone-300">Rodadas</dt>
-              <dd className="text-right text-bone-50">{state.round}</dd>
-              <dt className="text-bone-300">Vencidas</dt>
+            <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[10px] text-[#9fe08a]">
+              <span>PRÊMIO</span>
+              <CoinCount value={`${result.prize ?? 0}`} className="text-[12px]" />
+            </div>
+            <p className="mt-1 font-term text-base text-bone-300">Saldo: ${coins.player}</p>
+            <button type="button" data-tone="brass" className="btn-pixel mt-5 w-full" onClick={onShop}>
+              ENTRAR NA LOJA CLANDESTINA
+            </button>
+            <div className="loading-bar mt-2" style={{ animationDuration: `${AUTO_SHOP_MS}ms` }} aria-hidden="true" />
+          </>
+        )}
+
+        {runOver && (
+          <>
+            <div className="mx-auto mb-3 w-fit">
+              <RivalAvatar rival={rival} mood="smug" pixel={5} />
+            </div>
+            <p className="font-pixel text-[8px] text-bone-400">FIM DA RUN</p>
+            <h2 id="round-title" className="mt-2 font-pixel text-[16px] leading-snug text-blood-400 text-shadow-pixel">
+              {name} TE QUEBROU
+            </h2>
+            <p className="mt-2 font-term text-xl text-bone-200">
+              {KIND_TITLE[result.kind]} {subtitle}
+            </p>
+            <dl className="mx-auto mt-4 grid max-w-[250px] grid-cols-2 gap-y-1 text-left font-term text-lg">
+              <dt className="text-bone-300">Partidas vencidas</dt>
+              <dd className="text-right text-bone-50">{stats.matchesWon}</dd>
+              <dt className="text-bone-300">Rodadas vencidas</dt>
               <dd className="text-right text-bone-50">{stats.roundsWon.player}</dd>
               <dt className="text-bone-300">Moedas ganhas</dt>
               <dd className="text-right text-bone-50">${stats.coinsEarned}</dd>
+              <dt className="text-bone-300">Pedras de grife</dt>
+              <dd className="text-right text-bone-50">{Object.keys(state.decks.player).length}</dd>
             </dl>
             <div className="mt-5 grid gap-2">
               <button type="button" data-tone="brass" className="btn-pixel" onClick={onRestart}>
-                NOVO DUELO
+                NOVA RUN
               </button>
               <button type="button" className="btn-pixel" onClick={onMenu}>
                 MENU
               </button>
             </div>
           </>
-        ) : (
+        )}
+
+        {!matchWon && !runOver && (
           <>
-            <p className="font-pixel text-[9px] text-bone-400">RODADA {state.round}</p>
+            <p className="font-pixel text-[9px] text-bone-400">
+              PARTIDA {state.run.match} · RODADA {state.round}
+            </p>
             <h2 id="round-title" className={`mt-2 font-pixel text-[20px] leading-snug text-shadow-pixel ${tie ? 'text-bone-100' : playerWon ? 'text-brass-300' : 'text-blood-400'}`}>
               {KIND_TITLE[result.kind]}
             </h2>
@@ -127,7 +152,7 @@ export default function RoundOverlay({ state, onNext, onRestart, onMenu }) {
               <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[11px] text-blood-400">
                 <span>−{damage}</span>
                 <PixelHeart broken pixel={2} />
-                <span className="text-bone-200">{playerWon ? 'NO TIO ZÉ' : 'EM VOCÊ'}</span>
+                <span className="text-bone-200">{playerWon ? `EM ${name}` : 'EM VOCÊ'}</span>
               </div>
             )}
             {boosted && (
@@ -136,17 +161,19 @@ export default function RoundOverlay({ state, onNext, onRestart, onMenu }) {
               </p>
             )}
 
-            {result.reward && <RewardCard id={result.reward} />}
-
             <div className="mt-4 flex items-start justify-center gap-5">
               <MiniHand tiles={hands.player} label="SUA MÃO" points={result.sums?.player} />
-              <MiniHand tiles={hands.tioZe} label="MÃO DO TIO ZÉ" points={result.sums?.tioZe} />
+              <MiniHand tiles={hands.tioZe} label={`MÃO DE ${name}`} points={result.sums?.tioZe} />
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-4">
               <HeartsBar current={hearts.player} max={MAX_HEARTS} pixel={2} label="Seus corações" />
-              <CoinCount value={coins.player} />
+              <span className="font-pixel text-[8px] text-bone-400">×</span>
+              <HeartsBar current={hearts.tioZe} max={state.maxHearts.tioZe} pixel={2} label={`Corações de ${rival.name}`} />
             </div>
+            <p className="mt-2">
+              <CoinCount value={coins.player} />
+            </p>
 
             <p className="mt-3 font-term text-sm text-bone-400">
               Dano: batida {DAMAGE.normal} · bucha {DAMAGE.bucha} · cruzada {DAMAGE.cruzada} · tranca {DAMAGE.tranca}

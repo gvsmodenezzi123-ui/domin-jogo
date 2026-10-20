@@ -3,7 +3,6 @@ import { buildTioZeView, decideTioZeAction } from '../../ai/tioZeAI.js';
 import { computeBoardLayout, rectGap, rectsOverlap } from '../boardLayout.js';
 import {
   FULL_SET,
-  MAX_HEARTS,
   boardTilesInOrder,
   createSeededRng,
   getDrawAvailability,
@@ -97,7 +96,8 @@ function runDuel(seed) {
   let state = gameReducer(createInitialState(), { type: 'START_DUEL', deck: shuffle(FULL_SET, rng) });
   let steps = 0;
   const kinds = new Set();
-  while (state.phase !== 'gameOver') {
+  // um duelo = uma partida da run: termina quando alguém zera os corações
+  while (state.phase !== 'gameOver' && state.phase !== 'matchWon') {
     steps += 1;
     if (steps > 5000) throw new Error(`duelo ${seed} não terminou`);
     if (state.phase === 'roundOver') {
@@ -115,7 +115,7 @@ function runDuel(seed) {
     state = next;
     assertTileConservation(state);
     for (const seat of ['player', 'tioZe']) {
-      check(state.hearts[seat] >= 0 && state.hearts[seat] <= MAX_HEARTS, 'corações fora do limite');
+      check(state.hearts[seat] >= 0 && state.hearts[seat] <= state.maxHearts[seat], 'corações fora do limite');
       check(state.coins[seat] >= 0, 'moedas negativas');
     }
   }

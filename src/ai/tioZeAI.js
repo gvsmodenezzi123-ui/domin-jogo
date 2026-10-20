@@ -37,13 +37,12 @@ import {
   pipSum,
   placeTile,
 } from '../engine/dominoLogic.js';
+import { DEFAULT_STYLE, getRival } from '../data/rivals.js';
 import { requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
 /** Delay reflexivo entre cada ação do Tio Zé. */
 export const TIO_ZE_REFLEX_MS = 700;
 
-/** Gasta coração para comprar só se tiver pelo menos isso. */
-const HEART_DRAW_MIN_HEARTS = 3;
 
 /** Visão do jogo a partir de uma cadeira (sem informação oculta do adversário). */
 export function buildTioZeView(state, seat = 'tioZe') {
@@ -60,8 +59,10 @@ export function buildTioZeView(state, seat = 'tioZe') {
     openingTileId: requiredOpeningFor(state, seat),
     consecutivePasses: state.consecutivePasses,
     suspectedMissing: seat === 'tioZe' ? state.memory.playerMissing : [],
-    // regras de encaixe da cadeira (para o Tio Zé: pontas congeladas pelo Chumbo)
+    // regras de encaixe da cadeira (pontas travadas pelo Chumbo, talismãs de encaixe)
     rules: rulesFor(state, seat),
+    // jeito de jogar: cada rival tem o seu (o jogador simulado usa o padrão)
+    style: seat === 'tioZe' ? getRival(state.rivalId).style : DEFAULT_STYLE,
   };
 }
 
@@ -77,13 +78,15 @@ function estimatedOpponentSum(view) {
   return view.opponentHandCount * averageUnseenPips(view);
 }
 
-/** A tranca (menor soma vence) favorece ele com essa mão? */
+/** A tranca (menor soma vence) favorece ele com essa mão? (`trancaBias` dá folga a quem gosta de trancar) */
 function trancaFavors(view, hand) {
-  return handSum(hand) < estimatedOpponentSum(view);
+  const bias = 1 + (view.style?.trancaBias ?? 0);
+  return handSum(hand) < estimatedOpponentSum(view) * bias;
 }
 
 export function scoreMove(view, move) {
   const { tile, side } = move;
+  const style = view.style ?? DEFAULT_STYLE;
   const endsBefore = getOpenEnds(view.board);
   const after = placeTile(view.board, tile, side, view.rules);
   const remaining = view.hand.filter((t) => t.id !== tile.id);
@@ -97,23 +100,29 @@ export function scoreMove(view, move) {
   let score = 0;
 
   // descarrega peso
-  score += pipSum(tile);
+  score += pipSum(tile) * style.heavy;
 
-  // buchas pesadas primeiro
-  if (isDouble(tile)) score += 6 + tile.a * 1.5;
+  // buchas pesadas primeiro (o Seu Arlindo adora soltar logo no começo)
+  if (isDouble(tile)) {
+    score += (6 + tile.a * 1.5) * style.doubles;
+    if (style.earlyDoubles && boardTilesInOrder(view.board).length < 6) score += style.earlyDoubles;
+  }
 
   // múltiplo de 5 rende moedas
-  if (isMultipleOfFive(after)) score += 4;
+  if (isMultipleOfFive(after)) score += style.five;
 
   // controle: quantas pedras dele seguem as novas pontas
   const followers = remaining.filter((t) => canPlayOn(t, ends.left) || canPlayOn(t, ends.right)).length;
-  score += followers * 2;
+  score += followers * style.follow;
   if (followers === 0) score -= 5;
 
-  // pressão: pontas que o jogador parece não ter
+  // pressão: pontas que o jogador parece não ter (o Marcão força você a cavar)
   const missing = new Set(view.suspectedMissing);
-  if (missing.has(ends.left)) score += 3 * danger;
-  if (missing.has(ends.right) && ends.right !== ends.left) score += 3 * danger;
+  if (missing.has(ends.left)) score += style.pressure * danger;
+  if (missing.has(ends.right) && ends.right !== ends.left) score += style.pressure * danger;
+
+  // pontas iguais fecham o jogo (a Dona Neide gosta)
+  if (style.lockEnds && ends.left === ends.right) score += style.lockEnds;
 
   // tranca fechada: só se a menor soma estiver do lado dele
   if (isTrancaFechada(after)) score += trancaFavors(view, remaining) ? 40 : -60;
@@ -140,7 +149,7 @@ function willPay(cost, view) {
   if (!cost) return false;
   if (cost.type === 'free') return true;
   if (cost.type === 'coins') return view.coins >= cost.amount;
-  if (cost.type === 'heart') return view.hearts >= HEART_DRAW_MIN_HEARTS;
+  if (cost.type === 'heart') return view.hearts >= (view.style ?? DEFAULT_STYLE).heartDrawMin;
   return false;
 }
 
@@ -169,39 +178,11 @@ export function decideTioZeAction(view) {
   return { type: 'PASS', actor };
 }
 
-/** Agenda a próxima ação do Tio Zé. Retorna a função que cancela. */
+/** Agenda a próxima ação do rival (cada um tem seu tempo, ver `reflexMs`). Retorna a função que cancela. */
 export function scheduleTioZeTurn(dispatch, delay = TIO_ZE_REFLEX_MS) {
   const timer = setTimeout(() => dispatch({ type: 'TIO_ZE_ACT' }), delay);
   return () => clearTimeout(timer);
 }
 
-// ---------------------------------------------------------------------------
-// Falas
-// ---------------------------------------------------------------------------
-
-export const TIO_ZE_LINES = Object.freeze({
-  intro: ['Senta, menino. A mesa tá posta.', 'Mais um pra minha coleção...'],
-  play: ['Toma.', 'Encaixa essa.', 'Hehe...', 'Essa é minha.', 'Segue o jogo.'],
-  playDouble: ['BUCHA NA MESA!', 'Lá vai carroça!', 'Desovei a bucha.'],
-  draw: ['Vou no dorme...', 'Deixa eu cavar.', 'Compro, compro.'],
-  pass: ['Passo.', 'Toc, toc. Passo.', 'Nada pra mim.'],
-  passTranca: ['Passo... e tranco. Hehe.', 'Vamos contar os pontos?'],
-  bonus5: ['Cinco na mesa, três no bolso.', 'Múltiplo de cinco! Hehe.'],
-  playerPass: ['Passou, é? Hehehe.', 'Tá sem pedra, menino?'],
-  playerDraw: ['Cava, cava...', 'O dorme não tem piedade.'],
-  playerBonus: ['Sorte sua...', 'Guarda essas moedas. Vai precisar.'],
-  winRound: ['Bati! Sente o peso.', 'Mais um coração pro meu pote.'],
-  loseRound: ['Sorte de principiante...', 'Argh! Isso vai te custar.'],
-  tranca: ['Mesa travada. Vamos contar.', 'Trancou!'],
-  duelWin: ['Mais uma alma na minha mesa.'],
-  duelLose: ['...Volte amanhã. Se tiver coragem.'],
-  hurtRelic: ['Ai! Que bruxaria é essa?', 'Isso é trapaça, menino!', 'Essa pedra tá amaldiçoada...'],
-  undo: ['Ei! Eu tinha jogado isso!', 'Que relógio é esse?!', 'Volta o tempo, é? Hmpf.'],
-});
-
-/** Fala determinística (sem Math.random) a partir de uma semente. */
-export function pickTioZeLine(kind, seed = 0) {
-  const lines = TIO_ZE_LINES[kind];
-  if (!lines || !lines.length) return null;
-  return lines[Math.abs(seed) % lines.length];
-}
+// Falas do Tio Zé (e de reserva para os outros rivais) vivem em data/rivals.js.
+export { TIO_ZE_LINES, pickTioZeLine } from '../data/rivals.js';

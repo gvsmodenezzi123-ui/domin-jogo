@@ -230,10 +230,11 @@ export function orientTile(tile, endValue) {
 
 /**
  * Coloca a pedra e devolve uma nova mesa. Lança erro se não encaixa.
- * A pedra leva junto o aprimoramento (`enhancement`), se tiver.
+ * A pedra leva junto o aprimoramento (`enhancement`), se tiver, e `meta`
+ * (o reducer passa { by }: quem jogou).
  */
-export function placeTile(board, tile, side, rules = BASE_RULES) {
-  const extra = tile.enhancement ? { enhancement: tile.enhancement } : {};
+export function placeTile(board, tile, side, rules = BASE_RULES, meta = {}) {
+  const extra = tile.enhancement ? { enhancement: tile.enhancement, ...meta } : { ...meta };
   if (!board.root) {
     if (side !== SIDES.ROOT) throw new Error('A primeira pedra deve ir na raiz.');
     return {
