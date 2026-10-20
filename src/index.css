@@ -217,6 +217,7 @@
 
 @layer base {
   :root {
+    --crack-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 40' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M4 1 L7 7 L5 12 L9 17 L8 20' stroke='%23101214' stroke-width='.9'/%3E%3Cpath d='M7 7 L11 9' stroke='%23101214' stroke-width='.6'/%3E%3Cpath d='M15 23 L12 28 L14 32 L11 39' stroke='%23101214' stroke-width='.8'/%3E%3Cpath d='M12 28 L8 30' stroke='%23101214' stroke-width='.5'/%3E%3Cpath d='M4.6 1.6 L7.6 7.6 L5.6 12.6 L9.6 17.6' stroke='%23ffffff' stroke-opacity='.2' stroke-width='.4'/%3E%3Cpath d='M15.6 23.6 L12.6 28.6 L14.6 32.6' stroke='%23ffffff' stroke-opacity='.16' stroke-width='.4'/%3E%3C/g%3E%3C/svg%3E");
     --felt-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.08 0 0 0 0 0.03 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
@@ -333,6 +334,206 @@
     border: 1px solid rgba(240, 204, 120, 0.5);
   }
 
+  /* ---------- Peças aprimoradas: "shaders" em CSS ----------
+     --d = profundidade do chanfro (vem do DominoTile). Cada material troca o
+     fundo, o chanfro, os pips e ganha camadas extras: .tile-enh-layer (por
+     dentro, recortada) e .tile-enh-glow (brilho por fora). */
+
+  .tile-enh-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .tile-enh-glow {
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+  }
+
+  /* Ouro: metal polido, pips escuros, reflexo que corre pela pedra */
+  .tile-enh-ouro {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 24%),
+      linear-gradient(150deg, #fff1b8 0%, #f0cc78 18%, #c8962e 46%, #f6d98a 62%, #9c6a1c 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 250, 220, 0.95),
+      inset -1px -1px 0 rgba(90, 55, 10, 0.75),
+      inset 0 0 0 1px rgba(80, 50, 10, 0.45),
+      0 var(--d) 0 #7a5214,
+      0 calc(var(--d) + 1px) 0 #2a1a06,
+      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.55),
+      0 0 9px rgba(255, 210, 110, 0.35);
+  }
+
+  .tile-enh-ouro .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #4a3008 0%, #1a0f02 60%, #000 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(0, 0, 0, 0.9),
+      0 1px 0 rgba(255, 240, 190, 0.75);
+  }
+
+  .tile-enh-ouro .domino-divider {
+    background: rgba(90, 58, 10, 0.8);
+    box-shadow: 1px 1px 0 rgba(255, 240, 190, 0.6);
+  }
+
+  .tile-enh-ouro .tile-enh-layer::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -70%;
+    width: 45%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 240, 0.8) 50%, transparent 100%);
+    transform: skewX(-18deg);
+    animation: gold-shine 3.2s ease-in-out infinite;
+  }
+
+  /* Rubi (Sanguinária): carmesim brilhante, pulsando, com sombra vermelha */
+  .tile-enh-rubi {
+    background:
+      radial-gradient(circle at 32% 24%, rgba(255, 205, 210, 0.7), transparent 30%),
+      linear-gradient(150deg, #ff5a6a 0%, #d0142f 42%, #7a0718 78%, #4a030e 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 200, 205, 0.85),
+      inset -1px -1px 0 rgba(60, 0, 10, 0.8),
+      inset 0 0 0 1px rgba(60, 0, 12, 0.5),
+      0 var(--d) 0 #5a0412,
+      0 calc(var(--d) + 1px) 0 #1f0106,
+      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.55);
+  }
+
+  .tile-enh-rubi .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #3a0008 0%, #120003 70%);
+    box-shadow:
+      inset 0 1px 1px #000,
+      0 1px 0 rgba(255, 170, 175, 0.65);
+  }
+
+  .tile-enh-rubi .domino-divider {
+    background: rgba(50, 0, 8, 0.75);
+    box-shadow: 1px 1px 0 rgba(255, 170, 175, 0.45);
+  }
+
+  .tile-enh-rubi .tile-enh-glow {
+    box-shadow:
+      0 0 6px 2px rgba(255, 40, 70, 0.9),
+      0 6px 14px 3px rgba(200, 0, 40, 0.6);
+    animation: enh-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* Cristal (Camaleão): ciano translúcido com brilho neon */
+  .tile-enh-cristal {
+    background:
+      linear-gradient(125deg, rgba(255, 255, 255, 0.6) 0%, transparent 28%, rgba(255, 255, 255, 0.2) 50%, transparent 66%),
+      linear-gradient(160deg, rgba(160, 252, 255, 0.62) 0%, rgba(60, 205, 235, 0.42) 50%, rgba(20, 120, 170, 0.55) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(170, 252, 255, 0.95),
+      inset 0 0 7px rgba(190, 255, 255, 0.75),
+      0 var(--d) 0 rgba(20, 95, 125, 0.85),
+      0 calc(var(--d) + 1px) 0 rgba(4, 30, 40, 0.9),
+      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.45);
+  }
+
+  .tile-enh-cristal .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #f2ffff 0%, #59dcff 55%, #0b6b8a 100%);
+    box-shadow: 0 0 4px rgba(120, 250, 255, 0.95);
+  }
+
+  .tile-enh-cristal .domino-divider {
+    background: rgba(200, 255, 255, 0.75);
+    box-shadow: 0 0 3px rgba(120, 250, 255, 0.9);
+  }
+
+  .tile-enh-cristal .tile-enh-glow {
+    box-shadow: 0 0 9px 2px rgba(80, 240, 255, 0.8);
+    animation: enh-pulse 2.2s ease-in-out infinite;
+  }
+
+  .tile-enh-cristal .tile-enh-layer {
+    background: linear-gradient(35deg, transparent 46%, rgba(255, 255, 255, 0.35) 48%, transparent 52%);
+  }
+
+  /* Chumbo: ferro fosco escuro, rachado */
+  .tile-enh-chumbo {
+    background:
+      var(--crack-texture),
+      radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.14), transparent 45%),
+      linear-gradient(155deg, #5d636a 0%, #3c4147 48%, #24282c 100%);
+    background-size:
+      100% 100%,
+      auto,
+      auto;
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.2),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.65),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 var(--d) 0 #1a1d20,
+      0 calc(var(--d) + 1px) 0 #090a0b,
+      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.6);
+  }
+
+  .tile-enh-chumbo .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #eef1f3 0%, #a3aab1 70%, #6c737a 100%);
+    box-shadow:
+      inset 0 -1px 1px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(0, 0, 0, 0.45);
+  }
+
+  .tile-enh-chumbo .domino-divider {
+    background: rgba(10, 12, 14, 0.8);
+    box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* Fantasma: roxo translúcido, pulsação espectral leve */
+  .tile-enh-fantasma {
+    background:
+      radial-gradient(ellipse at 50% 28%, rgba(235, 220, 255, 0.55), transparent 60%),
+      linear-gradient(160deg, rgba(195, 155, 255, 0.6) 0%, rgba(125, 75, 215, 0.48) 55%, rgba(60, 22, 125, 0.58) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(225, 205, 255, 0.65),
+      inset 0 0 8px rgba(235, 215, 255, 0.5),
+      0 var(--d) 0 rgba(45, 12, 90, 0.7),
+      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.35);
+    animation: ghost-flicker 2.6s ease-in-out infinite;
+  }
+
+  .tile-enh-fantasma .domino-pip {
+    background: radial-gradient(circle, #ffffff 0%, #dcc8ff 55%, #8a5cff 100%);
+    box-shadow: 0 0 4px rgba(225, 195, 255, 0.95);
+  }
+
+  .tile-enh-fantasma .domino-divider {
+    background: rgba(235, 220, 255, 0.6);
+    box-shadow: none;
+  }
+
+  .tile-enh-fantasma .tile-enh-glow {
+    box-shadow: 0 0 10px 3px rgba(180, 130, 255, 0.6);
+    animation: enh-pulse 2.6s ease-in-out infinite;
+  }
+
+  .tile-enh-fantasma .tile-enh-layer::after {
+    content: '';
+    position: absolute;
+    inset: -30%;
+    background:
+      radial-gradient(ellipse at 30% 62%, rgba(245, 232, 255, 0.45), transparent 42%),
+      radial-gradient(ellipse at 72% 30%, rgba(205, 175, 255, 0.4), transparent 38%);
+    animation: ghost-drift 4s ease-in-out infinite alternate;
+  }
+
+  /* pedra do Tio Zé revelada (Olho de Vidro, Espelho Retrovisor) */
+  .revealed-tile {
+    outline: 1px solid rgba(130, 240, 255, 0.85);
+    outline-offset: 1px;
+  }
+
   /* ---------- Mesa ---------- */
 
   .felt-table {
@@ -406,6 +607,31 @@
   .end-badge-active {
     background: #fff0b8;
     animation: badge-bounce 0.9s steps(3, end) infinite;
+  }
+
+  /* Chumbo: o Tio Zé não pode usar essa ponta na vez dele */
+  .end-badge-frozen {
+    color: #e9eef2;
+    background:
+      var(--crack-texture),
+      linear-gradient(160deg, #7c858d, #4a5157);
+    background-size:
+      100% 100%,
+      auto;
+    box-shadow:
+      0 3px 0 #000,
+      0 0 10px rgba(170, 190, 210, 0.45),
+      inset -3px -3px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* Cristal: na sua próxima jogada essa ponta aceita qualquer número */
+  .end-badge-wild {
+    color: #04313a;
+    background: #b8fbff;
+    box-shadow:
+      0 3px 0 #000,
+      0 0 14px rgba(80, 240, 255, 0.9),
+      inset -3px -3px 0 rgba(0, 90, 110, 0.35);
   }
 
   .slot-ghost {
@@ -517,6 +743,206 @@
     border: 4px solid transparent;
     border-bottom-color: #0b0705;
     border-left-color: #0b0705;
+  }
+
+  /* ---------- Talismãs (4 slots abaixo do painel do Tio Zé) ---------- */
+
+  .relic-bar {
+    background:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 13px),
+      linear-gradient(180deg, #1d130b, #120b06);
+    border-bottom: 3px solid #0b0705;
+    box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.05);
+  }
+
+  .relic-slot {
+    position: relative;
+    z-index: 10;
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 40%, #241810, #0b0705 75%);
+    border: 2px solid var(--rarity, #3d2512);
+    box-shadow:
+      inset 0 0 0 2px #120b06,
+      0 2px 0 #000;
+  }
+
+  .relic-slot-empty {
+    border-style: dashed;
+    border-color: rgba(233, 220, 180, 0.2);
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .relic-slot-open {
+    outline: 2px solid var(--color-brass-300);
+    outline-offset: 1px;
+  }
+
+  .relic-slot-spent > span {
+    filter: grayscale(0.85) brightness(0.55);
+  }
+
+  .relic-slot-ready {
+    box-shadow:
+      inset 0 0 0 2px #120b06,
+      0 2px 0 #000,
+      0 0 10px rgba(255, 143, 58, 0.75);
+  }
+
+  .relic-tooltip {
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 220, 170, 0.03) 0 1px, transparent 1px 4px),
+      linear-gradient(180deg, #2a1a0e, #160d07);
+    border: 3px solid #0b0705;
+    box-shadow:
+      inset 0 0 0 2px var(--rarity, #4a3220),
+      0 5px 0 #000,
+      0 0 24px rgba(0, 0, 0, 0.8);
+  }
+
+  .btn-mini {
+    min-height: 30px;
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .dev-chip {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    line-height: 1;
+    color: rgba(233, 220, 180, 0.5);
+    padding: 5px 5px;
+    border: 1px dashed rgba(233, 220, 180, 0.28);
+  }
+
+  .proc-toast {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    line-height: 1.35;
+    padding: 5px 7px;
+    color: #1a1006;
+    background: var(--color-brass-300);
+    border: 2px solid #0b0705;
+    box-shadow:
+      0 3px 0 #000,
+      0 0 14px rgba(240, 204, 120, 0.4);
+    animation: proc-toast 2.6s ease-out forwards;
+  }
+
+  .proc-toast[data-tone='enemy'] {
+    color: var(--color-bone-50);
+    background: var(--color-blood-500);
+    box-shadow:
+      0 3px 0 #000,
+      0 0 14px rgba(179, 38, 30, 0.5);
+  }
+
+  .proc-toast[data-tone='info'] {
+    color: #04313a;
+    background: #a6f1fb;
+    box-shadow:
+      0 3px 0 #000,
+      0 0 14px rgba(80, 240, 255, 0.45);
+  }
+
+  .animate-relic-proc {
+    animation: relic-proc 720ms steps(6, end) both;
+  }
+
+  /* ---------- Painel DEV ---------- */
+
+  .dev-card {
+    background:
+      repeating-linear-gradient(0deg, rgba(120, 240, 255, 0.025) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, #131a17, #0a0e0c);
+    border: 3px solid #0b0705;
+    box-shadow:
+      inset 0 0 0 2px #2c4a3a,
+      0 -4px 0 #000,
+      0 0 40px rgba(0, 0, 0, 0.85);
+  }
+
+  .dev-section {
+    border-top: 2px dashed rgba(140, 220, 180, 0.18);
+  }
+
+  .dev-label {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    color: #8fd6b4;
+  }
+
+  .dev-num {
+    min-width: 0;
+    height: 34px;
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    color: var(--color-bone-100);
+    background: #1a221e;
+    border: 2px solid #0b0705;
+    box-shadow: inset 1px 1px 0 rgba(200, 255, 230, 0.08);
+  }
+
+  .dev-num[aria-pressed='true'] {
+    color: #1a1006;
+    background: var(--color-brass-300);
+  }
+
+  .dev-select {
+    width: 100%;
+    height: 38px;
+    padding: 0 8px;
+    font-family: var(--font-term);
+    font-size: 20px;
+    color: var(--color-bone-50);
+    background: #1a221e;
+    border: 2px solid #0b0705;
+    border-radius: 0;
+    box-shadow: inset 1px 1px 0 rgba(200, 255, 230, 0.08);
+  }
+
+  .dev-relic {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    text-align: left;
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    line-height: 1.35;
+    color: var(--color-bone-200);
+    background: #121815;
+    border: 2px solid #0b0705;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  .dev-relic[aria-pressed='true'] {
+    color: var(--color-bone-50);
+    background: #2a2412;
+    box-shadow:
+      inset 0 0 0 2px var(--rarity),
+      0 0 10px rgba(240, 204, 120, 0.25);
+  }
+
+  .dev-relic:disabled {
+    opacity: 0.4;
+  }
+
+  .reward-card {
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px solid var(--rarity, #3d2512);
+    box-shadow:
+      inset 0 0 0 2px #0b0705,
+      0 0 18px rgba(240, 204, 120, 0.2);
   }
 
   /* ---------- Mão do jogador (leque flutuante sobre o feltro) ---------- */
@@ -750,6 +1176,80 @@
   }
 }
 
+@keyframes gold-shine {
+  0%,
+  55% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 380% 0;
+  }
+}
+
+@keyframes enh-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ghost-flicker {
+  0%,
+  100% {
+    opacity: 0.76;
+  }
+  50% {
+    opacity: 0.97;
+  }
+}
+
+@keyframes ghost-drift {
+  from {
+    translate: -8% 6%;
+  }
+  to {
+    translate: 8% -6%;
+  }
+}
+
+@keyframes relic-proc {
+  0% {
+    transform: scale(1.7);
+    filter: brightness(2.6);
+  }
+  55% {
+    transform: scale(0.88);
+    filter: brightness(1.4);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes proc-toast {
+  0% {
+    opacity: 0;
+    translate: 14px 0;
+  }
+  8% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  82% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -8px;
+    visibility: hidden;
+  }
+}
+
 @keyframes hurt {
   0% {
     opacity: 0;
@@ -784,8 +1284,16 @@
   .animate-tile-slam,
   .animate-power-wiggle,
   .tile-ring-power,
-  .hand-float {
+  .hand-float,
+  .tile-enh-fantasma,
+  .tile-enh-glow,
+  .tile-enh-layer::after,
+  .animate-relic-proc {
     animation: none !important;
+  }
+
+  .tile-enh-glow {
+    opacity: 0.7;
   }
 
   .impact-ring {

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
+import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import { LAMP, LAMP_PALETTE } from './sprites.js';
@@ -28,6 +29,10 @@ function useElementSize() {
 
 const SIDE_LABEL = { left: 'esquerda', right: 'direita', root: 'centro' };
 
+/** Marca da ponta: congelada pelo Chumbo (vale para o Tio Zé) ou curinga do Cristal (vale para você). */
+const MARK_CLASS = { frozen: 'end-badge-frozen', wild: 'end-badge-wild', both: 'end-badge-wild' };
+const MARK_LABEL = { frozen: ' (congelada para o Tio Zé)', wild: ' (curinga na sua jogada)', both: ' (curinga na sua jogada)' };
+
 /** Caixa (px do mundo) de uma pedra de `unit` px centrada no retângulo r (em unidades). */
 function tileBox(r, orientation, unit) {
   const w = orientation === 'horizontal' ? unit * 2 : unit;
@@ -50,6 +55,8 @@ export default function TableBoard({
   dimmed = false,
   previewDouble = false,
   frameRef,
+  endMarks = {},
+  overlay = null,
 }) {
   const [areaRef, size] = useElementSize();
   // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
@@ -69,6 +76,10 @@ export default function TableBoard({
   );
   const camera = computeCamera(baseLayout, size);
   const unit = B - TILE_INSET * 2;
+  const enhancementOf = useMemo(
+    () => new Map(boardTilesInOrder(board).filter((t) => t.enhancement).map((t) => [t.id, t.enhancement])),
+    [board],
+  );
 
   return (
     <section ref={frameRef} className="felt-table relative min-h-0 w-full flex-1 overflow-hidden" aria-label="Mesa">
@@ -103,6 +114,7 @@ export default function TableBoard({
                       orientation={tile.lineAxis}
                       onBoard
                       unit={unit}
+                      enhancement={enhancementOf.get(tile.id)}
                       openEnd={tile.isOpenEnd}
                       depth={tile.isDouble ? 5 : 4}
                     />
@@ -136,8 +148,8 @@ export default function TableBoard({
                       tabIndex={active ? 0 : -1}
                       disabled={!active}
                       onClick={() => onPlaySide?.(side)}
-                      aria-label={`Ponta ${SIDE_LABEL[side]} livre: ${slot.value}`}
-                      className={`end-badge absolute z-30 ${active ? 'end-badge-active' : ''}`}
+                      aria-label={`Ponta ${SIDE_LABEL[side]} livre: ${slot.value}${MARK_LABEL[endMarks[side]] ?? ''}`}
+                      className={`end-badge absolute z-30 ${active ? 'end-badge-active' : ''} ${MARK_CLASS[endMarks[side]] ?? ''}`}
                       style={{
                         left: slot.badge.x * B,
                         top: slot.badge.y * B,
@@ -158,6 +170,8 @@ export default function TableBoard({
       </div>
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
+
+      {overlay}
 
       {banner && (
         <div className="pointer-events-none absolute inset-x-0 top-[38%] z-40 flex justify-center px-4">

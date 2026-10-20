@@ -65,6 +65,8 @@ const SIDE_BUTTON = {
 /**
  * Mão do jogador em leque flutuante sobre o feltro, HUD (corações, moedas) e as
  * ações: comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
+ * No modo descarte (Giz de Sinuca) qualquer pedra pode ser tocada e os botões
+ * viram PULAR / DESCARTAR.
  */
 export default function PlayerRack({
   hand,
@@ -85,6 +87,10 @@ export default function PlayerRack({
   coins,
   ends,
   hint,
+  discardMode = false,
+  onDiscard,
+  onSkipDiscard,
+  onSecretTap,
 }) {
   const [areaRef, width] = useWidth();
   const { unit, spots } = computeFan(hand.length, width);
@@ -99,7 +105,10 @@ export default function PlayerRack({
     >
       <div className="flex items-center justify-between gap-2 px-3 pt-2">
         <div className="flex items-center gap-2">
-          <span className="font-pixel text-[10px] text-bone-50 text-shadow-pixel">VOCÊ</span>
+          {/* 3 toques seguidos aqui abrem o painel DEV */}
+          <button type="button" onClick={onSecretTap} className="font-pixel text-[10px] text-bone-50 text-shadow-pixel" aria-label="Você">
+            VOCÊ
+          </button>
           <HeartsBar current={hearts} max={maxHearts} pixel={2} label={`Você: ${hearts} de ${maxHearts} corações`} />
         </div>
         <div className="flex items-center gap-3">
@@ -120,8 +129,9 @@ export default function PlayerRack({
           const spot = spots[i];
           if (!spot) return null;
           const selected = tile.id === selectedId;
-          const playable = isTurn && playableIds.has(tile.id);
-          const power = selected && tile.a === tile.b;
+          const active = isTurn || discardMode;
+          const playable = active && playableIds.has(tile.id);
+          const power = selected && tile.a === tile.b && !discardMode;
           return (
             <div
               key={tile.id}
@@ -152,9 +162,10 @@ export default function PlayerRack({
                       depth={3}
                       selected={selected}
                       power={power}
+                      enhancement={tile.enhancement}
                       playable={playable && !selected}
-                      dimmed={isTurn && !playable}
-                      disabled={!isTurn || !playable}
+                      dimmed={active && !playable}
+                      disabled={!active || !playable}
                       onClick={() => onSelectTile(tile)}
                     />
                   </div>
@@ -172,40 +183,51 @@ export default function PlayerRack({
         {hint}
       </p>
 
-      <div className="grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
-        <button type="button" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
-          <span>COMPRAR</span>
-          <span className="text-[8px] text-bone-200">
-            <DrawCost draw={draw} />
-          </span>
-          <span className="sr-only">{`Compra ${drawsThisTurn + 1} de 3 neste turno`}</span>
-        </button>
-
-        <div className="flex gap-2">
-          {selectedSides.length > 0 ? (
-            selectedSides.map((side) => (
-              <button
-                key={side}
-                type="button"
-                data-tone="brass"
-                className="btn-pixel flex-1"
-                onClick={() => onPlay(side)}
-              >
-                {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
-              </button>
-            ))
-          ) : (
-            <div className="btn-placeholder flex flex-1 items-center justify-center text-center font-pixel text-[8px] leading-relaxed text-bone-400">
-              {isTurn ? 'TOQUE NUMA PEDRA' : 'AGUARDE'}
-            </div>
-          )}
+      {discardMode ? (
+        <div className="grid grid-cols-[1fr_1.4fr] gap-2 px-3 pt-1.5">
+          <button type="button" className="btn-pixel" onClick={onSkipDiscard}>
+            PULAR
+          </button>
+          <button type="button" data-tone="brass" className="btn-pixel" disabled={!selectedId} onClick={onDiscard}>
+            DESCARTAR
+          </button>
         </div>
+      ) : (
+        <div className="grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
+          <button type="button" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
+            <span>COMPRAR</span>
+            <span className="text-[8px] text-bone-200">
+              <DrawCost draw={draw} />
+            </span>
+            <span className="sr-only">{`Compra ${drawsThisTurn + 1} de 3 neste turno`}</span>
+          </button>
 
-        <button type="button" data-tone="blood" className="btn-pixel" disabled={!canPass} onClick={onPass}>
-          PASSAR
-          <br />A VEZ
-        </button>
-      </div>
+          <div className="flex gap-2">
+            {selectedSides.length > 0 ? (
+              selectedSides.map((side) => (
+                <button
+                  key={side}
+                  type="button"
+                  data-tone="brass"
+                  className="btn-pixel flex-1"
+                  onClick={() => onPlay(side)}
+                >
+                  {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
+                </button>
+              ))
+            ) : (
+              <div className="btn-placeholder flex flex-1 items-center justify-center text-center font-pixel text-[8px] leading-relaxed text-bone-400">
+                {isTurn ? 'TOQUE NUMA PEDRA' : 'AGUARDE'}
+              </div>
+            )}
+          </div>
+
+          <button type="button" data-tone="blood" className="btn-pixel" disabled={!canPass} onClick={onPass}>
+            PASSAR
+            <br />A VEZ
+          </button>
+        </div>
+      )}
 
       <div className="flex justify-center gap-1.5 pt-2" aria-hidden="true">
         {[0, 1, 2].map((i) => (

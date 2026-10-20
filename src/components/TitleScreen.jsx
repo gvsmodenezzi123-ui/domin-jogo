@@ -13,8 +13,11 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-/** Tela inicial. O toque em "Sentar à mesa" também destrava o áudio no iOS. */
-export default function TitleScreen({ onStart }) {
+/**
+ * Tela inicial. O toque em "Sentar à mesa" também destrava o áudio no iOS.
+ * 3 toques no título liberam o painel DEV (botão "DEV" na faixa dos talismãs).
+ */
+export default function TitleScreen({ onStart, onSecretTap, devUnlocked = false }) {
   const showInstallHint = isIOS() && !isStandalone();
   return (
     <main
@@ -32,8 +35,12 @@ export default function TitleScreen({ onStart }) {
 
       <div className="relative flex flex-col items-center">
         <TioZeAvatar mood="smug" pixel={7} />
-        <h1 className="title-logo mt-5 font-pixel text-[34px] leading-none">BUXARIA</h1>
-        <p className="mt-3 font-pixel text-[9px] tracking-widest text-bone-300">DUELO DE DOMINÓ · PATCH 0.1.2</p>
+        <h1 className="title-logo mt-5 font-pixel text-[34px] leading-none" onClick={onSecretTap}>
+          BUXARIA
+        </h1>
+        <p className="mt-3 font-pixel text-[9px] tracking-widest text-bone-300">
+          DUELO DE DOMINÓ · PATCH 0.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+        </p>
         <p className="mt-4 max-w-[300px] font-term text-xl leading-tight text-bone-200">
           O Tio Zé te espera debaixo da lâmpada. Cada batida custa sangue.
         </p>
@@ -50,6 +57,7 @@ export default function TitleScreen({ onStart }) {
           <li>Tranca (menor soma)</li>
           <li className="text-right text-blood-400">−{DAMAGE.tranca}♥</li>
           <li className="col-span-2 mt-1 text-bone-300">Pontas somando múltiplo de 5: +$3. Compra: 1ª grátis, 2ª $3, 3ª 1♥.</li>
+          <li className="col-span-2 text-bone-300">Vença rodadas para achar talismãs (até 4). Pedras de ouro, rubi, cristal, chumbo e fantasma têm poderes.</li>
         </ul>
         <button type="button" data-tone="brass" className="btn-pixel w-full text-[12px]" onClick={onStart}>
           SENTAR À MESA

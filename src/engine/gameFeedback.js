@@ -4,7 +4,10 @@
  */
 
 import { pickTioZeLine } from '../ai/tioZeAI.js';
-import { getOpenEnds, getValidSides } from './dominoLogic.js';
+import { BASE_RULES, getOpenEnds, getPlacement, getValidSides } from './dominoLogic.js';
+import { requiredOpeningFor } from './powers.js';
+
+const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'dev']);
 
 function findLast(events, predicate) {
   for (let i = events.length - 1; i >= 0; i -= 1) {
@@ -49,6 +52,10 @@ function lineKindFor(ev) {
       return ev.result.winner === 'tioZe' ? 'winRound' : 'loseRound';
     case 'duelEnd':
       return ev.winner === 'tioZe' ? 'duelWin' : 'duelLose';
+    case 'heartLost':
+      return ev.who === 'tioZe' && DIRECT_HURT.has(ev.reason) ? 'hurtRelic' : null;
+    case 'undo':
+      return 'undo';
     default:
       return null;
   }
@@ -86,19 +93,34 @@ export function deriveHurtKey(events, who) {
   return findLast(events, (e) => e.type === 'heartLost' && e.who === who && e.seq > duelStart)?.seq ?? 0;
 }
 
+/** Por que a pedra entra fora da regra comum (relíquia ou cristal), para a dica. */
+const SPECIAL_HINT = {
+  wild: 'Ponta de cristal: aceita qualquer número agora.',
+  fuzzy: 'Borracha: encaixa com 1 de diferença (1x por rodada).',
+  steel: 'Bucha de Aço: o [0|0] encaixa em qualquer ponta.',
+};
+
 /** Texto de ajuda logo acima dos botões. */
-export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCount, drawAllowed }) {
+export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCount, drawAllowed, rules = BASE_RULES }) {
   if (state.phase !== 'playing') return '';
+  if (state.pending?.type === 'discard') {
+    return selectedTile ? 'Toque em DESCARTAR para mandar ela pro fundo do dorme.' : 'Giz de Sinuca: escolha uma pedra para descartar (ou pule).';
+  }
+  if (state.pending?.type === 'drawChoice') return 'Barbante: escolha uma das duas pedras.';
   if (!isPlayerTurn) return 'Vez do Tio Zé...';
   if (!state.board.root) {
-    if (state.openingTileId) {
-      const [a, b] = state.openingTileId.split('-');
+    const required = requiredOpeningFor(state, 'player');
+    if (required) {
+      const [a, b] = required.split('-');
       return a === b ? `Abra a mesa com a bucha ${a}|${b}.` : `Abra a mesa com a ${a}|${b}.`;
     }
-    return 'Você venceu a última: abra com qualquer pedra.';
+    // sem pedra obrigatória: você venceu a última rodada (ou a mesa foi limpa no painel DEV)
+    return state.lastPlay ? 'Mesa vazia: abra com qualquer pedra.' : 'Você venceu a última: abra com qualquer pedra.';
   }
   if (selectedTile) {
-    const sides = getValidSides(selectedTile, state.board);
+    const sides = getValidSides(selectedTile, state.board, rules);
+    const special = sides.map((side) => getPlacement(selectedTile, state.board, side, rules).via).find((via) => SPECIAL_HINT[via]);
+    if (special) return SPECIAL_HINT[special];
     if (sides.length === 2) {
       const ends = getOpenEnds(state.board);
       return ends.left === ends.right

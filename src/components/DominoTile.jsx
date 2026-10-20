@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { getEnhancement } from '../data/enhancedTiles.js';
 
 /**
  * Posições dos pips numa grade 3x3 [linha, coluna], pensadas para a metade de
@@ -72,6 +73,8 @@ function Half({ value, horizontal, unit }) {
  * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
  * onBoard:     na mesa a bucha fica sempre atravessada: os eixos se invertem
  * power:       bucha selecionada na mão — moldura amarela pulsando
+ * enhancement: 'ouro' | 'rubi' | 'cristal' | 'chumbo' | 'fantasma' — troca o material
+ *              da pedra por um "shader" em CSS (.tile-enh-<id> em index.css)
  * unit:        lado de cada metade, em px
  */
 function DominoTile({
@@ -85,6 +88,7 @@ function DominoTile({
   openEnd = false,
   onBoard = false,
   power = false,
+  enhancement = null,
   depth = 2,
   onClick,
   disabled = false,
@@ -129,19 +133,11 @@ function DominoTile({
 
   const stain = stainFor(values);
   const dividerThickness = Math.max(1, Math.round(unit * 0.06));
-
-  return (
-    <Tag
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      disabled={onClick ? disabled : undefined}
-      aria-label={label ?? `Pedra ${values[0]} e ${values[1]}`}
-      aria-pressed={onClick ? selected : undefined}
-      className={`relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
-        dimmed ? 'brightness-[.6] sepia-[.35]' : ''
-      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${className}`}
-      style={{
-        ...shared,
+  const enh = getEnhancement(enhancement);
+  // osso envelhecido (padrão) ou material da peça aprimorada, que vem do CSS
+  const surface = enh
+    ? { '--d': `${depth}px` }
+    : {
         background: [
           `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(112,78,28,${stain.alpha}), transparent 42%)`,
           `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,252,236,.22), transparent 48%)`,
@@ -155,7 +151,19 @@ function DominoTile({
           `0 ${depth + 1}px 0 #2a1f10`,
           `0 ${depth + 2}px ${depth + 4}px rgba(0,0,0,.55)`,
         ].join(','),
-      }}
+      };
+
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      disabled={onClick ? disabled : undefined}
+      aria-label={label ?? `Pedra ${values[0]} e ${values[1]}${enh ? ` (${enh.name})` : ''}`}
+      aria-pressed={onClick ? selected : undefined}
+      className={`relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
+        dimmed ? 'brightness-[.6] sepia-[.35]' : ''
+      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${className}`}
+      style={{ ...shared, ...surface }}
     >
       <Half value={values[0]} horizontal={horizontal} unit={unit} />
       <Half value={values[1]} horizontal={horizontal} unit={unit} />
@@ -168,6 +176,12 @@ function DominoTile({
             : { top: '50%', left: '16%', right: '16%', height: dividerThickness, transform: 'translateY(-50%)' }
         }
       />
+      {enh && (
+        <>
+          <span aria-hidden="true" className="tile-enh-layer" />
+          <span aria-hidden="true" className="tile-enh-glow" />
+        </>
+      )}
       {selected && (
         <span
           aria-hidden="true"

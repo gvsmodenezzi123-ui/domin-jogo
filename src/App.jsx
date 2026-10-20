@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
+import DevPanel from './components/DevPanel.jsx';
+import DrawChoice from './components/DrawChoice.jsx';
 import OpponentHeader from './components/OpponentHeader.jsx';
 import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
+import ProcToasts, { TOAST_ROW_PX } from './components/ProcToasts.jsx';
+import RelicBar from './components/RelicBar.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import TableBoard from './components/TableBoard.jsx';
 import TitleScreen from './components/TitleScreen.jsx';
+import { useProcToasts } from './components/useProcToasts.js';
+import { useTripleTap } from './components/useTripleTap.js';
 import { audio } from './engine/audioSynth.js';
 import {
   FULL_SET,
@@ -24,8 +30,29 @@ import {
   deriveTioZeSpeech,
 } from './engine/gameFeedback.js';
 import { createInitialState, gameReducer } from './engine/gameReducer.js';
+import { canUndo, endMarksFor, requiredOpeningFor, revealedTioZeTiles, rulesFor } from './engine/powers.js';
 
 const newDeck = () => shuffle(FULL_SET);
+/** Semente dos sorteios da campanha (pedra aprimorada por rodada, talismã de prêmio). */
+const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+
+const DEV_KEY = 'buxaria:dev';
+
+function readDevFlag() {
+  try {
+    return window.localStorage.getItem(DEV_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveDevFlag() {
+  try {
+    window.localStorage.setItem(DEV_KEY, '1');
+  } catch {
+    /* sem storage (aba privada): vale só nesta sessão */
+  }
+}
 
 /** Momento (ms) em que a bucha assenta na animação `tile-slam`. */
 const DOUBLE_LANDING_MS = 290;
@@ -34,8 +61,13 @@ const DOUBLE_LANDING_MS = 290;
 const FX_DELAY = {
   tilePlaced: 0,
   drawTile: 0,
+  drawPeek: 0,
   pass: 0,
+  discard: 0,
+  undo: 0,
+  proc: 90,
   bonus5: 140,
+  coins: 180,
   roundEnd: 260,
   heartLost: 560,
   duelEnd: 1300,
@@ -74,13 +106,32 @@ function runEventFx(ev, shell, table) {
       }
       break;
     case 'drawTile':
+    case 'drawPeek':
       at(() => audio.drawTile());
       break;
     case 'pass':
       at(() => audio.passKnock());
       break;
+    case 'discard':
+      at(() => audio.passKnock());
+      break;
     case 'bonus5':
       at(() => audio.coin());
+      break;
+    case 'coins':
+      if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev') at(() => audio.coin());
+      break;
+    case 'proc':
+      at(() => audio.relicChime(ev.tone));
+      break;
+    case 'undo':
+      at(() => audio.rewind());
+      break;
+    case 'relicGained':
+      setTimeout(() => audio.relicChime('player'), 1500);
+      break;
+    case 'dev':
+      at(() => audio.click());
       break;
     case 'roundEnd':
       at(() => (ev.result.kind === 'tranca' ? audio.lock() : audio.slam()));
@@ -93,7 +144,8 @@ function runEventFx(ev, shell, table) {
           navigator.vibrate?.(ev.amount >= 2 ? [70, 40, 90] : 60);
         }
       });
-      if (ev.reason !== 'draw') {
+      // jingle de rodada só na contagem do fim da rodada (não em compra nem em dano direto)
+      if (ev.reason !== 'draw' && !ev.direct) {
         setTimeout(() => (ev.who === 'tioZe' ? audio.roundWin() : audio.roundLose()), 1150);
       }
       break;
@@ -105,6 +157,16 @@ function runEventFx(ev, shell, table) {
   }
 }
 
+/** Último disparo de cada talismã no duelo atual: o slot pisca quando muda. */
+function deriveRelicFlashes(events) {
+  const flashes = {};
+  for (const ev of events) {
+    if (ev.type === 'duelStart') for (const key of Object.keys(flashes)) delete flashes[key];
+    if (ev.type === 'proc' && ev.source === 'relic') flashes[ev.id] = ev.seq;
+  }
+  return flashes;
+}
+
 /**
  * Loop principal: segura o estado do duelo, agenda o Tio Zé, converte eventos
  * em som/feedback e liga os componentes.
@@ -114,24 +176,31 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [muted, setMuted] = useState(() => audio.muted);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [devUnlocked, setDevUnlocked] = useState(readDevFlag);
+  const [devOpen, setDevOpen] = useState(false);
+  const { toasts, push: pushToast, clear: clearToasts } = useProcToasts();
   const shellRef = useRef(null);
   const tableRef = useRef(null);
   const processedSeq = useRef(0);
 
   // Tio Zé: cada mudança de estado na vez dele agenda a próxima ação (700ms).
-  // Com o menu aberto ele espera.
+  // Ele espera com o menu ou o painel DEV abertos e enquanto você decide
+  // (escolha do Barbante, descarte do Giz).
   useEffect(() => {
-    if (menuOpen || state.phase !== 'playing' || state.turn !== 'tioZe') return undefined;
+    if (menuOpen || devOpen || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch);
-  }, [state, menuOpen]);
+  }, [state, menuOpen, devOpen]);
 
   // Efeitos colaterais dos eventos novos.
   useEffect(() => {
     const fresh = state.events.filter((e) => e.seq > processedSeq.current);
     if (!fresh.length) return;
     processedSeq.current = fresh[fresh.length - 1].seq;
-    fresh.forEach((ev) => runEventFx(ev, shellRef.current, tableRef.current));
-  }, [state.events]);
+    fresh.forEach((ev) => {
+      runEventFx(ev, shellRef.current, tableRef.current);
+      if (ev.type === 'proc') pushToast(ev, FX_DELAY.proc);
+    });
+  }, [state.events, pushToast]);
 
   // iOS suspende o áudio quando o app vai para o fundo.
   useEffect(() => {
@@ -146,17 +215,23 @@ export default function App() {
     };
   }, []);
 
-  const isPlayerTurn = state.phase === 'playing' && state.turn === 'player';
+  const playing = state.phase === 'playing';
+  const pending = playing ? state.pending : null;
+  const discardMode = pending?.type === 'discard';
+  const isPlayerTurn = playing && state.turn === 'player' && !pending;
   const hand = state.hands.player;
-  const requiredTileId = state.board.root ? null : state.openingTileId;
+  const playerRules = rulesFor(state, 'player');
+  const requiredTileId = requiredOpeningFor(state, 'player');
 
   const playableIds = useMemo(() => {
+    if (discardMode) return new Set(hand.map((t) => t.id));
     if (!isPlayerTurn) return new Set();
-    return new Set(getPlayableMoves(hand, state.board, requiredTileId).map((m) => m.tile.id));
-  }, [isPlayerTurn, hand, state.board, requiredTileId]);
+    return new Set(getPlayableMoves(hand, state.board, requiredTileId, playerRules).map((m) => m.tile.id));
+  }, [discardMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules]);
 
-  const selectedTile = isPlayerTurn ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
-  const selectedSides = selectedTile ? getValidSides(selectedTile, state.board) : [];
+  const selectedTile =
+    isPlayerTurn || discardMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
+  const selectedSides = selectedTile && !discardMode ? getValidSides(selectedTile, state.board, playerRules) : [];
 
   const draw = getDrawAvailability({
     drawsThisTurn: state.drawsThisTurn,
@@ -167,12 +242,17 @@ export default function App() {
   const boardOpen = Boolean(state.board.root);
   const canDraw = isPlayerTurn && boardOpen && draw.allowed;
   const canPass = isPlayerTurn && boardOpen;
+  const undoReady = canUndo(state);
 
   const banner = useMemo(() => deriveBanner(state.events), [state.events]);
   const speech = useMemo(() => deriveTioZeSpeech(state.events), [state.events]);
+  const relicFlashes = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
   const mood = deriveTioZeMood(state);
   const tioZeHurtKey = deriveHurtKey(state.events, 'tioZe');
   const playerHurtKey = deriveHurtKey(state.events, 'player');
+  const revealed = revealedTioZeTiles(state);
+  const endMarks = endMarksFor(state);
+  const spentRelics = [state.fx.borrachaUsed && 'borracha', state.fx.relogioUsed && 'relogio'].filter(Boolean);
 
   const hint = buildPlayerHint({
     state,
@@ -180,6 +260,7 @@ export default function App() {
     selectedTile,
     playableCount: playableIds.size,
     drawAllowed: canDraw,
+    rules: playerRules,
   });
 
   const play = useCallback((tileId, side) => {
@@ -188,10 +269,15 @@ export default function App() {
   }, []);
 
   const handleSelectTile = (tile) => {
+    if (discardMode) {
+      audio.click();
+      setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
+      return;
+    }
     if (!isPlayerTurn || !playableIds.has(tile.id)) return;
     audio.click();
     if (selectedTile?.id === tile.id) {
-      const sides = getValidSides(tile, state.board);
+      const sides = getValidSides(tile, state.board, playerRules);
       if (sides.length === 1) play(tile.id, sides[0]);
       else setSelectedId(null);
       return;
@@ -205,12 +291,17 @@ export default function App() {
   };
 
   const handlePlaySide = (side) => {
-    if (selectedTile) play(selectedTile.id, side);
+    if (selectedTile && !discardMode) play(selectedTile.id, side);
   };
 
   const handleDraw = () => {
     if (!canDraw) return;
     dispatch({ type: 'DRAW', actor: 'player' });
+  };
+
+  const handlePickDraw = (tileId) => {
+    audio.click();
+    dispatch({ type: 'DRAW_PICK', tileId });
   };
 
   const handlePass = () => {
@@ -219,13 +310,32 @@ export default function App() {
     dispatch({ type: 'PASS', actor: 'player' });
   };
 
+  const handleDiscard = () => {
+    if (!discardMode || !selectedTile) return;
+    dispatch({ type: 'DISCARD', tileId: selectedTile.id });
+    setSelectedId(null);
+  };
+
+  const handleSkipDiscard = () => {
+    audio.click();
+    setSelectedId(null);
+    dispatch({ type: 'SKIP_DISCARD' });
+  };
+
+  const handleUndo = () => {
+    if (!undoReady) return;
+    setSelectedId(null);
+    dispatch({ type: 'UNDO' });
+  };
+
   const startDuel = () => {
     audio.unlock();
     audio.startAmbience();
     audio.startMusic();
     audio.click();
     setSelectedId(null);
-    dispatch({ type: 'START_DUEL', deck: newDeck() });
+    clearToasts();
+    dispatch({ type: 'START_DUEL', deck: newDeck(), seed: newSeed() });
   };
 
   const nextRound = () => {
@@ -238,6 +348,8 @@ export default function App() {
     audio.click();
     setSelectedId(null);
     setMenuOpen(false);
+    setDevOpen(false);
+    clearToasts();
     dispatch({ type: 'RETURN_TO_TITLE' });
   };
 
@@ -256,10 +368,31 @@ export default function App() {
     setMuted(audio.toggleMuted());
   };
 
+  // Painel DEV: 3 toques no título (tela inicial) ou em "VOCÊ" (no duelo).
+  const unlockDev = useCallback(() => {
+    saveDevFlag();
+    setDevUnlocked(true);
+    audio.unlock();
+    audio.relicChime('info');
+  }, []);
+  const openDevFromGame = useCallback(() => {
+    unlockDev();
+    setDevOpen(true);
+  }, [unlockDev]);
+  const titleSecretTap = useTripleTap(unlockDev);
+  const gameSecretTap = useTripleTap(openDevFromGame);
+
+  const devAction = (action) => {
+    setSelectedId(null);
+    dispatch(action);
+    // a tranca forçada abre o resultado da rodada: fecha o painel para ver
+    if (action.op === 'forceTranca') setDevOpen(false);
+  };
+
   if (state.phase === 'title') {
     return (
       <div className="app-shell h-full">
-        <TitleScreen onStart={startDuel} />
+        <TitleScreen onStart={startDuel} onSecretTap={titleSecretTap} devUnlocked={devUnlocked} />
       </div>
     );
   }
@@ -274,14 +407,26 @@ export default function App() {
         maxHearts={MAX_HEARTS}
         coins={state.coins.tioZe}
         handCount={state.hands.tioZe.length}
+        revealed={revealed}
         boneyardCount={state.boneyard.length}
-        isTurn={state.phase === 'playing' && state.turn === 'tioZe'}
+        isTurn={playing && state.turn === 'tioZe'}
         mood={mood}
         hurtKey={tioZeHurtKey}
         speech={speech}
+        speechDrop={toasts.length * TOAST_ROW_PX}
         muted={muted}
         onToggleMute={toggleMute}
         onOpenMenu={openMenu}
+      />
+
+      <RelicBar
+        relics={state.relics}
+        flashes={relicFlashes}
+        spent={spentRelics}
+        canUndo={undoReady}
+        onUndo={handleUndo}
+        devUnlocked={devUnlocked}
+        onOpenDev={() => setDevOpen(true)}
       />
 
       <TableBoard
@@ -291,8 +436,10 @@ export default function App() {
         onPlaySide={handlePlaySide}
         banner={banner}
         dimmed={roundFinished}
-        previewDouble={Boolean(selectedTile && selectedTile.a === selectedTile.b)}
+        previewDouble={Boolean(selectedTile && !discardMode && selectedTile.a === selectedTile.b)}
         frameRef={tableRef}
+        endMarks={endMarks}
+        overlay={<ProcToasts toasts={toasts} />}
       />
 
       <PlayerRack
@@ -314,15 +461,23 @@ export default function App() {
         coins={state.coins.player}
         ends={ends}
         hint={hint}
+        discardMode={discardMode}
+        onDiscard={handleDiscard}
+        onSkipDiscard={handleSkipDiscard}
+        onSecretTap={gameSecretTap}
       />
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+
+      {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
       {roundFinished && (
         <RoundOverlay state={state} onNext={nextRound} onRestart={startDuel} onMenu={backToMenu} />
       )}
 
       {menuOpen && <PauseMenu muted={muted} onToggleMute={toggleMute} onResume={closeMenu} onQuit={backToMenu} />}
+
+      {devOpen && <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} />}
     </div>
   );
 }

@@ -9,7 +9,8 @@
  *   board.right -> pedras que saem da raiz para a direita, em ordem de colocação
  * Cada pedra de ramo é { id, a, b, inner, outer, seq }: `inner` encosta na pedra
  * anterior, `outer` é o valor que fica livre (a "rotação automática") e `seq` é
- * a ordem em que ela foi jogada.
+ * a ordem em que ela foi jogada. Pedras aprimoradas levam `enhancement`; encaixes
+ * especiais (curinga, ±1, Bucha de Aço) levam `via`.
  */
 
 export const MAX_PIP = 6;
@@ -158,14 +159,66 @@ export function isMultipleOfFive(board) {
 
 export const canPlayOn = (tile, endValue) => hasValue(tile, endValue);
 
-/** Lados em que a pedra encaixa: ['root'] com a mesa vazia, ou 'left'/'right'. */
-export function getValidSides(tile, board) {
+/**
+ * Regras extras de encaixe (relíquias e peças aprimoradas). Sem nada = dominó normal.
+ *   frozenSides: pontas em que não se pode jogar (Chumbo, na vez do Tio Zé)
+ *   wildSides:   pontas que aceitam qualquer número (Cristal, na sua próxima jogada)
+ *   fuzzy:       aceita 1 número de diferença da ponta (Borracha Escolar)
+ *   steelZero:   a [0|0] encaixa em qualquer ponta (Bucha de Aço)
+ */
+export const BASE_RULES = Object.freeze({});
+
+const otherSide = (side) => (side === SIDES.LEFT ? SIDES.RIGHT : SIDES.LEFT);
+
+/**
+ * Encaixe "forçado" (curinga ou ±1): escolhe o giro da pedra. Prefere fechar
+ * múltiplo de 5, depois o lado que encosta mais perto do número da ponta.
+ */
+function forcedOrientation(tile, endValue, otherEnd, accepts) {
+  const options = [
+    { inner: tile.a, outer: tile.b },
+    { inner: tile.b, outer: tile.a },
+  ].filter((o) => accepts(o.inner));
+  if (!options.length) return null;
+  const fives = (o) => {
+    const sum = o.outer + otherEnd;
+    return sum > 0 && sum % 5 === 0 ? 1 : 0;
+  };
+  options.sort(
+    (p, q) =>
+      fives(q) - fives(p) || Math.abs(p.inner - endValue) - Math.abs(q.inner - endValue) || q.outer - p.outer,
+  );
+  return options[0];
+}
+
+/**
+ * Como a pedra entra na ponta `side`: { inner, outer, via } ou null.
+ * `via` diz o motivo: 'root' | 'match' | 'steel' | 'wild' | 'fuzzy'.
+ */
+export function getPlacement(tile, board, side, rules = BASE_RULES) {
   const ends = getOpenEnds(board);
-  if (!ends) return [SIDES.ROOT];
-  const sides = [];
-  if (canPlayOn(tile, ends.left)) sides.push(SIDES.LEFT);
-  if (canPlayOn(tile, ends.right)) sides.push(SIDES.RIGHT);
-  return sides;
+  if (!ends) return side === SIDES.ROOT ? { inner: tile.a, outer: tile.b, via: 'root' } : null;
+  if (side !== SIDES.LEFT && side !== SIDES.RIGHT) return null;
+  if (rules.frozenSides?.includes(side)) return null;
+  const end = ends[side];
+  const exact = orientTile(tile, end);
+  if (exact) return { ...exact, via: 'match' };
+  if (rules.steelZero && tile.a === 0 && tile.b === 0) return { inner: 0, outer: 0, via: 'steel' };
+  const otherEnd = ends[otherSide(side)];
+  if (rules.wildSides?.includes(side)) {
+    return { ...forcedOrientation(tile, end, otherEnd, () => true), via: 'wild' };
+  }
+  if (rules.fuzzy) {
+    const near = forcedOrientation(tile, end, otherEnd, (v) => Math.abs(v - end) === 1);
+    if (near) return { ...near, via: 'fuzzy' };
+  }
+  return null;
+}
+
+/** Lados em que a pedra encaixa: ['root'] com a mesa vazia, ou 'left'/'right'. */
+export function getValidSides(tile, board, rules = BASE_RULES) {
+  if (!board.root) return [SIDES.ROOT];
+  return [SIDES.LEFT, SIDES.RIGHT].filter((side) => getPlacement(tile, board, side, rules));
 }
 
 /** Gira a pedra para que `inner` encoste no valor da ponta. */
@@ -175,12 +228,16 @@ export function orientTile(tile, endValue) {
   return null;
 }
 
-/** Coloca a pedra (já validada ou não) e devolve uma nova mesa. Lança erro se não encaixa. */
-export function placeTile(board, tile, side) {
+/**
+ * Coloca a pedra e devolve uma nova mesa. Lança erro se não encaixa.
+ * A pedra leva junto o aprimoramento (`enhancement`), se tiver.
+ */
+export function placeTile(board, tile, side, rules = BASE_RULES) {
+  const extra = tile.enhancement ? { enhancement: tile.enhancement } : {};
   if (!board.root) {
     if (side !== SIDES.ROOT) throw new Error('A primeira pedra deve ir na raiz.');
     return {
-      root: { id: tile.id, a: tile.a, b: tile.b, left: tile.a, right: tile.b, seq: 0 },
+      root: { id: tile.id, a: tile.a, b: tile.b, left: tile.a, right: tile.b, seq: 0, ...extra },
       left: [],
       right: [],
     };
@@ -188,14 +245,15 @@ export function placeTile(board, tile, side) {
   if (side !== SIDES.LEFT && side !== SIDES.RIGHT) {
     throw new Error(`Lado inválido: ${side}`);
   }
-  const ends = getOpenEnds(board);
-  const oriented = orientTile(tile, ends[side]);
-  if (!oriented) {
-    throw new Error(`A pedra ${tile.id} não encaixa na ponta ${side} (${ends[side]}).`);
+  const placement = getPlacement(tile, board, side, rules);
+  if (!placement) {
+    throw new Error(`A pedra ${tile.id} não encaixa na ponta ${side} (${getOpenEnds(board)[side]}).`);
   }
+  const { inner, outer, via } = placement;
   // `seq` = ordem em que a pedra entrou na mesa (a raiz é 0). O layout da mesa
   // posiciona as pedras nessa ordem, então uma pedra nova nunca move as antigas.
-  const placed = { id: tile.id, a: tile.a, b: tile.b, ...oriented, seq: boardTileCount(board) };
+  const placed = { id: tile.id, a: tile.a, b: tile.b, inner, outer, seq: boardTileCount(board), ...extra };
+  if (via !== 'match') placed.via = via;
   return {
     root: board.root,
     left: side === SIDES.LEFT ? [...board.left, placed] : board.left,
@@ -203,22 +261,28 @@ export function placeTile(board, tile, side) {
   };
 }
 
+/** Id da pedra que segura a ponta `side` (a raiz, se o ramo está vazio). */
+export function endTileId(board, side) {
+  if (!board.root) return null;
+  const branch = board[side];
+  return branch?.length ? branch[branch.length - 1].id : board.root.id;
+}
+
 /** Lista de jogadas possíveis [{ tile, side }] para uma mão. */
-export function getPlayableMoves(hand, board, requiredTileId = null) {
+export function getPlayableMoves(hand, board, requiredTileId = null, rules = BASE_RULES) {
   const moves = [];
   for (const tile of hand) {
     if (requiredTileId && tile.id !== requiredTileId) continue;
-    for (const side of getValidSides(tile, board)) {
+    for (const side of getValidSides(tile, board, rules)) {
       moves.push({ tile, side });
     }
   }
   return moves;
 }
 
-export function hasAnyPlay(hand, board) {
-  const ends = getOpenEnds(board);
-  if (!ends) return hand.length > 0;
-  return hand.some((t) => canPlayOn(t, ends.left) || canPlayOn(t, ends.right));
+export function hasAnyPlay(hand, board, rules = BASE_RULES) {
+  if (!board.root) return hand.length > 0;
+  return hand.some((t) => getValidSides(t, board, rules).length > 0);
 }
 
 /** Quantas pedras com o valor `value` já estão na mesa. */
@@ -242,12 +306,12 @@ export function isTrancaFechada(board) {
  *  - 'bloqueio': Dorme vazio e nenhum dos dois tem pedra que encaixe.
  * (A tranca por dois passes seguidos é tratada pelo controle de turno.)
  */
-export function getTrancaReason({ board, hands, boneyard }) {
+export function getTrancaReason({ board, hands, boneyard }, rules = {}) {
   if (!board.root) return null;
-  if (isTrancaFechada(board)) return 'fechada';
-  if (boneyard.length === 0 && !hasAnyPlay(hands.player, board) && !hasAnyPlay(hands.tioZe, board)) {
-    return 'bloqueio';
-  }
+  // `rules` = poderes permanentes de cada lado (ex.: Bucha de Aço ainda encaixa numa mesa fechada)
+  const stuck = () => !hasAnyPlay(hands.player, board, rules.player) && !hasAnyPlay(hands.tioZe, board, rules.tioZe);
+  if (isTrancaFechada(board) && stuck()) return 'fechada';
+  if (boneyard.length === 0 && stuck()) return 'bloqueio';
   return null;
 }
 
@@ -280,8 +344,10 @@ export function batidaDamage(kind) {
  * Resolve uma tranca: vence quem tem a MENOR soma de pontos na mão.
  * Empate = ninguém leva dano.
  */
-export function resolveTranca(hands) {
-  const sums = { player: handSum(hands.player), tioZe: handSum(hands.tioZe) };
+export function resolveTranca(hands, tileValue = {}) {
+  // `tileValue[seat]` troca o valor de cada pedra na contagem (ex.: Chave de Fenda: bucha vale 0)
+  const sumFor = (seat) => hands[seat].reduce((sum, t) => sum + (tileValue[seat] ? tileValue[seat](t) : pipSum(t)), 0);
+  const sums = { player: sumFor('player'), tioZe: sumFor('tioZe') };
   if (sums.player === sums.tioZe) {
     return { kind: 'tranca', winner: null, loser: null, damage: 0, sums };
   }

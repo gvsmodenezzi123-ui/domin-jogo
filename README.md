@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.1.2
+# Buxaria — Patch 0.2
 
 Duelo 1x1 tático de **dominó roguelike** contra o Tio Zé, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -8,7 +8,7 @@ Duelo 1x1 tático de **dominó roguelike** contra o Tio Zé, em dark pixel art
 ```bash
 npm install
 npm run dev       # servidor local (abre na rede, dá pra testar no celular)
-npm test          # testes do motor, da IA e do layout (inclui 300 duelos simulados)
+npm test          # testes do motor, da IA, do layout e das relíquias (centenas de duelos simulados)
 npm run lint
 npm run build     # gera dist/ (base relativa: funciona na raiz ou em subpasta)
 npm run preview   # serve o build, com service worker ativo
@@ -33,7 +33,7 @@ O PWA precisa de HTTPS. Duas opções:
 - Importe o repositório pelo site deles (login com GitHub) e escolha a branch.
 - O Vite é detectado sozinho: build `npm run build`, pasta `dist`.
 
-## Regras do Patch 0.1
+## Regras básicas
 
 - Duplo-seis (28 pedras), 7 para cada lado, 14 no **Dorme**. 5 corações para cada um.
 - A 1ª rodada (e qualquer rodada depois de empate) abre com a **maior bucha** das mãos.
@@ -53,6 +53,68 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.2: talismãs, peças aprimoradas e painel DEV
+
+### Peças aprimoradas (`src/data/enhancedTiles.js`)
+
+O aprimoramento fica na pedra (`tile.enhancement`) e vai junto para a mesa. Só as suas pedras
+são aprimoradas. A cada rodada, uma pedra da sua mão nasce aprimorada (sorteio).
+
+| Pedra | Visual | Efeito |
+| --- | --- | --- |
+| Ouro | metal dourado polido, pips escuros, reflexo correndo | +$4 ao jogar; +$10 se você vencer a rodada com ela na mão ou na mesa |
+| Rubi (Sanguinária) | carmesim brilhante, brilho vermelho pulsando | se o Tio Zé tiver que comprar ou passar logo depois, toma 1 de dano direto |
+| Cristal (Camaleão) | ciano translúcido, neon | a ponta que ela deixa aceita qualquer número na SUA próxima jogada (para o Tio Zé vale o número normal) |
+| Chumbo | ferro fosco escuro, rachado | congela a ponta durante a próxima vez inteira do Tio Zé |
+| Fantasma | roxo translúcido, pulsação espectral | jogar não gasta a sua vez |
+
+O "shader" de cada uma é CSS puro (`.tile-enh-<id>` em `index.css`): gradientes, chanfro com
+`--d`, pips recoloridos e duas camadas extras (`.tile-enh-layer` por dentro, `.tile-enh-glow` por
+fora), animadas só com `opacity`/`translate` para não pesar no iPhone. Vale na mão, na mesa, no
+resultado da rodada e no painel DEV. Na mesa, a ponta congelada aparece em ferro e a curinga em ciano.
+
+### Talismãs (`src/data/relics.js`)
+
+Até 4, na faixa logo abaixo do painel do Tio Zé. Toque num talismã para ver nome, raridade e efeito.
+Vencer uma rodada com slot livre dá um talismã sorteado (comum 6 : rara 3 : lendária 1).
+
+| Talismã | Raridade | Efeito |
+| --- | --- | --- |
+| Caneca de Chopp | comum | jogar bucha não gasta a vez |
+| Olho de Vidro | comum | revela as 2 pedras mais altas do Tio Zé |
+| Borracha Escolar | comum | 1x por rodada, encaixe com 1 número de diferença |
+| Cinzeiro de Bar | comum | +$2 cada vez que o Tio Zé compra ou passa |
+| Dado Viciado | comum | começa a rodada com pelo menos 2 pedras de 6 |
+| Barbante no Dedo | comum | ao comprar, vê 2 e escolhe 1 (a outra vai pro fundo do dorme) |
+| Giz de Sinuca | comum | fechar múltiplo de 5 deixa descartar 1 pedra pro fundo do dorme |
+| Chave de Fenda | comum | suas buchas valem 0 na tranca |
+| Dedal de Chumbo | rara | Tio Zé comprou/passou 2 vezes seguidas: −1 coração |
+| Espelho Retrovisor | rara | mostra a pedra que o Tio Zé acabou de comprar |
+| Anel do Bicheiro | rara | pontas iguais depois da sua jogada: Tio Zé −$3 (ou −1 coração sem dinheiro) |
+| Bucha de Aço | rara | a [0\|0] encaixa em qualquer ponta |
+| Carteira Recheada | rara | +1 de dano na batida a cada $15 que você tem |
+| Mão Grande | lendária | batida com o Tio Zé de 4+ pedras: dano dobrado |
+| Relógio Quebrado | lendária | 1x por rodada, botão DESFAZER: a última pedra do Tio Zé volta pra mão dele e a vez é sua |
+
+Cada talismã é dado + ganchos puros (`rules`, `onDeal`, `onPlayerPlay`, `extraTurn`, `onTioZeMiss`,
+`batidaDamage`, `trancaTileValue`, `drawOptions`, `reveal`, `ability`). O reducer chama os ganchos
+nos momentos certos (`engine/powers.js` faz a ponte). Dano direto pode nocautear no meio da rodada.
+
+As regras de encaixe ganharam opções (`getPlacement` em `dominoLogic.js`): `wildSides` (Cristal),
+`fuzzy` (Borracha), `steelZero` (Bucha de Aço) e `frozenSides` (Chumbo, que a IA do Tio Zé respeita).
+Escolhas que dependem de você (Barbante, Giz) travam o jogo em `state.pending` até você decidir.
+
+### Painel DEV (`src/components/DevPanel.jsx`)
+
+Secreto: **3 toques em "VOCÊ"** durante o duelo (ou 3 toques no título BUXARIA, que libera um botão
+"DEV" discreto na faixa dos talismãs). O Tio Zé espera com o painel aberto.
+
+- **Gerar pedra:** lado A e B (0–6) + aprimoramento → ADICIONAR À MÃO (puxa do dorme ou do Tio Zé;
+  se a pedra já estiver na mesa, cria uma cópia).
+- **Talismãs:** toque para equipar/remover na hora (máximo 4).
+- **Recursos:** +10 moedas, resetar vidas, −1 vida do Tio Zé, esvaziar a mão dele, limpar a mesa,
+  forçar tranca (contagem imediata).
+
 ## Arquitetura
 
 ```
@@ -62,8 +124,13 @@ src/
                       automática, tranca, batida/dano, abertura, escada de compra
     boardLayout.js    grade da mesa em "U" (caminhos de cada ponta, sem zoom)
     gameReducer.js    estado do duelo e transições; emite eventos com `seq`
+    powers.js         relíquias/peças aprimoradas aplicadas ao estado (regras, ganchos, revelações)
+    effects.js        transições pequenas compartilhadas (moedas, dano direto, avisos)
     gameFeedback.js   eventos → banner, falas e humor do Tio Zé, dica do jogador
     audioSynth.js     sintetizador Web Audio puro: efeitos, trilha de bossa e ambiência de bar
+  data/
+    enhancedTiles.js  as 5 peças aprimoradas (dados + ganchos)
+    relics.js         os 15 talismãs (dados, ícones 12x12 em pixel art, ganchos)
   ai/
     tioZeAI.js        decisão do Tio Zé + delay reflexivo de 700ms + falas
   components/
@@ -73,6 +140,10 @@ src/
     PlayerRack.jsx    mão em leque flutuante, seleção de pedras e botões de ação
     handFan.js        geometria do leque (posição, inclinação e descida de cada pedra)
     PauseMenu.jsx     pausa: continuar, som, sair do duelo
+    RelicBar.jsx      4 slots de talismã com tooltip e botão do Relógio
+    ProcToasts.jsx    avisos quando um talismã ou pedra dispara
+    DrawChoice.jsx    escolha da compra (Barbante no Dedo)
+    DevPanel.jsx      painel de testes secreto
     RoundOverlay.jsx  resultado da rodada / fim do duelo
     TitleScreen.jsx   tela inicial (destrava o áudio no iOS)
     PixelSprite.jsx, PixelHeart.jsx, sprites.js   pixel art em SVG
@@ -83,9 +154,10 @@ public/
 scripts/generate-icons.mjs   gera os PNGs (sem dependências)
 ```
 
-**Fluxo de dados:** a UI despacha ações (`PLAY`, `DRAW`, `PASS`, `TIO_ZE_ACT`, `START_DUEL`,
-`NEXT_ROUND`) para um reducer puro. Toda aleatoriedade (o baralho embaralhado) entra pela ação,
-então o motor é determinístico e testável. O reducer emite eventos (`tilePlaced`, `bonus5`,
+**Fluxo de dados:** a UI despacha ações (`PLAY`, `DRAW`, `DRAW_PICK`, `PASS`, `DISCARD`,
+`SKIP_DISCARD`, `UNDO`, `TIO_ZE_ACT`, `START_DUEL`, `NEXT_ROUND`, `DEV`) para um reducer puro. Toda
+aleatoriedade (o baralho embaralhado e a `seed` dos sorteios) entra pela ação, então o motor é
+determinístico e testável. O reducer emite eventos (`tilePlaced`, `bonus5`,
 `heartLost`, `roundEnd`...) e o `App` transforma cada um em som, tremida e banner.
 
 ### Mesa em "U" e câmera dinâmica

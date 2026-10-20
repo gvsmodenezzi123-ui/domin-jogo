@@ -364,6 +364,26 @@ export class AudioSynth {
   }
 
   /** Tranca: pedras travando — clac-clac seco. */
+  /** Relíquia ou peça aprimorada disparou: brilho curto (grave quando é contra você). */
+  relicChime(tone = 'player') {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    const notes = tone === 'enemy' ? [659, 523, 392] : tone === 'info' ? [988, 1319] : [1319, 1760, 2637];
+    notes.forEach((freq, i) => {
+      this.tone({ t: t + i * 0.06, type: 'triangle', freq, peak: 0.07, attack: 0.002, decay: 0.28, room: 0.45 });
+    });
+    this.noiseBurst({ t, peak: 0.03, decay: 0.18, filter: { type: 'highpass', freq: 6500 }, room: 0.3 });
+  }
+
+  /** Relógio Quebrado: a jogada volta no tempo (varredura de trás pra frente). */
+  rewind() {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    this.tone({ t, type: 'triangle', freq: 220, freqEnd: 1320, peak: 0.1, attack: 0.25, decay: 0.12, room: 0.4 });
+    this.noiseBurst({ t, peak: 0.06, attack: 0.22, decay: 0.08, filter: { type: 'bandpass', freq: 600, q: 2 }, sweepTo: 4200 });
+    this.tileKnock();
+  }
+
   lock() {
     if (!this.canPlay()) return;
     [0, 0.11, 0.22].forEach((offset) => {

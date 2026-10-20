@@ -18,7 +18,7 @@
  *  - deixar pontas que o jogador parece não ter (lembra de passes e compras).
  *
  * Ele não espia a sua mão: só vê a própria mão, a mesa, contagens públicas e
- * a memória do que você fez.
+ * a memória do que você fez. Respeita as pontas congeladas pelo Chumbo.
  */
 
 import {
@@ -37,6 +37,7 @@ import {
   pipSum,
   placeTile,
 } from '../engine/dominoLogic.js';
+import { requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
 /** Delay reflexivo entre cada ação do Tio Zé. */
 export const TIO_ZE_REFLEX_MS = 700;
@@ -56,9 +57,11 @@ export function buildTioZeView(state, seat = 'tioZe') {
     coins: state.coins[seat],
     hearts: state.hearts[seat],
     drawsThisTurn: state.drawsThisTurn,
-    openingTileId: state.openingTileId,
+    openingTileId: requiredOpeningFor(state, seat),
     consecutivePasses: state.consecutivePasses,
     suspectedMissing: seat === 'tioZe' ? state.memory.playerMissing : [],
+    // regras de encaixe da cadeira (para o Tio Zé: pontas congeladas pelo Chumbo)
+    rules: rulesFor(state, seat),
   };
 }
 
@@ -82,7 +85,7 @@ function trancaFavors(view, hand) {
 export function scoreMove(view, move) {
   const { tile, side } = move;
   const endsBefore = getOpenEnds(view.board);
-  const after = placeTile(view.board, tile, side);
+  const after = placeTile(view.board, tile, side, view.rules);
   const remaining = view.hand.filter((t) => t.id !== tile.id);
 
   if (remaining.length === 0) {
@@ -126,7 +129,7 @@ function compareTie(p, q) {
 /** Melhor jogada (ou null). */
 export function chooseBestMove(view) {
   const required = view.board.root ? null : view.openingTileId;
-  const moves = getPlayableMoves(view.hand, view.board, required);
+  const moves = getPlayableMoves(view.hand, view.board, required, view.rules);
   if (!moves.length) return null;
   const scored = moves.map((m) => ({ ...m, score: scoreMove(view, m) }));
   scored.sort((p, q) => q.score - p.score || compareTie(p, q));
@@ -192,6 +195,8 @@ export const TIO_ZE_LINES = Object.freeze({
   tranca: ['Mesa travada. Vamos contar.', 'Trancou!'],
   duelWin: ['Mais uma alma na minha mesa.'],
   duelLose: ['...Volte amanhã. Se tiver coragem.'],
+  hurtRelic: ['Ai! Que bruxaria é essa?', 'Isso é trapaça, menino!', 'Essa pedra tá amaldiçoada...'],
+  undo: ['Ei! Eu tinha jogado isso!', 'Que relógio é esse?!', 'Volta o tempo, é? Hmpf.'],
 });
 
 /** Fala determinística (sem Math.random) a partir de uma semente. */

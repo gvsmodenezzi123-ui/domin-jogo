@@ -39,23 +39,27 @@ const MOOD_LABEL = {
 
 /**
  * Painel superior: avatar do Tio Zé, corações racháveis, moedas,
- * pedras viradas na mão dele e o Dorme.
+ * pedras viradas na mão dele e o Dorme. `revealed` são as pedras dele que você
+ * enxerga (Olho de Vidro, Espelho Retrovisor): aparecem de cara para cima.
  */
 export default function OpponentHeader({
   hearts,
   maxHearts,
   coins,
   handCount,
+  revealed = [],
   boneyardCount,
   isTurn,
   mood,
   hurtKey,
   speech,
+  speechDrop = 0,
   muted,
   onToggleMute,
   onOpenMenu,
 }) {
-  const shownBacks = Math.min(handCount, 14);
+  const shownFaces = revealed.slice(0, Math.min(handCount, 14));
+  const shownBacks = Math.max(0, Math.min(handCount, 14) - shownFaces.length);
   const overlap = handCount > 9 ? -5 : 2;
 
   return (
@@ -105,13 +109,24 @@ export default function OpponentHeader({
 
           <div className="flex items-end justify-between gap-2">
             <div className="flex min-w-0 items-end" aria-label={`Tio Zé tem ${handCount} pedras`}>
+              {shownFaces.map((tile, i) => (
+                <DominoTile
+                  key={tile.id}
+                  values={[tile.a, tile.b]}
+                  unit={10}
+                  depth={1}
+                  className="revealed-tile"
+                  label={`Pedra revelada do Tio Zé: ${tile.a} e ${tile.b}`}
+                  style={{ marginLeft: i === 0 ? 0 : overlap + 2 }}
+                />
+              ))}
               {Array.from({ length: shownBacks }, (_, i) => (
                 <DominoTile
                   key={i}
                   faceDown
                   unit={10}
                   depth={1}
-                  style={{ marginLeft: i === 0 ? 0 : overlap }}
+                  style={{ marginLeft: i === 0 && !shownFaces.length ? 0 : overlap }}
                 />
               ))}
               <span className="ml-2 font-pixel text-[9px] text-bone-300">×{handCount}</span>
@@ -135,7 +150,9 @@ export default function OpponentHeader({
       {speech && (
         <div
           key={speech.key}
-          className="speech-bubble animate-speech pointer-events-none absolute left-1/2 top-full z-40 mt-[54px] w-max max-w-[64%] -translate-x-1/2 text-center"
+          className="speech-bubble animate-speech pointer-events-none absolute left-1/2 top-full z-40 w-max max-w-[64%] -translate-x-1/2 text-center transition-[margin] duration-200"
+          // abaixo da faixa dos talismãs (38px) e dos avisos de relíquia que estiverem na tela
+          style={{ marginTop: 92 + speechDrop }}
           role="status"
         >
           {speech.text}
