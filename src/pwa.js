@@ -25,8 +25,13 @@ export function installTouchGuards() {
 export function registerServiceWorker() {
   if (!import.meta.env.PROD || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((error) => {
-      console.warn('Service worker não registrado:', error);
-    });
+    try {
+      navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((error) => {
+        console.warn('Service worker não registrado:', error);
+      });
+    } catch (error) {
+      // páginas em iframe isolado (ex.: prévias) não permitem service worker
+      console.warn('Service worker indisponível aqui:', error);
+    }
   });
 }

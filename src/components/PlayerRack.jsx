@@ -138,7 +138,8 @@ export default function PlayerRack({
                     className="animate-tile-in transition-transform duration-150"
                     style={{
                       animationDelay: `${Math.min(index, 7) * 45}ms`,
-                      transform: selected ? `translateY(-${LIFT}px)` : undefined,
+                      // `translate` (e não `transform`) para o levantar não brigar com a animação de entrada
+                      translate: selected ? `0 -${LIFT}px` : undefined,
                     }}
                   >
                     <DominoTile
