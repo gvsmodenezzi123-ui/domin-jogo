@@ -48,6 +48,7 @@ export default function Hotbar({
               ready.includes(relic.id) ? 'relic-slot-ready' : ''
             } ${owner === 'tioZe' ? 'relic-slot-rival' : ''}`}
             style={{ width: size, height: size, '--rarity': tier.color }}
+            data-relic-slot={`${owner}:${relic.id}`}
             aria-label={`${relic.name} (${tier.label.toLowerCase()}): ${relic.description}`}
             onClick={onTap ? () => onTap(relic.id) : undefined}
             {...(press ? press({ kind: 'relic', id: relic.id, owner }) : {})}

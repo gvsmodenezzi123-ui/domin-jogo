@@ -38,7 +38,7 @@ import {
   placeTile,
 } from '../engine/dominoLogic.js';
 import { DEFAULT_STYLE, getRival } from '../data/rivals.js';
-import { requiredOpeningFor, rulesFor } from '../engine/powers.js';
+import { knownPlayerTiles, requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
 /** Delay reflexivo entre cada ação do Tio Zé. */
 export const TIO_ZE_REFLEX_MS = 700;
@@ -63,6 +63,8 @@ export function buildTioZeView(state, seat = 'tioZe') {
     rules: rulesFor(state, seat),
     // jeito de jogar: cada rival tem o seu (o jogador simulado usa o padrão)
     style: seat === 'tioZe' ? getRival(state.rivalId).style : DEFAULT_STYLE,
+    // pedras suas que ele enxerga (Paulinho Pente Fino, Madama Sofia)
+    knownTiles: seat === 'tioZe' ? knownPlayerTiles(state) : [],
   };
 }
 
@@ -123,6 +125,11 @@ export function scoreMove(view, move) {
 
   // pontas iguais fecham o jogo (a Dona Neide gosta)
   if (style.lockEnds && ends.left === ends.right) score += style.lockEnds;
+
+  // ele sabe pedras suas: evita deixar ponta onde elas encaixam
+  for (const known of view.knownTiles ?? []) {
+    score += canPlayOn(known, ends.left) || canPlayOn(known, ends.right) ? -4 : 2;
+  }
 
   // tranca fechada: só se a menor soma estiver do lado dele
   if (isTrancaFechada(after)) score += trancaFavors(view, remaining) ? 40 : -60;

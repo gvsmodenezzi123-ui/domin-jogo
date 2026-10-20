@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { TOTAL_NODES } from '../data/campaign.js';
 import { DAMAGE, MAX_HEARTS, handSum } from '../engine/dominoLogic.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
@@ -47,18 +48,40 @@ function MiniHand({ tiles, label, points }) {
 
 function subtitleFor(result, rival) {
   const playerWon = result.winner === 'player';
+  if (result.shielded) return `${rival.name} é imune à primeira tranca. Nada de dano.`;
   if (result.kind === 'nocaute') return KNOCKOUT_CAUSE[result.reason] ?? (playerWon ? `${rival.name} caiu antes da batida.` : 'Você caiu.');
   if (!result.winner) return 'Empate na contagem. Ninguém sangra.';
   if (result.kind === 'tranca') return playerWon ? 'Menor soma é sua.' : `Menor soma é de ${rival.name}.`;
   return playerWon ? 'Você bateu.' : `${rival.name} bateu.`;
 }
 
+function RunStats({ state }) {
+  const { stats } = state;
+  return (
+    <dl className="mx-auto mt-4 grid max-w-[250px] grid-cols-2 gap-y-1 text-left font-term text-lg">
+      <dt className="text-bone-300">Nós vencidos</dt>
+      <dd className="text-right text-bone-50">
+        {state.run.cleared.length}/{TOTAL_NODES}
+      </dd>
+      <dt className="text-bone-300">Rodadas vencidas</dt>
+      <dd className="text-right text-bone-50">{stats.roundsWon.player}</dd>
+      <dt className="text-bone-300">Moedas ganhas</dt>
+      <dd className="text-right text-bone-50">${stats.coinsEarned}</dd>
+      <dt className="text-bone-300">Pedras de grife</dt>
+      <dd className="text-right text-bone-50">{Object.keys(state.decks.player).length}</dd>
+    </dl>
+  );
+}
+
 /**
- * Resultado da rodada, da partida (vitória → loja) ou da run (você zerou).
+ * Resultado da rodada, do nó (vitória → loja → mapa), da run vencida (último
+ * chefe) ou da run perdida (você zerou).
  */
 export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = true, onRestart, onMenu }) {
-  const { roundResult: result, phase, hands, hearts, coins, stats } = state;
+  const { roundResult: result, phase, hands, hearts, coins } = state;
   const matchWon = phase === 'matchWon';
+  const runWon = phase === 'runWon';
+  const clearedNode = state.run.cleared.at(-1) ?? 0;
 
   useEffect(() => {
     if (!matchWon || !autoShop) return undefined;
@@ -68,6 +91,7 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
 
   if (!result) return null;
   const runOver = phase === 'gameOver';
+  const heal = result.heal ?? 0;
   const playerWon = result.winner === 'player';
   const tie = !result.winner;
   const subtitle = subtitleFor(result, rival);
@@ -83,7 +107,9 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
             <div className="mx-auto mb-3 w-fit">
               <RivalAvatar rival={rival} mood="hurt" pixel={5} />
             </div>
-            <p className="font-pixel text-[8px] text-bone-400">PARTIDA {state.run.match} VENCIDA</p>
+            <p className="font-pixel text-[8px] text-bone-400">
+              {rival.boss ? 'CHEFE DERROTADO' : `NÓ ${clearedNode + 1}/${TOTAL_NODES} VENCIDO`}
+            </p>
             <h2 id="round-title" className="mt-2 font-pixel text-[16px] leading-snug text-brass-300 text-shadow-pixel">
               VOCÊ QUEBROU {name}
             </h2>
@@ -95,6 +121,10 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
               <CoinCount value={`${result.prize ?? 0}`} className="text-[12px]" />
             </div>
             <p className="mt-1 font-term text-base text-bone-300">Saldo: ${coins.player}</p>
+            <div className="mt-2 flex items-center justify-center gap-2 font-pixel text-[9px] text-[#ff8c7a]">
+              <span>{rival.boss ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
+              <HeartsBar current={hearts.player} max={MAX_HEARTS} pixel={2} label={`Seus corações: ${hearts.player}`} />
+            </div>
             <button type="button" data-tone="brass" className="btn-pixel mt-5 w-full" onClick={onShop}>
               ENTRAR NA LOJA CLANDESTINA
             </button>
@@ -114,19 +144,10 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
             <p className="mt-2 font-term text-xl text-bone-200">
               {KIND_TITLE[result.kind]} {subtitle}
             </p>
-            <dl className="mx-auto mt-4 grid max-w-[250px] grid-cols-2 gap-y-1 text-left font-term text-lg">
-              <dt className="text-bone-300">Partidas vencidas</dt>
-              <dd className="text-right text-bone-50">{stats.matchesWon}</dd>
-              <dt className="text-bone-300">Rodadas vencidas</dt>
-              <dd className="text-right text-bone-50">{stats.roundsWon.player}</dd>
-              <dt className="text-bone-300">Moedas ganhas</dt>
-              <dd className="text-right text-bone-50">${stats.coinsEarned}</dd>
-              <dt className="text-bone-300">Pedras de grife</dt>
-              <dd className="text-right text-bone-50">{Object.keys(state.decks.player).length}</dd>
-            </dl>
+            <RunStats state={state} />
             <div className="mt-5 grid gap-2">
               <button type="button" data-tone="brass" className="btn-pixel" onClick={onRestart}>
-                NOVA RUN
+                NOVO JOGO
               </button>
               <button type="button" className="btn-pixel" onClick={onMenu}>
                 MENU
@@ -135,10 +156,38 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
           </>
         )}
 
-        {!matchWon && !runOver && (
+        {runWon && (
+          <>
+            <div className="mx-auto mb-3 w-fit">
+              <RivalAvatar rival={rival} mood="hurt" pixel={5} />
+            </div>
+            <p className="font-pixel text-[8px] text-bone-400">18 MESAS · 3 REGIÕES</p>
+            <h2 id="round-title" className="run-won-title mt-2 font-pixel text-[15px] leading-snug text-brass-300 text-shadow-pixel">
+              VOCÊ É O NOVO DONO DO BOTECO
+            </h2>
+            <p className="mt-2 font-term text-xl text-bone-200">
+              {KIND_TITLE[result.kind]} O Comendador entrega a chave do boteco.
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[10px] text-[#9fe08a]">
+              <span>PRÊMIO FINAL</span>
+              <CoinCount value={`${result.prize ?? 0}`} className="text-[12px]" />
+            </div>
+            <RunStats state={state} />
+            <div className="mt-5 grid gap-2">
+              <button type="button" data-tone="brass" className="btn-pixel" onClick={onRestart}>
+                NOVO JOGO
+              </button>
+              <button type="button" className="btn-pixel" onClick={onMenu}>
+                MENU
+              </button>
+            </div>
+          </>
+        )}
+
+        {!matchWon && !runOver && !runWon && (
           <>
             <p className="font-pixel text-[9px] text-bone-400">
-              PARTIDA {state.run.match} · RODADA {state.round}
+              NÓ {state.run.node + 1} · RODADA {state.round}
             </p>
             <h2 id="round-title" className={`mt-2 font-pixel text-[20px] leading-snug text-shadow-pixel ${tie ? 'text-bone-100' : playerWon ? 'text-brass-300' : 'text-blood-400'}`}>
               {KIND_TITLE[result.kind]}

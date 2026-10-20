@@ -1,6 +1,6 @@
-# Buxaria — Patch 0.3
+# Buxaria — Patch 0.4
 
-Duelo 1x1 tático de **dominó roguelike** contra o Tio Zé, em dark pixel art
+Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
 
 ## Rodando
@@ -53,7 +53,62 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.4: campanha, menus e mesa viva
+
+### Menu principal (`TitleScreen.jsx`)
+Lâmpada, logo **BUXARIA** com contorno pesado e quatro botões:
+- **JOGAR** → NOVO JOGO ou **CONTINUAR** (apagado se não houver run salva).
+- **OPÇÕES** → volume dos efeitos, volume da música/bar, vibração e resetar progresso (pede confirmação).
+- **COLEÇÕES** → o **Livro de Boteco** com todos os talismãs, pedras de grife e rivais. O que você já
+  viu (loja, hotbar do rival, seu baralho, mesa) mostra ícone, nome e efeito; o resto é silhueta com "?".
+- **CRÉDITOS** da mesa.
+
+### Campanha (`src/data/campaign.js`, `CampaignMap.jsx`)
+3 regiões × 6 nós = 18 rivais. Os nós 1–5 sobem de dificuldade; o 6º é o **chefe**.
+Trilha vertical de baixo para cima: o nó vencido ganha um **X de giz** e libera o próximo.
+
+| Região | Rivais (chefe por último) |
+| --- | --- |
+| 1. Boteco da Esquina | Tio Zé · Tonho do Gás · Baiano da Sinuca · Valdir Borracheiro · Dona Neide · **Seu Arlindo, o Rei da Bucha** (5♥, bucha dele dá dano dobrado) |
+| 2. Clube da Sinuca Clandestino | Marcão do Guincho · Serginho 22 · Cida da Marmita · Paulinho Pente Fino · Tião Navalha · **Beto Cigano, o Banqueiro** (6♥, cobra $2 a cada compra sua) |
+| 3. Submundo do Jogo do Bicho | Carlinhos Mão Leve · Bigode de Ouro · Madama Sofia · Doutor Fausto · Alemão do Ferro Velho · **Comendador Moreira, o Dono do Boteco** (7♥, 2 talismãs lendários, imune à 1ª tranca) |
+
+Regras próprias (`mechanics` em `rivals.js`, aplicadas no `gameReducer.js`): Cida recupera 1♥ quando
+você passa; Paulinho vê a sua pedra mais pesada e Sofia as suas buchas (a IA usa e a sua mão marca com
+um olho); Carlinhos rouba $2 quando casa as duas pontas; as pedras do Alemão valem 2× na tranca.
+
+- **Seus corações continuam** de um nó para o outro: vencer cura **+2♥**, vencer chefe cura tudo.
+- **Save** (`engine/save.js` + `engine/progress.js`, localStorage `buxaria:run`): gravado no mapa e na
+  loja (nó, vida, moedas, talismãs, pedras de grife e a vitrine como estava). Perder ou vencer a run apaga.
+- Vencer o Comendador encerra a run: **VOCÊ É O NOVO DONO DO BOTECO**.
+
+### Loja em grade
+Topo com saldo e a sua hotbar (toque para vender); 3 cartas quadradas de talismã em cima; 2 cartas
+largas de pedra de grife embaixo, com o material animado e "Substitui [X|Y]". Reembaralhar fica mais
+caro na mesma visita: **$3, $5, $8, depois $12**. Chance de raridade por região:
+
+| Região | Comum | Raro | Lendário | Mítico |
+| --- | --- | --- | --- | --- |
+| 1 | 60% | 35% | 5% | 0% |
+| 2 | 45% | 35% | 15% | 5% |
+| 3 | 30% | 30% | 25% | 15% |
+
+### Mesa
+- Fala do rival num **balão compacto** colado no retrato, some em 2,5 s. Os avisos de +$3 e de talismã
+  viraram **textos flutuantes**: o "+$3 Σ10" sobe da pedra jogada até o contador de moedas.
+- **Toque só seleciona.** Jogar é no botão JOGAR ou na vaga pontilhada da mesa (sem toque duplo).
+- **Jogada do rival:** "PENSANDO..." embaixo do retrato (mín. 600 ms) → a pedra voa da mão dele até a
+  ponta (400 ms) → **SLAM** seco de osso na madeira + a mesa treme 100 ms → 800 ms de destaque (anel
+  amarelo pulsando, escala 1,05 e o rótulo "[4|3]"). Só então a sua vez libera.
+- Feltro com a cor de cada rival, enfeites (giz, rasgo e marca de caneca, neon, cinzas e moedas, névoa
+  tóxica, runas, ferrugem, conhaque e mogno) e clima por região (fumaça no clube, brasa no submundo).
+- Pedras de grife: Ouro com reflexo contínuo, Rubi pulsando com brasas subindo, Cristal com prisma de
+  arco-íris na borda, Chumbo em metal escuro com rachadura em relevo, Fantasma flutuando (75–95%).
+  Cada uma tem som próprio ao entrar na mesa (moedas, sino de vidro, baque grave com eco, bigorna).
+
 ## Patch 0.3: run roguelike, Loja Clandestina e rivais
+
+> Parte deste patch mudou no 0.4 (vida entre nós, ordem fixa dos rivais, preço do reembaralhar): veja acima.
 
 ### A run
 - Você começa com o baralho de 28 pedras **100% comum** e sem talismãs, contra o **Tio Zé**.
@@ -180,14 +235,19 @@ src/
     gameReducer.js    estado do duelo e transições; emite eventos com `seq`
     powers.js         relíquias/peças aprimoradas aplicadas ao estado (regras, ganchos, revelações)
     effects.js        transições pequenas compartilhadas (moedas, dano direto, avisos)
-    shop.js           vitrine da loja, bloqueios de compra, valor de revenda
-    gameFeedback.js   eventos → banner, falas e humor do Tio Zé, dica do jogador
+    shop.js           vitrine da loja (raridade por região), bloqueios de compra, revenda
+    save.js           foto da run para o CONTINUAR (e validação do que vem do storage)
+    progress.js       localStorage: save, Livro de Boteco, opções e vibração
+    rivalInfo.js      jeito de jogar e regras de cada rival (texto do mapa)
+    gameFeedback.js   eventos → texto flutuante do +$3, falas e humor do rival, dica do jogador
     audioSynth.js     sintetizador Web Audio puro: efeitos, trilha de bossa e ambiência de bar
   data/
     rarities.js       comum, raro, lendário, mítico (cor, revenda, peso no sorteio)
     enhancedTiles.js  as 5 peças aprimoradas (dados + ganchos)
     relics.js         os 15 talismãs (dados, ícones 12x12 em pixel art, ganchos por dono)
-    rivals.js         Tio Zé + 5 rivais (retratos 16x16, falas, estilo de jogo)
+    campaign.js       as 3 regiões, os 18 nós, preços do reembaralhar e cura entre nós
+    rivals.js         os 18 rivais (retratos 16x16, falas, estilo, regras, feltro)
+    portraits.js      retratos dos rivais novos do 0.4
   ai/
     tioZeAI.js        decisão do Tio Zé + delay reflexivo de 700ms + falas
   components/
@@ -195,17 +255,19 @@ src/
     TableBoard.jsx    feltro verde-musgo, vinheta da lâmpada, caminho em "U"
     PlayerRack.jsx    mão em leque flutuante, seleção de pedras e botões de ação
     handFan.js        geometria do leque (posição, inclinação e descida de cada pedra)
-    PauseMenu.jsx     pausa: continuar, som, sair do duelo
+    PauseMenu.jsx     pausa: continuar, som, opções, sair para o menu
+    CampaignMap.jsx   trilha dos 18 nós com X de giz
+    CollectionBook.jsx, OptionsPanel.jsx, MenuModal.jsx   telas do menu
+    FloatingTexts.jsx textos que sobem da mesa (useFloats.js)
     RivalBench.jsx    o outro lado da mesa: retrato, hotbar e mão do rival
     RivalHand.jsx     leque do rival (virado, menor, pedras reveladas de frente)
     Hotbar.jsx        4 slots de talismã (seu, do rival, da loja)
     Shop.jsx          Loja Clandestina do Boteco
     InfoBalloon.jsx   balão do toque longo (useLongPress.js)
-    ProcToasts.jsx    avisos quando um talismã ou pedra dispara
     DrawChoice.jsx    escolha da compra (Barbante no Dedo)
     DevPanel.jsx      painel de testes secreto
     RoundOverlay.jsx  resultado da rodada / fim do duelo
-    TitleScreen.jsx   tela inicial (destrava o áudio no iOS)
+    TitleScreen.jsx   menu principal (destrava o áudio no iOS)
     PixelSprite.jsx, PixelHeart.jsx, sprites.js   pixel art em SVG
   App.jsx             loop principal: reducer, agenda do Tio Zé, sons, orquestra a UI
   pwa.js              bloqueio de pinça/zoom e registro do service worker
@@ -215,11 +277,12 @@ scripts/generate-icons.mjs   gera os PNGs (sem dependências)
 ```
 
 **Fluxo de dados:** a UI despacha ações (`PLAY`, `DRAW`, `DRAW_PICK`, `PASS`, `DISCARD`,
-`SKIP_DISCARD`, `UNDO`, `TIO_ZE_ACT`, `START_DUEL` (nova run), `NEXT_ROUND`, `OPEN_SHOP`,
-`SHOP_BUY_RELIC`, `SHOP_BUY_TILE`, `SHOP_SELL_RELIC`, `SHOP_REROLL`, `NEXT_MATCH`, `DEV`) para um reducer puro. Toda
+`SKIP_DISCARD`, `UNDO`, `TIO_ZE_ACT`, `NEW_RUN`, `LOAD_RUN`, `ENTER_NODE`, `NEXT_ROUND`, `OPEN_SHOP`,
+`SHOP_BUY_RELIC`, `SHOP_BUY_TILE`, `SHOP_SELL_RELIC`, `SHOP_REROLL`, `LEAVE_SHOP`, `DEV`; `START_DUEL` e
+`NEXT_MATCH` ficam como atalhos para testes) para um reducer puro. Toda
 aleatoriedade (o baralho embaralhado e a `seed` dos sorteios) entra pela ação, então o motor é
 determinístico e testável. O reducer emite eventos (`tilePlaced`, `bonus5`,
-`heartLost`, `roundEnd`...) e o `App` transforma cada um em som, tremida e banner.
+`heartLost`, `roundEnd`...) e o `App` transforma cada um em som, tremida e texto flutuante.
 
 ### Mesa em "U" e câmera dinâmica
 

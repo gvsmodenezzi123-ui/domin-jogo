@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
-import { RIVALS, RIVAL_IDS } from '../data/rivals.js';
+import { REGIONS } from '../data/campaign.js';
+import { RIVALS } from '../data/rivals.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 
@@ -36,7 +37,6 @@ export default function DevPanel({ state, onAction, onClose }) {
   const dev = (op, extra = {}) => onAction({ type: 'DEV', op, ...extra });
   const mine = state.relics.player;
   const full = mine.length >= RELIC_SLOTS;
-  const inMatch = state.phase !== 'shop';
 
   return (
     <div className="overlay-backdrop fixed inset-0 z-[80] flex items-end justify-center" role="dialog" aria-modal="true" aria-labelledby="dev-title">
@@ -50,7 +50,7 @@ export default function DevPanel({ state, onAction, onClose }) {
               PAINEL DEV
             </h2>
             <p className="mt-1 font-term text-base leading-none text-bone-400">
-              partida {state.run.match} · rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'rival'} · {state.phase}
+              nó {state.run.node + 1} · partida {state.run.match} · rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'rival'} · {state.phase}
             </p>
           </div>
           <button type="button" className="btn-pixel btn-mini" onClick={onClose}>
@@ -130,25 +130,29 @@ export default function DevPanel({ state, onAction, onClose }) {
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-rival">
           <h3 id="dev-rival" className="dev-label">
-            RIVAL DA PARTIDA
+            PULAR PARA O NÓ (RIVAL)
           </h3>
           <label className="mt-1 block">
             <span className="sr-only">Trocar rival</span>
             <select
               className="dev-select"
               value={state.rivalId}
-              disabled={!inMatch}
               onChange={(e) => onAction({ type: 'DEV', op: 'setRival', rivalId: e.target.value })}
             >
-              {RIVAL_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {RIVALS[id].name} — {RIVALS[id].title}
-                </option>
+              {REGIONS.map((region) => (
+                <optgroup key={region.id} label={`${region.id}. ${region.name}`}>
+                  {region.nodes.map((id, i) => (
+                    <option key={id} value={id}>
+                      {i + 1}. {RIVALS[id].name} — {RIVALS[id].title}
+                      {i === region.nodes.length - 1 ? ' (CHEFE)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>
           <button type="button" data-tone="brass" className="btn-pixel mt-2 w-full" disabled={!playing} onClick={() => dev('winMatch')}>
-            VENCER PARTIDA (IR PRA LOJA)
+            VENCER O NÓ (IR PRA LOJA)
           </button>
         </section>
 

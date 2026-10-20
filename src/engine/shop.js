@@ -1,15 +1,18 @@
 /**
- * Loja Clandestina do Boteco: abre depois de cada partida vencida.
+ * Loja Clandestina do Boteco: abre depois de cada nó vencido.
  *
  * Vitrine: 3 talismãs que você ainda não tem + 2 peças de grife (aprimoramento
  * para uma pedra COMUM do seu baralho; a comprada substitui a comum, o baralho
- * continua com 28). Reembaralhar custa $3. Talismãs equipados vendem pela metade
- * do preço-base da raridade (RARITIES[...].sellPrice).
+ * continua com 28). A raridade sorteada segue a região do próximo nó
+ * (data/campaign.js): no Boteco da Esquina quase não sai lendário e nunca
+ * mítico. Reembaralhar fica mais caro a cada uso na mesma visita ($3, $5, $8,
+ * $12). Talismãs equipados vendem pela metade do preço-base da raridade.
  *
- * Tudo puro: o sorteio sai de um gerador com semente (seed da run + partida +
+ * Tudo puro: o sorteio sai de um gerador com semente (seed da run + nó +
  * quantas vezes você reembaralhou).
  */
 
+import { regionOf, rerollCost } from '../data/campaign.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { RARITIES } from '../data/rarities.js';
 import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
@@ -17,11 +20,41 @@ import { FULL_SET, createSeededRng } from './dominoLogic.js';
 
 export const SHOP_RELIC_OFFERS = 3;
 export const SHOP_TILE_OFFERS = 2;
-export const REROLL_COST = 3;
 
 export function shopRng(state, rerolls, salt = 0) {
   const seed = (state.seed ?? 0) >>> 0;
-  return createSeededRng((seed ^ Math.imul(state.run.match + 7, 0x9e3779b1) ^ Math.imul(rerolls + 1 + salt * 31, 0x85ebca6b)) >>> 0);
+  return createSeededRng((seed ^ Math.imul(state.run.node + 7, 0x9e3779b1) ^ Math.imul(rerolls + 1 + salt * 31, 0x85ebca6b)) >>> 0);
+}
+
+/**
+ * Sorteia `count` itens distintos: primeiro a raridade (pelas chances da região,
+ * só entre as que ainda têm item), depois um item dela. Se nenhuma raridade com
+ * chance tiver item sobrando, sorteia entre o que restou.
+ */
+function pickByRarity(pool, rarityOf, chances, count, rng) {
+  const left = pool.slice();
+  const picked = [];
+  while (picked.length < count && left.length) {
+    const present = [...new Set(left.map(rarityOf))].filter((r) => (chances[r] ?? 0) > 0);
+    let candidates = left;
+    if (present.length) {
+      const total = present.reduce((sum, r) => sum + chances[r], 0);
+      let roll = rng() * total;
+      let chosen = present[present.length - 1];
+      for (const r of present) {
+        roll -= chances[r];
+        if (roll < 0) {
+          chosen = r;
+          break;
+        }
+      }
+      candidates = left.filter((item) => rarityOf(item) === chosen);
+    }
+    const item = candidates[Math.floor(rng() * candidates.length)];
+    picked.push(item);
+    left.splice(left.indexOf(item), 1);
+  }
+  return picked;
 }
 
 /** Sorteia `count` itens distintos, com peso. */
@@ -45,12 +78,13 @@ function pickWeighted(pool, weightOf, count, rng) {
   return picked;
 }
 
-/** Monta a vitrine da loja. */
+/** Monta a vitrine da loja (raridade conforme a região do próximo nó). */
 export function buildShop(state, rerolls = 0) {
   const rng = shopRng(state, rerolls);
+  const chances = regionOf(state.run.node).rarity;
   const owned = new Set(state.relics.player);
   const relicPool = RELIC_IDS.filter((id) => !owned.has(id));
-  const relics = pickWeighted(relicPool, (id) => RARITIES[RELICS[id].rarity].weight, SHOP_RELIC_OFFERS, rng).map((id) => ({
+  const relics = pickByRarity(relicPool, (id) => RELICS[id].rarity, chances, SHOP_RELIC_OFFERS, rng).map((id) => ({
     id,
     price: RELICS[id].price,
     sold: false,
@@ -60,11 +94,11 @@ export function buildShop(state, rerolls = 0) {
   const plainIds = FULL_SET.map((t) => t.id).filter((id) => !state.decks.player[id]);
   const tileIds = pickWeighted(plainIds, () => 1, SHOP_TILE_OFFERS, rng);
   const tiles = tileIds.map((tileId) => {
-    const [enhancement] = pickWeighted(ENHANCEMENT_IDS, (e) => RARITIES[ENHANCEMENTS[e].rarity].weight, 1, rng);
+    const [enhancement] = pickByRarity(ENHANCEMENT_IDS, (e) => ENHANCEMENTS[e].rarity, chances, 1, rng);
     return { tileId, enhancement, price: ENHANCEMENTS[enhancement].price, sold: false };
   });
 
-  return { relics, tiles, rerolls, rerollCost: REROLL_COST };
+  return { relics, tiles, rerolls, rerollCost: rerollCost(rerolls) };
 }
 
 /** Por que não dá para comprar esse talismã agora (ou null se dá). */
@@ -84,3 +118,5 @@ export function tileBuyBlock(state, offer) {
 
 /** Quanto um talismã equipado vale na revenda. */
 export const sellPriceOf = (relicId) => RARITIES[RELICS[relicId]?.rarity]?.sellPrice ?? 0;
+
+export { rerollCost };

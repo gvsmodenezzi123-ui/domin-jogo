@@ -437,24 +437,24 @@ describe('talismãs e pedras dos rivais', () => {
     expect(s.fx.frozen.player).toEqual([]);
   });
 
-  it('o rival nunca recebe as SUAS pedras aprimoradas; o Tião recebe o Chumbo dele', () => {
+  it('o rival nunca recebe as SUAS pedras aprimoradas; o Valdir recebe o Chumbo dele', () => {
     const deck = [
       ...[t(0, 0), t(0, 1), t(0, 2), t(0, 3), t(0, 4), t(0, 5), t(0, 6)],
-      ...[t(4, 6), t(1, 1), t(1, 2), t(1, 3), t(1, 4), t(1, 5), t(1, 6)],
+      ...[t(3, 5), t(1, 1), t(1, 2), t(1, 3), t(1, 4), t(1, 5), t(1, 6)],
     ];
     const used = new Set(deck.map((x) => x.id));
     const full = [...deck, ...FULL_SET.filter((x) => !used.has(x.id))];
     const s = gameReducer(createInitialState(), {
       type: 'START_DUEL',
       deck: full,
-      rivalId: 'tiao',
+      rivalId: 'valdir',
       playerDeck: { '1-1': 'ouro', '0-0': 'rubi' },
     });
     const byId = (seat, id) => s.hands[seat].find((x) => x.id === id);
     expect(byId('player', '0-0').enhancement).toBe('rubi');
     expect(byId('tioZe', '1-1').enhancement).toBeUndefined(); // o seu [1|1] de ouro, na mão dele, é comum
-    expect(byId('tioZe', '4-6').enhancement).toBe('chumbo');
-    expect(s.hearts.tioZe).toBe(5);
+    expect(byId('tioZe', '3-5').enhancement).toBe('chumbo');
+    expect(s.hearts.tioZe).toBe(3);
   });
 });
 

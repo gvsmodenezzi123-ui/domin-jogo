@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildTioZeView, decideTioZeAction, scoreMove } from '../../ai/tioZeAI.js';
 import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../../data/relics.js';
-import { RIVALS, RIVAL_IDS, RIVAL_POOL, pickNextRival } from '../../data/rivals.js';
+import { NODES, REGIONS, TOTAL_NODES } from '../../data/campaign.js';
+import { BOSS_IDS, RIVALS, RIVAL_IDS } from '../../data/rivals.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -15,7 +16,7 @@ import {
 } from '../dominoLogic.js';
 import { MATCH_PRIZE, createInitialState, gameReducer } from '../gameReducer.js';
 import { canUndo } from '../powers.js';
-import { REROLL_COST, relicBuyBlock, sellPriceOf } from '../shop.js';
+import { relicBuyBlock, rerollCost, sellPriceOf } from '../shop.js';
 
 const t = (a, b) => makeTile(a, b);
 const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra });
@@ -78,7 +79,7 @@ describe('partida → loja → próximo rival', () => {
       expect(FULL_SET.some((x) => x.id === offer.tileId)).toBe(true);
       expect(offer.price).toBeGreaterThan(0);
     }
-    expect(RIVAL_POOL).toContain(shop.shop.nextRivalId);
+    expect(shop.shop.nextRivalId).toBe('tonho'); // o próximo nó do mapa
   });
 
   it('comprar talismã desconta as moedas e ocupa um slot; o item some da vitrine', () => {
@@ -111,18 +112,28 @@ describe('partida → loja → próximo rival', () => {
     expect(byRarity).toEqual({ comum: 2, raro: 4, lendario: 7, mitico: 10 });
   });
 
-  it('reembaralhar custa $3 e troca a vitrine; sem dinheiro, não deixa', () => {
+  it('reembaralhar custa $3, $5, $8 e depois $12 na mesma visita; sem dinheiro, não deixa', () => {
     let s = toShop(newRun(11));
-    s = dev(s, 'addCoins', { amount: 30 });
+    s = dev(s, 'addCoins', { amount: 60 });
     const before = s.shop;
     const coins = s.coins.player;
+    expect(s.shop.rerollCost).toBe(3);
     s = gameReducer(s, { type: 'SHOP_REROLL' });
-    expect(s.coins.player).toBe(coins - REROLL_COST);
+    expect(s.coins.player).toBe(coins - 3);
     expect(s.shop.rerolls).toBe(1);
+    expect(s.shop.rerollCost).toBe(5);
+    let paid = [];
+    for (let i = 0; i < 4; i += 1) {
+      const c = s.coins.player;
+      s = gameReducer(s, { type: 'SHOP_REROLL' });
+      paid.push(c - s.coins.player);
+    }
+    expect(paid).toEqual([5, 8, 12, 12]);
+    expect([0, 1, 2, 3, 9].map(rerollCost)).toEqual([3, 5, 8, 12, 12]);
     expect(s.shop.nextRivalId).toBe(before.nextRivalId);
     const changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
     expect(changed(before.relics, s.shop.relics) || changed(before.tiles, s.shop.tiles)).toBe(true);
-    const broke = { ...s, coins: { ...s.coins, player: 2 } };
+    const broke = { ...s, coins: { ...s.coins, player: 11 } };
     expect(gameReducer(broke, { type: 'SHOP_REROLL' })).toBe(broke);
   });
 
@@ -199,9 +210,10 @@ describe('partida → loja → próximo rival', () => {
 });
 
 describe('rivais', () => {
-  it('6 rivais (Tio Zé + 5 da galeria) com retrato 16x16 em 4 humores', () => {
-    expect(RIVAL_IDS).toEqual(['tioZe', 'arlindo', 'neide', 'marcao', 'tiao', 'beto']);
-    expect(RIVAL_POOL).toEqual(['arlindo', 'neide', 'marcao', 'tiao', 'beto']);
+  it('18 rivais com retrato 16x16 em 4 humores, na ordem da campanha', () => {
+    expect(RIVAL_IDS).toHaveLength(18);
+    expect(RIVAL_IDS).toEqual(NODES.map((n) => n.rivalId));
+    expect(BOSS_IDS).toEqual(['arlindo', 'beto', 'comendador']);
     for (const id of RIVAL_IDS) {
       const rival = RIVALS[id];
       for (const mood of ['idle', 'thinking', 'smug', 'hurt']) {
@@ -213,28 +225,37 @@ describe('rivais', () => {
         }
       }
       for (const relic of rival.relics) expect(RELICS[relic]).toBeTruthy();
+      expect(rival.reflexMs, id).toBeGreaterThanOrEqual(600);
     }
-    expect(RIVALS.arlindo.relics).toEqual(['chaveDeFenda']);
+    expect(RIVALS.arlindo.hearts).toBe(5);
+    expect(RIVALS.arlindo.mechanics.doubleBuchaDamage).toBe(true);
     expect(RIVALS.neide.relics).toEqual(['dedal']);
-    expect(RIVALS.marcao.relics).toEqual(['cinzeiro']);
+    expect(Object.values(RIVALS.valdir.deck)).toEqual(['chumbo']);
     expect(RIVALS.tiao.hearts).toBe(5);
-    expect(Object.values(RIVALS.tiao.deck)).toEqual(['chumbo']);
-    expect(RIVALS.beto.relics).toEqual(['anel']);
-    expect(RIVALS.beto.rarity).toBe('mitico');
+    expect(RIVALS.beto.hearts).toBe(6);
+    expect(RIVALS.beto.mechanics.drawFee).toBe(2);
+    expect(Object.values(RIVALS.bigode.deck)).toEqual(['ouro', 'ouro']);
+    expect(Object.values(RIVALS.fausto.deck)).toEqual(['cristal', 'cristal']);
+    expect(RIVALS.comendador.hearts).toBe(7);
+    expect(RIVALS.comendador.relics).toHaveLength(2);
+    for (const relic of RIVALS.comendador.relics) expect(RELICS[relic].rarity).toBe('lendario');
   });
 
-  it('o sorteio não repete o último rival e o Beto Cigano é raro', () => {
-    const rng = createSeededRng(99);
-    const count = {};
-    let last = 'tioZe';
-    for (let i = 0; i < 2000; i += 1) {
-      const id = pickNextRival(rng, last);
-      expect(id).not.toBe(last);
-      count[id] = (count[id] ?? 0) + 1;
-      last = id;
+  it('campanha: 3 regiões de 6 nós, chefe no 6º; a dificuldade sobe dentro da região', () => {
+    expect(TOTAL_NODES).toBe(18);
+    expect(REGIONS.map((r) => r.name)).toEqual(['BOTECO DA ESQUINA', 'CLUBE DA SINUCA CLANDESTINO', 'SUBMUNDO DO JOGO DO BICHO']);
+    for (const region of REGIONS) {
+      const nodes = NODES.filter((n) => n.region === region.id);
+      expect(nodes).toHaveLength(6);
+      expect(nodes.map((n) => n.boss)).toEqual([false, false, false, false, false, true]);
+      const hearts = nodes.map((n) => RIVALS[n.rivalId].hearts);
+      for (let i = 1; i < hearts.length; i += 1) expect(hearts[i]).toBeGreaterThanOrEqual(hearts[i - 1]);
+      const total = Object.values(region.rarity).reduce((a, b) => a + b, 0);
+      expect(total).toBe(100);
     }
-    expect(count.tioZe).toBeUndefined();
-    expect(count.beto).toBeLessThan(count.arlindo / 2);
+    expect(REGIONS[0].rarity).toMatchObject({ lendario: 5, mitico: 0 });
+    expect(REGIONS[1].rarity).toMatchObject({ lendario: 15, mitico: 5 });
+    expect(REGIONS[2].rarity).toMatchObject({ lendario: 25, mitico: 15 });
   });
 
   it('estilos: Seu Arlindo solta bucha cedo; Marcão pressiona as pontas que você não tem', () => {
@@ -262,6 +283,7 @@ describe('rivais', () => {
     expect(RIVALS.beto.reflexMs).toBeLessThan(RIVALS.tioZe.reflexMs);
     const s = newRun(2, { rivalId: 'beto' });
     expect(dev(s, 'winMatch').roundResult.prize).toBe(MATCH_PRIZE + RIVALS.beto.prizeBonus);
+    expect(RIVALS.beto.prizeBonus).toBeGreaterThan(RIVALS.tioZe.prizeBonus);
   });
 });
 
@@ -298,7 +320,13 @@ describe('simulação de runs inteiras', () => {
           shop = gameReducer(shop, { type: 'SHOP_BUY_RELIC', index: Math.floor(rng() * 3) });
           shop = gameReducer(shop, { type: 'SHOP_BUY_TILE', index: Math.floor(rng() * 2) });
           if (rng() < 0.3) shop = gameReducer(shop, { type: 'SHOP_REROLL' });
-          next = gameReducer(shop, { type: 'NEXT_MATCH', deck: shuffle(FULL_SET, rng) });
+          if (rng() < 0.5) {
+            next = gameReducer(shop, { type: 'NEXT_MATCH', deck: shuffle(FULL_SET, rng) });
+          } else {
+            const map = gameReducer(shop, { type: 'LEAVE_SHOP' });
+            expect(map.phase).toBe('map');
+            next = gameReducer(map, { type: 'ENTER_NODE', deck: shuffle(FULL_SET, rng) });
+          }
           // às vezes o rival da partida dá uma mãozinha: o jogador simulado é fraco
           if (rng() < 0.5) next = dev(next, 'damageTioZe');
         } else if (s.pending?.type === 'drawChoice') next = gameReducer(s, { type: 'DRAW_PICK', tileId: s.pending.options.at(-1).id });
@@ -325,7 +353,7 @@ describe('simulação de runs inteiras', () => {
     }
     expect(matchesWon).toBeGreaterThan(40);
     expect(shopsVisited).toBeGreaterThan(40);
-    expect(rivalsSeen.size).toBeGreaterThanOrEqual(5);
+    expect(rivalsSeen.size).toBeGreaterThanOrEqual(4);
   }, 60000);
 
   it('o estado inicial e as constantes batem', () => {

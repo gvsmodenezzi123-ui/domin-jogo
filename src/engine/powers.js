@@ -10,6 +10,7 @@
 
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, getRelic, isUsed } from '../data/relics.js';
+import { getRival } from '../data/rivals.js';
 import { BASE_RULES, boardTilesInOrder, endTileId, makeTile, pipSum } from './dominoLogic.js';
 
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
@@ -17,6 +18,9 @@ export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 export const relicsOf = (state, seat) => (state.relics[seat] ?? []).map(getRelic).filter(Boolean);
 
 export const hasRelic = (state, seat, id) => (state.relics[seat] ?? []).includes(id);
+
+/** Regras próprias do rival da partida (ver `mechanics` em data/rivals.js). */
+export const rivalMechanics = (state) => getRival(state.rivalId).mechanics ?? {};
 
 // ---------------------------------------------------------------------------
 // Baralho de cada lado
@@ -70,14 +74,38 @@ export function trancaRulesFor(state) {
   return { player: rulesFor(state, 'player', { frozen: false }), tioZe: rulesFor(state, 'tioZe', { frozen: false }) };
 }
 
-/** Valor de cada pedra na contagem da tranca (Chave de Fenda), por lado. */
+/**
+ * Valor de cada pedra na contagem da tranca, por lado: Chave de Fenda (bucha
+ * vale 0) e o peso do rival (Alemão do Ferro Velho: as pedras dele valem 2×).
+ */
 export function trancaTileValues(state) {
   const values = {};
   for (const seat of ['player', 'tioZe']) {
     const relic = relicsOf(state, seat).find((r) => r.trancaTileValue);
-    if (relic) values[seat] = relic.trancaTileValue;
+    const weight = seat === 'tioZe' ? (rivalMechanics(state).trancaWeight ?? 1) : 1;
+    if (!relic && weight === 1) continue;
+    const base = relic ? relic.trancaTileValue : pipSum;
+    values[seat] = weight === 1 ? base : (tile) => base(tile) * weight;
   }
   return values;
+}
+
+/**
+ * Pedras da SUA mão que o rival enxerga: Paulinho Pente Fino vê a mais pesada,
+ * Madama Sofia prevê as suas buchas. A IA dele usa isso; a sua tela marca essas pedras.
+ */
+export function knownPlayerTiles(state) {
+  const mech = rivalMechanics(state);
+  const hand = state.hands.player;
+  const known = new Map();
+  if (mech.exposeHeaviest && hand.length) {
+    const heaviest = hand.slice().sort((x, y) => pipSum(y) - pipSum(x) || y.b - x.b)[0];
+    known.set(heaviest.id, heaviest);
+  }
+  if (mech.predictDoubles) {
+    for (const tile of hand) if (tile.a === tile.b) known.set(tile.id, tile);
+  }
+  return [...known.values()];
 }
 
 /** Pedra que o lado é obrigado a usar para abrir a mesa (só se ele tiver a pedra). */

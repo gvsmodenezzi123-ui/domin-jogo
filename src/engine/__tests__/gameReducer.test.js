@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TIO_ZE_REFLEX_MS, buildTioZeView, decideTioZeAction } from '../../ai/tioZeAI.js';
 import { TIO_ZE_FACES, HEART_BROKEN, HEART_FULL } from '../../components/sprites.js';
 import { FULL_SET, makeTile } from '../dominoLogic.js';
-import { deriveBanner, deriveTioZeSpeech } from '../gameFeedback.js';
+import { bonusFloat, deriveTioZeSpeech } from '../gameFeedback.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
 
 const t = (a, b) => makeTile(a, b);
@@ -89,13 +89,14 @@ describe('controle de ritmo', () => {
 });
 
 describe('múltiplo de 5', () => {
-  it('quem fecha múltiplo de 5 ganha $3 e gera o banner', () => {
+  it('quem fecha múltiplo de 5 ganha $3 e gera o texto flutuante', () => {
     let s = start(deckWith([t(5, 5), ...PLAYER.slice(1)], [t(1, 1), t(2, 2), t(0, 0), t(3, 3), t(1, 4), t(2, 4), t(0, 4)]));
     expect(s.openingTileId).toBe('5-5');
     const before = s.coins.player;
     s = gameReducer(s, { type: 'PLAY', actor: 'player', tileId: '5-5', side: 'root' });
     expect(s.coins.player).toBe(before + 3);
-    expect(deriveBanner(s.events)).toMatchObject({ text: '+$3 MÚLTIPLO DE 5!', tone: 'player' });
+    const bonus = [...s.events].reverse().find((e) => e.type === 'bonus5');
+    expect(bonusFloat(bonus)).toEqual({ text: '+$3 Σ10', tone: 'player', to: 'player' });
   });
 });
 

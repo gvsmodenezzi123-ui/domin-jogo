@@ -5,7 +5,7 @@ import { computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import PixelSprite from './PixelSprite.jsx';
-import { COIN, COIN_PALETTE } from './sprites.js';
+import { COIN, COIN_PALETTE, EYE, EYE_PALETTE } from './sprites.js';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -101,6 +101,8 @@ export default function PlayerRack({
   devUnlocked = false,
   onOpenDev,
   press,
+  knownIds,
+  rivalName = 'o rival',
 }) {
   const [areaRef, width] = useWidth();
   const { unit, spots } = computeFan(hand.length, width);
@@ -130,7 +132,7 @@ export default function PlayerRack({
               Σ{sum}
             </span>
           )}
-          <CoinCount value={coins} />
+          <CoinCount value={coins} target="player" />
         </div>
       </div>
 
@@ -166,6 +168,7 @@ export default function PlayerRack({
           const active = isTurn || discardMode;
           const playable = active && playableIds.has(tile.id);
           const power = selected && tile.a === tile.b && !discardMode;
+          const known = knownIds?.has(tile.id);
           return (
             <div
               key={tile.id}
@@ -205,6 +208,11 @@ export default function PlayerRack({
                       className={!active || !playable ? 'pointer-events-none' : ''}
                       onClick={() => onSelectTile(tile)}
                     />
+                    {known && (
+                      <span className="tile-known-mark" aria-label={`${rivalName} está vendo esta pedra`} title={`${rivalName} está vendo esta pedra`}>
+                        <PixelSprite rows={EYE} palette={EYE_PALETTE} pixel={1.5} />
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

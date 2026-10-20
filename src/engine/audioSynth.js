@@ -1,7 +1,10 @@
 /**
  * Buxaria — sintetizador procedural (Web Audio API pura, sem arquivos de áudio).
  *
- * Grafo:  vozes → [sala (delay curto com realimentação)] → master → compressor → saída
+ * Grafo:  efeitos → [sala (delay curto com realimentação)] → sfx ┐
+ *         música e ambiente do bar ─────────────────────→ música ┴→ master → compressor → saída
+ *
+ * `sfx` e `music` têm volume próprio (OPÇÕES); `master` é o mudo.
  *
  * No iOS o AudioContext só nasce/retoma dentro de um gesto do usuário:
  * chame `unlock()` num toque (o botão "Sentar à mesa" faz isso).
@@ -24,6 +27,10 @@ function writeMuted(value) {
     // armazenamento bloqueado: o mudo vale só nesta sessão
   }
 }
+
+/** Volume padrão das OPÇÕES: nele cada canal fica no nível original da mixagem. */
+const SFX_REF = 0.85;
+const MUSIC_REF = 0.6;
 
 const midiToFreq = (midi) => 440 * 2 ** ((midi - 69) / 12);
 
@@ -86,7 +93,19 @@ export class AudioSynth {
     this.ambience = null;
     this.music = null;
     this.pink = null;
+    this.sfxBus = null;
+    this.musicBus = null;
     this.muted = readMuted();
+    this.volumes = { sfx: SFX_REF, music: MUSIC_REF };
+  }
+
+  /** Volume (0–1) dos efeitos e da música; vale na hora, mesmo antes do áudio destravar. */
+  setVolumes({ sfx = this.volumes.sfx, music = this.volumes.music } = {}) {
+    this.volumes = { sfx, music };
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.sfxBus.gain.setTargetAtTime(sfx / SFX_REF, now, 0.03);
+    this.musicBus.gain.setTargetAtTime(music / MUSIC_REF, now, 0.05);
   }
 
   get ready() {
@@ -127,6 +146,13 @@ export class AudioSynth {
     this.master.gain.value = this.muted ? 0 : 0.85;
     this.master.connect(compressor);
 
+    this.sfxBus = ctx.createGain();
+    this.sfxBus.gain.value = this.volumes.sfx / SFX_REF;
+    this.sfxBus.connect(this.master);
+    this.musicBus = ctx.createGain();
+    this.musicBus.gain.value = this.volumes.music / MUSIC_REF;
+    this.musicBus.connect(this.master);
+
     // "sala": um delay curto escurecido dá corpo de quarto fechado
     const roomIn = ctx.createGain();
     roomIn.gain.value = 1;
@@ -144,7 +170,7 @@ export class AudioSynth {
     tone.connect(feedback);
     feedback.connect(delay);
     tone.connect(wet);
-    wet.connect(this.master);
+    wet.connect(this.sfxBus);
     this.room = roomIn;
 
     // ruído branco reaproveitado por todas as vozes
@@ -185,7 +211,7 @@ export class AudioSynth {
   }
 
   connectOut(node, roomSend = 0) {
-    node.connect(this.master);
+    node.connect(this.sfxBus);
     if (roomSend > 0) {
       const send = this.ctx.createGain();
       send.gain.value = roomSend;
@@ -394,6 +420,83 @@ export class AudioSynth {
     this.tileKnock();
   }
 
+  /**
+   * Jogada do rival assentando na mesa: pancada seca de osso na madeira
+   * ("SLAM"), mais forte e com menos sala que a sua batida comum.
+   */
+  aiSlam({ double = false } = {}) {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    const jitter = 1 + (Math.random() - 0.5) * 0.06;
+    this.noiseBurst({ t, peak: 0.72, decay: 0.026, filter: { type: 'bandpass', freq: 2400 * jitter, q: 1.3 }, room: 0.18 });
+    this.noiseBurst({ t, peak: 0.3, decay: 0.012, filter: { type: 'highpass', freq: 5200 } });
+    this.tone({ t, type: 'triangle', freq: 205 * jitter, freqEnd: 96, peak: 0.66, attack: 0.0015, decay: 0.075, room: 0.12 });
+    this.tone({ t, freq: 1640 * jitter, peak: 0.08, attack: 0.001, decay: 0.03 });
+    this.tone({ t: t + 0.003, freq: 82, freqEnd: 44, peak: double ? 0.8 : 0.6, attack: 0.003, decay: double ? 0.24 : 0.16 });
+    if (double) this.noiseBurst({ t: t + 0.04, peak: 0.4, decay: 0.03, filter: { type: 'bandpass', freq: 1900, q: 1.4 }, room: 0.15 });
+  }
+
+  /** Som próprio de cada pedra de grife ao entrar na mesa (por cima da batida). */
+  enhancedPlace(id) {
+    if (!this.canPlay()) return;
+    const t = this.now(0.012);
+    switch (id) {
+      case 'ouro': {
+        // madeira + moedas tilintando
+        [0, 0.055, 0.12].forEach((dt, i) => {
+          const f = [2637, 3136, 2349][i] * (1 + (Math.random() - 0.5) * 0.02);
+          this.tone({ t: t + dt, freq: f, peak: 0.1, attack: 0.001, decay: 0.26, room: 0.35 });
+          this.tone({ t: t + dt, freq: f * 2.71, peak: 0.03, attack: 0.001, decay: 0.09 });
+        });
+        break;
+      }
+      case 'cristal': {
+        // sino de vidro: parciais inarmônicos, queda longa
+        const base = 1760;
+        [
+          [1, 0.12, 1.1],
+          [2.32, 0.06, 0.8],
+          [4.25, 0.035, 0.55],
+          [6.63, 0.018, 0.35],
+        ].forEach(([ratio, peak, decay]) => {
+          this.tone({ t, freq: base * ratio, peak, attack: 0.002, decay, room: 0.6 });
+        });
+        break;
+      }
+      case 'rubi': {
+        // pancada grave e pesada, com eco abafado
+        this.tone({ t, freq: 58, freqEnd: 30, peak: 0.85, attack: 0.004, decay: 0.42 });
+        this.noiseBurst({ t, peak: 0.35, decay: 0.08, filter: { type: 'lowpass', freq: 380 } });
+        [0.19, 0.38].forEach((dt, i) => {
+          this.tone({ t: t + dt, freq: 54, freqEnd: 32, peak: i ? 0.14 : 0.28, attack: 0.006, decay: 0.3, filter: { type: 'lowpass', freq: 240 } });
+        });
+        break;
+      }
+      case 'chumbo': {
+        // bigorna: ferro batido, parciais metálicos brilhantes
+        this.noiseBurst({ t, peak: 0.42, decay: 0.02, filter: { type: 'highpass', freq: 3000 } });
+        [
+          [523, 0.16, 0.9],
+          [1444, 0.1, 0.6],
+          [2825, 0.06, 0.4],
+          [4030, 0.035, 0.25],
+        ].forEach(([freq, peak, decay]) => {
+          this.tone({ t, type: 'triangle', freq, peak, attack: 0.001, decay, room: 0.35 });
+        });
+        this.tone({ t, freq: 110, freqEnd: 70, peak: 0.4, attack: 0.002, decay: 0.12 });
+        break;
+      }
+      case 'fantasma': {
+        // sopro espectral subindo
+        this.noiseBurst({ t, peak: 0.12, attack: 0.08, decay: 0.4, filter: { type: 'bandpass', freq: 900, q: 4 }, sweepTo: 2600, room: 0.6 });
+        this.tone({ t, type: 'sine', freq: 660, freqEnd: 990, peak: 0.05, attack: 0.1, decay: 0.45, room: 0.6 });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
   lock() {
     if (!this.canPlay()) return;
     [0, 0.11, 0.22].forEach((offset) => {
@@ -524,7 +627,7 @@ export class AudioSynth {
     const out = ctx.createGain();
     out.gain.value = 0;
     out.gain.setTargetAtTime(0.75, ctx.currentTime, 1.5);
-    out.connect(this.master);
+    out.connect(this.musicBus);
 
     const nodes = [
       // conversa abafada (faixa da voz, bem filtrada) e o grave da sala
@@ -626,11 +729,7 @@ export class AudioSynth {
     warm.frequency.value = 2600;
     warm.Q.value = 0.5;
     bus.connect(warm);
-    warm.connect(this.master);
-    const send = ctx.createGain();
-    send.gain.value = 0.35;
-    warm.connect(send);
-    send.connect(this.room);
+    warm.connect(this.musicBus);
 
     this.music = { bus, step: 0, nextTime: ctx.currentTime + 0.2, timer: null };
     this.music.timer = setInterval(() => this.scheduleMusic(), 60);

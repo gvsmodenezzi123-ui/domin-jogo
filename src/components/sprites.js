@@ -170,3 +170,14 @@ export const MENU_ICON = Object.freeze([
   'bbbbbbbbbb',
   'bbbbbbbbbb',
 ]);
+
+/** Olho do rival: marca as suas pedras que ele está vendo (Paulinho, Madama Sofia). */
+export const EYE_PALETTE = Object.freeze({ k: '#0b0705', w: '#f4ecd2', v: '#b277ff', p: '#1a0b2e' });
+
+export const EYE = Object.freeze([
+  '..kkkkk..',
+  '.kwwvwwk.',
+  'kwwvpvwwk',
+  '.kwwvwwk.',
+  '..kkkkk..',
+]);

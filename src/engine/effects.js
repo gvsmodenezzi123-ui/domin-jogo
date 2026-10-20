@@ -18,8 +18,8 @@ export function patchFx(state, patch) {
 }
 
 /** Uma relíquia ou peça aprimorada disparou: vira aviso na tela e brilho no slot. */
-export function proc(state, { source, id, text, tone = 'player' }) {
-  return emit(state, { type: 'proc', source, id, text, tone });
+export function proc(state, { source, id, text, tone = 'player', owner }) {
+  return emit(state, { type: 'proc', source, id, text, tone, owner: owner ?? (tone === 'enemy' ? 'tioZe' : 'player') });
 }
 
 export function gainCoins(state, who, amount, source) {

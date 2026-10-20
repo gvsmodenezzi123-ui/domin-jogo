@@ -21,12 +21,16 @@ function useWidth() {
  * para baixo e flutuando de leve. Pedras reveladas (Olho de Vidro, Espelho)
  * aparecem de frente, um pouco transparentes.
  */
-export default function RivalHand({ tiles, revealedIds, className = '' }) {
+export default function RivalHand({ tiles, revealedIds, className = '', containerRef }) {
   const [ref, width] = useWidth();
+  const setRef = (el) => {
+    ref.current = el;
+    if (containerRef) containerRef.current = el;
+  };
   const { unit, spots } = computeFan(tiles.length, width, RIVAL_FAN);
   const height = unit * 2 + RIVAL_FAN.drop + 4;
   return (
-    <div ref={ref} className={`relative ${className}`} style={{ height }} aria-label={`Mão do rival: ${tiles.length} pedras`} role="img">
+    <div ref={setRef} className={`relative ${className}`} style={{ height }} aria-label={`Mão do rival: ${tiles.length} pedras`} role="img">
       <div className="absolute inset-0 rotate-180">
         {tiles.map((tile, i) => {
           const spot = spots[i];

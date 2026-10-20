@@ -1,6 +1,6 @@
 /**
  * Funções puras que traduzem o estado/eventos em feedback para a UI:
- * banner de múltiplo de 5, falas e humor do Tio Zé, e a dica do jogador.
+ * texto flutuante do múltiplo de 5, falas e humor do rival, e a dica do jogador.
  */
 
 import { pickRivalLine } from '../data/rivals.js';
@@ -20,17 +20,10 @@ function lastSeqOf(events, type) {
   return findLast(events, (e) => e.type === type)?.seq ?? 0;
 }
 
-/** Banner temporário do múltiplo de 5 (só da rodada atual). */
-export function deriveBanner(events) {
-  const roundStart = lastSeqOf(events, 'roundStart');
-  const ev = findLast(events, (e) => e.type === 'bonus5' && e.seq > roundStart);
-  if (!ev) return null;
-  return {
-    key: ev.seq,
-    tone: ev.by === 'player' ? 'player' : 'enemy',
-    text: `+$${ev.amount} MÚLTIPLO DE 5!`,
-    sub: ev.by === 'player' ? `PONTAS SOMAM ${ev.sum}` : `PRO BOLSO DO TIO ZÉ · ${ev.sum}`,
-  };
+/** Texto flutuante do múltiplo de 5: sobe da ponta jogada até as moedas de quem fechou. */
+export function bonusFloat(ev) {
+  if (ev?.type !== 'bonus5') return null;
+  return { text: `+$${ev.amount} Σ${ev.sum}`, tone: ev.by === 'player' ? 'player' : 'enemy', to: ev.by === 'player' ? 'player' : 'tioZe' };
 }
 
 function lineKindFor(ev) {
@@ -103,13 +96,13 @@ const SPECIAL_HINT = {
 };
 
 /** Texto de ajuda logo acima dos botões. */
-export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCount, drawAllowed, rules = BASE_RULES }) {
+export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCount, drawAllowed, rules = BASE_RULES, rivalName = 'o rival' }) {
   if (state.phase !== 'playing') return '';
   if (state.pending?.type === 'discard') {
     return selectedTile ? 'Toque em DESCARTAR para mandar ela pro fundo do dorme.' : 'Giz de Sinuca: escolha uma pedra para descartar (ou pule).';
   }
   if (state.pending?.type === 'drawChoice') return 'Barbante: escolha uma das duas pedras.';
-  if (!isPlayerTurn) return 'Vez do Tio Zé...';
+  if (!isPlayerTurn) return `Vez de ${rivalName}...`;
   if (!state.board.root) {
     const required = requiredOpeningFor(state, 'player');
     if (required) {
@@ -129,7 +122,7 @@ export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCou
         ? 'Encaixa dos dois lados. Escolha a ponta.'
         : 'Encaixa nas duas pontas! Escolha o lado.';
     }
-    return 'Toque de novo, no JOGAR ou na vaga da mesa.';
+    return 'Toque no JOGAR ou na vaga pontilhada da mesa.';
   }
   if (playableCount > 0) return `Sua vez. ${playableCount} pedra${playableCount > 1 ? 's' : ''} encaixa${playableCount > 1 ? 'm' : ''}.`;
   if (drawAllowed) return 'Nada encaixa. Compre no dorme ou passe.';
