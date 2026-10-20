@@ -99,7 +99,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
               SEUS TALISMÃS {state.relics.player.length}/{RELIC_SLOTS} · TOQUE PARA VENDER
             </h2>
             <Hotbar
-              key={alert}
+              key={`hotbar-${alert}`}
               relics={state.relics.player}
               size={44}
               press={press}
@@ -108,7 +108,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
               className={`mt-1.5 justify-center ${alert ? 'animate-hotbar-full' : ''}`}
             />
             {alert > 0 && (
-              <p key={alert} className="shop-alert animate-shop-alert mt-2 px-2 py-1.5 text-center font-pixel text-[8px] leading-relaxed" role="alert">
+              <p key={`alert-${alert}`} className="shop-alert animate-shop-alert mt-2 px-2 py-1.5 text-center font-pixel text-[8px] leading-relaxed" role="alert">
                 HOTBAR CHEIA! VENDA UM TALISMÃ ANTES DE COMPRAR OUTRO
               </p>
             )}
