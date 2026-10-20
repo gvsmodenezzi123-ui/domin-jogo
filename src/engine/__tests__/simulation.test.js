@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTioZeView, decideTioZeAction } from '../../ai/tioZeAI.js';
-import { computeBoardLayout, getBranchPaths } from '../boardLayout.js';
+import { computeBoardLayout, rectGap, rectsOverlap } from '../boardLayout.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -12,11 +12,12 @@ import {
 } from '../dominoLogic.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
 
+// mundos [colunas, linhas]: SE, iPhone 14, telas altas
 const GRIDS = [
-  [16, 12],
-  [16, 14],
-  [16, 18],
-  [16, 24],
+  [10, 9],
+  [10, 11],
+  [10, 13],
+  [10, 18],
 ];
 
 function check(condition, message) {
@@ -37,17 +38,19 @@ function assertLayout(board) {
   for (const [cols, rows] of GRIDS) {
     const { tiles } = computeBoardLayout(board, cols, rows);
     check(tiles.length === boardTilesInOrder(board).length, 'pedra sem posição no layout');
-    const occupied = new Set();
-    for (const tile of tiles) {
-      for (let dx = 0; dx < tile.w; dx += 1) {
-        for (let dy = 0; dy < tile.h; dy += 1) {
-          const x = tile.x + dx;
-          const y = tile.y + dy;
-          check(x >= 0 && x < cols && y >= 0 && y < rows, `pedra fora da mesa em ${cols}x${rows}`);
-          const k = `${x},${y}`;
-          check(!occupied.has(k), `pedras sobrepostas em ${k}`);
-          occupied.add(k);
-        }
+    for (let i = 0; i < tiles.length; i += 1) {
+      const t = tiles[i];
+      check((t.w > t.h) === (t.orientation === 'horizontal'), `pedra ${t.id} com retângulo e orientação trocados`);
+      check(!t.isDouble || t.orientation !== t.lineAxis, `bucha ${t.id} não está atravessada`);
+      for (let j = i + 1; j < tiles.length; j += 1) {
+        check(!rectsOverlap(t, tiles[j]), `pedras ${t.id} e ${tiles[j].id} sobrepostas em ${cols}x${rows}`);
+      }
+    }
+    // cada pedra encosta na anterior da sua ponta (a corrente nunca pula)
+    for (const branch of ['left', 'right']) {
+      const chain = [tiles[0], ...tiles.filter((t) => t.branch === branch)];
+      for (let k = 1; k < chain.length; k += 1) {
+        check(rectGap(chain[k - 1], chain[k]) < 1e-6, `corrente ${branch} desconectada em ${chain[k].id}`);
       }
     }
   }
@@ -118,38 +121,4 @@ describe('simulação de duelos completos', () => {
     // os quatro desfechos aparecem em 300 duelos
     expect([...kinds].sort()).toEqual(['bucha', 'cruzada', 'normal', 'tranca']);
   }, 60000);
-});
-
-describe('caminhos em U', () => {
-  it('cada ramo tem espaço para 27 pedras + vaga em qualquer grade', () => {
-    for (const [cols, rows] of GRIDS) {
-      const paths = getBranchPaths(cols, rows);
-      for (const branch of ['left', 'right']) {
-        const path = paths[branch];
-        expect(path.length).toBe(56);
-        for (let i = 1; i < path.length; i += 1) {
-          const d = Math.abs(path[i].x - path[i - 1].x) + Math.abs(path[i].y - path[i - 1].y);
-          expect(d).toBe(1);
-        }
-        for (const c of path) {
-          expect(c.x).toBeGreaterThanOrEqual(0);
-          expect(c.x).toBeLessThan(cols);
-          expect(c.y).toBeGreaterThanOrEqual(0);
-          expect(c.y).toBeLessThan(rows);
-        }
-      }
-    }
-  });
-
-  it('desenha um U: desce, sobe pela margem e curva no topo', () => {
-    const { left, right } = getBranchPaths(16, 18);
-    expect(left[0]).toEqual({ x: 6, y: 17 });
-    expect(right[0]).toEqual({ x: 9, y: 17 });
-    // margem esquerda e direita sobem
-    expect(left.some((c) => c.x === 0 && c.y === 0)).toBe(true);
-    expect(right.some((c) => c.x === 15 && c.y === 0)).toBe(true);
-    // ramos nunca invadem a metade do outro
-    expect(left.every((c) => c.x <= 6)).toBe(true);
-    expect(right.every((c) => c.x >= 9)).toBe(true);
-  });
 });

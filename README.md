@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.1
+# Buxaria — Patch 0.1.1
 
 Duelo 1x1 tático de **dominó roguelike** contra o Tio Zé, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -86,14 +86,26 @@ scripts/generate-icons.mjs   gera os PNGs (sem dependências)
 então o motor é determinístico e testável. O reducer emite eventos (`tilePlaced`, `bonus5`,
 `heartLost`, `roundEnd`...) e o `App` transforma cada um em som, tremida e banner.
 
-### Mesa em "U"
+### Mesa em "U" e câmera dinâmica
 
-A mesa é uma grade de 16 colunas; o número de linhas se ajusta à altura da tela (12–26).
-A primeira pedra fica no centro da fileira de baixo. A ponta esquerda anda para a esquerda,
-sobe pela margem esquerda e, no topo, curva para dentro (e espirala, se ainda precisar).
-A direita é o espelho. Cada ponta tem espaço para 27 pedras em qualquer tela, sempre com
-uma célula de folga entre as voltas. As pontas abertas ganham `scale-110 z-10`, borda pulsante
-e um badge com o valor livre; com uma pedra selecionada, a vaga vira alvo de toque.
+As pedras ficam num "mundo" de 10 unidades de largura (unidade = lado curto da pedra);
+a altura acompanha a tela. A primeira pedra fica no centro da linha de baixo. A ponta
+esquerda anda para a esquerda, sobe pela margem e, no topo, curva para dentro e desce pelo
+meio (espiral). Se a corrente ficar longa demais para a espiral, aquela ponta é redesenhada
+como "gancho": curva no topo e sobe pelo centro, e as pedras deslizam para o novo lugar.
+A direita é o espelho. Cada ponta vive na sua metade, então uma nunca mexe na outra.
+
+- **Buchas sempre atravessadas:** em pé quando a linha corre na horizontal, deitadas nas
+  pernas do U, centradas no encaixe (como na mesa de boteco). A regra fica em
+  `tileOrientationOnBoard` e a `DominoTile` inverte os eixos quando `onBoard` e `isDouble`.
+- **Câmera:** sem zoom manual. Enquadra todas as pedras e as vagas, com zoom máximo no começo
+  da rodada (pedra 96×48 px) e afastando conforme a trilha cresce. Se tudo só caberia
+  pequeno demais, enquadra as duas pontas abertas.
+- **Pontas abertas:** `scale-110 z-10`, borda pulsante e badge com o número livre em tamanho
+  fixo na tela (legível em qualquer zoom). Com uma pedra selecionada, a vaga vira alvo de toque.
+- **Peso da bucha:** ao entrar, a bucha salta, bate e assenta (`tile-slam`), com anel de impacto,
+  sombra projetada, pancada dupla de madeira mais grave (`audioSynth.doubleSlam`) e a mesa treme.
+  Na mão, tocar numa bucha pulsa a moldura em amarelo, com toque sonoro e vibração (Android).
 
 ### Tio Zé
 

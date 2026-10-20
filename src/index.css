@@ -33,6 +33,9 @@
   --color-brass-600: #8f6a24;
 
   --animate-tile-drop: tile-drop 300ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  /* bucha: salta, bate (~62% = 290ms) e assenta */
+  --animate-tile-slam: tile-slam 470ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  --animate-power-wiggle: power-wiggle 420ms ease-in-out both;
   --animate-tile-in: tile-in 260ms steps(5, end) both;
   --animate-end-pulse: end-pulse 1.6s ease-in-out infinite;
   --animate-banner: banner 2s ease-out forwards;
@@ -55,6 +58,49 @@
       opacity: 1;
       transform: scale(1);
       filter: none;
+    }
+  }
+
+  @keyframes tile-slam {
+    0% {
+      opacity: 0;
+      transform: translateY(-22px) scale(1.25);
+      filter: brightness(1.5);
+    }
+    35% {
+      opacity: 1;
+      transform: translateY(-8px) scale(1.14);
+    }
+    62% {
+      transform: translateY(2px) scale(0.93);
+      filter: brightness(1.15);
+    }
+    80% {
+      transform: translateY(-2px) scale(1.03);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+
+  @keyframes power-wiggle {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    20% {
+      rotate: -5deg;
+    }
+    40% {
+      rotate: 4deg;
+    }
+    60% {
+      rotate: -3deg;
+    }
+    80% {
+      rotate: 2deg;
     }
   }
 
@@ -274,6 +320,11 @@
       0 0 10px 2px rgba(240, 204, 120, 0.55);
   }
 
+  .tile-ring-power {
+    border: 2px solid var(--color-brass-300);
+    animation: power-pulse 0.9s ease-in-out infinite;
+  }
+
   .tile-ring-playable {
     border: 1px solid rgba(240, 204, 120, 0.5);
   }
@@ -310,6 +361,26 @@
     filter: drop-shadow(0 6px 10px rgba(255, 217, 138, 0.45));
   }
 
+  .board-world {
+    transform-origin: 0 0;
+    transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* se a trilha for redesenhada (tela girou, corrente virou gancho), as pedras deslizam */
+  .board-tile {
+    transition:
+      left 0.45s ease,
+      top 0.45s ease,
+      scale 0.2s ease;
+  }
+
+  .impact-ring {
+    inset: -8px;
+    border: 3px solid rgba(240, 204, 120, 0.85);
+    border-radius: 8px;
+    animation: impact 520ms ease-out 290ms both;
+  }
+
   .end-badge {
     transform: translate(-50%, -50%);
     display: flex;
@@ -319,10 +390,11 @@
     line-height: 1;
     color: #1a1006;
     background: var(--color-brass-300);
-    border: 2px solid #1a1006;
+    border: 3px solid #1a1006;
     box-shadow:
-      0 2px 0 #000,
-      inset -2px -2px 0 rgba(0, 0, 0, 0.25);
+      0 3px 0 #000,
+      0 0 12px rgba(240, 204, 120, 0.45),
+      inset -3px -3px 0 rgba(0, 0, 0, 0.25);
     image-rendering: pixelated;
   }
 
@@ -630,6 +702,37 @@
   }
 }
 
+@keyframes impact {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+    visibility: hidden;
+  }
+}
+
+@keyframes power-pulse {
+  0%,
+  100% {
+    border-color: var(--color-brass-300);
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 8px 2px rgba(255, 214, 90, 0.45);
+  }
+  50% {
+    border-color: #fff1a8;
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 18px 6px rgba(255, 214, 90, 0.85);
+  }
+}
+
 @keyframes hurt {
   0% {
     opacity: 0;
@@ -660,7 +763,19 @@
   .slot-ghost,
   .animate-end-pulse,
   .animate-tile-drop,
-  .animate-tile-in {
+  .animate-tile-in,
+  .animate-tile-slam,
+  .animate-power-wiggle,
+  .tile-ring-power {
     animation: none !important;
+  }
+
+  .impact-ring {
+    display: none;
+  }
+
+  .board-world,
+  .board-tile {
+    transition: none;
   }
 }

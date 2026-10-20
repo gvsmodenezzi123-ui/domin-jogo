@@ -297,6 +297,34 @@ export class AudioSynth {
     this.tone({ t, freq: 62, freqEnd: 34, peak: 0.6, attack: 0.003, decay: 0.32, room: 0.6 });
   }
 
+  /**
+   * Bucha batendo na mesa: duas pancadas de madeira quase juntas (a pedra
+   * bate de quina e assenta), mais secas (pouca sala) e com peso grave.
+   */
+  doubleSlam() {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    [0, 0.042].forEach((offset, i) => {
+      const at = t + offset;
+      const jitter = 1 + (Math.random() - 0.5) * 0.06;
+      this.noiseBurst({ t: at, peak: i ? 0.52 : 0.66, decay: 0.028, filter: { type: 'bandpass', freq: (i ? 1850 : 2250) * jitter, q: 1.6 }, room: 0.2 });
+      this.tone({ t: at, type: 'triangle', freq: (i ? 148 : 172) * jitter, freqEnd: 82, peak: i ? 0.52 : 0.64, attack: 0.002, decay: 0.085, room: 0.15 });
+      this.tone({ t: at, freq: 1480 * jitter, peak: 0.07, attack: 0.001, decay: 0.03 });
+    });
+    // peso: grave curto embaixo da segunda pancada
+    this.tone({ t: t + 0.042, freq: 74, freqEnd: 40, peak: 0.72, attack: 0.003, decay: 0.2 });
+    this.noiseBurst({ t: t + 0.042, peak: 0.18, decay: 0.09, filter: { type: 'lowpass', freq: 420 } });
+  }
+
+  /** Selecionou uma bucha na mão: estalo de osso + brilho metálico curto. */
+  powerSelect() {
+    if (!this.canPlay()) return;
+    const t = this.now();
+    this.tone({ t, type: 'triangle', freq: 260, freqEnd: 190, peak: 0.16, attack: 0.002, decay: 0.06 });
+    this.tone({ t: t + 0.03, freq: 1318.5, peak: 0.07, attack: 0.002, decay: 0.18, room: 0.3 });
+    this.tone({ t: t + 0.03, freq: 1975.5, peak: 0.035, attack: 0.002, decay: 0.12 });
+  }
+
   /** Tranca: pedras travando — clac-clac seco. */
   lock() {
     if (!this.canPlay()) return;

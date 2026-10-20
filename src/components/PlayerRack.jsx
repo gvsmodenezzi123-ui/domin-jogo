@@ -132,6 +132,7 @@ export default function PlayerRack({
                 const index = r * perRow + i;
                 const selected = tile.id === selectedId;
                 const playable = isTurn && playableIds.has(tile.id);
+                const power = selected && tile.a === tile.b;
                 return (
                   <div
                     key={tile.id}
@@ -142,17 +143,21 @@ export default function PlayerRack({
                       translate: selected ? `0 -${LIFT}px` : undefined,
                     }}
                   >
-                    <DominoTile
-                      values={[tile.a, tile.b]}
-                      orientation="vertical"
-                      unit={unit}
-                      depth={3}
-                      selected={selected}
-                      playable={playable && !selected}
-                      dimmed={isTurn && !playable}
-                      disabled={!isTurn || !playable}
-                      onClick={() => onSelectTile(tile)}
-                    />
+                    {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
+                    <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
+                      <DominoTile
+                        values={[tile.a, tile.b]}
+                        orientation="vertical"
+                        unit={unit}
+                        depth={3}
+                        selected={selected}
+                        power={power}
+                        playable={playable && !selected}
+                        dimmed={isTurn && !playable}
+                        disabled={!isTurn || !playable}
+                        onClick={() => onSelectTile(tile)}
+                      />
+                    </div>
                   </div>
                 );
               })}

@@ -68,8 +68,11 @@ function Half({ value, horizontal, unit }) {
 /**
  * Pedra de dominó em osso amarelado envelhecido.
  *
- * values: [primeiro, segundo] — esquerda/direita (deitada) ou cima/baixo (em pé)
- * unit:   lado de cada metade, em px
+ * values:      [primeiro, segundo] — esquerda/direita (deitada) ou cima/baixo (em pé)
+ * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
+ * onBoard:     na mesa a bucha fica sempre atravessada: os eixos se invertem
+ * power:       bucha selecionada na mão — moldura amarela pulsando
+ * unit:        lado de cada metade, em px
  */
 function DominoTile({
   values = [0, 0],
@@ -80,6 +83,8 @@ function DominoTile({
   dimmed = false,
   playable = false,
   openEnd = false,
+  onBoard = false,
+  power = false,
   depth = 2,
   onClick,
   disabled = false,
@@ -87,7 +92,11 @@ function DominoTile({
   style,
   label,
 }) {
-  const horizontal = orientation === 'horizontal';
+  const isDouble = values[0] === values[1];
+  // bucha na mesa: perpendicular à linha (em pé na horizontal, deitada na vertical)
+  const crosswise = onBoard && isDouble && !faceDown;
+  const actual = crosswise ? (orientation === 'horizontal' ? 'vertical' : 'horizontal') : orientation;
+  const horizontal = actual === 'horizontal';
   const width = horizontal ? unit * 2 : unit;
   const height = horizontal ? unit : unit * 2;
   const Tag = onClick ? 'button' : 'div';
@@ -130,7 +139,7 @@ function DominoTile({
       aria-pressed={onClick ? selected : undefined}
       className={`relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
-      } ${className}`}
+      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${className}`}
       style={{
         ...shared,
         background: [
@@ -160,7 +169,11 @@ function DominoTile({
         }
       />
       {selected && (
-        <span aria-hidden="true" className="tile-ring-selected pointer-events-none absolute -inset-[3px]" style={{ borderRadius: radius + 2 }} />
+        <span
+          aria-hidden="true"
+          className={`${power ? 'tile-ring-power' : 'tile-ring-selected'} pointer-events-none absolute -inset-[3px]`}
+          style={{ borderRadius: radius + 2 }}
+        />
       )}
       {!selected && playable && (
         <span aria-hidden="true" className="tile-ring-playable pointer-events-none absolute -inset-[2px]" style={{ borderRadius: radius + 1 }} />

@@ -1,11 +1,14 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { computeBoardLayout, computeGridSize } from '../engine/boardLayout.js';
+import { BASE_UNIT_PX, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import { LAMP, LAMP_PALETTE } from './sprites.js';
 
-const TILE_GAP = 2;
-const BOARD_PADDING = 10;
+/** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
+const BOARD_PADDING = 8;
+/** Folga visual entre pedras vizinhas, em px do mundo (antes da câmera). */
+const TILE_INSET = 1.5;
+const B = BASE_UNIT_PX;
 
 function useElementSize() {
   const ref = useRef(null);
@@ -25,28 +28,33 @@ function useElementSize() {
 
 const SIDE_LABEL = { left: 'esquerda', right: 'direita', root: 'centro' };
 
+/** Caixa (px do mundo) de uma pedra de `unit` px centrada no retângulo r (em unidades). */
+function tileBox(r, orientation, unit) {
+  const w = orientation === 'horizontal' ? unit * 2 : unit;
+  const h = orientation === 'horizontal' ? unit : unit * 2;
+  return { left: r.x * B + (r.w * B - w) / 2, top: r.y * B + (r.h * B - h) / 2, width: w, height: h };
+}
+
 /**
- * Mesa em feltro verde-musgo. As pedras são posicionadas numa grade em "U"
- * (ver engine/boardLayout.js); não há zoom: a grade sempre cabe na tela.
+ * Mesa em feltro verde-musgo. As pedras ficam num "mundo" em unidades
+ * (engine/boardLayout.js) e uma câmera automática enquadra a jogada:
+ * bem perto no começo da rodada, afastando conforme a trilha cresce.
  */
-export default function TableBoard({ board, playableSides = [], onPlaySide, banner, dimmed = false }) {
+export default function TableBoard({ board, playableSides = [], onPlaySide, banner, dimmed = false, previewDouble = false, frameRef }) {
   const [areaRef, size] = useElementSize();
-  const { cols, rows, cell } = computeGridSize(size.width, size.height);
-  const layout = useMemo(() => computeBoardLayout(board, cols, rows), [board, cols, rows]);
+  const { cols, rows } = computeWorldSize(size.width, size.height);
 
-  const offsetX = Math.floor((size.width - cols * cell) / 2);
-  const offsetY = Math.floor((size.height - rows * cell) / 2);
-  const unit = Math.max(8, cell - TILE_GAP);
-
-  const place = (x, y, w, h, tileW, tileH) => ({
-    left: offsetX + x * cell + (w * cell - tileW) / 2,
-    top: offsetY + y * cell + (h * cell - tileH) / 2,
-  });
-
-  const slotEntries = Object.entries(layout.slots);
+  // A câmera usa o layout sem prévia, para não mexer quando o jogador seleciona uma pedra.
+  const baseLayout = useMemo(() => computeBoardLayout(board, cols, rows), [board, cols, rows]);
+  const layout = useMemo(
+    () => (previewDouble ? computeBoardLayout(board, cols, rows, { previewDouble: true }) : baseLayout),
+    [board, cols, rows, previewDouble, baseLayout],
+  );
+  const camera = computeCamera(baseLayout, size);
+  const unit = B - TILE_INSET * 2;
 
   return (
-    <section className="felt-table relative min-h-0 flex-1 overflow-hidden" aria-label="Mesa">
+    <section ref={frameRef} className="felt-table relative min-h-0 w-full flex-1 overflow-hidden" aria-label="Mesa">
       <div className="lamp-light pointer-events-none absolute inset-0" />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
       <div className="pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
@@ -55,36 +63,44 @@ export default function TableBoard({ board, playableSides = [], onPlaySide, bann
       </div>
 
       <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING }}>
-        {cell > 0 && (
-          <>
+        {size.width > 0 && (
+          <div
+            className="board-world absolute left-0 top-0"
+            style={{
+              width: cols * B,
+              height: rows * B,
+              transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
+            }}
+          >
             {layout.tiles.map((tile) => {
-              const tileW = tile.orientation === 'horizontal' ? unit * 2 : unit;
-              const tileH = tile.orientation === 'horizontal' ? unit : unit * 2;
-              const pos = place(tile.x, tile.y, tile.w, tile.h, tileW, tileH);
+              const box = tileBox(tile, tile.orientation, unit);
               return (
                 <div
                   key={tile.id}
-                  className={`absolute ${tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'} transition-transform duration-200`}
-                  style={{ left: pos.left, top: pos.top, width: tileW, height: tileH }}
+                  className={`board-tile absolute ${tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'}`}
+                  style={box}
                 >
-                  <div className="animate-tile-drop">
+                  <div className={`relative ${tile.isDouble ? 'animate-tile-slam' : 'animate-tile-drop'}`}>
                     <DominoTile
                       values={tile.values}
-                      orientation={tile.orientation}
+                      orientation={tile.lineAxis}
+                      onBoard
                       unit={unit}
                       openEnd={tile.isOpenEnd}
-                      depth={Math.max(1, Math.round(unit * 0.08))}
+                      depth={tile.isDouble ? 5 : 4}
                     />
+                    {tile.isDouble && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
                   </div>
                 </div>
               );
             })}
 
-            {slotEntries.map(([side, slot]) => {
+            {Object.entries(layout.slots).map(([side, slot]) => {
               const active = playableSides.includes(side);
-              const slotW = slot.w * cell - TILE_GAP;
-              const slotH = slot.h * cell - TILE_GAP;
-              const pos = place(slot.x, slot.y, slot.w, slot.h, slotW, slotH);
+              const box = tileBox(slot, slot.orientation, unit);
+              // badge com tamanho fixo NA TELA (contraescala da câmera): número sempre legível
+              const badgeScreen = Math.min(40, Math.max(22, camera.unitPx * 0.82));
+              const badgeSize = badgeScreen / camera.scale;
               return (
                 <div key={side}>
                   {active && (
@@ -93,15 +109,10 @@ export default function TableBoard({ board, playableSides = [], onPlaySide, bann
                       onClick={() => onPlaySide?.(side)}
                       aria-label={`Jogar na ponta ${SIDE_LABEL[side]}`}
                       className="slot-ghost absolute z-20"
-                      style={{ left: pos.left, top: pos.top, width: slotW, height: slotH }}
+                      style={box}
                     />
                   )}
-                  {!active && side === 'root' && (
-                    <div
-                      className="slot-empty pointer-events-none absolute"
-                      style={{ left: pos.left, top: pos.top, width: slotW, height: slotH }}
-                    />
-                  )}
+                  {!active && side === 'root' && <div className="slot-empty pointer-events-none absolute" style={box} />}
                   {slot.badge && (
                     <button
                       type="button"
@@ -111,11 +122,12 @@ export default function TableBoard({ board, playableSides = [], onPlaySide, bann
                       aria-label={`Ponta ${SIDE_LABEL[side]} livre: ${slot.value}`}
                       className={`end-badge absolute z-30 ${active ? 'end-badge-active' : ''}`}
                       style={{
-                        left: offsetX + slot.badge.x * cell,
-                        top: offsetY + slot.badge.y * cell,
-                        width: Math.max(16, Math.round(cell * 0.78)),
-                        height: Math.max(16, Math.round(cell * 0.78)),
-                        fontSize: Math.max(7, Math.round(cell * 0.36)),
+                        left: slot.badge.x * B,
+                        top: slot.badge.y * B,
+                        width: badgeSize,
+                        height: badgeSize,
+                        fontSize: (badgeScreen * 0.46) / camera.scale,
+                        borderWidth: 3 / camera.scale,
                       }}
                     >
                       {slot.value}
@@ -124,7 +136,7 @@ export default function TableBoard({ board, playableSides = [], onPlaySide, bann
                 </div>
               );
             })}
-          </>
+          </div>
         )}
       </div>
 

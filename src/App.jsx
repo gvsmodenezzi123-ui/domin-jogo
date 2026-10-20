@@ -26,6 +26,9 @@ import { createInitialState, gameReducer } from './engine/gameReducer.js';
 
 const newDeck = () => shuffle(FULL_SET);
 
+/** Momento (ms) em que a bucha assenta na animação `tile-slam`. */
+const DOUBLE_LANDING_MS = 290;
+
 /** Atraso (ms) de cada som dentro de um mesmo lote de eventos, para não embolar. */
 const FX_DELAY = {
   tilePlaced: 0,
@@ -54,11 +57,20 @@ function shake(element, strength = 6) {
 }
 
 /** Som e tremida para cada evento emitido pelo reducer. */
-function runEventFx(ev, shell) {
+function runEventFx(ev, shell, table) {
   const at = (fn) => setTimeout(fn, FX_DELAY[ev.type] ?? 0);
   switch (ev.type) {
     case 'tilePlaced':
-      at(() => audio.tileKnock({ heavy: ev.double }));
+      if (ev.double) {
+        // bucha: pancada dupla e a mesa treme quando ela assenta
+        setTimeout(() => {
+          audio.doubleSlam();
+          shake(table, 3);
+          navigator.vibrate?.(25);
+        }, DOUBLE_LANDING_MS);
+      } else {
+        at(() => audio.tileKnock());
+      }
       break;
     case 'drawTile':
       at(() => audio.drawTile());
@@ -101,6 +113,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [muted, setMuted] = useState(() => audio.muted);
   const shellRef = useRef(null);
+  const tableRef = useRef(null);
   const processedSeq = useRef(0);
 
   // Tio Zé: cada mudança de estado na vez dele agenda a próxima ação (700ms).
@@ -114,7 +127,7 @@ export default function App() {
     const fresh = state.events.filter((e) => e.seq > processedSeq.current);
     if (!fresh.length) return;
     processedSeq.current = fresh[fresh.length - 1].seq;
-    fresh.forEach((ev) => runEventFx(ev, shellRef.current));
+    fresh.forEach((ev) => runEventFx(ev, shellRef.current, tableRef.current));
   }, [state.events]);
 
   // iOS suspende o áudio quando o app vai para o fundo.
@@ -181,6 +194,11 @@ export default function App() {
       return;
     }
     setSelectedId(tile.id);
+    if (tile.a === tile.b) {
+      // bucha é jogada de poder: toque e vibração próprios
+      audio.powerSelect();
+      navigator.vibrate?.(15);
+    }
   };
 
   const handlePlaySide = (side) => {
@@ -256,6 +274,8 @@ export default function App() {
         onPlaySide={handlePlaySide}
         banner={banner}
         dimmed={roundFinished}
+        previewDouble={Boolean(selectedTile && selectedTile.a === selectedTile.b)}
+        frameRef={tableRef}
       />
 
       <PlayerRack
