@@ -16,11 +16,11 @@ import { prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useTripleTap } from './components/useTripleTap.js';
-import { REGIONS } from './data/campaign.js';
+import { BOSS_MUSIC, REGIONS, regionOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { getRival } from './data/rivals.js';
-import { audio } from './engine/audioSynth.js';
+import { sound } from './engine/audioSynth.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -124,54 +124,50 @@ function runEventFx(ev, shell, table, offset = 0) {
       if (ev.double) {
         // bucha: pancada dupla e a mesa treme quando ela assenta
         at(() => {
-          audio.doubleSlam();
-          if (ev.enhancement) audio.enhancedPlace(ev.enhancement);
+          sound.playTileSlam(true, ev.enhancement);
           shake(table, 3);
           haptic(25);
         }, DOUBLE_LANDING_MS);
       } else {
-        at(() => {
-          audio.tileKnock();
-          if (ev.enhancement) audio.enhancedPlace(ev.enhancement);
-        });
+        at(() => sound.playTileSlam(false, ev.enhancement));
       }
       break;
     case 'drawTile':
     case 'drawPeek':
     case 'shopReroll':
-      at(() => audio.drawTile());
+      at(() => sound.playDraw());
       break;
     case 'pass':
     case 'discard':
-      at(() => audio.passKnock());
+      at(() => sound.playPass());
       break;
     case 'bonus5':
-      at(() => audio.coin());
+      at(() => sound.playCoinJingle());
       break;
     case 'coins':
-      if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev') at(() => audio.coin());
+      if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev') at(() => sound.playCoinJingle());
       break;
     case 'shopBuy':
-      at(() => audio.purchase());
+      at(() => sound.playPurchase());
       break;
     case 'shopOpen':
-      at(() => audio.relicChime('info'));
+      at(() => sound.playChime('info'));
       break;
     case 'proc':
-      at(() => audio.relicChime(ev.tone));
+      at(() => sound.playChime(ev.tone));
       break;
     case 'undo':
-      at(() => audio.rewind());
+      at(() => sound.playRewind());
       break;
     case 'dev':
-      at(() => audio.click());
+      at(() => sound.playClick());
       break;
     case 'roundEnd':
-      at(() => (ev.result.kind === 'tranca' ? audio.lock() : audio.slam()));
+      at(() => (ev.result.kind === 'tranca' ? sound.playLock() : sound.playTileSlam(true)));
       break;
     case 'heartLost':
       at(() => {
-        audio.heartDamage();
+        sound.playHeartHit();
         if (ev.who === 'player') {
           shake(shell, ev.amount >= 2 ? 9 : 6);
           haptic(ev.amount >= 2 ? [70, 40, 90] : 60);
@@ -179,15 +175,23 @@ function runEventFx(ev, shell, table, offset = 0) {
       });
       // jingle de rodada só na contagem do fim da rodada (não em compra nem em dano direto)
       if (ev.reason !== 'draw' && !ev.direct) {
-        at(() => (ev.who === 'tioZe' ? audio.roundWin() : audio.roundLose()), 1150 - FX_DELAY.heartLost);
+        at(() => (ev.who === 'tioZe' ? sound.playRoundWin() : sound.playRoundLose()), 1150 - FX_DELAY.heartLost);
       }
       break;
     case 'duelEnd':
-      at(() => (ev.winner === 'player' ? audio.victory() : audio.defeat()));
+      at(() => (ev.winner === 'player' ? sound.playVictory() : sound.playDefeat()));
       break;
     default:
       break;
   }
+}
+
+/** Faixa da tela atual: menu e Boteco no jazz, Clube da Sinuca no funk, Submundo e chefes na tensão. */
+function musicFor(state) {
+  if (state.phase === 'title') return REGIONS[0].music;
+  if (state.phase === 'map' || state.phase === 'shop') return regionOf(state.run.node).music;
+  const rival = getRival(state.rivalId);
+  return rival.boss ? BOSS_MUSIC : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
 }
 
 /** Último disparo de cada talismã na partida atual, por dono: o slot pisca quando muda. */
@@ -267,7 +271,7 @@ function seenNow(state) {
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const [selectedId, setSelectedId] = useState(null);
-  const [muted, setMuted] = useState(() => audio.muted);
+  const [muted, setMuted] = useState(() => sound.isMuted);
   const [settings, setSettings] = useState(loadSettings);
   const [collection, setCollection] = useState(loadCollection);
   const [save, setSave] = useState(loadRunSave);
@@ -287,7 +291,13 @@ export default function App() {
   const bookRef = useRef(collection);
   const rival = getRival(state.rivalId);
 
-  useEffect(() => audio.setVolumes(settings), [settings]);
+  useEffect(() => sound.setVolumes(settings), [settings]);
+
+  // Trilha: Boteco (jazz), Clube da Sinuca (funk) e Submundo/chefes (tensão). Só depois do 1º toque.
+  const musicTrack = musicFor(state);
+  useEffect(() => {
+    if (sound.ctx) sound.playTrack(musicTrack);
+  }, [musicTrack]);
 
   const clearAiAnim = useCallback(() => {
     aiTimers.current.forEach((id) => clearTimeout(id));
@@ -313,8 +323,7 @@ export default function App() {
       const label = tileName(ev.tileId);
       setAiAnim({ key: ev.seq, tileId: ev.tileId, label, stage: 'flight', from });
       const land = setTimeout(() => {
-        audio.aiSlam({ double: ev.double });
-        if (ev.enhancement) audio.enhancedPlace(ev.enhancement);
+        sound.playAiSlam(ev.double, ev.enhancement);
         shake(tableRef.current, ev.double ? 4 : 3, 100);
         haptic(ev.double ? 22 : 12);
         setAiAnim((cur) => (cur?.key === ev.seq ? { ...cur, stage: 'spot' } : cur));
@@ -379,7 +388,7 @@ export default function App() {
   // iOS suspende o áudio quando o app vai para o fundo.
   useEffect(() => {
     const resume = () => {
-      if (document.visibilityState === 'visible' && audio.ready) audio.unlock();
+      if (document.visibilityState === 'visible' && sound.ctx) sound.init();
     };
     document.addEventListener('visibilitychange', resume);
     window.addEventListener('pointerdown', resume, { passive: true });
@@ -453,12 +462,12 @@ export default function App() {
   // Tocar na pedra só seleciona (ou desseleciona). Jogar é no JOGAR ou na vaga da mesa.
   const handleSelectTile = (tile) => {
     if (discardMode) {
-      audio.click();
+      sound.playClick();
       setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
       return;
     }
     if (!isPlayerTurn || !playableIds.has(tile.id)) return;
-    audio.click();
+    sound.playClick();
     if (selectedTile?.id === tile.id) {
       setSelectedId(null);
       return;
@@ -466,7 +475,7 @@ export default function App() {
     setSelectedId(tile.id);
     if (tile.a === tile.b) {
       // bucha é jogada de poder: toque e vibração próprios
-      audio.powerSelect();
+      sound.playPowerSelect();
       haptic(15);
     }
   };
@@ -481,7 +490,7 @@ export default function App() {
   };
 
   const handlePickDraw = (tileId) => {
-    audio.click();
+    sound.playClick();
     dispatch({ type: 'DRAW_PICK', tileId });
   };
 
@@ -498,7 +507,7 @@ export default function App() {
   };
 
   const handleSkipDiscard = () => {
-    audio.click();
+    sound.playClick();
     setSelectedId(null);
     dispatch({ type: 'SKIP_DISCARD' });
   };
@@ -509,10 +518,10 @@ export default function App() {
     dispatch({ type: 'UNDO' });
   };
 
+  // dentro de um toque: destrava o áudio (iOS) e liga a trilha da tela atual
   const wakeAudio = () => {
-    audio.unlock();
-    audio.startAmbience();
-    audio.startMusic();
+    sound.init();
+    if (!sound.isPlayingMusic || sound.currentTrack !== musicTrack) sound.playTrack(musicTrack);
   };
 
   const resetTable = () => {
@@ -525,7 +534,7 @@ export default function App() {
 
   const newGame = () => {
     wakeAudio();
-    audio.click();
+    sound.playClick();
     resetTable();
     clearRunSave();
     setSave(null);
@@ -539,19 +548,19 @@ export default function App() {
       return;
     }
     wakeAudio();
-    audio.click();
+    sound.playClick();
     resetTable();
     dispatch({ type: 'LOAD_RUN', save: saved });
   };
 
   const enterNode = () => {
-    audio.click();
+    sound.playClick();
     resetTable();
     dispatch({ type: 'ENTER_NODE', deck: newDeck() });
   };
 
   const nextRound = () => {
-    audio.click();
+    sound.playClick();
     setSelectedId(null);
     dispatch({ type: 'NEXT_ROUND', deck: newDeck() });
   };
@@ -563,17 +572,17 @@ export default function App() {
   }, [clearFloats]);
 
   const shopAction = (action) => {
-    audio.click();
+    sound.playClick();
     dispatch(action);
   };
 
   const leaveShop = () => {
-    audio.click();
+    sound.playClick();
     dispatch({ type: 'LEAVE_SHOP' });
   };
 
   const backToMenu = () => {
-    audio.click();
+    sound.playClick();
     resetTable();
     dispatch({ type: 'RETURN_TO_TITLE' });
     setSave(loadRunSave());
@@ -581,18 +590,18 @@ export default function App() {
   };
 
   const openMenu = () => {
-    audio.click();
+    sound.playClick();
     setMenuOpen(true);
   };
 
   const closeMenu = () => {
-    audio.click();
+    sound.playClick();
     setMenuOpen(false);
   };
 
   const toggleMute = () => {
-    audio.unlock();
-    setMuted(audio.toggleMuted());
+    sound.init();
+    setMuted(sound.toggleMute());
   };
 
   const changeSettings = (next) => {
@@ -608,16 +617,16 @@ export default function App() {
   };
 
   const titleTap = () => {
-    audio.unlock();
-    audio.click();
+    wakeAudio();
+    sound.playClick();
   };
 
   // Painel DEV: 3 toques no título (tela inicial) ou em "VOCÊ" (no duelo).
   const unlockDev = useCallback(() => {
     saveDevFlag();
     setDevUnlocked(true);
-    audio.unlock();
-    audio.relicChime('info');
+    sound.init();
+    sound.playChime('info');
   }, []);
   const openDevFromGame = useCallback(() => {
     unlockDev();

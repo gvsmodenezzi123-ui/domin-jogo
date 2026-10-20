@@ -34,7 +34,7 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
   return (
     <div className="grid gap-4">
       <Slider id="opt-sfx" label="EFEITOS (SFX)" value={settings.sfx} onChange={(sfx) => set({ sfx })} />
-      <Slider id="opt-music" label="MÚSICA E BAR" value={settings.music} onChange={(music) => set({ music })} />
+      <Slider id="opt-music" label="MÚSICA" value={settings.music} onChange={(music) => set({ music })} />
       <button
         type="button"
         className="btn-pixel"

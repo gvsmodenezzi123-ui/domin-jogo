@@ -3,7 +3,8 @@
  * são rivais comuns com dificuldade subindo; o nó 6 é o chefe da região.
  *
  * Também mora aqui o que muda conforme a região: a chance de cada raridade na
- * Loja Clandestina e o clima da mesa (`atmosphere`).
+ * Loja Clandestina, o clima da mesa (`atmosphere`) e a faixa de música
+ * (`music`, ver engine/audioSynth.js; os chefes tocam a `BOSS_MUSIC`).
  */
 
 export const REGIONS = Object.freeze([
@@ -12,6 +13,7 @@ export const REGIONS = Object.freeze([
     name: 'BOTECO DA ESQUINA',
     subtitle: 'Feltro tradicional, cerveja quente',
     atmosphere: 'boteco',
+    music: 'botecoJazz',
     // chance (%) de cada raridade na loja
     rarity: Object.freeze({ comum: 60, raro: 35, lendario: 5, mitico: 0 }),
     nodes: Object.freeze(['tioZe', 'tonho', 'baiano', 'valdir', 'neide', 'arlindo']),
@@ -21,6 +23,7 @@ export const REGIONS = Object.freeze([
     name: 'CLUBE DA SINUCA CLANDESTINO',
     subtitle: 'Neon, fumaça e taco quebrado',
     atmosphere: 'neon',
+    music: 'sinucaFunk',
     rarity: Object.freeze({ comum: 45, raro: 35, lendario: 15, mitico: 5 }),
     nodes: Object.freeze(['marcao', 'serginho', 'cida', 'paulinho', 'tiao', 'beto']),
   }),
@@ -29,12 +32,16 @@ export const REGIONS = Object.freeze([
     name: 'SUBMUNDO DO JOGO DO BICHO',
     subtitle: 'Alta tensão, apostas pesadas',
     atmosphere: 'bicho',
+    music: 'bossFight',
     rarity: Object.freeze({ comum: 30, raro: 30, lendario: 25, mitico: 15 }),
     nodes: Object.freeze(['carlinhos', 'bigode', 'sofia', 'fausto', 'alemao', 'comendador']),
   }),
 ]);
 
 export const NODES_PER_REGION = 6;
+
+/** Faixa das mesas de chefe (em qualquer região). */
+export const BOSS_MUSIC = 'bossFight';
 
 /** Todos os nós em ordem: { index, region, slot (1–6), rivalId, boss }. */
 export const NODES = Object.freeze(

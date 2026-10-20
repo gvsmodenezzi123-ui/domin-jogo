@@ -5,6 +5,7 @@ import { HeartsBar } from './PixelHeart.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import RivalHand from './RivalHand.jsx';
+import RivalSpeech from './RivalSpeech.jsx';
 import { MENU_ICON, SPEAKER_OFF, SPEAKER_ON, SPEAKER_PALETTE } from './sprites.js';
 
 const MOOD_LABEL = {
@@ -18,7 +19,8 @@ const MOOD_LABEL = {
  * O outro lado da mesa: o rival sentado no feltro, sem prateleira de madeira.
  * Retrato, status ("PENSANDO...") e hotbar dele (2x2) à esquerda; nome,
  * corações, moedas e o dorme no topo; a mão dele flutuando logo abaixo.
- * A fala aparece num balão compacto colado no retrato e some em 2,5 s.
+ * A fala aparece num balão compacto colado no retrato, letra a letra e com a
+ * voz do rival (RivalSpeech.jsx), e some logo depois.
  */
 export default function RivalBench({
   rival,
@@ -60,11 +62,7 @@ export default function RivalBench({
         </div>
 
         <div className="relative min-w-0 flex-1">
-          {speech && (
-            <div key={speech.key} className="speech-compact pointer-events-none absolute left-0 top-0 z-40" role="status">
-              <span>{speech.text}</span>
-            </div>
-          )}
+          {speech && <RivalSpeech key={speech.key} text={speech.text} voice={rival.id} />}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h2 className="truncate font-pixel text-[10px] leading-none text-bone-50 text-shadow-pixel">{rival.name.toUpperCase()}</h2>

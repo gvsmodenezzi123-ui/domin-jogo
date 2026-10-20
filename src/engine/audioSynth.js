@@ -1,14 +1,13 @@
-/**
- * Buxaria — sintetizador procedural (Web Audio API pura, sem arquivos de áudio).
- *
- * Grafo:  efeitos → [sala (delay curto com realimentação)] → sfx ┐
- *         música e ambiente do bar ─────────────────────→ música ┴→ master → compressor → saída
- *
- * `sfx` e `music` têm volume próprio (OPÇÕES); `master` é o mudo.
- *
- * No iOS o AudioContext só nasce/retoma dentro de um gesto do usuário:
- * chame `unlock()` num toque (o botão "Sentar à mesa" faz isso).
- */
+// src/engine/audioSynth.js
+// Motor Procedural de Áudio Web: Músicas Chiptune/Jazz de Boteco, Efeitos Sonoros Físicos e Vozes Estilo Animalese
+//
+// Ajustes para encaixar no jogo (marcados com "AJUSTE" no código):
+//   - perfis de voz para os 18 rivais, com os ids do jogo (neide, arlindo...);
+//   - `speed` do perfil vira o ritmo da fala (ms por letra); com som desligado o texto continua aparecendo;
+//   - as pedras de grife usam os ids do jogo (ouro, cristal, rubi, chumbo, fantasma);
+//   - nada toca com o áudio ainda travado (iOS: o contexto só destrava num toque);
+//   - volume das OPÇÕES, mudo salvo no aparelho e a faixa atual volta ao desmutar;
+//   - os outros sons do jogo (clique, compra, coração, vitória...) no mesmo estilo, no fim da classe.
 
 const MUTE_KEY = 'buxaria:muted';
 
@@ -28,103 +27,63 @@ function writeMuted(value) {
   }
 }
 
-/** Volume padrão das OPÇÕES: nele cada canal fica no nível original da mixagem. */
-const SFX_REF = 0.85;
-const MUSIC_REF = 0.6;
-
-const midiToFreq = (midi) => 440 * 2 ** ((midi - 69) / 12);
-
-/** Trilha: bossa lenta de boteco, 76 BPM, 8 compassos em loop. */
-const MUSIC_BPM = 76;
-const EIGHTH = 60 / MUSIC_BPM / 2;
-const LOOP_EIGHTHS = 64;
-const MUSIC_LEVEL = 0.55;
-
-/** Acordes (MIDI): baixo na tônica e na quinta, voicing confortável no meio. */
-const CHORDS = {
-  Dm9: { root: 38, fifth: 45, voicing: [53, 57, 60, 64] },
-  G13: { root: 43, fifth: 38, voicing: [53, 59, 64] },
-  Cmaj9: { root: 36, fifth: 43, voicing: [52, 55, 59, 62] },
-  A7b13: { root: 45, fifth: 40, voicing: [55, 61, 65] },
-  Em7: { root: 40, fifth: 47, voicing: [55, 59, 62] },
-  A7: { root: 45, fifth: 40, voicing: [55, 61, 64] },
+// --- PERFIS DE VOZ ---
+// baseFreq (Hz), mod (variação por sílaba, Hz), type (onda), speed (ms por letra)
+const VOICE_PROFILES = {
+  tioZe: { baseFreq: 110, mod: 35, type: 'triangle', speed: 85 }, // Voz rouca, grave de fumante
+  donaNeide: { baseFreq: 340, mod: 70, type: 'sine', speed: 65 }, // Voz aguda e ranzinza
+  marcao: { baseFreq: 80, mod: 25, type: 'sawtooth', speed: 100 }, // Voz de caminhoneiro pesada
+  seuArlindo: { baseFreq: 130, mod: 40, type: 'square', speed: 90 }, // Boss fanfarrão
+  default: { baseFreq: 160, mod: 50, type: 'triangle', speed: 75 },
+  // AJUSTE: o resto da campanha
+  tonho: { baseFreq: 190, mod: 60, type: 'square', speed: 55 }, // entregador apressado
+  baiano: { baseFreq: 150, mod: 55, type: 'triangle', speed: 80 }, // malemolente
+  valdir: { baseFreq: 95, mod: 30, type: 'sawtooth', speed: 95 }, // rouco de oficina
+  serginho: { baseFreq: 230, mod: 80, type: 'square', speed: 50 }, // ligeiro, fala atropelando
+  cida: { baseFreq: 290, mod: 60, type: 'sine', speed: 70 }, // tia da marmita
+  paulinho: { baseFreq: 200, mod: 40, type: 'triangle', speed: 70 }, // vaidoso
+  tiao: { baseFreq: 120, mod: 30, type: 'sawtooth', speed: 60 }, // seco e rápido
+  beto: { baseFreq: 140, mod: 45, type: 'triangle', speed: 75 }, // macio de banqueiro
+  carlinhos: { baseFreq: 210, mod: 70, type: 'square', speed: 55 }, // batedor de carteira
+  bigode: { baseFreq: 105, mod: 30, type: 'triangle', speed: 90 }, // gordo e satisfeito
+  sofia: { baseFreq: 260, mod: 90, type: 'sine', speed: 95 }, // mística, arrastada
+  fausto: { baseFreq: 125, mod: 15, type: 'sine', speed: 85 }, // frio, monótono
+  alemao: { baseFreq: 85, mod: 25, type: 'square', speed: 95 }, // ferro velho
+  comendador: { baseFreq: 95, mod: 35, type: 'triangle', speed: 110 }, // grave, sem pressa
 };
 
-/** Um acorde por meio compasso: ii–V–I–VI, e uma volta com Em7–A7 no fim. */
-const HALF_BARS = [
-  'Dm9', 'Dm9', 'G13', 'G13', 'Cmaj9', 'Cmaj9', 'A7b13', 'A7b13',
-  'Dm9', 'Dm9', 'G13', 'G13', 'Em7', 'A7', 'Dm9', 'G13',
-];
+/** AJUSTE: ids do jogo → perfis acima. */
+const VOICE_ALIASES = { neide: 'donaNeide', arlindo: 'seuArlindo' };
 
-/** Vibrafone: [colcheia de início (0–63), duração em colcheias, nota MIDI]. */
-const MELODY = [
-  [0, 3, 69], [3, 2, 72], [5, 3, 76],
-  [8, 2, 74], [10, 1, 72], [11, 5, 71],
-  [18, 2, 76], [20, 2, 74], [22, 2, 71],
-  [24, 4, 73], [28, 4, 69],
-  [32, 3, 77], [35, 1, 76], [36, 2, 74], [38, 2, 69],
-  [40, 2, 71], [42, 4, 76],
-  [48, 2, 79], [50, 2, 76], [52, 2, 73], [54, 2, 67],
-  [56, 4, 74], [60, 2, 72], [62, 2, 71],
-];
+/** AJUSTE: ids das pedras de grife no jogo → nomes usados no motor. */
+const ENHANCEMENT_ALIASES = { ouro: 'gold', cristal: 'crystal', rubi: 'ruby', chumbo: 'lead', fantasma: 'ghost' };
 
-const NOTE = {
-  A2: 110,
-  E3: 164.81,
-  A3: 220,
-  C4: 261.63,
-  Cs4: 277.18,
-  D4: 293.66,
-  Ds4: 311.13,
-  E4: 329.63,
-  A4: 440,
-  C5: 523.25,
-  Cs5: 554.37,
-  E5: 659.25,
-  A5: 880,
-};
+/** Letras que não fazem som (pausa natural da fala). */
+const SILENT_CHARS = new Set([' ', '.', ',', '!', '?', '…', '-', ':', ';']);
 
-export class AudioSynth {
+export const voiceProfile = (character) => VOICE_PROFILES[VOICE_ALIASES[character] ?? character] ?? VOICE_PROFILES.default;
+
+export class SoundEngine {
   constructor() {
     this.ctx = null;
-    this.master = null;
-    this.room = null;
-    this.noise = null;
-    this.ambience = null;
-    this.music = null;
-    this.pink = null;
-    this.sfxBus = null;
-    this.musicBus = null;
-    this.muted = readMuted();
-    this.volumes = { sfx: SFX_REF, music: MUSIC_REF };
+    this.isMuted = readMuted();
+    this.musicVolume = 0.4;
+    this.sfxVolume = 0.7;
+    this.currentTrack = null;
+    this.isPlayingMusic = false;
+    this.musicStep = 0;
+    this.musicInterval = null;
+    this.tempo = 120;
+    this.noiseBuffer = null;
+    this.stopSpeech = null;
   }
 
-  /** Volume (0–1) dos efeitos e da música; vale na hora, mesmo antes do áudio destravar. */
-  setVolumes({ sfx = this.volumes.sfx, music = this.volumes.music } = {}) {
-    this.volumes = { sfx, music };
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    this.sfxBus.gain.setTargetAtTime(sfx / SFX_REF, now, 0.03);
-    this.musicBus.gain.setTargetAtTime(music / MUSIC_REF, now, 0.05);
-  }
-
-  get ready() {
-    return Boolean(this.ctx);
-  }
-
-  /** Cria (ou retoma) o contexto. Deve ser chamado dentro de um gesto do usuário. */
-  unlock() {
+  init() {
     if (typeof window === 'undefined') return false;
     if (!this.ctx) {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return false;
-      this.ctx = new Ctx({ latencyHint: 'interactive' });
-      this.buildGraph();
-      // buffer silencioso: destrava o áudio no Safari antigo
-      const silent = this.ctx.createBufferSource();
-      silent.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-      silent.connect(this.ctx.destination);
-      silent.start(0);
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return false;
+      this.ctx = new AudioCtx();
     }
     if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
       this.ctx.resume().catch(() => {});
@@ -132,745 +91,418 @@ export class AudioSynth {
     return true;
   }
 
-  buildGraph() {
-    const ctx = this.ctx;
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -16;
-    compressor.knee.value = 12;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.18;
-    compressor.connect(ctx.destination);
-
-    this.master = ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.85;
-    this.master.connect(compressor);
-
-    this.sfxBus = ctx.createGain();
-    this.sfxBus.gain.value = this.volumes.sfx / SFX_REF;
-    this.sfxBus.connect(this.master);
-    this.musicBus = ctx.createGain();
-    this.musicBus.gain.value = this.volumes.music / MUSIC_REF;
-    this.musicBus.connect(this.master);
-
-    // "sala": um delay curto escurecido dá corpo de quarto fechado
-    const roomIn = ctx.createGain();
-    roomIn.gain.value = 1;
-    const delay = ctx.createDelay(1);
-    delay.delayTime.value = 0.083;
-    const feedback = ctx.createGain();
-    feedback.gain.value = 0.32;
-    const tone = ctx.createBiquadFilter();
-    tone.type = 'lowpass';
-    tone.frequency.value = 1800;
-    const wet = ctx.createGain();
-    wet.gain.value = 0.22;
-    roomIn.connect(delay);
-    delay.connect(tone);
-    tone.connect(feedback);
-    feedback.connect(delay);
-    tone.connect(wet);
-    wet.connect(this.sfxBus);
-    this.room = roomIn;
-
-    // ruído branco reaproveitado por todas as vozes
-    const length = Math.floor(ctx.sampleRate * 1.5);
-    this.noise = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = this.noise.getChannelData(0);
-    for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+  /** AJUSTE: só toca com o contexto rodando (senão as notas acumulam e saem todas juntas ao destravar). */
+  ready() {
+    return this.init() && this.ctx.state === 'running';
   }
 
-  setMuted(muted) {
-    this.muted = muted;
-    writeMuted(muted);
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setTargetAtTime(muted ? 0 : 0.85, now, 0.03);
+  /** AJUSTE: volume das OPÇÕES (0–1). */
+  setVolumes({ sfx = this.sfxVolume, music = this.musicVolume } = {}) {
+    this.sfxVolume = sfx;
+    this.musicVolume = music;
   }
 
-  toggleMuted() {
-    this.setMuted(!this.muted);
-    return this.muted;
-  }
+  // --- 1. SISTEMA VOCAL PROCEDURAL (ANIMALESE / BLIP CHATTER) ---
+  // Cada personagem tem frequência base, tipo de onda e velocidade de fala únicos
+  playVoiceBlip(character = 'tioZe') {
+    if (this.isMuted || !this.ready()) return;
 
-  // -------------------------------------------------------------------------
-  // Blocos de construção
-  // -------------------------------------------------------------------------
+    const profile = voiceProfile(character);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
 
-  canPlay() {
-    return Boolean(this.ctx) && !this.muted && this.ctx.state === 'running';
-  }
+    // Variação orgânica de entonação por sílaba
+    const pitchJitter = (Math.random() - 0.5) * profile.mod;
+    osc.type = profile.type;
+    osc.frequency.setValueAtTime(profile.baseFreq + pitchJitter, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, profile.baseFreq - 20 + pitchJitter), this.ctx.currentTime + 0.08);
 
-  /** Envelope percussivo: ataque rápido e queda exponencial. */
-  envelope(gainNode, t, peak, attack, decay) {
-    const g = gainNode.gain;
-    g.setValueAtTime(0.0001, t);
-    g.exponentialRampToValueAtTime(peak, t + attack);
-    g.exponentialRampToValueAtTime(0.0001, t + attack + decay);
-  }
+    gain.gain.setValueAtTime(this.sfxVolume * 0.35, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
 
-  connectOut(node, roomSend = 0) {
-    node.connect(this.sfxBus);
-    if (roomSend > 0) {
-      const send = this.ctx.createGain();
-      send.gain.value = roomSend;
-      node.connect(send);
-      send.connect(this.room);
-    }
-  }
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
 
-  tone({ t, type = 'sine', freq, freqEnd, peak = 0.3, attack = 0.004, decay = 0.2, room = 0, filter }) {
-    const ctx = this.ctx;
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + attack + decay);
-    const gain = ctx.createGain();
-    this.envelope(gain, t, peak, attack, decay);
-    let head = osc;
-    if (filter) {
-      const f = ctx.createBiquadFilter();
-      f.type = filter.type;
-      f.frequency.setValueAtTime(filter.freq, t);
-      if (filter.freqEnd) f.frequency.exponentialRampToValueAtTime(filter.freqEnd, t + attack + decay);
-      f.Q.value = filter.q ?? 0.7;
-      osc.connect(f);
-      head = f;
-    }
-    head.connect(gain);
-    this.connectOut(gain, room);
-    osc.start(t);
-    osc.stop(t + attack + decay + 0.05);
-  }
-
-  noiseBurst({ t, peak = 0.3, attack = 0.001, decay = 0.08, filter, sweepTo, room = 0, distortion = 0 }) {
-    const ctx = this.ctx;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    const f = ctx.createBiquadFilter();
-    f.type = filter.type;
-    f.frequency.setValueAtTime(filter.freq, t);
-    if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + attack + decay);
-    f.Q.value = filter.q ?? 1;
-    const gain = ctx.createGain();
-    this.envelope(gain, t, peak, attack, decay);
-    src.connect(f);
-    let head = f;
-    if (distortion > 0) {
-      const shaper = ctx.createWaveShaper();
-      shaper.curve = this.distortionCurve(distortion);
-      f.connect(shaper);
-      head = shaper;
-    }
-    head.connect(gain);
-    this.connectOut(gain, room);
-    const offset = Math.random() * (this.noise.duration - 0.5);
-    src.start(t, offset);
-    src.stop(t + attack + decay + 0.05);
-  }
-
-  distortionCurve(amount) {
-    const n = 1024;
-    const curve = new Float32Array(n);
-    const k = amount * 100;
-    for (let i = 0; i < n; i += 1) {
-      const x = (i * 2) / n - 1;
-      curve[i] = ((3 + k) * x * 20 * (Math.PI / 180)) / (Math.PI + k * Math.abs(x));
-    }
-    return curve;
-  }
-
-  now(offset = 0) {
-    return this.ctx.currentTime + 0.005 + offset;
-  }
-
-  // -------------------------------------------------------------------------
-  // Sons do jogo
-  // -------------------------------------------------------------------------
-
-  /** Batida seca de madeira/osso: pedra encostando na mesa. */
-  tileKnock({ heavy = false } = {}) {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    const jitter = 1 + (Math.random() - 0.5) * 0.08;
-    // estalo de osso
-    this.noiseBurst({ t, peak: heavy ? 0.55 : 0.42, decay: 0.035, filter: { type: 'bandpass', freq: 2600 * jitter, q: 1.4 }, room: 0.5 });
-    // ressonância modal curta (osso)
-    this.tone({ t, freq: 1720 * jitter, peak: 0.08, attack: 0.001, decay: 0.045 });
-    this.tone({ t, freq: 2930 * jitter, peak: 0.04, attack: 0.001, decay: 0.03 });
-    // corpo de madeira da mesa
-    this.tone({ t, type: 'triangle', freq: (heavy ? 190 : 230) * jitter, freqEnd: 120, peak: heavy ? 0.5 : 0.36, attack: 0.002, decay: 0.09, room: 0.35 });
-    if (heavy) {
-      this.tone({ t: t + 0.004, type: 'sine', freq: 95, freqEnd: 55, peak: 0.32, attack: 0.003, decay: 0.14 });
-    }
-  }
-
-  /** Clique de interface. */
-  click() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.tone({ t, type: 'square', freq: 1450, peak: 0.07, attack: 0.001, decay: 0.022, filter: { type: 'lowpass', freq: 3200 } });
-    this.noiseBurst({ t, peak: 0.08, decay: 0.012, filter: { type: 'highpass', freq: 4000 } });
-  }
-
-  /** Pedra sendo puxada do dorme: arrasto + toque leve. */
-  drawTile() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.noiseBurst({ t, peak: 0.16, attack: 0.03, decay: 0.16, filter: { type: 'bandpass', freq: 700, q: 1.8 }, sweepTo: 2600 });
-    this.tone({ t: t + 0.2, type: 'triangle', freq: 300, freqEnd: 180, peak: 0.14, attack: 0.002, decay: 0.05 });
-  }
-
-  /** Passar a vez: duas batidas de nó dos dedos na mesa. */
-  passKnock() {
-    if (!this.canPlay()) return;
-    [0, 0.17].forEach((offset, i) => {
-      const t = this.now(offset);
-      this.tone({ t, type: 'sine', freq: i ? 120 : 135, freqEnd: 70, peak: 0.55, attack: 0.002, decay: 0.12, room: 0.4 });
-      this.noiseBurst({ t, peak: 0.22, decay: 0.04, filter: { type: 'lowpass', freq: 900 }, room: 0.3 });
-    });
-  }
-
-  /** Moedas: dois parciais metálicos. */
-  coin() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.tone({ t, freq: 1568, peak: 0.13, attack: 0.002, decay: 0.32, room: 0.3 });
-    this.tone({ t, freq: 3920, peak: 0.04, attack: 0.001, decay: 0.12 });
-    this.tone({ t: t + 0.075, freq: 2093, peak: 0.14, attack: 0.002, decay: 0.45, room: 0.4 });
-    this.tone({ t: t + 0.075, freq: 5230, peak: 0.03, attack: 0.001, decay: 0.15 });
-  }
-
-  /** Dano de coração: dois baques de batimento e um estalo rachando. */
-  heartDamage() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.tone({ t, freq: 78, freqEnd: 42, peak: 0.75, attack: 0.004, decay: 0.16 });
-    this.tone({ t: t + 0.19, freq: 70, freqEnd: 38, peak: 0.6, attack: 0.004, decay: 0.2 });
-    this.noiseBurst({ t: t + 0.3, peak: 0.42, decay: 0.12, filter: { type: 'highpass', freq: 1400 }, distortion: 0.6, room: 0.5 });
-    this.noiseBurst({ t: t + 0.33, peak: 0.25, decay: 0.07, filter: { type: 'bandpass', freq: 3200, q: 3 } });
-    this.tone({ t: t + 0.3, type: 'sawtooth', freq: 58, freqEnd: 40, peak: 0.2, attack: 0.01, decay: 0.55, filter: { type: 'lowpass', freq: 380 } });
-  }
-
-  /** Batida que fecha a rodada: pedra pesada + pancada grave. */
-  slam() {
-    if (!this.canPlay()) return;
-    this.tileKnock({ heavy: true });
-    const t = this.now(0.02);
-    this.tone({ t, freq: 62, freqEnd: 34, peak: 0.6, attack: 0.003, decay: 0.32, room: 0.6 });
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
   }
 
   /**
-   * Bucha batendo na mesa: duas pancadas de madeira quase juntas (a pedra
-   * bate de quina e assenta), mais secas (pouca sala) e com peso grave.
+   * Executa uma frase vocal com cadência humana. `onCharCallback(textoAtéAqui)`
+   * a cada letra (efeito máquina de escrever); devolve uma função que corta a
+   * fala. AJUSTE: uma fala nova corta a anterior, o ritmo é o `speed` do
+   * personagem e, com som desligado, o texto continua aparecendo (sem os blips).
    */
-  doubleSlam() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    [0, 0.042].forEach((offset, i) => {
-      const at = t + offset;
-      const jitter = 1 + (Math.random() - 0.5) * 0.06;
-      this.noiseBurst({ t: at, peak: i ? 0.52 : 0.66, decay: 0.028, filter: { type: 'bandpass', freq: (i ? 1850 : 2250) * jitter, q: 1.6 }, room: 0.2 });
-      this.tone({ t: at, type: 'triangle', freq: (i ? 148 : 172) * jitter, freqEnd: 82, peak: i ? 0.52 : 0.64, attack: 0.002, decay: 0.085, room: 0.15 });
-      this.tone({ t: at, freq: 1480 * jitter, peak: 0.07, attack: 0.001, decay: 0.03 });
-    });
-    // peso: grave curto embaixo da segunda pancada
-    this.tone({ t: t + 0.042, freq: 74, freqEnd: 40, peak: 0.72, attack: 0.003, decay: 0.2 });
-    this.noiseBurst({ t: t + 0.042, peak: 0.18, decay: 0.09, filter: { type: 'lowpass', freq: 420 } });
-  }
-
-  /** Selecionou uma bucha na mão: estalo de osso + brilho metálico curto. */
-  powerSelect() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.tone({ t, type: 'triangle', freq: 260, freqEnd: 190, peak: 0.16, attack: 0.002, decay: 0.06 });
-    this.tone({ t: t + 0.03, freq: 1318.5, peak: 0.07, attack: 0.002, decay: 0.18, room: 0.3 });
-    this.tone({ t: t + 0.03, freq: 1975.5, peak: 0.035, attack: 0.002, decay: 0.12 });
-  }
-
-  /** Tranca: pedras travando — clac-clac seco. */
-  /** Relíquia ou peça aprimorada disparou: brilho curto (grave quando é contra você). */
-  relicChime(tone = 'player') {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    const notes = tone === 'enemy' ? [659, 523, 392] : tone === 'info' ? [988, 1319] : [1319, 1760, 2637];
-    notes.forEach((freq, i) => {
-      this.tone({ t: t + i * 0.06, type: 'triangle', freq, peak: 0.07, attack: 0.002, decay: 0.28, room: 0.45 });
-    });
-    this.noiseBurst({ t, peak: 0.03, decay: 0.18, filter: { type: 'highpass', freq: 6500 }, room: 0.3 });
-  }
-
-  /** Compra na loja: gaveta do caixa abrindo + moedas. */
-  purchase() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.noiseBurst({ t, peak: 0.22, decay: 0.05, filter: { type: 'bandpass', freq: 1800, q: 1.2 }, room: 0.3 });
-    this.tone({ t, type: 'triangle', freq: 180, freqEnd: 120, peak: 0.25, attack: 0.002, decay: 0.08 });
-    this.tone({ t: t + 0.07, freq: 2093, peak: 0.12, attack: 0.002, decay: 0.3, room: 0.4 });
-    this.tone({ t: t + 0.13, freq: 2637, peak: 0.11, attack: 0.002, decay: 0.42, room: 0.45 });
-  }
-
-  /** Relógio Quebrado: a jogada volta no tempo (varredura de trás pra frente). */
-  rewind() {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    this.tone({ t, type: 'triangle', freq: 220, freqEnd: 1320, peak: 0.1, attack: 0.25, decay: 0.12, room: 0.4 });
-    this.noiseBurst({ t, peak: 0.06, attack: 0.22, decay: 0.08, filter: { type: 'bandpass', freq: 600, q: 2 }, sweepTo: 4200 });
-    this.tileKnock();
-  }
-
-  /**
-   * Jogada do rival assentando na mesa: pancada seca de osso na madeira
-   * ("SLAM"), mais forte e com menos sala que a sua batida comum.
-   */
-  aiSlam({ double = false } = {}) {
-    if (!this.canPlay()) return;
-    const t = this.now();
-    const jitter = 1 + (Math.random() - 0.5) * 0.06;
-    this.noiseBurst({ t, peak: 0.72, decay: 0.026, filter: { type: 'bandpass', freq: 2400 * jitter, q: 1.3 }, room: 0.18 });
-    this.noiseBurst({ t, peak: 0.3, decay: 0.012, filter: { type: 'highpass', freq: 5200 } });
-    this.tone({ t, type: 'triangle', freq: 205 * jitter, freqEnd: 96, peak: 0.66, attack: 0.0015, decay: 0.075, room: 0.12 });
-    this.tone({ t, freq: 1640 * jitter, peak: 0.08, attack: 0.001, decay: 0.03 });
-    this.tone({ t: t + 0.003, freq: 82, freqEnd: 44, peak: double ? 0.8 : 0.6, attack: 0.003, decay: double ? 0.24 : 0.16 });
-    if (double) this.noiseBurst({ t: t + 0.04, peak: 0.4, decay: 0.03, filter: { type: 'bandpass', freq: 1900, q: 1.4 }, room: 0.15 });
-  }
-
-  /** Som próprio de cada pedra de grife ao entrar na mesa (por cima da batida). */
-  enhancedPlace(id) {
-    if (!this.canPlay()) return;
-    const t = this.now(0.012);
-    switch (id) {
-      case 'ouro': {
-        // madeira + moedas tilintando
-        [0, 0.055, 0.12].forEach((dt, i) => {
-          const f = [2637, 3136, 2349][i] * (1 + (Math.random() - 0.5) * 0.02);
-          this.tone({ t: t + dt, freq: f, peak: 0.1, attack: 0.001, decay: 0.26, room: 0.35 });
-          this.tone({ t: t + dt, freq: f * 2.71, peak: 0.03, attack: 0.001, decay: 0.09 });
-        });
-        break;
+  speakPhrase(phrase, character = 'tioZe', onCharCallback = null) {
+    this.stopSpeech?.();
+    const { speed } = voiceProfile(character);
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= phrase.length) {
+        clearInterval(interval);
+        return;
       }
-      case 'cristal': {
-        // sino de vidro: parciais inarmônicos, queda longa
-        const base = 1760;
-        [
-          [1, 0.12, 1.1],
-          [2.32, 0.06, 0.8],
-          [4.25, 0.035, 0.55],
-          [6.63, 0.018, 0.35],
-        ].forEach(([ratio, peak, decay]) => {
-          this.tone({ t, freq: base * ratio, peak, attack: 0.002, decay, room: 0.6 });
-        });
-        break;
+      const char = phrase[i];
+      if (!SILENT_CHARS.has(char)) {
+        this.playVoiceBlip(character);
       }
-      case 'rubi': {
-        // pancada grave e pesada, com eco abafado
-        this.tone({ t, freq: 58, freqEnd: 30, peak: 0.85, attack: 0.004, decay: 0.42 });
-        this.noiseBurst({ t, peak: 0.35, decay: 0.08, filter: { type: 'lowpass', freq: 380 } });
-        [0.19, 0.38].forEach((dt, i) => {
-          this.tone({ t: t + dt, freq: 54, freqEnd: 32, peak: i ? 0.14 : 0.28, attack: 0.006, decay: 0.3, filter: { type: 'lowpass', freq: 240 } });
-        });
-        break;
-      }
-      case 'chumbo': {
-        // bigorna: ferro batido, parciais metálicos brilhantes
-        this.noiseBurst({ t, peak: 0.42, decay: 0.02, filter: { type: 'highpass', freq: 3000 } });
-        [
-          [523, 0.16, 0.9],
-          [1444, 0.1, 0.6],
-          [2825, 0.06, 0.4],
-          [4030, 0.035, 0.25],
-        ].forEach(([freq, peak, decay]) => {
-          this.tone({ t, type: 'triangle', freq, peak, attack: 0.001, decay, room: 0.35 });
-        });
-        this.tone({ t, freq: 110, freqEnd: 70, peak: 0.4, attack: 0.002, decay: 0.12 });
-        break;
-      }
-      case 'fantasma': {
-        // sopro espectral subindo
-        this.noiseBurst({ t, peak: 0.12, attack: 0.08, decay: 0.4, filter: { type: 'bandpass', freq: 900, q: 4 }, sweepTo: 2600, room: 0.6 });
-        this.tone({ t, type: 'sine', freq: 660, freqEnd: 990, peak: 0.05, attack: 0.1, decay: 0.45, room: 0.6 });
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
-  lock() {
-    if (!this.canPlay()) return;
-    [0, 0.11, 0.22].forEach((offset) => {
-      const t = this.now(offset);
-      this.noiseBurst({ t, peak: 0.3, decay: 0.03, filter: { type: 'bandpass', freq: 1900, q: 2 }, room: 0.4 });
-      this.tone({ t, type: 'square', freq: 210, freqEnd: 150, peak: 0.08, attack: 0.001, decay: 0.05, filter: { type: 'lowpass', freq: 1200 } });
-    });
-  }
-
-  /** Vitória: arpejo menor resolvendo em maior, caixinha de música amaldiçoada. */
-  victory() {
-    if (!this.canPlay()) return;
-    const seq = [NOTE.A3, NOTE.C4, NOTE.E4, NOTE.A4, NOTE.Cs5, NOTE.E5, NOTE.A5];
-    seq.forEach((freq, i) => {
-      const t = this.now(i * 0.11);
-      this.tone({ t, type: 'triangle', freq, peak: 0.16, attack: 0.004, decay: 0.5, room: 0.6 });
-      this.tone({ t, type: 'sine', freq: freq * 2, peak: 0.04, attack: 0.002, decay: 0.25 });
-    });
-    const t = this.now(seq.length * 0.11);
-    [NOTE.A3, NOTE.Cs4, NOTE.E4, NOTE.A4].forEach((freq) => {
-      this.tone({ t, type: 'triangle', freq, peak: 0.1, attack: 0.02, decay: 1.6, room: 0.7 });
-    });
-  }
-
-  /** Derrota: queda cromática em serra abafada e um baque final. */
-  defeat() {
-    if (!this.canPlay()) return;
-    const seq = [NOTE.E4, NOTE.Ds4, NOTE.D4, NOTE.Cs4];
-    seq.forEach((freq, i) => {
-      const t = this.now(i * 0.3);
-      this.tone({
-        t,
-        type: 'sawtooth',
-        freq,
-        freqEnd: freq * 0.97,
-        peak: 0.16,
-        attack: 0.03,
-        decay: 0.42,
-        room: 0.6,
-        filter: { type: 'lowpass', freq: 1400, freqEnd: 500 },
-      });
-    });
-    const t = this.now(seq.length * 0.3);
-    this.tone({ t, type: 'sawtooth', freq: NOTE.A2, freqEnd: 55, peak: 0.24, attack: 0.02, decay: 1.4, room: 0.7, filter: { type: 'lowpass', freq: 600, freqEnd: 120 } });
-    this.tone({ t, freq: 55, freqEnd: 30, peak: 0.6, attack: 0.005, decay: 0.5 });
-  }
-
-  /** Ganhou a rodada (sem fim de duelo). */
-  roundWin() {
-    if (!this.canPlay()) return;
-    [NOTE.E4, NOTE.A4, NOTE.C5].forEach((freq, i) => {
-      this.tone({ t: this.now(i * 0.09), type: 'triangle', freq, peak: 0.14, attack: 0.004, decay: 0.35, room: 0.5 });
-    });
-  }
-
-  /** Perdeu a rodada (sem fim de duelo). */
-  roundLose() {
-    if (!this.canPlay()) return;
-    [NOTE.E4, NOTE.C4, NOTE.A3].forEach((freq, i) => {
-      this.tone({ t: this.now(i * 0.12), type: 'sawtooth', freq, peak: 0.1, attack: 0.01, decay: 0.35, room: 0.5, filter: { type: 'lowpass', freq: 1100 } });
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Ambiência de bar
-  // -------------------------------------------------------------------------
-
-  /** Ruído rosa (filtro de Paul Kellet): base da conversa de fundo do bar. */
-  pinkNoise(seconds = 4) {
-    if (this.pink) return this.pink;
-    const ctx = this.ctx;
-    const length = Math.floor(ctx.sampleRate * seconds);
-    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let [b0, b1, b2, b3, b4, b5, b6] = [0, 0, 0, 0, 0, 0, 0];
-    for (let i = 0; i < length; i += 1) {
-      const white = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.969 * b2 + white * 0.153852;
-      b3 = 0.8665 * b3 + white * 0.3104856;
-      b4 = 0.55 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.016898;
-      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-      b6 = white * 0.115926;
-    }
-    this.pink = buffer;
-    return buffer;
-  }
-
-  /** Camada de ruído em loop, filtrada, com "ondas" lentas de volume (gente conversando). */
-  noiseLayer(out, { type, freq, q = 0.7, level, swell = 0, rate = 0.1 }) {
-    const ctx = this.ctx;
-    const src = ctx.createBufferSource();
-    src.buffer = this.pinkNoise();
-    src.loop = true;
-    const filter = ctx.createBiquadFilter();
-    filter.type = type;
-    filter.frequency.value = freq;
-    filter.Q.value = q;
-    const gain = ctx.createGain();
-    gain.gain.value = level;
-    src.connect(filter);
-    filter.connect(gain);
-    gain.connect(out);
-    const nodes = [src];
-    if (swell > 0) {
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = rate;
-      const depth = ctx.createGain();
-      depth.gain.value = swell;
-      lfo.connect(depth);
-      depth.connect(gain.gain);
-      lfo.start();
-      nodes.push(lfo);
-    }
-    src.start(0, Math.random() * 3);
-    return nodes;
-  }
-
-  /**
-   * Fundo do bar, quase imperceptível: murmúrio grave de gente conversando,
-   * zumbido da lâmpada e, de vez em quando, um "tink" de copo ou garrafa.
-   */
-  startAmbience() {
-    if (!this.ctx || this.ambience) return;
-    const ctx = this.ctx;
-    const out = ctx.createGain();
-    out.gain.value = 0;
-    out.gain.setTargetAtTime(0.75, ctx.currentTime, 1.5);
-    out.connect(this.musicBus);
-
-    const nodes = [
-      // conversa abafada (faixa da voz, bem filtrada) e o grave da sala
-      ...this.noiseLayer(out, { type: 'bandpass', freq: 380, q: 0.9, level: 0.05, swell: 0.02, rate: 0.07 }),
-      ...this.noiseLayer(out, { type: 'bandpass', freq: 760, q: 1.3, level: 0.016, swell: 0.008, rate: 0.13 }),
-      ...this.noiseLayer(out, { type: 'lowpass', freq: 170, level: 0.04 }),
-    ];
-
-    // zumbido da lâmpada pendente, mais baixo que a conversa
-    const hum = ctx.createOscillator();
-    hum.type = 'sawtooth';
-    hum.frequency.value = 60;
-    const humFilter = ctx.createBiquadFilter();
-    humFilter.type = 'bandpass';
-    humFilter.frequency.value = 120;
-    humFilter.Q.value = 6;
-    const humGain = ctx.createGain();
-    humGain.gain.value = 0.01;
-    hum.connect(humFilter);
-    humFilter.connect(humGain);
-    humGain.connect(out);
-    hum.start();
-    nodes.push(hum);
-
-    this.ambience = { out, nodes, timer: null };
-    this.scheduleGlassTink();
-  }
-
-  /** Próximo "tink" daqui a 15–25 s. */
-  scheduleGlassTink() {
-    if (!this.ambience) return;
-    const delay = 15000 + Math.random() * 10000;
-    this.ambience.timer = setTimeout(() => {
-      this.glassTink();
-      this.scheduleGlassTink();
-    }, delay);
-  }
-
-  /** Copo ou garrafa tilintando em algum canto do bar (parciais inarmônicos, bem baixo). */
-  glassTink() {
-    if (!this.canPlay() || !this.ambience) return;
-    const ctx = this.ctx;
-    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
-    if (pan.pan) pan.pan.value = (Math.random() * 2 - 1) * 0.75;
-    pan.connect(this.ambience.out);
-    const send = ctx.createGain();
-    send.gain.value = 0.5;
-    pan.connect(send);
-    send.connect(this.room);
-
-    const clink = (t, base, level) => {
-      [
-        [1, 0.032, 0.9],
-        [1.52, 0.018, 0.7],
-        [2.33, 0.011, 0.5],
-        [3.11, 0.006, 0.35],
-      ].forEach(([ratio, peak, decay]) => {
-        const osc = ctx.createOscillator();
-        osc.frequency.value = base * ratio;
-        const gain = ctx.createGain();
-        this.envelope(gain, t, peak * level, 0.002, decay);
-        osc.connect(gain);
-        gain.connect(pan);
-        osc.start(t);
-        osc.stop(t + decay + 0.05);
-      });
+      if (onCharCallback) onCharCallback(phrase.substring(0, i + 1));
+      i++;
+    }, speed);
+    const stop = () => {
+      clearInterval(interval);
+      if (this.stopSpeech === stop) this.stopSpeech = null;
     };
-    const t = this.now();
-    const base = 2100 + Math.random() * 1100;
-    clink(t, base, 1);
-    // às vezes são dois copos brindando
-    if (Math.random() < 0.45) clink(t + 0.09 + Math.random() * 0.08, base * (1.04 + Math.random() * 0.06), 0.7);
+    this.stopSpeech = stop;
+    return stop;
   }
 
-  stopAmbience() {
-    if (!this.ambience || !this.ctx) return;
-    const { out, nodes, timer } = this.ambience;
-    clearTimeout(timer);
-    const t = this.ctx.currentTime;
-    out.gain.setTargetAtTime(0, t, 0.3);
-    nodes.forEach((n) => n.stop(t + 1.5));
-    this.ambience = null;
+  // --- 2. IMPACTOS FÍSICOS E SFX DE MESA ---
+  playTileSlam(isDouble = false, enhancement = null) {
+    if (this.isMuted || !this.ready()) return;
+
+    // Batida de madeira oca (Frequência baixa ressonante)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const freq = isDouble ? 110 : 160;
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(this.sfxVolume * (isDouble ? 0.9 : 0.6), this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.14);
+
+    // Efeito específico de pedra aprimorada
+    const enh = ENHANCEMENT_ALIASES[enhancement] ?? enhancement;
+    if (enh === 'gold') this.playCoinJingle();
+    if (enh === 'crystal') this.playGlassPing();
+    if (enh === 'ruby') this.playDeepBassDrop();
+    if (enh === 'lead') this.playAnvil();
+    if (enh === 'ghost') this.playGhostSigh();
   }
 
-  // -------------------------------------------------------------------------
-  // Trilha de boteco: bossa lenta, 8 compassos em loop
-  // -------------------------------------------------------------------------
+  playCoinJingle() {
+    if (this.isMuted || !this.ready()) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
+    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+    gain.gain.setValueAtTime(this.sfxVolume * 0.4, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.3);
+  }
 
-  /** Liga a trilha (agendador com folga de 250 ms, à prova de travadas do timer). */
-  startMusic() {
-    if (!this.ctx || this.music) return;
-    const ctx = this.ctx;
-    const bus = ctx.createGain();
-    bus.gain.value = 0;
-    bus.gain.setTargetAtTime(MUSIC_LEVEL, ctx.currentTime, 2.5);
-    // um pouco abafada, como vindo de um rádio do balcão
-    const warm = ctx.createBiquadFilter();
-    warm.type = 'lowpass';
-    warm.frequency.value = 2600;
-    warm.Q.value = 0.5;
-    bus.connect(warm);
-    warm.connect(this.musicBus);
+  playGlassPing() {
+    if (this.isMuted || !this.ready()) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1800, this.ctx.currentTime);
+    gain.gain.setValueAtTime(this.sfxVolume * 0.3, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.4);
+  }
 
-    this.music = { bus, step: 0, nextTime: ctx.currentTime + 0.2, timer: null };
-    this.music.timer = setInterval(() => this.scheduleMusic(), 60);
-    this.scheduleMusic();
+  playDeepBassDrop() {
+    if (this.isMuted || !this.ready()) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(90, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + 0.35);
+    gain.gain.setValueAtTime(this.sfxVolume * 0.7, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.35);
+  }
+
+  /** AJUSTE: Chumbo — ferro de bigorna (parciais metálicos). */
+  playAnvil() {
+    [
+      [523, 0.3, 0.9],
+      [1444, 0.18, 0.6],
+      [2825, 0.1, 0.4],
+    ].forEach(([freq, peak, dur]) => this.tone({ type: 'triangle', freq, peak, dur }));
+    this.noise({ freq: 3500, filter: 'highpass', peak: 0.35, dur: 0.03 });
+  }
+
+  /** AJUSTE: Fantasma — sopro espectral subindo. */
+  playGhostSigh() {
+    this.tone({ type: 'sine', freq: 660, freqEnd: 990, peak: 0.12, dur: 0.45, attack: 0.1 });
+    this.noise({ freq: 1200, peak: 0.12, dur: 0.4, attack: 0.08, q: 4 });
+  }
+
+  // --- 3. REPERTÓRIO MUSICAL DE BOTECO (MULTITRACKS CHIPTUNE/JAZZ) ---
+  // Sistema de Sequenciador por Passos com Baixo Acústico Sintetizado e Acordes
+  playTrack(trackName = 'botecoJazz') {
+    // AJUSTE: guarda a faixa mesmo com o som desligado (desmutar volta nela)
+    this.currentTrack = trackName;
+    if (this.isMuted || !this.init()) return;
+    this.stopMusic();
+    this.isPlayingMusic = true;
+    this.musicStep = 0;
+
+    // Frequências das Notas
+    const N = {
+      C2: 65.41, D2: 73.42, E2: 82.41, F2: 87.31, G2: 98.0, A2: 110.0, B2: 123.47,
+      C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
+      C4: 261.63, E4: 329.63, G4: 392.0, B4: 493.88, D4: 293.66, REST: 0,
+    };
+
+    // Tracks Disponíveis
+    const tracks = {
+      // Faixa 1: Boteco da Esquina (Bossa / Jazz Lento, descontraído)
+      botecoJazz: {
+        tempo: 220, // ms por step
+        bass: [
+          N.C2, N.REST, N.G2, N.REST, N.A2, N.REST, N.E2, N.REST,
+          N.F2, N.REST, N.C3, N.REST, N.G2, N.REST, N.B2, N.REST,
+        ],
+        chords: [
+          [N.E3, N.G3, N.B3], N.REST, [N.E3, N.G3], N.REST,
+          [N.F3, N.A3, N.C4], N.REST, [N.D3, N.F3], N.REST,
+        ],
+      },
+      // Faixa 2: Sinuca Clandestina (Funk 70s / Ritmo malandro com groove)
+      sinucaFunk: {
+        tempo: 180,
+        bass: [
+          N.D2, N.D2, N.REST, N.F2, N.REST, N.G2, N.REST, N.A2,
+          N.D2, N.REST, N.C3, N.A2, N.F2, N.REST, N.G2, N.REST,
+        ],
+        chords: [
+          [N.F3, N.A3], N.REST, [N.G3, N.B3], N.REST,
+          [N.A3, N.C4], N.REST, [N.F3, N.D4], N.REST,
+        ],
+      },
+      // Faixa 3: Tensão de Boss / Submundo (Pesado, tenso, compasso quebrado)
+      bossFight: {
+        tempo: 160,
+        bass: [
+          N.A2, N.A2, N.REST, N.A2, N.E2, N.REST, N.G2, N.REST,
+          N.F2, N.F2, N.REST, N.F2, N.D2, N.E2, N.F2, N.G2,
+        ],
+        chords: [
+          [N.C3, N.E3], N.REST, [N.D3, N.F3], N.REST,
+          [N.E3, N.G3], N.REST, [N.D3, N.F3], N.REST,
+        ],
+      },
+    };
+
+    const selected = tracks[trackName] || tracks.botecoJazz;
+
+    this.musicInterval = setInterval(() => {
+      if (!this.isPlayingMusic || this.isMuted) return;
+      // AJUSTE: com o áudio travado o passo é pulado (nada fica acumulado)
+      if (this.ctx?.state !== 'running') return;
+
+      const step = this.musicStep % selected.bass.length;
+      const bassNote = selected.bass[step];
+      const chordNotes = selected.chords[step % selected.chords.length];
+
+      // Toca o Baixo (Onda Triangular macia com ataque percussivo)
+      if (bassNote && bassNote > 0) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(bassNote, this.ctx.currentTime);
+        gain.gain.setValueAtTime(this.musicVolume * 0.45, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.35);
+      }
+
+      // Toca os Acordes de Fundo (Onda Senoidal suave para criar harmonia de bar)
+      if (Array.isArray(chordNotes)) {
+        chordNotes.forEach((freq) => {
+          if (freq > 0) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(this.musicVolume * 0.15, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.28);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.28);
+          }
+        });
+      }
+
+      this.musicStep++;
+    }, selected.tempo);
   }
 
   stopMusic() {
-    if (!this.music || !this.ctx) return;
-    const { bus, timer } = this.music;
-    clearInterval(timer);
-    bus.gain.setTargetAtTime(0, this.ctx.currentTime, 0.4);
-    setTimeout(() => bus.disconnect(), 2500);
-    this.music = null;
-  }
-
-  scheduleMusic() {
-    const m = this.music;
-    if (!m || !this.ctx) return;
-    const now = this.ctx.currentTime;
-    // voltou de segundo plano: não despeja as notas atrasadas de uma vez
-    if (m.nextTime < now - 0.1) m.nextTime = now + 0.05;
-    while (m.nextTime < now + 0.25) {
-      this.playMusicStep(m.step, m.nextTime);
-      m.nextTime += EIGHTH;
-      m.step = (m.step + 1) % LOOP_EIGHTHS;
+    this.isPlayingMusic = false;
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.musicInterval = null;
     }
   }
 
-  /** Uma colcheia da trilha: contrabaixo, acordes, vibrafone e escovinha. */
-  playMusicStep(step, t) {
-    const bar = Math.floor(step / 8);
-    const eighth = step % 8;
-    const chord = CHORDS[HALF_BARS[Math.floor(step / 4)]];
-
-    // contrabaixo de bossa: tônica pontuada + quinta, duas vezes por compasso
-    if (eighth === 0 || eighth === 4) this.musicBass(t, chord.root, EIGHTH * 2.8);
-    if (eighth === 3 || eighth === 7) this.musicBass(t, chord.fifth, EIGHTH * 0.9);
-
-    // violão/piano: batida sincopada, leve
-    const comp = bar % 2 === 0 ? [0, 3, 6] : [2, 5];
-    if (comp.includes(eighth)) chord.voicing.forEach((note) => this.musicPluck(t, note));
-
-    // vibrafone
-    for (const [start, length, note] of MELODY) {
-      if (start === step) this.musicVibes(t, note, length * EIGHTH);
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    writeMuted(this.isMuted);
+    if (this.isMuted) {
+      this.stopMusic();
+    } else {
+      this.playTrack(this.currentTrack ?? 'botecoJazz');
     }
-
-    // escovinha na caixa, quase só um sopro
-    this.noiseVoice(t, { peak: eighth % 2 ? 0.006 : 0.0035, decay: 0.06, freq: 6200 });
+    return this.isMuted;
   }
 
-  /** Nota com envelope percussivo indo para o barramento da música. */
-  musicNote({ t, freq, type = 'sine', peak, attack, decay, filterFreq, partials = [] }) {
-    const ctx = this.ctx;
-    const gain = ctx.createGain();
-    this.envelope(gain, t, peak, attack, decay);
-    let head = gain;
-    if (filterFreq) {
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = filterFreq;
-      gain.connect(filter);
-      head = filter;
+  // --- 4. OS OUTROS SONS DO JOGO (AJUSTE: mesmo estilo, oscilador → ganho → saída) ---
+
+  /** Nota curta com envelope percussivo. `delay` em segundos. */
+  tone({ type = 'sine', freq, freqEnd, peak = 0.3, dur = 0.15, attack = 0.004, delay = 0 }) {
+    if (this.isMuted || !this.ready()) return;
+    const t = this.ctx.currentTime + 0.005 + delay;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.sfxVolume * peak), t + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + attack + dur);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + attack + dur + 0.05);
+  }
+
+  /** Estalo de ruído filtrado (osso, papel, metal). */
+  noise({ freq = 2000, filter = 'bandpass', q = 1.2, peak = 0.3, dur = 0.05, attack = 0.001, delay = 0 }) {
+    if (this.isMuted || !this.ready()) return;
+    if (!this.noiseBuffer) {
+      const length = Math.floor(this.ctx.sampleRate * 0.6);
+      this.noiseBuffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+      const data = this.noiseBuffer.getChannelData(0);
+      for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
     }
-    head.connect(this.music.bus);
-    const oscs = [[1, 1, type], ...partials].map(([ratio, level, oscType]) => {
-      const osc = ctx.createOscillator();
-      osc.type = oscType ?? 'sine';
-      osc.frequency.value = freq * ratio;
-      if (level === 1) {
-        osc.connect(gain);
-      } else {
-        const g = ctx.createGain();
-        g.gain.value = level;
-        osc.connect(g);
-        g.connect(gain);
-      }
-      osc.start(t);
-      osc.stop(t + attack + decay + 0.05);
-      return osc;
+    const t = this.ctx.currentTime + 0.005 + delay;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    const f = this.ctx.createBiquadFilter();
+    f.type = filter;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.sfxVolume * peak), t + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + attack + dur);
+    src.connect(f);
+    f.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start(t, Math.random() * 0.4);
+    src.stop(t + attack + dur + 0.05);
+  }
+
+  /** Jogada do rival assentando: a madeira oca + estalo seco de osso ("SLAM"). */
+  playAiSlam(isDouble = false, enhancement = null) {
+    this.playTileSlam(isDouble, enhancement);
+    this.noise({ freq: 2400, q: 1.3, peak: 0.75, dur: 0.03 });
+    this.noise({ freq: 5200, filter: 'highpass', peak: 0.3, dur: 0.012 });
+    if (isDouble) this.noise({ freq: 1900, q: 1.4, peak: 0.45, dur: 0.03, delay: 0.04 });
+  }
+
+  playClick() {
+    this.tone({ type: 'square', freq: 1450, peak: 0.08, dur: 0.022, attack: 0.001 });
+  }
+
+  /** Selecionou uma bucha: estalo + brilho curto. */
+  playPowerSelect() {
+    this.tone({ type: 'triangle', freq: 260, freqEnd: 190, peak: 0.2, dur: 0.06 });
+    this.tone({ freq: 1318.5, peak: 0.1, dur: 0.18, delay: 0.03 });
+  }
+
+  /** Pedra puxada do dorme: arrasto + toque leve. */
+  playDraw() {
+    this.noise({ freq: 900, q: 1.8, peak: 0.2, dur: 0.16, attack: 0.03 });
+    this.tone({ type: 'triangle', freq: 300, freqEnd: 180, peak: 0.18, dur: 0.05, delay: 0.2 });
+  }
+
+  /** Passar a vez: duas batidas de nó dos dedos na mesa. */
+  playPass() {
+    this.tone({ freq: 135, freqEnd: 70, peak: 0.6, dur: 0.12 });
+    this.tone({ freq: 120, freqEnd: 70, peak: 0.6, dur: 0.12, delay: 0.17 });
+  }
+
+  /** Compra na loja: gaveta do caixa + moedas. */
+  playPurchase() {
+    this.noise({ freq: 1800, peak: 0.25, dur: 0.05 });
+    this.tone({ type: 'triangle', freq: 180, freqEnd: 120, peak: 0.3, dur: 0.08 });
+    this.tone({ freq: 2093, peak: 0.15, dur: 0.3, delay: 0.07 });
+    this.tone({ freq: 2637, peak: 0.14, dur: 0.42, delay: 0.13 });
+  }
+
+  /** Talismã ou pedra disparou: brilho curto (descendo quando é contra você). */
+  playChime(tone = 'player') {
+    const notes = tone === 'enemy' ? [659, 523, 392] : tone === 'info' ? [988, 1319] : [1319, 1760, 2637];
+    notes.forEach((freq, i) => this.tone({ type: 'triangle', freq, peak: 0.1, dur: 0.28, delay: i * 0.06 }));
+  }
+
+  /** Relógio Quebrado: varredura de trás pra frente. */
+  playRewind() {
+    this.tone({ type: 'triangle', freq: 220, freqEnd: 1320, peak: 0.14, dur: 0.12, attack: 0.25 });
+    this.playTileSlam(false);
+  }
+
+  /** Tranca: pedras travando — clac-clac-clac. */
+  playLock() {
+    [0, 0.11, 0.22].forEach((delay) => {
+      this.noise({ freq: 1900, q: 2, peak: 0.35, dur: 0.03, delay });
+      this.tone({ type: 'square', freq: 210, freqEnd: 150, peak: 0.08, dur: 0.05, delay });
     });
-    return { gain, oscs };
   }
 
-  musicBass(t, midi, length) {
-    this.musicNote({
-      t,
-      freq: midiToFreq(midi),
-      type: 'sine',
-      peak: 0.3,
-      attack: 0.008,
-      decay: Math.max(0.25, length),
-      filterFreq: 600,
-      partials: [[2, 0.18, 'triangle']],
-    });
+  /** Dano de coração: dois baques de batimento e um estalo rachando. */
+  playHeartHit() {
+    this.tone({ freq: 78, freqEnd: 42, peak: 0.8, dur: 0.16 });
+    this.tone({ freq: 70, freqEnd: 38, peak: 0.65, dur: 0.2, delay: 0.19 });
+    this.noise({ freq: 1600, filter: 'highpass', peak: 0.45, dur: 0.12, delay: 0.3 });
   }
 
-  musicPluck(t, midi) {
-    this.musicNote({ t, freq: midiToFreq(midi), type: 'triangle', peak: 0.04, attack: 0.012, decay: 0.55, filterFreq: 1300 });
+  playRoundWin() {
+    [523.25, 659.25, 783.99].forEach((freq, i) => this.tone({ type: 'triangle', freq, peak: 0.18, dur: 0.3, delay: i * 0.09 }));
   }
 
-  /** Vibrafone: senoide com um parcial agudo bem baixo e tremolo lento. */
-  musicVibes(t, midi, length) {
-    const ctx = this.ctx;
-    const decay = Math.max(0.9, length * 1.4);
-    const { gain } = this.musicNote({
-      t,
-      freq: midiToFreq(midi),
-      type: 'sine',
-      peak: 0.085,
-      attack: 0.004,
-      decay,
-      partials: [[4, 0.06, 'sine']],
-    });
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 5.2;
-    const depth = ctx.createGain();
-    depth.gain.value = 0.025;
-    lfo.connect(depth);
-    depth.connect(gain.gain);
-    lfo.start(t);
-    lfo.stop(t + decay + 0.05);
+  playRoundLose() {
+    [392, 311.13, 261.63].forEach((freq, i) => this.tone({ type: 'triangle', freq, peak: 0.18, dur: 0.35, delay: i * 0.12 }));
   }
 
-  noiseVoice(t, { peak, decay, freq }) {
-    const ctx = this.ctx;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = freq;
-    filter.Q.value = 0.8;
-    const gain = ctx.createGain();
-    this.envelope(gain, t, peak, 0.004, decay);
-    src.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.music.bus);
-    src.start(t, Math.random() * (this.noise.duration - 0.2));
-    src.stop(t + decay + 0.05);
+  /** Vitória: arpejo menor resolvendo em maior. */
+  playVictory() {
+    [220, 261.63, 329.63, 440, 554.37, 659.25, 880].forEach((freq, i) =>
+      this.tone({ type: 'triangle', freq, peak: 0.18, dur: 0.5, delay: i * 0.11 }),
+    );
+    [220, 277.18, 329.63, 440].forEach((freq) => this.tone({ type: 'triangle', freq, peak: 0.12, dur: 1.6, attack: 0.02, delay: 0.77 }));
+  }
+
+  /** Derrota: descida lenta e um baque. */
+  playDefeat() {
+    [440, 415.3, 392, 349.23, 293.66].forEach((freq, i) => this.tone({ type: 'sawtooth', freq, peak: 0.08, dur: 0.4, delay: i * 0.18 }));
+    this.tone({ freq: 62, freqEnd: 34, peak: 0.7, dur: 0.6, delay: 0.95 });
   }
 }
 
-/** Instância única usada pela UI. */
-export const audio = new AudioSynth();
+export const sound = new SoundEngine();

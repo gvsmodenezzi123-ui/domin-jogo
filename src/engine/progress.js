@@ -82,7 +82,8 @@ export function discover(collection, seen) {
 // Opções
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.85, music: 0.6, haptics: true });
+/** Volumes padrão do motor de som (engine/audioSynth.js). */
+export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.7, music: 0.4, haptics: true });
 
 const clamp01 = (v, fallback) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
 

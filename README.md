@@ -240,7 +240,7 @@ src/
     progress.js       localStorage: save, Livro de Boteco, opções e vibração
     rivalInfo.js      jeito de jogar e regras de cada rival (texto do mapa)
     gameFeedback.js   eventos → texto flutuante do +$3, falas e humor do rival, dica do jogador
-    audioSynth.js     sintetizador Web Audio puro: efeitos, trilha de bossa e ambiência de bar
+    audioSynth.js     motor de som Web Audio: vozes por rival, trilhas por região, efeitos da mesa
   data/
     rarities.js       comum, raro, lendário, mítico (cor, revenda, peso no sorteio)
     enhancedTiles.js  as 5 peças aprimoradas (dados + ganchos)
@@ -260,6 +260,7 @@ src/
     CollectionBook.jsx, OptionsPanel.jsx, MenuModal.jsx   telas do menu
     FloatingTexts.jsx textos que sobem da mesa (useFloats.js)
     RivalBench.jsx    o outro lado da mesa: retrato, hotbar e mão do rival
+    RivalSpeech.jsx   balão da fala, letra a letra com a voz do rival
     RivalHand.jsx     leque do rival (virado, menor, pedras reveladas de frente)
     Hotbar.jsx        4 slots de talismã (seu, do rival, da loja)
     Shop.jsx          Loja Clandestina do Boteco
@@ -320,18 +321,21 @@ com sombra projetada (`drop-shadow(0 10px 8px rgba(0,0,0,.45))`) e uma flutuaç�
 pedra tocada sobe para fora do leque (24px, `scale(1.1)`), fica reta e ganha contorno; bucha
 selecionada pulsa em amarelo. Mãos grandes encolhem e aproximam as pedras sem sair da tela.
 
-### Som de boteco
+### Som de boteco e vozes
 
-Tudo sintetizado em `audioSynth.js`, sem arquivos de áudio:
+Tudo sintetizado em `audioSynth.js` (`sound`, motor `SoundEngine`), sem arquivos de áudio:
 
-- **Trilha:** bossa lenta (76 BPM) em loop de 8 compassos — Dm9, G13, Cmaj9, A7♭13 e uma volta
-  com Em7–A7. Contrabaixo em senoide no padrão de bossa, acordes em triângulo suave, melodia
-  de vibrafone (senoide com tremolo) e escovinha quase inaudível. Agendador com folga de 250 ms,
-  que não despeja notas atrasadas quando o app volta do segundo plano.
-- **Ambiência:** murmúrio de bar em ruído rosa filtrado (faixa da voz, abafado), grave da sala,
-  zumbido da lâmpada e um "tink" de copo ou garrafa a cada 15–25 s, em posição aleatória no estéreo.
-- **Controles:** no topo da tela, botão de som (liga/desliga tudo, lembrado entre sessões) ao lado
-  do menu. O menu pausa o duelo (o Tio Zé espera) e permite sair para a tela inicial.
+- **Vozes "animalese":** cada rival fala letra a letra no balão, com um blip por letra no tom, na
+  onda e no ritmo dele (`VOICE_PROFILES`: o Tio Zé é grave e rouco, a Dona Neide aguda e ligeira,
+  o Marcão pesado em dente de serra, o Serginho atropela, o Comendador fala devagar...).
+  Espaço e pontuação ficam em silêncio. Com o som desligado o texto continua aparecendo.
+- **Trilhas por passo:** *botecoJazz* (menu e Boteco da Esquina), *sinucaFunk* (Clube da Sinuca) e
+  *bossFight* (Submundo e mesas de chefe). Baixo em triângulo e acordes em senoide.
+- **Mesa:** batida de madeira oca (mais grave na bucha); a jogada do rival soma um estalo seco de
+  osso (SLAM). Ouro tilinta moedas, Cristal faz sino de vidro, Rubi um baque grave, Chumbo bigorna,
+  Fantasma um sopro.
+- **Controles:** o botão de som no topo liga/desliga tudo (lembrado entre sessões); OPÇÕES tem
+  volume de efeitos e de música. Nada toca antes do primeiro toque (exigência do iOS).
 
 ### Tio Zé
 
