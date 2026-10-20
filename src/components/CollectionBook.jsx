@@ -5,7 +5,8 @@ import { RELICS, RELIC_IDS } from '../data/relics.js';
 import { RIVALS, RIVAL_IDS } from '../data/rivals.js';
 import { REGIONS } from '../data/campaign.js';
 import DominoTile from './DominoTile.jsx';
-import PixelSprite from './PixelSprite.jsx';
+import RelicIcon from './RelicIcon.jsx';
+import { RetroCard } from './RetroCard.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 
 const TABS = [
@@ -30,7 +31,7 @@ function Entry({ kind, id, known }) {
   let text;
   if (kind === 'relics') {
     const relic = RELICS[id];
-    icon = <PixelSprite rows={relic.icon} palette={relic.palette} pixel={2.5} />;
+    icon = <RelicIcon relic={relic} size={30} />;
     name = relic.name;
     rarity = relic.rarity;
     text = relic.description;
@@ -47,7 +48,12 @@ function Entry({ kind, id, known }) {
     text = `${rival.title} · ${REGIONS[rival.region - 1]?.name ?? ''}${rival.boss ? ' · CHEFE' : ''}`;
   }
   return (
-    <li className={`book-entry ${known ? '' : 'book-entry-unknown'}`} style={rarity && known ? { '--rarity': getRarity(rarity).color } : undefined}>
+    <RetroCard
+      as="li"
+      rarity={known && rarity ? rarity : 'neutral'}
+      className={`book-entry ${known ? '' : 'book-entry-unknown'}`}
+      style={rarity && known ? { '--rarity': getRarity(rarity).color } : undefined}
+    >
       <span className="book-icon">
         <span className={known ? '' : 'map-silhouette'}>{icon}</span>
       </span>
@@ -56,7 +62,7 @@ function Entry({ kind, id, known }) {
         {known && rarity && <Rarity id={rarity} />}
         <p className="mt-0.5 font-term text-[15px] leading-[1.05] text-bone-300">{known ? text : 'Ainda não apareceu na sua mesa.'}</p>
       </div>
-    </li>
+    </RetroCard>
   );
 }
 

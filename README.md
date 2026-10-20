@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.4.2
+# Buxaria — Patch 0.5
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -52,6 +52,18 @@ O PWA precisa de HTTPS. Duas opções:
 - **Passar a vez** é sempre permitido com a mesa aberta. Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.5: arte em alta densidade e cards com relevo
+
+- **Sprites 40x40** em `components/HighDensitySprites.jsx` (SVG com `crispEdges`, sombreamento em
+  camadas): o **Tio Zé** (quepe, rugas, barba por fazer, cigarro com brasa), a **Caneca de Chopp**
+  trincada, o **Dado Viciado** isométrico e o **Olho de Vidro**. O Tio Zé tem os 4 humores do jogo,
+  mexe a boca a cada letra da fala e solta fumaça da brasa (no "ferido" o cigarro cai).
+- `art` em `data/rivals.js` e `data/relics.js` liga cada um ao desenho (`components/artRegistry.js`);
+  quem ainda não tem desenho novo continua no pixel art antigo (`RelicIcon.jsx`, `RivalAvatar.jsx`).
+- **RetroCard** (`components/RetroCard.jsx`): card com borda na cor da raridade e chanfro embaixo,
+  que afunda ao apertar. Usado nas cartas da loja e no Livro de Boteco.
+- **Mesa:** vinheta mais profunda e moldura chanfrada escura por cima do feltro (mogno no Comendador).
 
 ## Patch 0.4.2: iluminação viva
 

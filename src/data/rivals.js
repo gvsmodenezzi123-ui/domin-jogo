@@ -21,6 +21,7 @@
  *   prizeBonus         moedas extras ao vencê-lo
  *   felt / decor       cores do feltro da mesa dele e enfeites (giz, caneca, cinzas...)
  *   smoke              (opcional) brasa do cigarro no retrato: de onde a fumaça sobe
+ *   art                (opcional) retrato de alta densidade em components/HighDensitySprites.jsx
  *   faces / palette    retrato 16x16 em pixel art, um mapa por humor
  *   lines              falas curtas por situação (o que faltar usa as do Tio Zé)
  */
@@ -225,6 +226,8 @@ export const RIVALS = Object.freeze({
     felt: { light: '#3a4a2a', mid: '#2c3a20', dark: '#1f2a17' },
     // brasa do cigarro no retrato (coluna, linha): a fumaça sobe dali quando ela aparece
     smoke: { x: 15, y: 10, ember: 'o' },
+    // retrato 40x40 de alta densidade (components/HighDensitySprites.jsx); o 16x16 fica de reserva
+    art: 'tioZe',
     decor: [],
     faces: TIO_ZE_FACES,
     palette: TIO_ZE_PALETTE,

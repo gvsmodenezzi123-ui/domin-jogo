@@ -233,6 +233,9 @@ export default function TableBoard({
         )}
       </div>
 
+      {/* moldura chanfrada da mesa: aro escuro, quina iluminada em cima, sombra embaixo */}
+      <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
+
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
     </section>
   );

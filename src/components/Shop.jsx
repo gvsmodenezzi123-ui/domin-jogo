@@ -9,7 +9,8 @@ import { relicBuyBlock, sellPriceOf, tileBuyBlock } from '../engine/shop.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import Hotbar from './Hotbar.jsx';
-import PixelSprite from './PixelSprite.jsx';
+import RelicIcon from './RelicIcon.jsx';
+import { RetroCard } from './RetroCard.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 
 function RarityBadge({ rarity }) {
@@ -131,14 +132,16 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
               const block = relicBuyBlock(state, offer);
               const tier = getRarity(relic.rarity);
               return (
-                <li
+                <RetroCard
+                  as="li"
                   key={`${offer.id}-${shop.rerolls}`}
-                  className={`shop-card ${offer.sold ? 'shop-item-sold' : ''} ${tier.id === 'mitico' ? 'shop-item-mythic' : ''}`}
+                  rarity={relic.rarity}
+                  className={`shop-card ${offer.sold ? 'shop-item-sold' : ''}`}
                   style={{ '--rarity': tier.color }}
                   {...press({ kind: 'relic', id: offer.id, owner: 'shop' })}
                 >
                   <span className="shop-card-icon">
-                    <PixelSprite rows={relic.icon} palette={relic.palette} pixel={3} />
+                    <RelicIcon relic={relic} size={36} />
                   </span>
                   <p className="shop-card-name font-pixel">{relic.short}</p>
                   <RarityBadge rarity={relic.rarity} />
@@ -153,7 +156,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
                     {offer.sold ? 'VENDIDO' : `$${offer.price}`}
                     {!offer.sold && full && <span className="block text-[6px] text-blood-700">CHEIA</span>}
                   </button>
-                </li>
+                </RetroCard>
               );
             })}
           </ul>
@@ -172,9 +175,11 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
               const tier = getRarity(enhancement.rarity);
               const label = tileLabel(offer.tileId);
               return (
-                <li
+                <RetroCard
+                  as="li"
                   key={`${offer.tileId}-${shop.rerolls}`}
-                  className={`shop-card shop-card-wide ${offer.sold ? 'shop-item-sold' : ''} ${tier.id === 'mitico' ? 'shop-item-mythic' : ''}`}
+                  rarity={enhancement.rarity}
+                  className={`shop-card shop-card-wide ${offer.sold ? 'shop-item-sold' : ''}`}
                   style={{ '--rarity': tier.color }}
                   {...press({ kind: 'offerTile', tileId: offer.tileId, enhancement: offer.enhancement })}
                 >
@@ -198,7 +203,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
                   >
                     {offer.sold ? 'VENDIDO' : `$${offer.price}`}
                   </button>
-                </li>
+                </RetroCard>
               );
             })}
           </ul>
@@ -248,7 +253,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
         <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">
           <div className="overlay-card w-full max-w-[280px] px-4 py-4 text-center">
             <div className="mx-auto w-fit">
-              <PixelSprite rows={selling.icon} palette={selling.palette} pixel={3} />
+              <RelicIcon relic={selling} size={44} />
             </div>
             <p id="sell-title" className="mt-2 font-pixel text-[9px] leading-snug text-bone-50">
               {selling.name.toUpperCase()}

@@ -59,7 +59,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.4.2</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -127,7 +127,7 @@ export default function TitleScreen({
           BUXARIA
         </h1>
         <p className="mt-4 font-pixel text-[8px] tracking-widest text-bone-400">
-          PATCH 0.4.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </div>
 

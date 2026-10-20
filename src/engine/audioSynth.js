@@ -59,7 +59,7 @@ const VOICE_ALIASES = { neide: 'donaNeide', arlindo: 'seuArlindo' };
 const ENHANCEMENT_ALIASES = { ouro: 'gold', cristal: 'crystal', rubi: 'ruby', chumbo: 'lead', fantasma: 'ghost' };
 
 /** Letras que não fazem som (pausa natural da fala). */
-const SILENT_CHARS = new Set([' ', '.', ',', '!', '?', '…', '-', ':', ';']);
+export const SILENT_CHARS = new Set([' ', '.', ',', '!', '?', '…', '-', ':', ';']);
 
 export const voiceProfile = (character) => VOICE_PROFILES[VOICE_ALIASES[character] ?? character] ?? VOICE_PROFILES.default;
 

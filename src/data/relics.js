@@ -88,6 +88,7 @@ export const RELICS = Object.freeze({
     id: 'caneca',
     name: 'Caneca de Chopp',
     short: 'CANECA',
+    art: 'canecaChopp', // ícone 40x40 em components/HighDensitySprites.jsx
     rarity: 'comum',
     price: 6,
     description: 'Jogar qualquer carroça (bucha) não gasta a sua vez.',
@@ -197,6 +198,7 @@ export const RELICS = Object.freeze({
     id: 'olhoDeVidro',
     name: 'Olho de Vidro',
     short: 'OLHO DE VIDRO',
+    art: 'olhoVidro',
     rarity: 'raro',
     price: 7,
     description: 'Revela para sempre as 2 pedras mais altas da mão do rival.',
@@ -222,6 +224,7 @@ export const RELICS = Object.freeze({
     id: 'dadoViciado',
     name: 'Dado Viciado',
     short: 'DADO VICIADO',
+    art: 'dadoViciado',
     rarity: 'raro',
     price: 8,
     description: 'Você sempre começa a rodada com pelo menos duas pedras que têm o número 6.',

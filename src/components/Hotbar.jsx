@@ -1,6 +1,6 @@
 import { getRarity } from '../data/rarities.js';
 import { RELIC_SLOTS, getRelic } from '../data/relics.js';
-import PixelSprite from './PixelSprite.jsx';
+import RelicIcon from './RelicIcon.jsx';
 
 /**
  * 4 slots de talismã. A mesma barra serve para você (acima do leque), para o
@@ -54,7 +54,7 @@ export default function Hotbar({
             {...(press ? press({ kind: 'relic', id: relic.id, owner }) : {})}
           >
             <span key={flashes[relic.id] ?? 0} className={`block ${flashes[relic.id] ? 'animate-relic-proc' : ''}`}>
-              <PixelSprite rows={relic.icon} palette={relic.palette} pixel={pixel} />
+              <RelicIcon relic={relic} size={pixel * 12} />
             </span>
           </button>
         );

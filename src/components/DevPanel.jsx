@@ -5,7 +5,7 @@ import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
 import { REGIONS } from '../data/campaign.js';
 import { RIVALS } from '../data/rivals.js';
 import DominoTile from './DominoTile.jsx';
-import PixelSprite from './PixelSprite.jsx';
+import RelicIcon from './RelicIcon.jsx';
 
 const PIPS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -120,7 +120,7 @@ export default function DevPanel({ state, onAction, onClose }) {
                   title={relic.description}
                   onClick={() => dev('toggleRelic', { id })}
                 >
-                  <PixelSprite rows={relic.icon} palette={relic.palette} pixel={2} className="shrink-0" />
+                  <RelicIcon relic={relic} size={24} className="shrink-0" />
                   <span className="min-w-0">{relic.short}</span>
                 </button>
               );

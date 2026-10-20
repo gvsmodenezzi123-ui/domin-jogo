@@ -1,6 +1,6 @@
 import { RELICS } from '../data/relics.js';
 import DominoTile from './DominoTile.jsx';
-import PixelSprite from './PixelSprite.jsx';
+import RelicIcon from './RelicIcon.jsx';
 
 /** Barbante Mágico: você vê as pedras de cima do dorme e fica com uma. */
 export default function DrawChoice({ options, onPick }) {
@@ -9,7 +9,7 @@ export default function DrawChoice({ options, onPick }) {
     <div className="overlay-backdrop fixed inset-0 z-[65] flex items-center justify-center px-6" role="dialog" aria-modal="true" aria-labelledby="draw-choice-title">
       <div className="overlay-card w-full max-w-[300px] px-5 py-5 text-center">
         <div className="mx-auto w-fit">
-          <PixelSprite rows={relic.icon} palette={relic.palette} pixel={3} />
+          <RelicIcon relic={relic} size={36} />
         </div>
         <h2 id="draw-choice-title" className="mt-2 font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">
           {relic.name.toUpperCase()}

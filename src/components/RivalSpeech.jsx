@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { sound } from '../engine/audioSynth.js';
+import { SILENT_CHARS, sound } from '../engine/audioSynth.js';
 
 /** Depois de terminar de falar, o balão fica isto na tela antes de sumir (ms). */
 const LINGER_MS = 1600;
@@ -10,14 +10,26 @@ const MIN_VISIBLE_MS = 2500;
  * Fala do rival: o texto aparece letra a letra com a voz dele ("animalese":
  * cada personagem tem tom, onda e ritmo próprios em audioSynth.js). Ao
  * terminar, o balão espera um pouco e some. Uma fala nova (key nova) corta a anterior.
+ * `onMouth(aberta)` avisa o retrato para mexer a boca a cada letra.
  */
-export default function RivalSpeech({ text, voice }) {
+export default function RivalSpeech({ text, voice, onMouth }) {
   const [shown, setShown] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [bornAt] = useState(() => performance.now());
   const done = shown.length >= text.length;
 
-  useEffect(() => sound.speakPhrase(text, voice, setShown), [text, voice]);
+  useEffect(() => {
+    const stop = sound.speakPhrase(text, voice, (typed) => {
+      setShown(typed);
+      // boca: abre numa letra, fecha na seguinte; pontuação e espaço fecham
+      const last = typed[typed.length - 1];
+      onMouth?.(typed.length < text.length && !SILENT_CHARS.has(last) && typed.length % 2 === 1);
+    });
+    return () => {
+      stop();
+      onMouth?.(false);
+    };
+  }, [text, voice, onMouth]);
 
   useEffect(() => {
     if (!done) return undefined;

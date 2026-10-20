@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import Hotbar from './Hotbar.jsx';
@@ -45,6 +46,8 @@ export default function RivalBench({
   press,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
+  // boca do retrato abre e fecha enquanto a fala aparece no balão
+  const [mouthOpen, setMouthOpen] = useState(false);
   return (
     <header
       className={`rival-bench relative z-30 shrink-0 px-3 pb-1.5 ${isTurn ? 'rival-bench-active' : ''}`}
@@ -53,7 +56,7 @@ export default function RivalBench({
       <div className="flex gap-2.5">
         <div className="flex shrink-0 flex-col items-center gap-1.5">
           <div className={`avatar-frame relative ${isTurn ? 'avatar-frame-active' : ''}`} data-rival-avatar>
-            <RivalAvatar rival={rival} mood={mood} pixel={3} hurtKey={hurtKey} />
+            <RivalAvatar rival={rival} mood={mood} size={56} hurtKey={hurtKey} speaking={mouthOpen} />
           </div>
           <span className={`rival-status font-pixel ${thinking ? 'rival-status-on' : ''}`} role="status" aria-live="polite">
             {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
@@ -62,7 +65,7 @@ export default function RivalBench({
         </div>
 
         <div className="relative min-w-0 flex-1">
-          {speech && <RivalSpeech key={speech.key} text={speech.text} voice={rival.id} />}
+          {speech && <RivalSpeech key={speech.key} text={speech.text} voice={rival.id} onMouth={setMouthOpen} />}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h2 className="truncate font-pixel text-[10px] leading-none text-bone-50 text-shadow-pixel">{rival.name.toUpperCase()}</h2>
