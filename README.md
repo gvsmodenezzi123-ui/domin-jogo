@@ -18,6 +18,21 @@ npm run icons     # regenera ícones e splash screens em public/
 No iPhone: abra no Safari → Compartilhar → **Adicionar à Tela de Início**.
 O app abre em tela cheia, com barra de status translúcida e sem zoom.
 
+## Publicar (para testar como PWA)
+
+O PWA precisa de HTTPS. Duas opções:
+
+**GitHub Pages** (repo público, ou conta com plano pago se o repo for privado)
+1. O workflow `.github/workflows/deploy-pages.yml` roda a cada push em `main` (e nesta branch do patch):
+   lint → testes → build → publica `dist/` na branch `gh-pages`.
+2. Uma vez só: Settings → Pages → Build and deployment → Source: **Deploy from a branch** →
+   `gh-pages` / `(root)` → Save.
+3. Endereço: `https://<usuário>.github.io/domin-jogo/`
+
+**Vercel ou Netlify** (grátis também para repo privado)
+- Importe o repositório pelo site deles (login com GitHub) e escolha a branch.
+- O Vite é detectado sozinho: build `npm run build`, pasta `dist`.
+
 ## Regras do Patch 0.1
 
 - Duplo-seis (28 pedras), 7 para cada lado, 14 no **Dorme**. 5 corações para cada um.
