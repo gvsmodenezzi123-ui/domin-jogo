@@ -1467,17 +1467,15 @@
 
   /* ---------- Tela inicial ---------- */
 
+  /* feixe da lâmpada do menu (balança e pisca com .animate-light-cone) */
   .title-cone {
     background: conic-gradient(from 180deg at 50% 9%, transparent 152deg, rgba(255, 214, 140, 0.13) 168deg, rgba(255, 214, 140, 0.2) 180deg, rgba(255, 214, 140, 0.13) 192deg, transparent 208deg);
     -webkit-mask: linear-gradient(180deg, #000 0%, #000 50%, transparent 92%);
     mask: linear-gradient(180deg, #000 0%, #000 50%, transparent 92%);
-    animation: lamp-flicker 7s steps(1, end) infinite;
   }
 
   .title-lamp {
     filter: drop-shadow(0 10px 24px rgba(255, 217, 138, 0.65));
-    animation: lamp-sway 6s ease-in-out infinite alternate;
-    transform-origin: 50% -40px;
   }
 
   .title-btn {
@@ -2190,13 +2188,141 @@
   }
 }
 
-@keyframes lamp-sway {
-  from {
-    rotate: -1.5deg;
+/* --- MOTOR DE ILUMINAÇÃO DINÂMICA E GAME FEEL (Patch 0.4.2) --- */
+
+/* 1. Balanço Físico da Lâmpada Pendente e do Cone de Luz */
+@keyframes lampSwing {
+  0% {
+    transform: rotate(-3deg);
   }
-  to {
-    rotate: 1.5deg;
+  50% {
+    transform: rotate(3deg);
   }
+  100% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes lightConeSway {
+  0% {
+    transform: rotate(-3deg) scaleX(0.98);
+    opacity: 0.82;
+  }
+  50% {
+    transform: rotate(3deg) scaleX(1.02);
+    opacity: 0.88;
+  }
+  100% {
+    transform: rotate(-3deg) scaleX(0.98);
+    opacity: 0.82;
+  }
+}
+
+/* 2. Micro-Oscilação de Energia de Boteco (Flicker Orgânico) */
+@keyframes tavernFlicker {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 25px rgba(234, 179, 8, 0.25));
+  }
+  18% {
+    filter: brightness(0.92) drop-shadow(0 0 18px rgba(234, 179, 8, 0.18));
+  }
+  22% {
+    filter: brightness(1.06) drop-shadow(0 0 32px rgba(234, 179, 8, 0.32));
+  }
+  58% {
+    filter: brightness(0.96);
+  }
+  72% {
+    filter: brightness(1.02);
+  }
+  85% {
+    filter: brightness(0.88);
+  } /* Pequena falha rápida */
+  87% {
+    filter: brightness(1.04);
+  }
+}
+
+/* 3. Feixe de Luz Reluzente nas Peças (Specular Shimmer) */
+@keyframes tileShimmer {
+  0% {
+    transform: translateX(-150%) rotate(25deg);
+  }
+  40%,
+  100% {
+    transform: translateX(250%) rotate(25deg);
+  }
+}
+
+/* 4. Pulsação Espectral nas Peças Raras */
+@keyframes gemPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 16px currentColor);
+  }
+}
+
+/* 5. Fumaça de Cigarro Subindo (Partículas) */
+@keyframes smokeDrift {
+  0% {
+    transform: translateY(0) scale(1) translateX(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-25px) scale(1.6) translateX(8px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-50px) scale(2.2) translateX(-4px);
+    opacity: 0;
+  }
+}
+
+/* Classes Utilitárias */
+.animate-lamp-swing {
+  transform-origin: top center;
+  animation: lampSwing 7s ease-in-out infinite;
+}
+
+.animate-light-cone {
+  transform-origin: top center;
+  animation:
+    lightConeSway 7s ease-in-out infinite,
+    tavernFlicker 9s ease-in-out infinite;
+}
+
+.tile-shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.tile-shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(60deg, transparent 40%, rgba(255, 255, 255, 0.22) 50%, transparent 60%);
+  animation: tileShimmer 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* o reflexo passa pelo leque como uma onda (cada pedra um pouco depois da vizinha) */
+.tile-shimmer-effect::after {
+  animation-delay: var(--shimmer-delay, 0s);
+}
+
+/* fumaça do cigarro do Tio Zé (3 baforadas defasadas, ver RivalAvatar.jsx) */
+.smoke-puff {
+  animation: smokeDrift 2.1s ease-out infinite;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2223,11 +2349,17 @@
   .atmo-layer,
   .ai-spot-ring,
   .map-node-current,
-  .title-lamp,
   .title-cone,
   .run-won-title,
-  .tile-enh-layer::before {
+  .tile-enh-layer::before,
+  .animate-lamp-swing,
+  .animate-light-cone,
+  .tile-shimmer-effect::after {
     animation: none !important;
+  }
+
+  .smoke-puff {
+    display: none;
   }
 
   .tile-enh-glow {

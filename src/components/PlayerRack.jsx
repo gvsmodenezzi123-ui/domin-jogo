@@ -201,6 +201,8 @@ export default function PlayerRack({
                       selected={selected}
                       power={power}
                       enhancement={tile.enhancement}
+                      shimmer
+                      shimmerDelay={i * 0.12}
                       playable={playable && !selected}
                       dimmed={active && !playable}
                       disabled={!active || !playable}

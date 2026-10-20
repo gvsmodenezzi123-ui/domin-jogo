@@ -42,7 +42,7 @@ function Entry({ kind, id, known }) {
     text = enh.description;
   } else {
     const rival = RIVALS[id];
-    icon = <RivalAvatar rival={rival} mood="idle" pixel={2} />;
+    icon = <RivalAvatar rival={rival} mood="idle" pixel={2} smoke={known} />;
     name = rival.name;
     text = `${rival.title} · ${REGIONS[rival.region - 1]?.name ?? ''}${rival.boss ? ' · CHEFE' : ''}`;
   }

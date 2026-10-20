@@ -20,6 +20,7 @@
  *   reflexMs           tempo de "pensar" antes de cada ação (mínimo 600 ms, para dar para ver)
  *   prizeBonus         moedas extras ao vencê-lo
  *   felt / decor       cores do feltro da mesa dele e enfeites (giz, caneca, cinzas...)
+ *   smoke              (opcional) brasa do cigarro no retrato: de onde a fumaça sobe
  *   faces / palette    retrato 16x16 em pixel art, um mapa por humor
  *   lines              falas curtas por situação (o que faltar usa as do Tio Zé)
  */
@@ -222,6 +223,8 @@ export const RIVALS = Object.freeze({
     reflexMs: 800,
     prizeBonus: 0,
     felt: { light: '#3a4a2a', mid: '#2c3a20', dark: '#1f2a17' },
+    // brasa do cigarro no retrato (coluna, linha): a fumaça sobe dali quando ela aparece
+    smoke: { x: 15, y: 10, ember: 'o' },
     decor: [],
     faces: TIO_ZE_FACES,
     palette: TIO_ZE_PALETTE,

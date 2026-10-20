@@ -73,6 +73,7 @@ function Half({ value, horizontal, unit }) {
  * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
  * onBoard:     na mesa a bucha fica sempre atravessada: os eixos se invertem
  * power:       bucha selecionada na mão — moldura amarela pulsando
+ * shimmer:     reflexo de luz passando pela pedra de tempos em tempos (`shimmerDelay` defasa)
  * enhancement: 'ouro' | 'rubi' | 'cristal' | 'chumbo' | 'fantasma' — troca o material
  *              da pedra por um "shader" em CSS (.tile-enh-<id> em index.css)
  * unit:        lado de cada metade, em px
@@ -89,6 +90,8 @@ function DominoTile({
   onBoard = false,
   power = false,
   enhancement = null,
+  shimmer = false,
+  shimmerDelay = 0,
   depth = 2,
   onClick,
   disabled = false,
@@ -181,6 +184,13 @@ function DominoTile({
           <span aria-hidden="true" className="tile-enh-layer" />
           <span aria-hidden="true" className="tile-enh-glow" />
         </>
+      )}
+      {shimmer && (
+        <span
+          aria-hidden="true"
+          className="tile-shimmer-effect pointer-events-none"
+          style={{ position: 'absolute', inset: 0, borderRadius: radius, '--shimmer-delay': `${shimmerDelay}s` }}
+        />
       )}
       {selected && (
         <span

@@ -39,6 +39,11 @@ const MARK_LABEL = {
   both: ' (curinga na sua jogada)',
 };
 
+/** Feixe cônico da lâmpada sobre o feltro. */
+const LIGHT_CONE = {
+  background: 'radial-gradient(circle at 50% 0%, rgba(254, 240, 138, 0.22) 0%, rgba(254, 240, 138, 0.08) 45%, transparent 75%)',
+};
+
 /** Voo da pedra do rival: da mão dele até a ponta (ms). */
 export const AI_FLIGHT_MS = 400;
 
@@ -133,9 +138,10 @@ export default function TableBoard({
         <div key={d} aria-hidden="true" className={`felt-decor felt-decor-${d} pointer-events-none absolute inset-0`} />
       ))}
       <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
-      <div className="lamp-light pointer-events-none absolute inset-0" />
+      {/* cone de luz da lâmpada: balança junto com ela e pisca como luz de bar */}
+      <div className="animate-light-cone pointer-events-none absolute inset-0" style={LIGHT_CONE} />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
-      <div className="pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
+      <div className="animate-lamp-swing pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
         <span className="block h-2 w-[2px] bg-black/80" />
         <PixelSprite rows={LAMP} palette={LAMP_PALETTE} pixel={3} className="lamp-sprite" />
       </div>
@@ -172,6 +178,7 @@ export default function TableBoard({
                       unit={unit}
                       enhancement={enhancementOf.get(tile.id)}
                       openEnd={tile.isOpenEnd}
+                      shimmer={tile.isOpenEnd}
                       depth={tile.isDouble ? 5 : 4}
                     />
                     {tile.isDouble && !arriving && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}

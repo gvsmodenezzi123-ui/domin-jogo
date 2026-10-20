@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.4
+# Buxaria — Patch 0.4.2
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -52,6 +52,18 @@ O PWA precisa de HTTPS. Duas opções:
 - **Passar a vez** é sempre permitido com a mesa aberta. Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.4.2: iluminação viva
+
+- **Lâmpada balançando** (`.animate-lamp-swing`, 7 s) na mesa e no menu, presa pelo fio no teto.
+- **Cone de luz** sobre o feltro (`.animate-light-cone`): balança junto com a lâmpada e pisca de
+  leve como luz de bar antigo, com uma falha rápida de energia de vez em quando.
+- **Reflexo nas pedras** (`.tile-shimmer-effect`): um feixe de luz passa pelas pedras da sua mão
+  (em onda pelo leque) e pelas duas pontas abertas da mesa. A camada é recortada no formato da
+  pedra, então os anéis de seleção não são cortados.
+- **Fumaça do Tio Zé:** três baforadas defasadas sobem da brasa do cigarro (some quando ele é ferido
+  e o cigarro cai). `smoke` em `rivals.js` diz de onde sai.
+- Tudo desliga com "Reduzir movimento" do iPhone.
 
 ## Patch 0.4: campanha, menus e mesa viva
 

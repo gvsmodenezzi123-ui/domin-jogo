@@ -59,7 +59,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.4</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.4.2</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -114,10 +114,10 @@ export default function TitleScreen({
         paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
       }}
     >
-      <div className="title-cone pointer-events-none absolute inset-0" />
+      <div className="title-cone animate-light-cone pointer-events-none absolute inset-0" />
       <div className="lamp-light pointer-events-none absolute inset-0" />
 
-      <div className="relative flex flex-col items-center">
+      <div className="animate-lamp-swing relative flex flex-col items-center">
         <span className="block h-10 w-[3px] bg-black" />
         <PixelSprite rows={LAMP} palette={LAMP_PALETTE} pixel={7} className="lamp-sprite title-lamp" />
       </div>
@@ -127,7 +127,7 @@ export default function TitleScreen({
           BUXARIA
         </h1>
         <p className="mt-4 font-pixel text-[8px] tracking-widest text-bone-400">
-          PATCH 0.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.4.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </div>
 

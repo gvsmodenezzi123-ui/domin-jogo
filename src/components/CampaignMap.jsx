@@ -62,7 +62,7 @@ function MapNode({ point, status, selected, onSelect }) {
       aria-pressed={selected}
     >
       <span className={`block ${known ? '' : 'map-silhouette'}`}>
-        <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'idle'} pixel={point.boss ? 4 : 3} />
+        <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'idle'} pixel={point.boss ? 4 : 3} smoke={known} />
       </span>
       {!known && <span className="map-node-lock font-pixel">?</span>}
       {status === 'cleared' && <span aria-hidden="true" className="chalk-x" />}
@@ -154,7 +154,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
       <footer className="map-footer relative z-10 shrink-0 px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
         <div className="flex gap-3">
           <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
-            <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'smug'} pixel={3} />
+            <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'smug'} pixel={3} smoke={known} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-[7px] text-bone-400">
