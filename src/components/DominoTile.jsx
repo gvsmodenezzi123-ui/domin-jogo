@@ -165,7 +165,9 @@ function DominoTile({
       aria-pressed={onClick ? selected : undefined}
       className={`relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
-      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${className}`}
+      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
+        enh && dimmed ? 'tile-enh-still' : ''
+      } ${className}`}
       style={{ ...shared, ...surface }}
     >
       <Half value={values[0]} horizontal={horizontal} unit={unit} />
@@ -183,6 +185,10 @@ function DominoTile({
         <>
           <span aria-hidden="true" className="tile-enh-layer" />
           <span aria-hidden="true" className="tile-enh-glow" />
+          {/* Ouro: o feixe especular cruza a pedra sem parar */}
+          {enh.id === 'ouro' && (
+            <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0, borderRadius: radius }} />
+          )}
         </>
       )}
       {shimmer && (

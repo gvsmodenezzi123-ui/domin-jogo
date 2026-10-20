@@ -4,8 +4,7 @@ import { getRival } from '../data/rivals.js';
 import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
-import PixelSprite from './PixelSprite.jsx';
-import { LAMP, LAMP_PALETTE } from './sprites.js';
+import { LampGlyph } from './UiGlyphs.jsx';
 
 function isStandalone() {
   if (typeof window === 'undefined') return false;
@@ -114,16 +113,18 @@ export default function TitleScreen({
         paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
       }}
     >
-      <div className="title-cone animate-light-cone pointer-events-none absolute inset-0" />
+      <div className="title-cone dynamic-light-cone pointer-events-none absolute inset-0" />
       <div className="lamp-light pointer-events-none absolute inset-0" />
 
-      <div className="animate-lamp-swing relative flex flex-col items-center">
+      {/* candeeiro preso no teto: balança de verdade (pivô no fio) */}
+      <div className="swinging-lamp pointer-events-none relative flex flex-col items-center">
         <span className="block h-10 w-[3px] bg-black" />
-        <PixelSprite rows={LAMP} palette={LAMP_PALETTE} pixel={7} className="lamp-sprite title-lamp" />
+        <LampGlyph size={120} className="lamp-sprite title-lamp" />
       </div>
 
       <div className="relative mt-[9vh] flex flex-col items-center">
-        <h1 className="title-logo font-pixel text-[40px] leading-none" onClick={onSecretTap}>
+        {/* logo com relevo 3D duplo: face de osso, extrusão de sangue e sombra funda */}
+        <h1 className="title-logo font-pixel text-[40px] leading-none" onClick={onSecretTap} data-text="BUXARIA">
           BUXARIA
         </h1>
         <p className="mt-4 font-pixel text-[8px] tracking-widest text-bone-400">
@@ -160,7 +161,7 @@ export default function TitleScreen({
         </MenuModal>
       )}
       {modal === 'book' && (
-        <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide>
+        <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
           <CollectionBook collection={collection} />
         </MenuModal>
       )}

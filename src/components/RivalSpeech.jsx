@@ -39,11 +39,14 @@ export default function RivalSpeech({ text, voice, onMouth }) {
   }, [done, bornAt]);
 
   return (
-    <div className={`speech-compact pointer-events-none absolute left-0 top-0 z-40 ${leaving ? 'speech-leaving' : ''}`} role="status" aria-label={text}>
-      <span aria-hidden="true">
+    <div
+      className={`speech-compact pointer-events-none absolute left-44 top-3 z-30 max-w-[140px] ${leaving ? 'speech-leaving' : ''}`}
+      role="status"
+      aria-label={text}
+    >
+      {/* uma linha só: o que não couber vira "…" (o balão é absoluto, não empurra ninguém) */}
+      <span aria-hidden="true" className="block truncate">
         {shown}
-        {/* o resto reserva espaço: o balão não cresce enquanto ele fala */}
-        <span className="invisible">{text.slice(shown.length)}</span>
       </span>
     </div>
   );

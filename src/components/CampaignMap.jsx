@@ -6,9 +6,8 @@ import { rivalBlurb, rivalRules } from '../engine/rivalInfo.js';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
-import PixelSprite from './PixelSprite.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
-import { MENU_ICON, SPEAKER_PALETTE } from './sprites.js';
+import { MenuGlyph } from './UiGlyphs.jsx';
 
 /** Altura de cada degrau da trilha (px) e do cabeçalho de cada região. */
 const STEP = 96;
@@ -44,15 +43,25 @@ function nodeStatus(index, run) {
   return 'locked';
 }
 
+/** Marcas no feltro de cada região (posição em %, tamanho em px): fundo de copo e cinzas. */
+const REGION_MARKS = [
+  { rings: [[14, 22, 46], [82, 58, 54], [24, 86, 40]], ash: [[70, 18], [12, 64], [88, 88]] },
+  { rings: [[78, 26, 50], [18, 52, 44], [66, 84, 58]], ash: [[30, 14], [86, 70], [10, 92]] },
+  { rings: [[20, 30, 56], [84, 44, 42], [44, 80, 50]], ash: [[64, 12], [8, 70], [90, 92]] },
+];
+
+/** Polaroid inclina um pouco, alternando, como foto jogada na mesa. */
+const TILT = [-4, 3, -2, 4, -3, 2];
+
 function MapNode({ point, status, selected, onSelect }) {
   const rival = getRival(point.rivalId);
   const known = status !== 'locked';
-  const size = point.boss ? 70 : 56;
+  const photo = point.boss ? 64 : 50;
   return (
     <button
       type="button"
-      className={`map-node map-node-${status} ${point.boss ? 'map-node-boss' : ''} ${selected ? 'map-node-selected' : ''}`}
-      style={{ left: `${point.x}%`, top: point.y, width: size, height: size }}
+      className={`map-node map-polaroid map-node-${status} ${point.boss ? 'map-node-boss' : ''} ${selected ? 'map-node-selected' : ''}`}
+      style={{ left: `${point.x}%`, top: point.y, rotate: `${TILT[point.slot - 1]}deg` }}
       onClick={() => onSelect(point.index)}
       aria-label={
         known
@@ -61,13 +70,16 @@ function MapNode({ point, status, selected, onSelect }) {
       }
       aria-pressed={selected}
     >
-      <span className={`block ${known ? '' : 'map-silhouette'}`}>
-        <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'idle'} pixel={point.boss ? 4 : 3} smoke={known} />
+      <span aria-hidden="true" className="polaroid-tape" />
+      <span className="polaroid-photo" style={{ width: photo, height: photo }}>
+        <span className={`block ${known ? '' : 'map-silhouette'}`}>
+          <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'idle'} size={photo} smoke={known} />
+        </span>
+        {!known && <span className="map-node-lock font-pixel">?</span>}
+        {status === 'cleared' && <span aria-hidden="true" className="chalk-x" />}
       </span>
-      {!known && <span className="map-node-lock font-pixel">?</span>}
-      {status === 'cleared' && <span aria-hidden="true" className="chalk-x" />}
+      <span className="polaroid-caption font-pixel">{known ? rival.name.toUpperCase() : '???'}</span>
       {point.boss && <span className="map-boss-tag font-pixel">CHEFE</span>}
-      <span className="map-node-name font-pixel">{known ? rival.name.toUpperCase() : '???'}</span>
     </button>
   );
 }
@@ -114,7 +126,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
             <h1 className="mt-1 truncate font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">{region.name}</h1>
           </div>
           <button type="button" onClick={onMenu} className="icon-btn shrink-0" aria-label="Voltar ao menu">
-            <PixelSprite rows={MENU_ICON} palette={SPEAKER_PALETTE} pixel={2} />
+            <MenuGlyph size={20} />
           </button>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
@@ -133,6 +145,12 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
               style={{ top: r.top, height: r.height }}
               aria-label={r.name}
             >
+              {REGION_MARKS[r.id - 1].rings.map(([x, y, d]) => (
+                <span key={`ring-${x}-${y}`} aria-hidden="true" className="map-ring pointer-events-none absolute" style={{ left: `${x}%`, top: `${y}%`, width: d, height: d }} />
+              ))}
+              {REGION_MARKS[r.id - 1].ash.map(([x, y]) => (
+                <span key={`ash-${x}-${y}`} aria-hidden="true" className="map-ash pointer-events-none absolute" style={{ left: `${x}%`, top: `${y}%` }} />
+              ))}
               <div className="map-region-head absolute inset-x-3 top-2 text-center">
                 <p className="font-pixel text-[9px] leading-snug text-bone-50 text-shadow-pixel">{r.name}</p>
                 <p className="font-term text-[15px] leading-none text-bone-300">{r.subtitle}</p>
@@ -140,9 +158,19 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
             </section>
           ))}
 
+          {/* trilha riscada a giz de sinuca (o filtro deixa o traço áspero) */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true">
-            <polyline points={path} className="map-path" vectorEffect="non-scaling-stroke" />
-            <polyline points={donePath} className="map-path-done" vectorEffect="non-scaling-stroke" />
+            <defs>
+              <filter id="chalk-rough" x="-5%" y="-1%" width="110%" height="102%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="grain" />
+                <feDisplacementMap in="SourceGraphic" in2="grain" scale="0.8" />
+              </filter>
+            </defs>
+            <g filter="url(#chalk-rough)">
+              <polyline points={path} className="map-path" vectorEffect="non-scaling-stroke" />
+              <polyline points={path} className="map-path map-path-echo" vectorEffect="non-scaling-stroke" transform="translate(0.4 1.5)" />
+              <polyline points={donePath} className="map-path-done" vectorEffect="non-scaling-stroke" />
+            </g>
           </svg>
 
           {points.map((p) => (
@@ -154,7 +182,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
       <footer className="map-footer relative z-10 shrink-0 px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
         <div className="flex gap-3">
           <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
-            <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'smug'} pixel={3} smoke={known} />
+            <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'smug'} size={48} smoke={known} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-[7px] text-bone-400">

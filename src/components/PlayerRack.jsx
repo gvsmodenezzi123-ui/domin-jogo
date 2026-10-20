@@ -4,8 +4,7 @@ import DominoTile from './DominoTile.jsx';
 import { computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
-import PixelSprite from './PixelSprite.jsx';
-import { COIN, COIN_PALETTE, EYE, EYE_PALETTE } from './sprites.js';
+import { CoinGlyph, EyeGlyph } from './UiGlyphs.jsx';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -36,14 +35,14 @@ function DrawCost({ draw }) {
   else if (cost.type === 'coins') {
     price = (
       <span className="inline-flex items-center gap-1 text-brass-300">
-        <PixelSprite rows={COIN} palette={COIN_PALETTE} pixel={1} />
+        <CoinGlyph size={9} />
         {cost.amount}
       </span>
     );
   } else {
     price = (
       <span className="inline-flex items-center gap-1 text-blood-400">
-        <PixelHeart pixel={1} />
+        <PixelHeart size={9} />
         {cost.amount}
       </span>
     );
@@ -172,6 +171,7 @@ export default function PlayerRack({
           return (
             <div
               key={tile.id}
+              data-hand-tile={tile.id}
               {...(tile.enhancement && press ? press({ kind: 'tile', tile }) : {})}
               className="hand-slot absolute"
               style={{
@@ -212,7 +212,7 @@ export default function PlayerRack({
                     />
                     {known && (
                       <span className="tile-known-mark" aria-label={`${rivalName} está vendo esta pedra`} title={`${rivalName} está vendo esta pedra`}>
-                        <PixelSprite rows={EYE} palette={EYE_PALETTE} pixel={1.5} />
+                        <EyeGlyph size={13} />
                       </span>
                     )}
                   </div>

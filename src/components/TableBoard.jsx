@@ -1,10 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { prefersReducedMotion } from './motion.js';
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
-import PixelSprite from './PixelSprite.jsx';
-import { LAMP, LAMP_PALETTE } from './sprites.js';
+import { LampGlyph } from './UiGlyphs.jsx';
 
 /** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
 const BOARD_PADDING = 8;
@@ -44,36 +42,6 @@ const LIGHT_CONE = {
   background: 'radial-gradient(circle at 50% 0%, rgba(254, 240, 138, 0.22) 0%, rgba(254, 240, 138, 0.08) 45%, transparent 75%)',
 };
 
-/** Voo da pedra do rival: da mão dele até a ponta (ms). */
-export const AI_FLIGHT_MS = 400;
-
-/**
- * Faz a pedra recém-jogada pelo rival sair da mão dele (ponto `from`, em px da
- * tela) e pousar no lugar dela na mesa. Roda antes da pintura: a pedra já
- * aparece no começo do voo.
- */
-function useIncomingFlight(worldRef, incoming, cols) {
-  const key = incoming?.stage === 'flight' ? incoming.key : null;
-  useLayoutEffect(() => {
-    if (!key || !incoming.from) return;
-    const world = worldRef.current;
-    const el = world?.querySelector(`[data-tile-id="${incoming.tileId}"]`);
-    if (!el?.animate || prefersReducedMotion()) return;
-    const scale = world.getBoundingClientRect().width / (cols * B) || 1;
-    const rect = el.getBoundingClientRect();
-    const dx = (incoming.from.x - (rect.left + rect.width / 2)) / scale;
-    const dy = (incoming.from.y - (rect.top + rect.height / 2)) / scale;
-    el.animate(
-      [
-        { transform: `translate(${dx}px, ${dy}px) scale(0.5) rotate(-16deg)`, opacity: 0.9 },
-        { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 },
-      ],
-      { duration: AI_FLIGHT_MS, easing: 'cubic-bezier(0.15, 0.75, 0.3, 1)' },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- um voo por jogada (key)
-  }, [key]);
-}
-
 /** Caixa (px do mundo) de uma pedra de `unit` px centrada no retângulo r (em unidades). */
 function tileBox(r, orientation, unit) {
   const w = orientation === 'horizontal' ? unit * 2 : unit;
@@ -102,7 +70,6 @@ export default function TableBoard({
   incoming = null,
 }) {
   const [areaRef, size] = useElementSize();
-  const worldRef = useRef(null);
   // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
   // altura no meio (dica em duas linhas, barra do Safari), só a câmera ajusta;
   // nenhuma pedra muda de lugar.
@@ -124,7 +91,6 @@ export default function TableBoard({
     () => new Map(boardTilesInOrder(board).filter((t) => t.enhancement).map((t) => [t.id, t.enhancement])),
     [board],
   );
-  useIncomingFlight(worldRef, incoming, cols);
   const feltVars = felt ? { '--felt-light': felt.light, '--felt-mid': felt.mid, '--felt-dark': felt.dark } : undefined;
 
   return (
@@ -139,17 +105,16 @@ export default function TableBoard({
       ))}
       <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
       {/* cone de luz da lâmpada: balança junto com ela e pisca como luz de bar */}
-      <div className="animate-light-cone pointer-events-none absolute inset-0" style={LIGHT_CONE} />
+      <div className="dynamic-light-cone pointer-events-none absolute inset-0" style={LIGHT_CONE} />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
-      <div className="animate-lamp-swing pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
+      <div className="swinging-lamp pointer-events-none absolute left-1/2 top-0 z-[6] flex -translate-x-1/2 flex-col items-center">
         <span className="block h-2 w-[2px] bg-black/80" />
-        <PixelSprite rows={LAMP} palette={LAMP_PALETTE} pixel={3} className="lamp-sprite" />
+        <LampGlyph size={44} className="lamp-sprite" />
       </div>
 
       <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING }}>
         {size.width > 0 && (
           <div
-            ref={worldRef}
             className="board-world absolute left-0 top-0"
             style={{
               width: cols * B,
@@ -162,13 +127,15 @@ export default function TableBoard({
               const arriving = incoming?.tileId === tile.id;
               const flying = arriving && incoming.stage === 'flight';
               const spot = arriving && incoming.stage === 'spot';
+              const landed = arriving && incoming.stage === 'landed';
               const entry = arriving ? '' : tile.isDouble ? 'animate-tile-slam' : 'animate-tile-drop';
               return (
                 <div
                   key={tile.id}
                   data-tile-id={tile.id}
-                  className={`board-tile absolute ${flying ? 'z-40' : spot ? 'z-20' : tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'}`}
-                  style={box}
+                  className={`board-tile absolute ${spot ? 'z-20' : tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'}`}
+                  // voando: a pedra real espera escondida; a cópia (tileFlight.js) chega aqui
+                  style={flying ? { ...box, visibility: 'hidden' } : box}
                 >
                   <div className={`relative ${entry} ${spot ? 'ai-spotlight' : ''}`}>
                     <DominoTile
@@ -181,7 +148,7 @@ export default function TableBoard({
                       shimmer={tile.isOpenEnd}
                       depth={tile.isDouble ? 5 : 4}
                     />
-                    {tile.isDouble && !arriving && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
+                    {tile.isDouble && (!arriving || landed) && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
                     {spot && <span aria-hidden="true" className="ai-spot-ring pointer-events-none absolute" />}
                   </div>
                 </div>

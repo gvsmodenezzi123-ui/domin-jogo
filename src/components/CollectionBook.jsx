@@ -77,15 +77,16 @@ export default function CollectionBook({ collection }) {
   const found = current.ids.filter((id) => seen.has(id)).length;
   return (
     <div>
-      <div className="grid grid-cols-3 gap-1.5" role="tablist" aria-label="Seções do livro">
+      {/* abas de fita marcadora, como num álbum encadernado */}
+      <div className="sticky top-0 z-10 grid grid-cols-3 gap-1.5 pb-1" role="tablist" aria-label="Seções do livro">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             role="tab"
             aria-selected={tab === t.id}
-            className="btn-pixel btn-mini book-tab"
-            data-tone={tab === t.id ? 'brass' : undefined}
+            className="book-ribbon font-pixel"
+            data-tab={t.id}
             onClick={() => setTab(t.id)}
           >
             {t.label}

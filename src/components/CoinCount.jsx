@@ -1,10 +1,9 @@
-import PixelSprite from './PixelSprite.jsx';
-import { COIN, COIN_PALETTE } from './sprites.js';
+import { CoinGlyph } from './UiGlyphs.jsx';
 
-export default function CoinCount({ value, className = '', target }) {
+export default function CoinCount({ value, className = '', target, size = 14 }) {
   return (
     <span data-coin-target={target} className={`inline-flex items-center gap-1 font-pixel text-[10px] text-brass-300 ${className}`}>
-      <PixelSprite rows={COIN} palette={COIN_PALETTE} pixel={2} />
+      <CoinGlyph size={size} />
       <span aria-label={`${value} moedas`}>${value}</span>
     </span>
   );

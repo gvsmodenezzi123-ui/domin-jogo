@@ -417,12 +417,17 @@ export class SoundEngine {
     src.stop(t + attack + dur + 0.05);
   }
 
-  /** Jogada do rival assentando: a madeira oca + estalo seco de osso ("SLAM"). */
-  playAiSlam(isDouble = false, enhancement = null) {
+  /** Pedra assentando na mesa (sua ou do rival): a madeira oca + estalo seco de osso ("SLAM"). */
+  playBoneSlam(isDouble = false, enhancement = null) {
     this.playTileSlam(isDouble, enhancement);
     this.noise({ freq: 2400, q: 1.3, peak: 0.75, dur: 0.03 });
     this.noise({ freq: 5200, filter: 'highpass', peak: 0.3, dur: 0.012 });
     if (isDouble) this.noise({ freq: 1900, q: 1.4, peak: 0.45, dur: 0.03, delay: 0.04 });
+  }
+
+  /** Nome antigo (Patch 0.4): o pouso da pedra do rival. */
+  playAiSlam(isDouble = false, enhancement = null) {
+    this.playBoneSlam(isDouble, enhancement);
   }
 
   playClick() {

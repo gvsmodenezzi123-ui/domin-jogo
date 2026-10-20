@@ -354,31 +354,6 @@
     box-shadow: 1px 1px 0 rgba(255, 240, 190, 0.6);
   }
 
-  .tile-enh-ouro .tile-enh-layer::after {
-    content: '';
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: -70%;
-    width: 45%;
-    background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 240, 0.8) 50%, transparent 100%);
-    transform: skewX(-18deg);
-    animation: gold-shine 2.1s linear infinite;
-  }
-
-  /* segundo reflexo, mais fino, atrás do primeiro: o brilho nunca para */
-  .tile-enh-ouro .tile-enh-layer::before {
-    content: '';
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: -70%;
-    width: 18%;
-    background: linear-gradient(100deg, transparent 0%, rgba(255, 250, 220, 0.55) 50%, transparent 100%);
-    transform: skewX(-18deg);
-    animation: gold-shine 2.1s linear -1.05s infinite;
-  }
-
   /* Rubi (Sanguinária): carmesim brilhante, pulsando, com sombra vermelha */
   .tile-enh-rubi {
     background:
@@ -393,11 +368,13 @@
       0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.55);
   }
 
+  /* pips em brasa incandescente */
   .tile-enh-rubi .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #3a0008 0%, #120003 70%);
+    background: radial-gradient(circle at 45% 40%, #fff3b0 0%, #ffb02e 30%, #ff4a1a 62%, #6a0410 100%);
     box-shadow:
-      inset 0 1px 1px #000,
-      0 1px 0 rgba(255, 170, 175, 0.65);
+      0 0 3px rgba(255, 140, 40, 0.95),
+      0 0 6px rgba(255, 60, 20, 0.6);
+    animation: ember-pip 1.6s ease-in-out infinite;
   }
 
   .tile-enh-rubi .domino-divider {
@@ -463,40 +440,44 @@
     box-shadow: 0 0 3px rgba(120, 250, 255, 0.9);
   }
 
-  /* prisma: borda com o arco-íris girando */
+  /* borda translúcida de vidro com brilho frio */
   .tile-enh-cristal .tile-enh-glow {
-    inset: -1.5px;
     opacity: 1;
-    padding: 1.5px;
-    background: conic-gradient(#ff6a8a, #ffd36a, #8cff8a, #6ae8ff, #9a7aff, #ff6ad8, #ff6a8a);
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box exclude,
-      linear-gradient(#000 0 0);
-    box-shadow: 0 0 9px 2px rgba(80, 240, 255, 0.55);
-    animation: prism-spin 3.2s linear infinite;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 0 8px 1px rgba(120, 240, 255, 0.5);
   }
 
+  /* holográfico: o arco-íris corre por dentro da pedra (holoPrismCycle) */
   .tile-enh-cristal .tile-enh-layer {
     background:
-      linear-gradient(35deg, transparent 46%, rgba(255, 255, 255, 0.35) 48%, transparent 52%),
-      linear-gradient(115deg, rgba(255, 120, 200, 0.18), transparent 30%, transparent 70%, rgba(120, 255, 230, 0.2));
+      linear-gradient(35deg, transparent 46%, rgba(255, 255, 255, 0.4) 48%, transparent 52%),
+      linear-gradient(
+        115deg,
+        rgba(255, 110, 200, 0.42),
+        rgba(120, 220, 255, 0.42),
+        rgba(150, 255, 170, 0.38),
+        rgba(255, 230, 120, 0.42),
+        rgba(190, 140, 255, 0.42),
+        rgba(255, 110, 200, 0.42)
+      );
+    background-size:
+      100% 100%,
+      300% 300%;
+    mix-blend-mode: overlay;
+    animation: holoPrismCycle 4s ease-in-out infinite;
   }
 
   /* Chumbo: ferro fosco escuro, rachado */
+  /* metal escuro fosco: nenhum brilho, só a rachadura em relevo */
   .tile-enh-chumbo {
     background:
       var(--crack-texture),
-      repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
-      radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.12), transparent 45%),
-      linear-gradient(155deg, #4b5056 0%, #30343a 48%, #1a1d21 100%);
+      var(--felt-noise),
+      linear-gradient(155deg, #3d4247 0%, #2b2f34 48%, #181b1e 100%);
     background-size:
       100% 100%,
-      auto,
-      auto,
+      90px 90px,
       auto;
     box-shadow:
       inset 1px 1px 0 rgba(255, 255, 255, 0.2),
@@ -537,9 +518,6 @@
       inset 0 0 8px rgba(235, 215, 255, 0.5),
       0 var(--d) 0 rgba(45, 12, 90, 0.7),
       0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.35);
-    animation:
-      ghost-flicker 2.6s ease-in-out infinite,
-      ghost-float 3.2s ease-in-out infinite;
   }
 
   .tile-enh-fantasma .domino-pip {
@@ -768,6 +746,11 @@
     box-shadow:
       inset 0 0 0 2px #1d1108,
       0 0 12px rgba(224, 83, 63, 0.55);
+  }
+
+  .icon-btn-sm {
+    min-width: 30px;
+    min-height: 26px;
   }
 
   .icon-btn {
@@ -1143,8 +1126,9 @@
     transition: transform 60ms steps(1, end);
   }
 
+  /* o botão afunda de verdade (3px) e o chanfro some */
   .btn-pixel:active:not(:disabled) {
-    transform: translateY(2px);
+    transform: translateY(3px);
     box-shadow:
       inset 2px 2px 0 rgba(0, 0, 0, 0.35),
       0 1px 0 #0b0705;
@@ -1211,9 +1195,23 @@
   }
 
   /* logo com contorno pesado: 8 direções de preto + sombra de sangue */
+  /* logo com relevo 3D DUPLO: contorno preto, 1ª extrusão em osso escurecido,
+     2ª extrusão em sangue e sombra funda; uma luz quente bate de cima */
   .title-logo {
-    color: var(--color-bone-50);
+    position: relative;
+    color: transparent;
     letter-spacing: 0.05em;
+    filter: drop-shadow(0 0 18px rgba(255, 214, 140, 0.3));
+    cursor: default;
+    user-select: none;
+  }
+
+  /* embaixo: contorno e as duas extrusões (osso escurecido, depois sangue) */
+  .title-logo::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    color: #000;
     text-shadow:
       -3px -3px 0 #000,
       0 -3px 0 #000,
@@ -1223,11 +1221,26 @@
       0 3px 0 #000,
       -3px 3px 0 #000,
       -3px 0 0 #000,
+      2px 2px 0 #8f7a4c,
+      3px 3px 0 #6e5a33,
+      5px 5px 0 #000,
       6px 6px 0 var(--color-blood-500),
-      9px 9px 0 #000,
-      0 0 30px rgba(255, 214, 140, 0.35);
-    cursor: default;
-    user-select: none;
+      7px 7px 0 var(--color-blood-500),
+      8px 8px 0 var(--color-blood-700),
+      10px 10px 0 #000,
+      12px 14px 12px rgba(0, 0, 0, 0.7);
+  }
+
+  /* em cima: a face de osso com a luz da lâmpada batendo de cima */
+  .title-logo::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #fffaf0 0%, #f4ecd2 40%, #d8c690 75%, #b39b5c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
   }
 
   .heart-alive {
@@ -1368,6 +1381,9 @@
 
   .rival-status {
     display: block;
+    width: 60px;
+    overflow: hidden;
+    text-align: center;
     height: 9px;
     font-size: 6px;
     line-height: 9px;
@@ -1397,13 +1413,6 @@
   /* terminou de falar e já ficou um tempo: some */
   .speech-leaving {
     animation: speech-out 320ms ease-in forwards;
-  }
-
-  .speech-compact > span {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .speech-compact::before {
@@ -1574,20 +1583,107 @@
     box-shadow: inset 0 0 0 1px rgba(240, 204, 120, 0.2);
   }
 
+  /* trilha a giz de sinuca: traço áspero claro + um eco mais fraco (giz passado duas vezes) */
   .map-path {
     fill: none;
-    stroke: rgba(240, 236, 220, 0.28);
+    stroke: rgba(236, 240, 246, 0.32);
     stroke-width: 3;
-    stroke-dasharray: 2 9;
+    stroke-dasharray: 5 7;
     stroke-linecap: round;
+  }
+
+  .map-path-echo {
+    stroke: rgba(160, 200, 255, 0.14);
+    stroke-width: 2;
+    stroke-dasharray: 9 5;
   }
 
   .map-path-done {
     fill: none;
-    stroke: rgba(255, 245, 225, 0.75);
-    stroke-width: 3;
-    stroke-dasharray: 7 6;
+    stroke: rgba(250, 250, 244, 0.82);
+    stroke-width: 3.5;
+    stroke-dasharray: 10 4;
     stroke-linecap: round;
+  }
+
+  /* marca molhada de fundo de copo de cerveja no feltro */
+  .map-ring {
+    border-radius: 9999px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle,
+      transparent 52%,
+      rgba(0, 0, 0, 0.32) 56%,
+      rgba(0, 0, 0, 0.12) 62%,
+      rgba(255, 230, 170, 0.05) 66%,
+      transparent 70%
+    );
+  }
+
+  /* cinzas de cigarro caídas */
+  .map-ash {
+    width: 26px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(circle at 30% 50%, rgba(190, 190, 185, 0.45) 0 2px, transparent 3px),
+      radial-gradient(circle at 55% 35%, rgba(140, 140, 135, 0.4) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 70% 65%, rgba(210, 210, 200, 0.35) 0 1px, transparent 2px),
+      radial-gradient(ellipse at 50% 55%, rgba(60, 60, 58, 0.35), transparent 70%);
+  }
+
+  /* alvo do mapa: polaroid presa com fita */
+  .map-node.map-polaroid {
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 4px 3px;
+    background: linear-gradient(170deg, #f1ead6 0%, #ddd2b4 100%);
+    border: 0;
+    border-radius: 2px;
+    box-shadow:
+      inset 0 0 0 1px rgba(90, 70, 40, 0.35),
+      0 3px 0 rgba(0, 0, 0, 0.45),
+      0 8px 14px rgba(0, 0, 0, 0.55);
+  }
+
+  .polaroid-photo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #2a2016, #0b0705 80%);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+  }
+
+  .polaroid-caption {
+    max-width: 76px;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 5px;
+    line-height: 1.5;
+    color: #2a1e10;
+  }
+
+  .polaroid-tape {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 30px;
+    height: 10px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: rgba(230, 215, 170, 0.55);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  }
+
+  .map-node-boss .polaroid-tape {
+    background: rgba(200, 38, 29, 0.6);
+  }
+
+  .map-node-locked.map-polaroid {
+    background: linear-gradient(170deg, #b9b09a 0%, #9a917c 100%);
   }
 
   .map-node {
@@ -1633,24 +1729,10 @@
     text-shadow: 2px 2px 0 #000;
   }
 
-  .map-node-name {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 50%;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 6px;
-    line-height: 1.3;
-    color: var(--color-bone-200);
-    text-shadow: 1px 1px 0 #000;
-    transform: translateX(-50%);
-  }
-
   .map-boss-tag {
     position: absolute;
-    top: -9px;
+    top: auto;
+    bottom: -9px;
     left: 50%;
     padding: 1px 3px;
     font-size: 6px;
@@ -1706,6 +1788,16 @@
       inset 0 0 0 1px rgba(200, 38, 29, 0.6),
       0 3px 0 #000,
       0 0 12px rgba(200, 38, 29, 0.35);
+  }
+
+  /* loja em 4 quadrantes que cabem na tela: topo, talismãs, peças e saída */
+  .shop-grid {
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .shop-quadrant {
+    min-height: 0;
   }
 
   .shop-card-icon {
@@ -1808,6 +1900,187 @@
     justify-content: center;
     background: radial-gradient(circle at 50% 40%, #241810, #0b0705 75%);
     border: 2px solid #0b0705;
+  }
+
+  /* ---------- Livro de Boteco: álbum encadernado em couro ---------- */
+
+  .book-leather {
+    position: relative;
+    background:
+      radial-gradient(ellipse 70% 40% at 30% 0%, rgba(255, 210, 160, 0.12), transparent 70%),
+      var(--felt-noise),
+      linear-gradient(160deg, #6b4126 0%, #4a2b17 45%, #2e1a0d 100%);
+    background-size:
+      100% 100%,
+      140px 140px,
+      100% 100%;
+    border: 3px solid #120a05;
+    border-radius: 6px 10px 10px 6px;
+    box-shadow:
+      inset 10px 0 0 -4px #2a170b,
+      inset 12px 0 0 -4px rgba(255, 210, 160, 0.12),
+      inset 0 0 0 2px rgba(0, 0, 0, 0.5),
+      0 8px 0 #000,
+      0 0 40px rgba(0, 0, 0, 0.85);
+  }
+
+  /* costura do couro e cantoneiras douradas */
+  .book-leather::before {
+    content: '';
+    position: absolute;
+    inset: 6px 6px 6px 14px;
+    border: 2px dashed rgba(220, 180, 110, 0.45);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .book-leather::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, #d4a64a 0 12px, transparent 12px) top left / 22px 22px no-repeat,
+      linear-gradient(225deg, #d4a64a 0 12px, transparent 12px) top right / 22px 22px no-repeat,
+      linear-gradient(45deg, #d4a64a 0 12px, transparent 12px) bottom left / 22px 22px no-repeat,
+      linear-gradient(315deg, #d4a64a 0 12px, transparent 12px) bottom right / 22px 22px no-repeat;
+    opacity: 0.85;
+  }
+
+  .book-leather > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* título gravado a ouro no couro */
+  .book-emboss {
+    color: #f0cc78;
+    text-shadow:
+      0 1px 0 rgba(255, 240, 200, 0.4),
+      0 -1px 0 rgba(0, 0, 0, 0.8),
+      1px 2px 0 #3a2410;
+  }
+
+  /* página do álbum: papel escuro pautado */
+  .book-page {
+    padding: 0 6px 6px 10px;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 230, 190, 0.035) 0 1px, transparent 1px 22px),
+      linear-gradient(180deg, #20160e, #170f09);
+    border-radius: 3px;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+      inset 6px 0 10px -6px rgba(0, 0, 0, 0.8);
+  }
+
+  /* abas: fitas marcadoras de tecido saindo da página */
+  .book-ribbon {
+    position: relative;
+    min-height: 32px;
+    padding: 6px 4px 9px;
+    font-size: 7px;
+    color: #f4ecd2;
+    background: var(--ribbon, #8f2219);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18);
+    opacity: 0.7;
+    transform: translateY(-2px);
+    transition:
+      transform 120ms ease-out,
+      opacity 120ms ease-out;
+  }
+
+  .book-ribbon[data-tab='relics'] {
+    --ribbon: #8f2219;
+  }
+
+  .book-ribbon[data-tab='tiles'] {
+    --ribbon: #1f5a8a;
+  }
+
+  .book-ribbon[data-tab='rivals'] {
+    --ribbon: #2c5a2a;
+  }
+
+  .book-ribbon[aria-selected='true'] {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+
+  /* ---------- Placar de vitória: lousa de bar ---------- */
+
+  .chalkboard {
+    position: relative;
+    background:
+      radial-gradient(ellipse 60% 40% at 30% 20%, rgba(255, 255, 255, 0.05), transparent 70%),
+      radial-gradient(ellipse 50% 30% at 75% 75%, rgba(255, 255, 255, 0.035), transparent 70%),
+      var(--felt-noise),
+      linear-gradient(170deg, #233328 0%, #18241c 60%, #111a14 100%);
+    background-size:
+      100% 100%,
+      100% 100%,
+      120px 120px,
+      100% 100%;
+    border: 8px solid #5a3a22;
+    border-image: linear-gradient(160deg, #7a4f2e, #4a2b17 55%, #2e1a0d) 1;
+    box-shadow:
+      inset 0 0 0 2px rgba(0, 0, 0, 0.55),
+      inset 0 0 30px rgba(0, 0, 0, 0.6),
+      0 8px 0 #000,
+      0 0 40px rgba(0, 0, 0, 0.85);
+  }
+
+  .chalk-text {
+    color: #f2efe4;
+    text-shadow:
+      0 0 1px rgba(255, 255, 255, 0.7),
+      1px 1px 0 rgba(255, 255, 255, 0.12),
+      -1px 0 1px rgba(200, 220, 255, 0.18);
+    opacity: 0.94;
+  }
+
+  .chalk-dim {
+    color: rgba(230, 236, 226, 0.6);
+  }
+
+  .chalk-line {
+    width: 70%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(240, 240, 230, 0.55) 15%, rgba(240, 240, 230, 0.35) 60%, transparent);
+  }
+
+  .chalk-coins {
+    color: #ffe08a;
+    text-shadow: 0 0 6px rgba(255, 210, 90, 0.5);
+  }
+
+  /* derrotado na lousa: nocauteado e torto, com carimbo */
+  .ko-wrap {
+    position: relative;
+  }
+
+  .ko-portrait {
+    padding: 4px;
+    background: #0b0705;
+    border: 2px solid rgba(240, 240, 230, 0.4);
+    rotate: -8deg;
+    filter: saturate(0.8) brightness(0.92);
+    box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  .ko-stamp {
+    position: absolute;
+    right: -26px;
+    bottom: -6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: #ff5a46;
+    border: 3px solid #ff5a46;
+    border-radius: 4px;
+    rotate: 12deg;
+    background: rgba(17, 26, 20, 0.6);
+    text-shadow: 0 0 6px rgba(255, 90, 70, 0.5);
+    animation: ko-stamp 420ms cubic-bezier(0.2, 1.4, 0.4, 1) 300ms both;
   }
 
   .animate-modal-in {
@@ -1913,16 +2186,6 @@
   }
 }
 
-@keyframes gold-shine {
-  0%,
-  55% {
-    translate: 0 0;
-  }
-  100% {
-    translate: 380% 0;
-  }
-}
-
 @keyframes enh-pulse {
   0%,
   100% {
@@ -1930,16 +2193,6 @@
   }
   50% {
     opacity: 1;
-  }
-}
-
-@keyframes ghost-flicker {
-  0%,
-  100% {
-    opacity: 0.76;
-  }
-  50% {
-    opacity: 0.97;
   }
 }
 
@@ -2092,25 +2345,6 @@
   }
 }
 
-@keyframes prism-spin {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(360deg);
-  }
-}
-
-@keyframes ghost-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -2px;
-  }
-}
-
 @keyframes neon-buzz {
   0%,
   100% {
@@ -2195,6 +2429,27 @@
   }
 }
 
+@keyframes ember-pip {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes ko-stamp {
+  from {
+    opacity: 0;
+    scale: 2.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
 @keyframes won-glow {
   0%,
   100% {
@@ -2209,61 +2464,187 @@
   }
 }
 
-/* --- MOTOR DE ILUMINAÇÃO DINÂMICA E GAME FEEL (Patch 0.4.2) --- */
+/* --- PATCH 0.5: ILUMINAÇÃO DINÂMICA VIVA E FÍSICA REAL (aceleração por GPU) --- */
 
-/* 1. Balanço Físico da Lâmpada Pendente e do Cone de Luz */
-@keyframes lampSwing {
+/* camadas de luz, partículas e vinheta nunca roubam o toque */
+.lamp-light,
+.felt-vignette,
+.felt-bevel,
+.felt-decor,
+.atmo-layer,
+.title-cone,
+.smoke-puff,
+.map-ring,
+.map-ash,
+.impact-ring,
+.ai-spot-ring,
+.tile-shimmer-effect,
+.tile-enh-layer,
+.tile-enh-glow {
+  pointer-events: none;
+}
+
+
+@keyframes realLampSwing {
   0% {
-    transform: rotate(-3deg);
+    transform: rotate(-3.5deg);
   }
   50% {
-    transform: rotate(3deg);
+    transform: rotate(3.5deg);
   }
   100% {
-    transform: rotate(-3deg);
+    transform: rotate(-3.5deg);
   }
 }
 
-@keyframes lightConeSway {
-  0% {
-    transform: rotate(-3deg) scaleX(0.98);
-    opacity: 0.82;
-  }
-  50% {
-    transform: rotate(3deg) scaleX(1.02);
-    opacity: 0.88;
-  }
-  100% {
-    transform: rotate(-3deg) scaleX(0.98);
-    opacity: 0.82;
-  }
-}
-
-/* 2. Micro-Oscilação de Energia de Boteco (Flicker Orgânico) */
-@keyframes tavernFlicker {
+@keyframes realTavernFlicker {
   0%,
   100% {
-    filter: brightness(1) drop-shadow(0 0 25px rgba(234, 179, 8, 0.25));
+    opacity: 0.88;
+    filter: drop-shadow(0 0 22px rgba(251, 191, 36, 0.35));
   }
   18% {
-    filter: brightness(0.92) drop-shadow(0 0 18px rgba(234, 179, 8, 0.18));
+    opacity: 0.74;
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.18));
   }
   22% {
-    filter: brightness(1.06) drop-shadow(0 0 32px rgba(234, 179, 8, 0.32));
+    opacity: 0.98;
+    filter: drop-shadow(0 0 32px rgba(251, 191, 36, 0.48));
   }
-  58% {
-    filter: brightness(0.96);
-  }
-  72% {
-    filter: brightness(1.02);
+  62% {
+    opacity: 0.82;
   }
   85% {
-    filter: brightness(0.88);
-  } /* Pequena falha rápida */
+    opacity: 0.68;
+  }
   87% {
-    filter: brightness(1.04);
+    opacity: 0.96;
   }
 }
+
+@keyframes specularSweep {
+  0% {
+    transform: translateX(-200%) translateY(-200%) rotate(45deg);
+  }
+  35%,
+  100% {
+    transform: translateX(250%) translateY(250%) rotate(45deg);
+  }
+}
+
+@keyframes holoPrismCycle {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes rubyHeartbeat {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 12px rgba(185, 28, 28, 0.5));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px #f87171) drop-shadow(0 0 20px rgba(239, 68, 68, 0.85));
+    transform: scale(1.025);
+  }
+}
+
+@keyframes ghostEthereal {
+  0%,
+  100% {
+    transform: translateY(0px);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 0.96;
+  }
+}
+
+.swinging-lamp {
+  transform-origin: 50% 0% !important;
+  animation: realLampSwing 6.5s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+.dynamic-light-cone {
+  transform-origin: 50% 0% !important;
+  animation:
+    realLampSwing 6.5s ease-in-out infinite,
+    realTavernFlicker 9s ease-in-out infinite !important;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.shimmer-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-active::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.45) 48%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.45) 52%,
+    transparent 65%
+  );
+  animation: specularSweep 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* pedras de grife (DominoTile.jsx): rubi bate como coração, fantasma flutua */
+.tile-enh-rubi {
+  animation: rubyHeartbeat 1.6s ease-in-out infinite;
+}
+
+.tile-enh-fantasma {
+  animation: ghostEthereal 3.4s ease-in-out infinite;
+}
+
+/* pedra apagada (não dá pra jogar agora): para de animar para o escurecido aparecer */
+.tile-enh-still {
+  animation: none !important;
+}
+
+/* cópia da pedra voando da mão até a mesa (components/tileFlight.js) */
+.tile-flight {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 58;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* cabeçalho do rival: tudo com tamanho fixo (sem tremer quando ele fala ou joga) */
+.rival-slot {
+  transition: opacity 260ms ease-out, translate 260ms ease-out;
+}
+
+.rival-slot-leaving {
+  opacity: 0;
+  translate: 0 8px;
+}
+
+/* --- MOTOR DE ILUMINAÇÃO DINÂMICA E GAME FEEL (Patch 0.4.2) --- */
 
 /* 3. Feixe de Luz Reluzente nas Peças (Specular Shimmer) */
 @keyframes tileShimmer {
@@ -2306,18 +2687,6 @@
 }
 
 /* Classes Utilitárias */
-.animate-lamp-swing {
-  transform-origin: top center;
-  animation: lampSwing 7s ease-in-out infinite;
-}
-
-.animate-light-cone {
-  transform-origin: top center;
-  animation:
-    lightConeSway 7s ease-in-out infinite,
-    tavernFlicker 9s ease-in-out infinite;
-}
-
 .tile-shimmer-effect {
   position: relative;
   overflow: hidden;
@@ -2373,8 +2742,13 @@
   .title-cone,
   .run-won-title,
   .tile-enh-layer::before,
-  .animate-lamp-swing,
-  .animate-light-cone,
+  .swinging-lamp,
+  .dynamic-light-cone,
+  .shimmer-active::after,
+  .tile-enh-rubi,
+  .tile-enh-rubi .domino-pip,
+  .tile-enh-fantasma,
+  .tile-enh-cristal .tile-enh-layer,
   .tile-shimmer-effect::after {
     animation: none !important;
   }

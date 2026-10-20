@@ -72,16 +72,17 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
   };
 
   return (
-    <div className={`shop-screen map-atmo-${region.atmosphere} fixed inset-0 z-[55] overflow-y-auto`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
+    <div className={`shop-screen map-atmo-${region.atmosphere} fixed inset-0 z-[55] overflow-hidden`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      {/* 4 quadrantes que cabem na tela (sem rolagem): saldo + hotbar · talismãs · peças · saída */}
       <div
-        className="mx-auto flex min-h-full w-full max-w-[460px] flex-col px-3"
+        className="shop-grid mx-auto grid h-full w-full max-w-[460px] gap-2 px-3"
         style={{
           paddingTop: 'max(env(safe-area-inset-top), 10px)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
         }}
       >
-        {/* topo: título, saldo e hotbar */}
-        <div className="shop-panel px-3 pb-2.5 pt-2.5">
+        {/* Q1: título, saldo e hotbar (venda a 50%) */}
+        <div className="shop-panel shop-quadrant px-3 pb-2.5 pt-2.5">
           <div className="flex items-center justify-between gap-2">
             <h1 id="shop-title" className="font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">
               LOJA CLANDESTINA
@@ -102,7 +103,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="font-pixel text-[7px] leading-relaxed text-bone-400">
               SEUS TALISMÃS {state.relics.player.length}/{RELIC_SLOTS}
-              <span className="block text-bone-200">TOQUE PARA VENDER</span>
+              <span className="block text-bone-200">TOQUE PARA VENDER (50%)</span>
             </p>
             <Hotbar
               key={`hotbar-${alert}`}
@@ -121,12 +122,12 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           )}
         </div>
 
-        {/* talismãs: 3 cartas quadradas */}
-        <section className="mt-2.5" aria-labelledby="shop-relics">
+        {/* Q2: talismãs em 3 cartas quadradas */}
+        <section className="shop-quadrant flex min-h-0 flex-col" aria-labelledby="shop-relics">
           <h2 id="shop-relics" className="shop-label">
             TALISMÃS
           </h2>
-          <ul className="mt-1.5 grid grid-cols-3 gap-2">
+          <ul className="mt-1.5 grid min-h-0 flex-1 grid-cols-3 gap-2">
             {shop.relics.map((offer, index) => {
               const relic = getRelic(offer.id);
               const block = relicBuyBlock(state, offer);
@@ -162,12 +163,12 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           </ul>
         </section>
 
-        {/* peças de grife: 2 cartas largas */}
-        <section className="mt-2.5" aria-labelledby="shop-tiles">
+        {/* Q3: peças de grife em 2 cartas largas, com o material animado */}
+        <section className="shop-quadrant flex min-h-0 flex-col" aria-labelledby="shop-tiles">
           <h2 id="shop-tiles" className="shop-label">
             PEÇAS DE GRIFE
           </h2>
-          <ul className="mt-1.5 grid grid-cols-2 gap-2">
+          <ul className="mt-1.5 grid min-h-0 flex-1 grid-cols-2 gap-2">
             {shop.tiles.map((offer, index) => {
               const enhancement = ENHANCEMENTS[offer.enhancement];
               const [a, b] = offer.tileId.split('-').map(Number);
@@ -209,43 +210,39 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           </ul>
         </section>
 
-        <button type="button" className="btn-pixel mt-2.5 w-full" disabled={coins < shop.rerollCost} onClick={onReroll}>
-          REEMBARALHAR · ${shop.rerollCost}
-        </button>
-
-        <div className="mt-2.5 flex items-center gap-2">
-          <span className="shrink-0 font-pixel text-[7px] leading-relaxed text-bone-400">
-            SEU BARALHO
-            <span className="block text-bone-200">28 · {upgraded.length} DE GRIFE</span>
-          </span>
-          <div className="flex min-w-0 flex-wrap gap-1">
-            {upgraded.map(([tileId, enhancement]) => {
-              const [a, b] = tileId.split('-').map(Number);
-              return (
-                <span key={tileId} {...press({ kind: 'offerTile', tileId, enhancement })}>
-                  <DominoTile values={[a, b]} unit={10} depth={1} enhancement={enhancement} />
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-auto pt-3">
-          <div className="flex items-center gap-2.5 px-1">
+        {/* Q4: reembaralhar, seu baralho, próximo nó e a saída */}
+        <div className="shop-quadrant self-end">
+          <div className="flex items-center gap-2">
             <div className="avatar-frame shrink-0">
-              <RivalAvatar rival={nextRival} mood="smug" pixel={2} />
+              <RivalAvatar rival={nextRival} mood="smug" size={32} />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="font-pixel text-[7px] text-bone-400">PRÓXIMO NÓ{nextRival.boss ? ' · CHEFE' : ''}</p>
-              <p className="mt-1 truncate font-pixel text-[9px] text-bone-50">{nextRival.name.toUpperCase()}</p>
-              <p className="truncate font-term text-[15px] leading-none text-bone-300">
-                {nextRival.title} · {nextRival.hearts}♥
+              <p className="mt-0.5 truncate font-pixel text-[8px] text-bone-50">{nextRival.name.toUpperCase()}</p>
+              <p className="truncate font-term text-[14px] leading-none text-bone-300">
+                {nextRival.title} · {nextRival.hearts}♥ · BARALHO: {upgraded.length} DE GRIFE
               </p>
             </div>
+            <div className="flex max-w-[86px] shrink-0 flex-wrap justify-end gap-1">
+              {upgraded.map(([tileId, enhancement]) => {
+                const [a, b] = tileId.split('-').map(Number);
+                return (
+                  <span key={tileId} {...press({ kind: 'offerTile', tileId, enhancement })}>
+                    <DominoTile values={[a, b]} unit={9} depth={1} enhancement={enhancement} />
+                  </span>
+                );
+              })}
+            </div>
           </div>
-          <button type="button" data-tone="blood" className="btn-pixel mt-2.5 w-full text-[11px]" onClick={onLeave}>
-            VOLTAR AO MAPA →
-          </button>
+          <div className="mt-2 grid grid-cols-[1fr_1.25fr] gap-2">
+            <button type="button" className="btn-pixel" disabled={coins < shop.rerollCost} onClick={onReroll}>
+              REEMBARALHAR
+              <span className="block text-[8px] text-brass-300">${shop.rerollCost}</span>
+            </button>
+            <button type="button" data-tone="blood" className="btn-pixel text-[10px]" onClick={onLeave}>
+              VOLTAR AO MAPA →
+            </button>
+          </div>
         </div>
       </div>
 

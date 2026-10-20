@@ -10,7 +10,8 @@ import PlayerRack from './components/PlayerRack.jsx';
 import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import Shop from './components/Shop.jsx';
-import TableBoard, { AI_FLIGHT_MS } from './components/TableBoard.jsx';
+import TableBoard from './components/TableBoard.jsx';
+import { flyTile } from './components/tileFlight.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import { prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
@@ -78,10 +79,16 @@ function saveDevFlag() {
   }
 }
 
-/** Momento (ms) em que a bucha assenta na animação `tile-slam`. */
-const DOUBLE_LANDING_MS = 290;
+/** Voo da sua pedra, da mão até a ponta (ms). */
+const PLAYER_FLIGHT_MS = 360;
+/** Voo da pedra do rival, do topo até a ponta (ms). */
+const AI_FLIGHT_MS = 400;
 /** Destaque da jogada do rival depois que a pedra pousa (anel amarelo + [a|b]). */
 const AI_SPOTLIGHT_MS = 800;
+/** Anel de impacto da sua bucha depois do pouso (ms). */
+const PLAYER_LANDED_MS = 280;
+/** Tremida da mesa quando a pedra assenta (ms). */
+const SLAM_SHAKE_MS = 150;
 
 /** Atraso (ms) de cada som dentro de um mesmo lote de eventos, para não embolar. */
 const FX_DELAY = {
@@ -114,23 +121,12 @@ function shake(element, strength = 6, duration = 380) {
   );
 }
 
-/** Som e tremida para cada evento emitido pelo reducer (`offset`: espera o voo da pedra do rival). */
+/** Som e tremida para cada evento emitido pelo reducer (`offset`: espera o voo da pedra). */
 function runEventFx(ev, shell, table, offset = 0) {
   const at = (fn, extra = 0) => setTimeout(fn, offset + (FX_DELAY[ev.type] ?? 0) + extra);
   switch (ev.type) {
     case 'tilePlaced':
-      // a pedra do rival tem o próprio pouso (App: voo + SLAM)
-      if (ev.by !== 'player') break;
-      if (ev.double) {
-        // bucha: pancada dupla e a mesa treme quando ela assenta
-        at(() => {
-          sound.playTileSlam(true, ev.enhancement);
-          shake(table, 3);
-          haptic(25);
-        }, DOUBLE_LANDING_MS);
-      } else {
-        at(() => sound.playTileSlam(false, ev.enhancement));
-      }
+      // o som e a tremida saem no pouso do voo (App: stagePlay)
       break;
     case 'drawTile':
     case 'drawPeek':
@@ -280,13 +276,17 @@ export default function App() {
   const [devOpen, setDevOpen] = useState(false);
   const [inspect, setInspect] = useState(null);
   // jogada do rival em cena: 'flight' (pedra voando) → 'spot' (destaque) → null
-  const [aiAnim, setAiAnim] = useState(null);
+  // pedra em cena na mesa: 'flight' (voando) → 'spot' (destaque do rival) / 'landed' (impacto da sua) → null
+  const [tableAnim, setTableAnim] = useState(null);
   const { items: floatItems, push: pushFloat, done: floatDone, clear: clearFloats } = useFloats();
   const shellRef = useRef(null);
   const tableRef = useRef(null);
   const rivalHandRef = useRef(null);
   const processedSeq = useRef(0);
-  const aiTimers = useRef([]);
+  const animTimers = useRef([]);
+  const cancelFlight = useRef(null);
+  // de onde a sua pedra sai (medido antes de jogar: depois do PLAY ela já saiu da mão)
+  const pendingPlay = useRef(null);
   // o livro é gravado direto no storage durante a run; a tela do menu lê quando você volta
   const bookRef = useRef(collection);
   const rival = getRival(state.rivalId);
@@ -299,41 +299,71 @@ export default function App() {
     if (sound.ctx) sound.playTrack(musicTrack);
   }, [musicTrack]);
 
-  const clearAiAnim = useCallback(() => {
-    aiTimers.current.forEach((id) => clearTimeout(id));
-    aiTimers.current = [];
-    setAiAnim(null);
+  const clearTableAnim = useCallback(() => {
+    animTimers.current.forEach((id) => clearTimeout(id));
+    animTimers.current = [];
+    cancelFlight.current?.();
+    cancelFlight.current = null;
+    setTableAnim(null);
   }, []);
-  useEffect(() => clearAiAnim, [clearAiAnim]);
+  useEffect(() => clearTableAnim, [clearTableAnim]);
 
   // Rival: cada mudança de estado na vez dele agenda a próxima ação (cada um tem seu tempo).
   // Ele espera com o menu ou o painel DEV abertos, enquanto você decide
   // (escolha do Barbante, descarte do Giz) e enquanto a jogada anterior dele está em cena.
   useEffect(() => {
-    if (menuOpen || devOpen || aiAnim || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
+    if (menuOpen || devOpen || tableAnim || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch, getRival(state.rivalId).reflexMs);
-  }, [state, menuOpen, devOpen, aiAnim]);
+  }, [state, menuOpen, devOpen, tableAnim]);
 
-  /** A pedra do rival sai da mão dele, voa 400 ms, bate (SLAM) e fica 800 ms em destaque. */
-  const stageAiPlay = useCallback(
+  /**
+   * Pedra jogada em cena: uma cópia sai da mão (sua: do leque; do rival: da vaga
+   * dele no topo), desliza até a ponta girando para a orientação da mesa e
+   * assenta com SLAM de osso na madeira e a mesa tremendo 150 ms. A do rival
+   * fica 800 ms em destaque antes de liberar a sua vez.
+   */
+  const stagePlay = useCallback(
     (ev) => {
-      aiTimers.current.forEach((id) => clearTimeout(id));
-      const hand = rivalHandRef.current?.getBoundingClientRect();
-      const from = hand ? { x: hand.left + hand.width / 2, y: hand.top + hand.height * 0.7 } : null;
-      const label = tileName(ev.tileId);
-      setAiAnim({ key: ev.seq, tileId: ev.tileId, label, stage: 'flight', from });
-      const land = setTimeout(() => {
-        sound.playAiSlam(ev.double, ev.enhancement);
-        shake(tableRef.current, ev.double ? 4 : 3, 100);
-        haptic(ev.double ? 22 : 12);
-        setAiAnim((cur) => (cur?.key === ev.seq ? { ...cur, stage: 'spot' } : cur));
-        pushFloat(() => {
-          const tile = centerOf(`[data-tile-id="${ev.tileId}"]`, { edge: 'top' });
-          return tile && { from: { x: tile.x, y: tile.y - 14 }, text: label, tone: 'enemy', kind: 'label' };
-        });
-      }, AI_FLIGHT_MS);
-      const release = setTimeout(() => setAiAnim((cur) => (cur?.key === ev.seq ? null : cur)), AI_FLIGHT_MS + AI_SPOTLIGHT_MS);
-      aiTimers.current = [land, release];
+      animTimers.current.forEach((id) => clearTimeout(id));
+      animTimers.current = [];
+      cancelFlight.current?.();
+      const rival = ev.by !== 'player';
+      let from = null;
+      if (rival) {
+        const slot = document.querySelector(`[data-rival-tile="${ev.tileId}"]`)?.getBoundingClientRect();
+        const hand = slot ?? rivalHandRef.current?.getBoundingClientRect();
+        if (hand) from = { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2, w: hand.width, h: hand.height, angle: 0 };
+      } else if (pendingPlay.current?.tileId === ev.tileId) {
+        from = pendingPlay.current.from;
+      }
+      pendingPlay.current = null;
+      const key = ev.seq;
+      setTableAnim({ key, tileId: ev.tileId, by: ev.by, stage: 'flight' });
+      cancelFlight.current = flyTile({
+        tileId: ev.tileId,
+        from,
+        duration: rival ? AI_FLIGHT_MS : PLAYER_FLIGHT_MS,
+        arc: rival ? 0 : 26,
+        onLand: () => {
+          cancelFlight.current = null;
+          sound.playBoneSlam(ev.double, ev.enhancement);
+          shake(tableRef.current, ev.double ? 4 : 3, SLAM_SHAKE_MS);
+          haptic(ev.double ? 22 : 12);
+          const later = (fn, ms) => animTimers.current.push(setTimeout(fn, ms));
+          if (rival) {
+            const label = tileName(ev.tileId);
+            setTableAnim((cur) => (cur?.key === key ? { ...cur, stage: 'spot' } : cur));
+            pushFloat(() => {
+              const tile = centerOf(`[data-tile-id="${ev.tileId}"]`, { edge: 'top' });
+              return tile && { from: { x: tile.x, y: tile.y - 14 }, text: label, tone: 'enemy', kind: 'label' };
+            });
+            later(() => setTableAnim((cur) => (cur?.key === key ? null : cur)), AI_SPOTLIGHT_MS);
+          } else {
+            setTableAnim((cur) => (cur?.key === key ? { ...cur, stage: 'landed' } : cur));
+            later(() => setTableAnim((cur) => (cur?.key === key ? null : cur)), PLAYER_LANDED_MS);
+          }
+        },
+      });
     },
     [pushFloat],
   );
@@ -348,9 +378,9 @@ export default function App() {
     for (const ev of fresh) {
       if (ev.type === 'tilePlaced') {
         lastTileId = ev.tileId;
-        if (ev.by === 'tioZe' && state.phase !== 'title') {
-          stageAiPlay(ev);
-          offset = AI_FLIGHT_MS;
+        if (state.phase !== 'title') {
+          stagePlay(ev);
+          offset = ev.by === 'player' ? PLAYER_FLIGHT_MS : AI_FLIGHT_MS;
         }
       }
       runEventFx(ev, shellRef.current, tableRef.current, offset);
@@ -370,7 +400,7 @@ export default function App() {
         }, offset + FX_DELAY.proc);
       }
     }
-  }, [state.events, state.lastPlay, state.phase, pushFloat, stageAiPlay]);
+  }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
 
   // Save: no mapa e na loja (e ao vencer o nó); some quando a run acaba.
   useEffect(() => {
@@ -409,7 +439,7 @@ export default function App() {
   const pending = playing ? state.pending : null;
   const discardMode = pending?.type === 'discard';
   // enquanto a jogada do rival está em cena, a sua vez ainda não começou
-  const isPlayerTurn = playing && state.turn === 'player' && !pending && !aiAnim;
+  const isPlayerTurn = playing && state.turn === 'player' && !pending && !tableAnim;
   const hand = state.hands.player;
   const playerRules = rulesFor(state, 'player');
   const requiredTileId = requiredOpeningFor(state, 'player');
@@ -433,7 +463,7 @@ export default function App() {
   const boardOpen = Boolean(state.board.root);
   const canDraw = isPlayerTurn && boardOpen && draw.allowed;
   const canPass = isPlayerTurn && boardOpen;
-  const undoReady = canUndo(state) && !aiAnim;
+  const undoReady = canUndo(state) && !tableAnim;
 
   const speech = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
   const relicFlashes = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
@@ -455,6 +485,10 @@ export default function App() {
   });
 
   const play = useCallback((tileId, side) => {
+    // mede a pedra no leque antes de ela sair da mão: o voo começa dali
+    const el = document.querySelector(`[data-hand-tile="${tileId}"]`);
+    const r = el?.getBoundingClientRect();
+    pendingPlay.current = r ? { tileId, from: { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, angle: 0 } } : null;
     dispatch({ type: 'PLAY', actor: 'player', tileId, side });
     setSelectedId(null);
   }, []);
@@ -529,7 +563,7 @@ export default function App() {
     setMenuOpen(false);
     setDevOpen(false);
     clearFloats();
-    clearAiAnim();
+    clearTableAnim();
   };
 
   const newGame = () => {
@@ -641,7 +675,7 @@ export default function App() {
     dispatch(action.op === 'setRival' ? { ...action, deck: newDeck() } : action);
     if (action.op === 'setRival') {
       clearFloats();
-      clearAiAnim();
+      clearTableAnim();
     }
     // tranca forçada e vitória abrem o resultado: fecha o painel para ver
     if (action.op === 'forceTranca' || action.op === 'winMatch' || action.op === 'setRival') setDevOpen(false);
@@ -711,7 +745,7 @@ export default function App() {
 
   const ends = getOpenEnds(state.board);
   const roundFinished = ['roundOver', 'matchWon', 'gameOver', 'runWon'].includes(state.phase);
-  const rivalThinking = playing && state.turn === 'tioZe' && !pending && !aiAnim;
+  const rivalThinking = playing && state.turn === 'tioZe' && !pending && !tableAnim;
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
@@ -732,11 +766,12 @@ export default function App() {
         flashes={relicFlashes.tioZe}
         isTurn={playing && state.turn === 'tioZe'}
         thinking={rivalThinking}
-        status={aiAnim ? 'JOGOU!' : null}
+        status={tableAnim?.by === 'tioZe' ? 'JOGOU!' : null}
         mood={mood}
         hurtKey={tioZeHurtKey}
         speech={speech}
         handRef={rivalHandRef}
+        roundKey={`${state.run.match}:${state.round}`}
         muted={muted}
         onToggleMute={toggleMute}
         onOpenMenu={openMenu}
@@ -748,14 +783,14 @@ export default function App() {
         roundKey={`${state.run.match}:${state.round}`}
         playableSides={selectedSides}
         onPlaySide={handlePlaySide}
-        dimmed={roundFinished && !aiAnim}
+        dimmed={roundFinished && !tableAnim}
         previewDouble={Boolean(selectedTile && !discardMode && selectedTile.a === selectedTile.b)}
         frameRef={tableRef}
         endMarks={endMarks}
         felt={rival.felt}
         decor={rival.decor}
         atmosphere={atmosphere}
-        incoming={aiAnim}
+        incoming={tableAnim}
       />
 
       <PlayerRack
@@ -799,7 +834,7 @@ export default function App() {
 
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
-      {roundFinished && !aiAnim && (
+      {roundFinished && !tableAnim && (
         <RoundOverlay
           state={state}
           rival={rival}
