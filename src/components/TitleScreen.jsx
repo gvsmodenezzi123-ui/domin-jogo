@@ -33,7 +33,7 @@ export default function TitleScreen({ onStart }) {
       <div className="relative flex flex-col items-center">
         <TioZeAvatar mood="smug" pixel={7} />
         <h1 className="title-logo mt-5 font-pixel text-[34px] leading-none">BUXARIA</h1>
-        <p className="mt-3 font-pixel text-[9px] tracking-widest text-bone-300">DUELO DE DOMINÓ · PATCH 0.1.1</p>
+        <p className="mt-3 font-pixel text-[9px] tracking-widest text-bone-300">DUELO DE DOMINÓ · PATCH 0.1.2</p>
         <p className="mt-4 max-w-[300px] font-term text-xl leading-tight text-bone-200">
           O Tio Zé te espera debaixo da lâmpada. Cada batida custa sangue.
         </p>

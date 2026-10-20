@@ -7,8 +7,9 @@
  *   board.root  -> primeira pedra { id, a, b, left, right }
  *   board.left  -> pedras que saem da raiz para a esquerda, em ordem de colocação
  *   board.right -> pedras que saem da raiz para a direita, em ordem de colocação
- * Cada pedra de ramo é { id, a, b, inner, outer }: `inner` encosta na pedra
- * anterior e `outer` é o valor que fica livre. Essa é a "rotação automática".
+ * Cada pedra de ramo é { id, a, b, inner, outer, seq }: `inner` encosta na pedra
+ * anterior, `outer` é o valor que fica livre (a "rotação automática") e `seq` é
+ * a ordem em que ela foi jogada.
  */
 
 export const MAX_PIP = 6;
@@ -179,7 +180,7 @@ export function placeTile(board, tile, side) {
   if (!board.root) {
     if (side !== SIDES.ROOT) throw new Error('A primeira pedra deve ir na raiz.');
     return {
-      root: { id: tile.id, a: tile.a, b: tile.b, left: tile.a, right: tile.b },
+      root: { id: tile.id, a: tile.a, b: tile.b, left: tile.a, right: tile.b, seq: 0 },
       left: [],
       right: [],
     };
@@ -192,7 +193,9 @@ export function placeTile(board, tile, side) {
   if (!oriented) {
     throw new Error(`A pedra ${tile.id} não encaixa na ponta ${side} (${ends[side]}).`);
   }
-  const placed = { id: tile.id, a: tile.a, b: tile.b, ...oriented };
+  // `seq` = ordem em que a pedra entrou na mesa (a raiz é 0). O layout da mesa
+  // posiciona as pedras nessa ordem, então uma pedra nova nunca move as antigas.
+  const placed = { id: tile.id, a: tile.a, b: tile.b, ...oriented, seq: boardTileCount(board) };
   return {
     root: board.root,
     left: side === SIDES.LEFT ? [...board.left, placed] : board.left,

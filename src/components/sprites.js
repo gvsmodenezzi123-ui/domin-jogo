@@ -157,3 +157,16 @@ export const SPEAKER_OFF = Object.freeze([
   '...bb.....',
   '....b.....',
 ]);
+
+export const MENU_ICON = Object.freeze([
+  'bbbbbbbbbb',
+  'bbbbbbbbbb',
+  '..........',
+  '..........',
+  'bbbbbbbbbb',
+  'bbbbbbbbbb',
+  '..........',
+  '..........',
+  'bbbbbbbbbb',
+  'bbbbbbbbbb',
+]);

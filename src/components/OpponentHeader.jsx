@@ -1,7 +1,16 @@
 import DominoTile from './DominoTile.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
 import PixelSprite from './PixelSprite.jsx';
-import { COIN, COIN_PALETTE, SPEAKER_OFF, SPEAKER_ON, SPEAKER_PALETTE, TIO_ZE_FACES, TIO_ZE_PALETTE } from './sprites.js';
+import {
+  COIN,
+  COIN_PALETTE,
+  MENU_ICON,
+  SPEAKER_OFF,
+  SPEAKER_ON,
+  SPEAKER_PALETTE,
+  TIO_ZE_FACES,
+  TIO_ZE_PALETTE,
+} from './sprites.js';
 
 export function CoinCount({ value, className = '' }) {
   return (
@@ -44,6 +53,7 @@ export default function OpponentHeader({
   speech,
   muted,
   onToggleMute,
+  onOpenMenu,
 }) {
   const shownBacks = Math.min(handCount, 14);
   const overlap = handCount > 9 ? -5 : 2;
@@ -70,15 +80,22 @@ export default function OpponentHeader({
                 )}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onToggleMute}
-              className="icon-btn shrink-0"
-              aria-label={muted ? 'Ligar som' : 'Desligar som'}
-              aria-pressed={muted}
-            >
-              <PixelSprite rows={muted ? SPEAKER_OFF : SPEAKER_ON} palette={SPEAKER_PALETTE} pixel={2} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onToggleMute}
+                className="icon-btn"
+                aria-label={muted ? 'Ligar som e música' : 'Desligar som e música'}
+                aria-pressed={muted}
+              >
+                <PixelSprite rows={muted ? SPEAKER_OFF : SPEAKER_ON} palette={SPEAKER_PALETTE} pixel={2} />
+              </button>
+              {onOpenMenu && (
+                <button type="button" onClick={onOpenMenu} className="icon-btn" aria-label="Menu">
+                  <PixelSprite rows={MENU_ICON} palette={SPEAKER_PALETTE} pixel={2} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-2">

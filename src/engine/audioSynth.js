@@ -25,6 +25,42 @@ function writeMuted(value) {
   }
 }
 
+const midiToFreq = (midi) => 440 * 2 ** ((midi - 69) / 12);
+
+/** Trilha: bossa lenta de boteco, 76 BPM, 8 compassos em loop. */
+const MUSIC_BPM = 76;
+const EIGHTH = 60 / MUSIC_BPM / 2;
+const LOOP_EIGHTHS = 64;
+const MUSIC_LEVEL = 0.55;
+
+/** Acordes (MIDI): baixo na tônica e na quinta, voicing confortável no meio. */
+const CHORDS = {
+  Dm9: { root: 38, fifth: 45, voicing: [53, 57, 60, 64] },
+  G13: { root: 43, fifth: 38, voicing: [53, 59, 64] },
+  Cmaj9: { root: 36, fifth: 43, voicing: [52, 55, 59, 62] },
+  A7b13: { root: 45, fifth: 40, voicing: [55, 61, 65] },
+  Em7: { root: 40, fifth: 47, voicing: [55, 59, 62] },
+  A7: { root: 45, fifth: 40, voicing: [55, 61, 64] },
+};
+
+/** Um acorde por meio compasso: ii–V–I–VI, e uma volta com Em7–A7 no fim. */
+const HALF_BARS = [
+  'Dm9', 'Dm9', 'G13', 'G13', 'Cmaj9', 'Cmaj9', 'A7b13', 'A7b13',
+  'Dm9', 'Dm9', 'G13', 'G13', 'Em7', 'A7', 'Dm9', 'G13',
+];
+
+/** Vibrafone: [colcheia de início (0–63), duração em colcheias, nota MIDI]. */
+const MELODY = [
+  [0, 3, 69], [3, 2, 72], [5, 3, 76],
+  [8, 2, 74], [10, 1, 72], [11, 5, 71],
+  [18, 2, 76], [20, 2, 74], [22, 2, 71],
+  [24, 4, 73], [28, 4, 69],
+  [32, 3, 77], [35, 1, 76], [36, 2, 74], [38, 2, 69],
+  [40, 2, 71], [42, 4, 76],
+  [48, 2, 79], [50, 2, 76], [52, 2, 73], [54, 2, 67],
+  [56, 4, 74], [60, 2, 72], [62, 2, 71],
+];
+
 const NOTE = {
   A2: 110,
   E3: 164.81,
@@ -48,6 +84,8 @@ export class AudioSynth {
     this.room = null;
     this.noise = null;
     this.ambience = null;
+    this.music = null;
+    this.pink = null;
     this.muted = readMuted();
   }
 
@@ -389,15 +427,83 @@ export class AudioSynth {
     });
   }
 
-  /** Zumbido da lâmpada pendente + tom de sala, bem baixo. */
+  // -------------------------------------------------------------------------
+  // Ambiência de bar
+  // -------------------------------------------------------------------------
+
+  /** Ruído rosa (filtro de Paul Kellet): base da conversa de fundo do bar. */
+  pinkNoise(seconds = 4) {
+    if (this.pink) return this.pink;
+    const ctx = this.ctx;
+    const length = Math.floor(ctx.sampleRate * seconds);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let [b0, b1, b2, b3, b4, b5, b6] = [0, 0, 0, 0, 0, 0, 0];
+    for (let i = 0; i < length; i += 1) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.969 * b2 + white * 0.153852;
+      b3 = 0.8665 * b3 + white * 0.3104856;
+      b4 = 0.55 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.016898;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
+    }
+    this.pink = buffer;
+    return buffer;
+  }
+
+  /** Camada de ruído em loop, filtrada, com "ondas" lentas de volume (gente conversando). */
+  noiseLayer(out, { type, freq, q = 0.7, level, swell = 0, rate = 0.1 }) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.pinkNoise();
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    const gain = ctx.createGain();
+    gain.gain.value = level;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(out);
+    const nodes = [src];
+    if (swell > 0) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = rate;
+      const depth = ctx.createGain();
+      depth.gain.value = swell;
+      lfo.connect(depth);
+      depth.connect(gain.gain);
+      lfo.start();
+      nodes.push(lfo);
+    }
+    src.start(0, Math.random() * 3);
+    return nodes;
+  }
+
+  /**
+   * Fundo do bar, quase imperceptível: murmúrio grave de gente conversando,
+   * zumbido da lâmpada e, de vez em quando, um "tink" de copo ou garrafa.
+   */
   startAmbience() {
     if (!this.ctx || this.ambience) return;
     const ctx = this.ctx;
     const out = ctx.createGain();
     out.gain.value = 0;
-    out.gain.setTargetAtTime(1, ctx.currentTime, 1.2);
+    out.gain.setTargetAtTime(0.75, ctx.currentTime, 1.5);
     out.connect(this.master);
 
+    const nodes = [
+      // conversa abafada (faixa da voz, bem filtrada) e o grave da sala
+      ...this.noiseLayer(out, { type: 'bandpass', freq: 380, q: 0.9, level: 0.05, swell: 0.02, rate: 0.07 }),
+      ...this.noiseLayer(out, { type: 'bandpass', freq: 760, q: 1.3, level: 0.016, swell: 0.008, rate: 0.13 }),
+      ...this.noiseLayer(out, { type: 'lowpass', freq: 170, level: 0.04 }),
+    ];
+
+    // zumbido da lâmpada pendente, mais baixo que a conversa
     const hum = ctx.createOscillator();
     hum.type = 'sawtooth';
     hum.frequency.value = 60;
@@ -406,44 +512,234 @@ export class AudioSynth {
     humFilter.frequency.value = 120;
     humFilter.Q.value = 6;
     const humGain = ctx.createGain();
-    humGain.gain.value = 0.022;
+    humGain.gain.value = 0.01;
     hum.connect(humFilter);
     humFilter.connect(humGain);
     humGain.connect(out);
-
-    // tremulação lenta da lâmpada
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.35;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.008;
-    lfo.connect(lfoGain);
-    lfoGain.connect(humGain.gain);
-
-    const room = ctx.createBufferSource();
-    room.buffer = this.noise;
-    room.loop = true;
-    const roomFilter = ctx.createBiquadFilter();
-    roomFilter.type = 'lowpass';
-    roomFilter.frequency.value = 320;
-    const roomGain = ctx.createGain();
-    roomGain.gain.value = 0.03;
-    room.connect(roomFilter);
-    roomFilter.connect(roomGain);
-    roomGain.connect(out);
-
     hum.start();
-    lfo.start();
-    room.start();
-    this.ambience = { out, nodes: [hum, lfo, room] };
+    nodes.push(hum);
+
+    this.ambience = { out, nodes, timer: null };
+    this.scheduleGlassTink();
+  }
+
+  /** Próximo "tink" daqui a 15–25 s. */
+  scheduleGlassTink() {
+    if (!this.ambience) return;
+    const delay = 15000 + Math.random() * 10000;
+    this.ambience.timer = setTimeout(() => {
+      this.glassTink();
+      this.scheduleGlassTink();
+    }, delay);
+  }
+
+  /** Copo ou garrafa tilintando em algum canto do bar (parciais inarmônicos, bem baixo). */
+  glassTink() {
+    if (!this.canPlay() || !this.ambience) return;
+    const ctx = this.ctx;
+    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+    if (pan.pan) pan.pan.value = (Math.random() * 2 - 1) * 0.75;
+    pan.connect(this.ambience.out);
+    const send = ctx.createGain();
+    send.gain.value = 0.5;
+    pan.connect(send);
+    send.connect(this.room);
+
+    const clink = (t, base, level) => {
+      [
+        [1, 0.032, 0.9],
+        [1.52, 0.018, 0.7],
+        [2.33, 0.011, 0.5],
+        [3.11, 0.006, 0.35],
+      ].forEach(([ratio, peak, decay]) => {
+        const osc = ctx.createOscillator();
+        osc.frequency.value = base * ratio;
+        const gain = ctx.createGain();
+        this.envelope(gain, t, peak * level, 0.002, decay);
+        osc.connect(gain);
+        gain.connect(pan);
+        osc.start(t);
+        osc.stop(t + decay + 0.05);
+      });
+    };
+    const t = this.now();
+    const base = 2100 + Math.random() * 1100;
+    clink(t, base, 1);
+    // às vezes são dois copos brindando
+    if (Math.random() < 0.45) clink(t + 0.09 + Math.random() * 0.08, base * (1.04 + Math.random() * 0.06), 0.7);
   }
 
   stopAmbience() {
     if (!this.ambience || !this.ctx) return;
-    const { out, nodes } = this.ambience;
+    const { out, nodes, timer } = this.ambience;
+    clearTimeout(timer);
     const t = this.ctx.currentTime;
     out.gain.setTargetAtTime(0, t, 0.3);
     nodes.forEach((n) => n.stop(t + 1.5));
     this.ambience = null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Trilha de boteco: bossa lenta, 8 compassos em loop
+  // -------------------------------------------------------------------------
+
+  /** Liga a trilha (agendador com folga de 250 ms, à prova de travadas do timer). */
+  startMusic() {
+    if (!this.ctx || this.music) return;
+    const ctx = this.ctx;
+    const bus = ctx.createGain();
+    bus.gain.value = 0;
+    bus.gain.setTargetAtTime(MUSIC_LEVEL, ctx.currentTime, 2.5);
+    // um pouco abafada, como vindo de um rádio do balcão
+    const warm = ctx.createBiquadFilter();
+    warm.type = 'lowpass';
+    warm.frequency.value = 2600;
+    warm.Q.value = 0.5;
+    bus.connect(warm);
+    warm.connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.35;
+    warm.connect(send);
+    send.connect(this.room);
+
+    this.music = { bus, step: 0, nextTime: ctx.currentTime + 0.2, timer: null };
+    this.music.timer = setInterval(() => this.scheduleMusic(), 60);
+    this.scheduleMusic();
+  }
+
+  stopMusic() {
+    if (!this.music || !this.ctx) return;
+    const { bus, timer } = this.music;
+    clearInterval(timer);
+    bus.gain.setTargetAtTime(0, this.ctx.currentTime, 0.4);
+    setTimeout(() => bus.disconnect(), 2500);
+    this.music = null;
+  }
+
+  scheduleMusic() {
+    const m = this.music;
+    if (!m || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    // voltou de segundo plano: não despeja as notas atrasadas de uma vez
+    if (m.nextTime < now - 0.1) m.nextTime = now + 0.05;
+    while (m.nextTime < now + 0.25) {
+      this.playMusicStep(m.step, m.nextTime);
+      m.nextTime += EIGHTH;
+      m.step = (m.step + 1) % LOOP_EIGHTHS;
+    }
+  }
+
+  /** Uma colcheia da trilha: contrabaixo, acordes, vibrafone e escovinha. */
+  playMusicStep(step, t) {
+    const bar = Math.floor(step / 8);
+    const eighth = step % 8;
+    const chord = CHORDS[HALF_BARS[Math.floor(step / 4)]];
+
+    // contrabaixo de bossa: tônica pontuada + quinta, duas vezes por compasso
+    if (eighth === 0 || eighth === 4) this.musicBass(t, chord.root, EIGHTH * 2.8);
+    if (eighth === 3 || eighth === 7) this.musicBass(t, chord.fifth, EIGHTH * 0.9);
+
+    // violão/piano: batida sincopada, leve
+    const comp = bar % 2 === 0 ? [0, 3, 6] : [2, 5];
+    if (comp.includes(eighth)) chord.voicing.forEach((note) => this.musicPluck(t, note));
+
+    // vibrafone
+    for (const [start, length, note] of MELODY) {
+      if (start === step) this.musicVibes(t, note, length * EIGHTH);
+    }
+
+    // escovinha na caixa, quase só um sopro
+    this.noiseVoice(t, { peak: eighth % 2 ? 0.006 : 0.0035, decay: 0.06, freq: 6200 });
+  }
+
+  /** Nota com envelope percussivo indo para o barramento da música. */
+  musicNote({ t, freq, type = 'sine', peak, attack, decay, filterFreq, partials = [] }) {
+    const ctx = this.ctx;
+    const gain = ctx.createGain();
+    this.envelope(gain, t, peak, attack, decay);
+    let head = gain;
+    if (filterFreq) {
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = filterFreq;
+      gain.connect(filter);
+      head = filter;
+    }
+    head.connect(this.music.bus);
+    const oscs = [[1, 1, type], ...partials].map(([ratio, level, oscType]) => {
+      const osc = ctx.createOscillator();
+      osc.type = oscType ?? 'sine';
+      osc.frequency.value = freq * ratio;
+      if (level === 1) {
+        osc.connect(gain);
+      } else {
+        const g = ctx.createGain();
+        g.gain.value = level;
+        osc.connect(g);
+        g.connect(gain);
+      }
+      osc.start(t);
+      osc.stop(t + attack + decay + 0.05);
+      return osc;
+    });
+    return { gain, oscs };
+  }
+
+  musicBass(t, midi, length) {
+    this.musicNote({
+      t,
+      freq: midiToFreq(midi),
+      type: 'sine',
+      peak: 0.3,
+      attack: 0.008,
+      decay: Math.max(0.25, length),
+      filterFreq: 600,
+      partials: [[2, 0.18, 'triangle']],
+    });
+  }
+
+  musicPluck(t, midi) {
+    this.musicNote({ t, freq: midiToFreq(midi), type: 'triangle', peak: 0.04, attack: 0.012, decay: 0.55, filterFreq: 1300 });
+  }
+
+  /** Vibrafone: senoide com um parcial agudo bem baixo e tremolo lento. */
+  musicVibes(t, midi, length) {
+    const ctx = this.ctx;
+    const decay = Math.max(0.9, length * 1.4);
+    const { gain } = this.musicNote({
+      t,
+      freq: midiToFreq(midi),
+      type: 'sine',
+      peak: 0.085,
+      attack: 0.004,
+      decay,
+      partials: [[4, 0.06, 'sine']],
+    });
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 5.2;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.025;
+    lfo.connect(depth);
+    depth.connect(gain.gain);
+    lfo.start(t);
+    lfo.stop(t + decay + 0.05);
+  }
+
+  noiseVoice(t, { peak, decay, freq }) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = freq;
+    filter.Q.value = 0.8;
+    const gain = ctx.createGain();
+    this.envelope(gain, t, peak, 0.004, decay);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.music.bus);
+    src.start(t, Math.random() * (this.noise.duration - 0.2));
+    src.stop(t + decay + 0.05);
   }
 }
 

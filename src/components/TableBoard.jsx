@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BASE_UNIT_PX, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
+import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import DominoTile from './DominoTile.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import { LAMP, LAMP_PALETTE } from './sprites.js';
@@ -37,12 +37,29 @@ function tileBox(r, orientation, unit) {
 
 /**
  * Mesa em feltro verde-musgo. As pedras ficam num "mundo" em unidades
- * (engine/boardLayout.js) e uma câmera automática enquadra a jogada:
- * bem perto no começo da rodada, afastando conforme a trilha cresce.
+ * (engine/boardLayout.js), com posição fixa desde que são jogadas, e uma
+ * câmera automática enquadra a jogada: bem perto no começo da rodada,
+ * afastando conforme a trilha cresce.
  */
-export default function TableBoard({ board, playableSides = [], onPlaySide, banner, dimmed = false, previewDouble = false, frameRef }) {
+export default function TableBoard({
+  board,
+  roundKey,
+  playableSides = [],
+  onPlaySide,
+  banner,
+  dimmed = false,
+  previewDouble = false,
+  frameRef,
+}) {
   const [areaRef, size] = useElementSize();
-  const { cols, rows } = computeWorldSize(size.width, size.height);
+  // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
+  // altura no meio (dica em duas linhas, barra do Safari), só a câmera ajusta;
+  // nenhuma pedra muda de lugar.
+  const [world, setWorld] = useState({ round: null, cols: WORLD_COLS, rows: 13 });
+  if (size.width > 0 && world.round !== roundKey) {
+    setWorld({ round: roundKey, ...computeWorldSize(size.width, size.height) });
+  }
+  const { cols, rows } = world;
 
   // A câmera usa o layout sem prévia, para não mexer quando o jogador seleciona uma pedra.
   const baseLayout = useMemo(() => computeBoardLayout(board, cols, rows), [board, cols, rows]);

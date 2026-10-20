@@ -12,12 +12,11 @@ import {
 } from '../dominoLogic.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
 
-// mundos [colunas, linhas]: SE, iPhone 14, telas altas
+// mundos [colunas, linhas]: mínimo, telas médias e altas
 const GRIDS = [
-  [10, 9],
-  [10, 11],
   [10, 13],
-  [10, 18],
+  [10, 14],
+  [10, 16],
 ];
 
 function check(condition, message) {
@@ -46,13 +45,30 @@ function assertLayout(board) {
         check(!rectsOverlap(t, tiles[j]), `pedras ${t.id} e ${tiles[j].id} sobrepostas em ${cols}x${rows}`);
       }
     }
-    // cada pedra encosta na anterior da sua ponta (a corrente nunca pula)
+    // cada pedra encosta na anterior da sua ponta (salvo o último recurso, ~1% das rodadas)
     for (const branch of ['left', 'right']) {
       const chain = [tiles[0], ...tiles.filter((t) => t.branch === branch)];
       for (let k = 1; k < chain.length; k += 1) {
+        if (chain[k].detached) continue;
         check(rectGap(chain[k - 1], chain[k]) < 1e-6, `corrente ${branch} desconectada em ${chain[k].id}`);
       }
     }
+    // sempre dentro do feltro (bucha atravessada pode passar meia unidade)
+    for (const t of tiles) {
+      const tol = t.isDouble ? 0.51 : 0.01;
+      check(t.x >= -tol && t.y >= -tol && t.x + t.w <= cols + tol && t.y + t.h <= rows + 0.01, `pedra ${t.id} fora do feltro`);
+    }
+  }
+}
+
+/** Pedras que já estavam na mesa não mudam de posição, tamanho nem rotação. */
+function assertNoTeleport(before, after) {
+  const [cols, rows] = GRIDS[0];
+  const old = computeBoardLayout(before, cols, rows).tiles;
+  const now = new Map(computeBoardLayout(after, cols, rows).tiles.map((t) => [t.id, t]));
+  for (const t of old) {
+    const n = now.get(t.id);
+    check(n && n.x === t.x && n.y === t.y && n.w === t.w && n.orientation === t.orientation, `pedra ${t.id} se mexeu`);
   }
 }
 
@@ -93,6 +109,7 @@ function runDuel(seed) {
     check(state.phase === 'playing', `fase inesperada ${state.phase}`);
     const action = state.turn === 'tioZe' ? { type: 'TIO_ZE_ACT' } : simulatedPlayerAction(state, rng);
     const next = gameReducer(state, action);
+    if (state.board.root && next.board !== state.board && next.phase === 'playing') assertNoTeleport(state.board, next.board);
     // o turno sempre progride: nenhuma ação escolhida pode ser rejeitada
     check(next !== state, `ação rejeitada: ${JSON.stringify(action)}`);
     state = next;

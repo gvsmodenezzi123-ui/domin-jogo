@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
 import OpponentHeader from './components/OpponentHeader.jsx';
+import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import TableBoard from './components/TableBoard.jsx';
@@ -112,15 +113,17 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const [selectedId, setSelectedId] = useState(null);
   const [muted, setMuted] = useState(() => audio.muted);
+  const [menuOpen, setMenuOpen] = useState(false);
   const shellRef = useRef(null);
   const tableRef = useRef(null);
   const processedSeq = useRef(0);
 
   // Tio Zé: cada mudança de estado na vez dele agenda a próxima ação (700ms).
+  // Com o menu aberto ele espera.
   useEffect(() => {
-    if (state.phase !== 'playing' || state.turn !== 'tioZe') return undefined;
+    if (menuOpen || state.phase !== 'playing' || state.turn !== 'tioZe') return undefined;
     return scheduleTioZeTurn(dispatch);
-  }, [state]);
+  }, [state, menuOpen]);
 
   // Efeitos colaterais dos eventos novos.
   useEffect(() => {
@@ -219,6 +222,7 @@ export default function App() {
   const startDuel = () => {
     audio.unlock();
     audio.startAmbience();
+    audio.startMusic();
     audio.click();
     setSelectedId(null);
     dispatch({ type: 'START_DUEL', deck: newDeck() });
@@ -233,7 +237,18 @@ export default function App() {
   const backToMenu = () => {
     audio.click();
     setSelectedId(null);
+    setMenuOpen(false);
     dispatch({ type: 'RETURN_TO_TITLE' });
+  };
+
+  const openMenu = () => {
+    audio.click();
+    setMenuOpen(true);
+  };
+
+  const closeMenu = () => {
+    audio.click();
+    setMenuOpen(false);
   };
 
   const toggleMute = () => {
@@ -266,10 +281,12 @@ export default function App() {
         speech={speech}
         muted={muted}
         onToggleMute={toggleMute}
+        onOpenMenu={openMenu}
       />
 
       <TableBoard
         board={state.board}
+        roundKey={state.round}
         playableSides={selectedSides}
         onPlaySide={handlePlaySide}
         banner={banner}
@@ -304,6 +321,8 @@ export default function App() {
       {roundFinished && (
         <RoundOverlay state={state} onNext={nextRound} onRestart={startDuel} onMenu={backToMenu} />
       )}
+
+      {menuOpen && <PauseMenu muted={muted} onToggleMute={toggleMute} onResume={closeMenu} onQuit={backToMenu} />}
     </div>
   );
 }

@@ -1,25 +1,17 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import DominoTile from './DominoTile.jsx';
+import { computeFan } from './handFan.js';
 import { CoinCount } from './OpponentHeader.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import PixelSprite from './PixelSprite.jsx';
 import { COIN, COIN_PALETTE } from './sprites.js';
 
-const TILE_AREA_HEIGHT = 132;
-const GAP = 6;
-const PAD_X = 10;
-const LIFT = 10;
-
-/** Tamanho das pedras na mão: uma fileira grande ou duas menores, sem rolagem. */
-function computeRackLayout(count, width, height = TILE_AREA_HEIGHT) {
-  if (!count || !width) return { rows: 1, unit: 40, perRow: count };
-  const usable = width - PAD_X * 2;
-  const single = Math.floor(Math.min(46, (usable - (count - 1) * GAP) / count, (height - LIFT - 4) / 2));
-  if (single >= 32 || count <= 4) return { rows: 1, unit: Math.max(18, single), perRow: count };
-  const perRow = Math.ceil(count / 2);
-  const double = Math.floor(Math.min(34, (usable - (perRow - 1) * GAP) / perRow, (height - LIFT - GAP - 4) / 4));
-  return { rows: 2, unit: Math.max(16, double), perRow };
-}
+/** Altura da área do leque (px). */
+const FAN_HEIGHT = 160;
+/** Distância da base do leque até o rodapé (as pedras das pontas descem até aqui). */
+const FAN_BASE = 26;
+/** Quanto a pedra selecionada sobe para fora do leque (-translate-y-6). */
+const SELECT_LIFT = 24;
 
 function useWidth() {
   const ref = useRef(null);
@@ -71,8 +63,8 @@ const SIDE_BUTTON = {
 };
 
 /**
- * Suporte de madeira com a mão do jogador, HUD (corações, moedas) e as ações:
- * comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
+ * Mão do jogador em leque flutuante sobre o feltro, HUD (corações, moedas) e as
+ * ações: comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
  */
 export default function PlayerRack({
   hand,
@@ -95,14 +87,13 @@ export default function PlayerRack({
   hint,
 }) {
   const [areaRef, width] = useWidth();
-  const { rows, unit, perRow } = computeRackLayout(hand.length, width);
-  const rowsOfTiles = rows === 1 ? [hand] : [hand.slice(0, perRow), hand.slice(perRow)];
+  const { unit, spots } = computeFan(hand.length, width);
   const sum = ends ? ends.left + ends.right : null;
   const sumIsFive = sum !== null && sum > 0 && sum % 5 === 0;
 
   return (
     <section
-      className={`player-rack relative z-20 shrink-0 ${isTurn ? 'player-rack-active' : ''}`}
+      className={`player-hand relative z-20 shrink-0 ${isTurn ? 'player-hand-active' : ''}`}
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 10px)' }}
       aria-label="Sua mão"
     >
@@ -124,47 +115,57 @@ export default function PlayerRack({
         </div>
       </div>
 
-      <div ref={areaRef} className="rack-shelf relative mx-2 mt-1.5" style={{ height: TILE_AREA_HEIGHT }}>
-        <div className="flex h-full flex-col items-center justify-end gap-1.5 pb-2">
-          {rowsOfTiles.map((rowTiles, r) => (
-            <div key={r} className="flex items-end justify-center" style={{ gap: GAP }}>
-              {rowTiles.map((tile, i) => {
-                const index = r * perRow + i;
-                const selected = tile.id === selectedId;
-                const playable = isTurn && playableIds.has(tile.id);
-                const power = selected && tile.a === tile.b;
-                return (
-                  <div
-                    key={tile.id}
-                    className="animate-tile-in transition-transform duration-150"
-                    style={{
-                      animationDelay: `${Math.min(index, 7) * 45}ms`,
-                      // `translate` (e não `transform`) para o levantar não brigar com a animação de entrada
-                      translate: selected ? `0 -${LIFT}px` : undefined,
-                    }}
-                  >
-                    {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
-                    <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
-                      <DominoTile
-                        values={[tile.a, tile.b]}
-                        orientation="vertical"
-                        unit={unit}
-                        depth={3}
-                        selected={selected}
-                        power={power}
-                        playable={playable && !selected}
-                        dimmed={isTurn && !playable}
-                        disabled={!isTurn || !playable}
-                        onClick={() => onSelectTile(tile)}
-                      />
-                    </div>
+      <div ref={areaRef} className="relative mx-1" style={{ height: FAN_HEIGHT }}>
+        {hand.map((tile, i) => {
+          const spot = spots[i];
+          if (!spot) return null;
+          const selected = tile.id === selectedId;
+          const playable = isTurn && playableIds.has(tile.id);
+          const power = selected && tile.a === tile.b;
+          return (
+            <div
+              key={tile.id}
+              className="hand-slot absolute"
+              style={{
+                left: `calc(50% + ${spot.x - unit / 2}px)`,
+                bottom: FAN_BASE,
+                width: unit,
+                height: unit * 2,
+                zIndex: selected ? 30 : i + 1,
+                // selecionada: sai do leque (-translate-y-6 scale-110), reta
+                transform: selected
+                  ? `translateY(-${SELECT_LIFT}px) rotate(0deg) scale(1.1)`
+                  : `translateY(${spot.drop}px) rotate(${spot.angle}deg)`,
+              }}
+            >
+              <div
+                className={`hand-float ${selected ? 'hand-float-lifted' : ''}`}
+                style={{ animationDelay: `${-i * 0.45}s` }}
+              >
+                <div className="animate-tile-in" style={{ animationDelay: `${Math.min(i, 7) * 45}ms` }}>
+                  {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
+                  <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
+                    <DominoTile
+                      values={[tile.a, tile.b]}
+                      orientation="vertical"
+                      unit={unit}
+                      depth={3}
+                      selected={selected}
+                      power={power}
+                      playable={playable && !selected}
+                      dimmed={isTurn && !playable}
+                      disabled={!isTurn || !playable}
+                      onClick={() => onSelectTile(tile)}
+                    />
                   </div>
-                );
-              })}
+                </div>
+              </div>
             </div>
-          ))}
-          {hand.length === 0 && <p className="font-term text-lg text-bone-300">Sem pedras.</p>}
-        </div>
+          );
+        })}
+        {hand.length === 0 && (
+          <p className="absolute inset-x-0 bottom-10 text-center font-term text-lg text-bone-300">Sem pedras.</p>
+        )}
       </div>
 
       <p className="min-h-[20px] px-3 pt-1.5 text-center font-term text-[17px] leading-tight text-bone-200" aria-live="polite">

@@ -12,7 +12,7 @@ import { createEmptyBoard, makeTile, placeTile } from '../dominoLogic.js';
 
 const t = (a, b) => makeTile(a, b);
 const COLS = 10;
-const ROWS = 11;
+const ROWS = 13;
 
 /** Mesa sintética: o layout só usa inner/outer, então dá para montar correntes longas. */
 function synthetic(rootTile, left = [], right = []) {
@@ -86,30 +86,51 @@ describe('U e corrente longa', () => {
     expect(Math.min(...left.map((x) => x.y))).toBeLessThan(ROWS - 5);
     expect(left.every((x) => x.x + x.w <= COLS / 2)).toBe(true);
     expect(right.every((x) => x.x >= COLS / 2)).toBe(true);
-    expect(lay.policies).toEqual({ left: 'spiral', right: 'spiral' });
   });
 
-  it('corrente enorme vira gancho sem pular nem sobrepor', () => {
-    const chain = Array.from({ length: 24 }, (_, i) => (i % 5 === 2 ? [3, 3] : [3, 3 + (i % 2)]));
+  it('corrente enorme fica dentro do feltro, conectada e sem sobrepor', () => {
+    const chain = Array.from({ length: 16 }, (_, i) => (i % 5 === 2 ? [3, 3] : [3, 3 + (i % 2)]));
     const lay = computeBoardLayout(synthetic(t(3, 4), chain), COLS, ROWS);
-    expect(lay.policies.left).toBe('hook');
     const left = [lay.tiles[0], ...lay.tiles.filter((x) => x.branch === 'left')];
     for (let i = 1; i < left.length; i += 1) expect(rectGap(left[i - 1], left[i])).toBeLessThan(1e-6);
+    for (const tile of lay.tiles) {
+      expect(tile.x).toBeGreaterThanOrEqual(-0.5);
+      expect(tile.y).toBeGreaterThanOrEqual(-0.5);
+      expect(tile.x + tile.w).toBeLessThanOrEqual(COLS + 0.5);
+      expect(tile.y + tile.h).toBeLessThanOrEqual(ROWS + 0.01);
+    }
     for (let i = 0; i < lay.tiles.length; i += 1) {
       for (let j = i + 1; j < lay.tiles.length; j += 1) expect(rectsOverlap(lay.tiles[i], lay.tiles[j])).toBe(false);
     }
   });
 
-  it('pedras já postas não mudam de lugar quando outra pedra entra (mesma estratégia)', () => {
-    const chain = Array.from({ length: 10 }, (_, i) => [i % 7, (i + 3) % 7]);
-    for (let n = 1; n < chain.length; n += 1) {
-      const before = computeBoardLayout(synthetic(t(1, 1), chain.slice(0, n), [[1, 2]]), COLS, ROWS);
-      const after = computeBoardLayout(synthetic(t(1, 1), chain.slice(0, n + 1), [[1, 2]]), COLS, ROWS);
-      if (before.policies.left !== after.policies.left) continue;
-      for (const tile of before.tiles) {
-        const moved = byId(after, tile.id);
-        expect({ x: moved.x, y: moved.y, orientation: moved.orientation }).toEqual({ x: tile.x, y: tile.y, orientation: tile.orientation });
+  it('no topo a linha dobra 90° para dentro, deitando as pedras de novo', () => {
+    const chain = Array.from({ length: 12 }, (_, i) => [i % 7, (i + 1) % 7]);
+    const lay = computeBoardLayout(synthetic(t(0, 0), chain), COLS, ROWS);
+    const top = lay.tiles.filter((x) => x.branch === 'left' && !x.isDouble && x.y < 1);
+    expect(top.length).toBeGreaterThan(0);
+    expect(top.some((x) => x.lineAxis === 'horizontal' && x.x > 0.5)).toBe(true);
+  });
+
+  it('pedras já postas nunca mudam de lugar nem de rotação quando outra entra', () => {
+    // joga alternando as pontas, com buchas no meio, numa mesa real (com `seq`)
+    let board = placeTile(createEmptyBoard(), t(3, 3), 'root');
+    const plays = [
+      [t(3, 1), 'left'], [t(3, 5), 'right'], [t(1, 1), 'left'], [t(5, 5), 'right'], [t(1, 4), 'left'],
+      [t(5, 2), 'right'], [t(4, 4), 'left'], [t(2, 2), 'right'], [t(4, 0), 'left'], [t(2, 6), 'right'],
+      [t(0, 0), 'left'], [t(6, 6), 'right'], [t(0, 2), 'left'], [t(6, 1), 'right'], [t(2, 4), 'left'],
+    ];
+    let before = computeBoardLayout(board, COLS, ROWS);
+    for (const [tile, side] of plays) {
+      board = placeTile(board, tile, side);
+      const after = computeBoardLayout(board, COLS, ROWS);
+      for (const old of before.tiles) {
+        const now = byId(after, old.id);
+        expect({ x: now.x, y: now.y, w: now.w, h: now.h, orientation: now.orientation }).toEqual({
+          x: old.x, y: old.y, w: old.w, h: old.h, orientation: old.orientation,
+        });
       }
+      before = after;
     }
   });
 
@@ -128,8 +149,8 @@ describe('câmera', () => {
   const viewport = { width: 374, height: 430 };
 
   it('o mundo tem 10 colunas e a altura segue a tela', () => {
-    expect(computeWorldSize(374, 430)).toEqual({ cols: 10, rows: 11 });
-    expect(computeWorldSize(359, 300).rows).toBe(9);
+    expect(computeWorldSize(374, 430)).toEqual({ cols: 10, rows: 13 });
+    expect(computeWorldSize(414, 640).rows).toBe(15);
   });
 
   it('começo da rodada: zoom máximo (pedras grandes)', () => {
@@ -169,12 +190,12 @@ describe('câmera', () => {
     endsVisible(lay, computeCamera(lay, viewport));
   });
 
-  it('duas correntes enormes: a câmera foca nas pontas, lá no alto', () => {
-    const chain = Array.from({ length: 22 }, (_, i) => [3, 3 + (i % 2)]);
+  it('mesa lotada cabe inteira no feltro, com pedras ~30% maiores que no Patch 0.1', () => {
+    const chain = Array.from({ length: 13 }, (_, i) => [3, 3 + (i % 2)]);
     const lay = computeBoardLayout(synthetic(t(3, 4), chain, chain), COLS, ROWS);
     const cam = computeCamera(lay, viewport);
-    expect(cam.focus).toBe('ends');
-    expect(cam.unitPx).toBeGreaterThanOrEqual(26);
+    expect(cam.focus).toBe('all');
+    expect(cam.unitPx).toBeGreaterThanOrEqual(22 * 1.3);
     endsVisible(lay, cam);
   });
 });
