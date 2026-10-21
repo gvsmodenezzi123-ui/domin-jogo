@@ -68,7 +68,7 @@ export function buildTioZeView(state, seat = 'tioZe') {
     // regras de encaixe da cadeira (pontas travadas pelo Chumbo, talismãs de encaixe)
     rules: rulesFor(state, seat),
     // jeito de jogar: o de cada rival + o nível da região (o jogador simulado usa o padrão)
-    style: seat === 'tioZe' ? playStyleOf(state.rivalId) : DEFAULT_STYLE,
+    style: seat === 'tioZe' ? playStyleOf(state.rivalId, state.mode) : DEFAULT_STYLE,
     // pedras suas que ele enxerga (Paulinho Pente Fino, Madama Sofia)
     knownTiles: seat === 'tioZe' ? knownPlayerTiles(state) : [],
     // a cadeira do jogador segue a regra do passe do Patch 0.5.4 (simulações jogam por ela)

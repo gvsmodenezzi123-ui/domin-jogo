@@ -29,7 +29,7 @@ function PipPicker({ label, value, onChange }) {
  * inicial, que libera o botão DEV ao lado da sua hotbar). O rival espera
  * enquanto o painel está aberto.
  */
-export default function DevPanel({ state, onAction, onClose }) {
+export default function DevPanel({ state, onAction, onClose, hardUnlocked = false, onToggleHard }) {
   const [a, setA] = useState(6);
   const [b, setB] = useState(6);
   const [enhancement, setEnhancement] = useState('nenhuma');
@@ -171,6 +171,15 @@ export default function DevPanel({ state, onAction, onClose }) {
               SEU TIÃO
             </button>
           </div>
+        </section>
+
+        <section className="dev-section mt-3 pt-3" aria-labelledby="dev-mode">
+          <h3 id="dev-mode" className="dev-label">
+            MALETAS · ESTA RUN: {state.mode === 'hard' ? 'PRETA (DIFÍCIL)' : 'BRANCA (NORMAL)'}
+          </h3>
+          <button type="button" data-tone={hardUnlocked ? 'blood' : 'brass'} className="btn-pixel btn-mini mt-2 w-full" onClick={onToggleHard}>
+            {hardUnlocked ? 'TRANCAR A MALETA PRETA' : 'LIBERAR A MALETA PRETA'}
+          </button>
         </section>
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-res">

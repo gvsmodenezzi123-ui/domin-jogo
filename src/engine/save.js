@@ -25,6 +25,7 @@ export function snapshotRun(state, resume, savedAt = 0) {
     v: SAVE_VERSION,
     savedAt,
     resume,
+    mode: state.mode === 'hard' ? 'hard' : 'normal',
     seed: state.seed,
     node: state.run.node,
     cleared: [...state.run.cleared],
@@ -77,6 +78,8 @@ export function isValidMarket(market) {
 export function isValidSave(save) {
   if (!save || typeof save !== 'object' || save.v !== SAVE_VERSION) return false;
   if (!RESUMES.includes(save.resume)) return false;
+  // Patch 0.6.3: maleta da run (saves sem o campo são da Maleta Branca)
+  if (save.mode != null && save.mode !== 'normal' && save.mode !== 'hard') return false;
   if (save.seed != null && !isInt(save.seed)) return false;
   const campaign = generateCampaign(save.seed ?? 0);
   const known = (id) => typeof id === 'string' && campaign.byId.has(id);

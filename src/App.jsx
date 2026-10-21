@@ -6,6 +6,7 @@ import CoinEventModal from './components/CoinEventModal.jsx';
 import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
 import FloatingTexts from './components/FloatingTexts.jsx';
+import HardUnlockModal from './components/HardUnlockModal.jsx';
 import InfoBalloon from './components/InfoBalloon.jsx';
 import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
@@ -22,15 +23,16 @@ import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
+import { TileSkinContext } from './components/tileSkin.js';
 import { BOSS_MUSIC, REGIONS } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
-import { getRival } from './data/rivals.js';
+import { getRival, rivalOf } from './data/rivals.js';
+import { modeOf } from './data/difficulty.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
 import { mapRegionId, regionIdOf } from './engine/campaignMap.js';
 import {
   FULL_SET,
-  MAX_HEARTS,
   boardTilesInOrder,
   getOpenEnds,
   getPlayableMoves,
@@ -55,9 +57,11 @@ import {
   discover,
   haptic,
   loadCollection,
+  loadHardUnlocked,
   loadRunSave,
   loadSettings,
   resetProgress,
+  saveHardUnlocked,
   saveSettings,
   writeRunSave,
 } from './engine/progress.js';
@@ -331,7 +335,11 @@ export default function App() {
   const pendingPlay = useRef(null);
   // o livro é gravado direto no storage durante a run; a tela do menu lê quando você volta
   const bookRef = useRef(collection);
-  const rival = getRival(state.rivalId);
+  // o rival no modo da run (a Maleta Preta muda corações, baralho e talismãs dele)
+  const rival = rivalOf(state);
+  // Patch 0.6.3: Maleta Preta liberada? E a tela inicial deve abrir direto nas maletas?
+  const [hardUnlocked, setHardUnlocked] = useState(loadHardUnlocked);
+  const [titlePick, setTitlePick] = useState(false);
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
   const { stage: veilStage, go: cutTo } = useSceneTransition();
 
@@ -363,7 +371,7 @@ export default function App() {
   // (escolha do Barbante, descarte do Giz) e enquanto a jogada anterior dele está em cena.
   useEffect(() => {
     if (menuOpen || devOpen || tableAnim || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
-    return scheduleTioZeTurn(dispatch, getRival(state.rivalId).reflexMs);
+    return scheduleTioZeTurn(dispatch, rivalOf(state).reflexMs);
   }, [state, menuOpen, devOpen, tableAnim]);
 
   // Turno sem saída (3 compras sem encaixe): o banner fica na mesa e o passe vai sozinho para o rival.
@@ -484,6 +492,13 @@ export default function App() {
     else if (state.phase === 'blackMarket') writeRunSave(snapshotRun(state, 'blackMarket', Date.now()));
     else if (state.phase === 'gameOver' || state.phase === 'runWon') clearRunSave();
   }, [state]);
+
+  // Patch 0.6.3: zerou a Maleta Branca com a Preta ainda trancada → tela de recompensa antes
+  // do final, e o desbloqueio vai para o aparelho na hora (buxaria_hard_mode_unlocked = true)
+  const celebrate = state.phase === 'runWon' && state.mode !== 'hard' && !hardUnlocked;
+  useEffect(() => {
+    if (celebrate) saveHardUnlocked(true);
+  }, [celebrate]);
 
   // Livro de Boteco: tudo que passa pela mesa fica registrado.
   useEffect(() => {
@@ -662,14 +677,28 @@ export default function App() {
     clearTableAnim();
   };
 
-  const newGame = () => {
+  /** NOVO JOGO depois de escolher a maleta ('normal' = Branca, 'hard' = Preta). */
+  const newGame = (mode = 'normal') => {
     wakeAudio();
     sound.playClick();
     cutTo(() => {
       resetTable();
       clearRunSave();
       setSave(null);
-      dispatch({ type: 'NEW_RUN', seed: newSeed() });
+      setTitlePick(false);
+      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id });
+    });
+  };
+
+  /** NOVO JOGO no fim da run: volta para a mesa das maletas. */
+  const restartRun = () => {
+    sound.playClick();
+    cutTo(() => {
+      resetTable();
+      dispatch({ type: 'RETURN_TO_TITLE' });
+      setSave(loadRunSave());
+      setCollection(bookRef.current);
+      setTitlePick(true);
     });
   };
 
@@ -729,6 +758,7 @@ export default function App() {
       dispatch({ type: 'RETURN_TO_TITLE' });
       setSave(loadRunSave());
       setCollection(bookRef.current);
+      setTitlePick(false);
     });
   };
 
@@ -780,6 +810,13 @@ export default function App() {
   const titleSecretTap = useTripleTap(unlockDev);
   const gameSecretTap = useTripleTap(openDevFromGame);
 
+  // painel DEV: tranca ou libera a Maleta Preta (para testar a tela das maletas)
+  const toggleHard = () => {
+    const next = !hardUnlocked;
+    saveHardUnlocked(next);
+    setHardUnlocked(next);
+  };
+
   const devAction = (action) => {
     setSelectedId(null);
     // trocar de rival recomeça a partida: precisa de um baralho novo
@@ -797,13 +834,18 @@ export default function App() {
   };
 
   const veil = <ScreenVeil stage={veilStage} />;
+  // Maleta Preta: as pedras comuns da partida viram ébano com pips brancos
+  const tileSkin = state.phase !== 'title' ? modeOf(state.mode).skin : 'bone';
 
   if (state.phase === 'title') {
     return (
-      <>
+      <TileSkinContext.Provider value={tileSkin}>
       <div className="app-shell h-full">
         <TitleScreen
+          key={titlePick ? 'maletas' : 'menu'}
           save={save}
+          hardUnlocked={hardUnlocked}
+          startPicking={titlePick}
           onNewGame={newGame}
           onContinue={continueRun}
           settings={settings}
@@ -816,13 +858,15 @@ export default function App() {
         />
       </div>
       {veil}
-      </>
+      </TileSkinContext.Provider>
     );
   }
 
   // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
   const sceneChip = ['shop', 'blackMarket', 'coinEvent'].includes(state.phase);
-  const devPanel = devOpen && <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} />;
+  const devPanel = devOpen && (
+    <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} hardUnlocked={hardUnlocked} onToggleHard={toggleHard} />
+  );
   // no mapa fica ao lado do menu; na loja, em cima do botão de voltar (o saldo mora no topo)
   const devChip = devUnlocked && (
     <button
@@ -837,7 +881,7 @@ export default function App() {
 
   if (state.phase === 'map') {
     return (
-      <>
+      <TileSkinContext.Provider value={tileSkin}>
         <div ref={shellRef} className="app-shell h-full">
           <CampaignMap key={state.run.node ?? 'start'} state={state} onEnter={enterNode} onMenu={backToMenu} press={press} />
           {devChip}
@@ -845,13 +889,13 @@ export default function App() {
           {devPanel}
         </div>
         {veil}
-      </>
+      </TileSkinContext.Provider>
     );
   }
 
   if (state.phase === 'blackMarket') {
     return (
-      <>
+      <TileSkinContext.Provider value={tileSkin}>
         <div ref={shellRef} className="app-shell h-full">
           <BlackMarketModal
             state={state}
@@ -864,26 +908,26 @@ export default function App() {
           {devPanel}
         </div>
         {veil}
-      </>
+      </TileSkinContext.Provider>
     );
   }
 
   if (state.phase === 'coinEvent') {
     return (
-      <>
+      <TileSkinContext.Provider value={tileSkin}>
         <div ref={shellRef} className="app-shell h-full">
           <CoinEventModal state={state} onLeave={leaveTo('LEAVE_EVENT')} />
           {devChip}
           {devPanel}
         </div>
         {veil}
-      </>
+      </TileSkinContext.Provider>
     );
   }
 
   if (state.phase === 'shop') {
     return (
-      <>
+      <TileSkinContext.Provider value={tileSkin}>
         <div ref={shellRef} className="app-shell h-full">
           <Shop
             state={state}
@@ -899,7 +943,7 @@ export default function App() {
           {devPanel}
         </div>
         {veil}
-      </>
+      </TileSkinContext.Provider>
     );
   }
 
@@ -909,7 +953,7 @@ export default function App() {
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
-    <>
+    <TileSkinContext.Provider value={tileSkin}>
     <div
       ref={shellRef}
       className="app-shell flex h-full flex-col overflow-hidden"
@@ -968,7 +1012,7 @@ export default function App() {
         passRule={passRule}
         onPass={handlePass}
         hearts={state.hearts.player}
-        maxHearts={MAX_HEARTS}
+        maxHearts={state.maxHearts.player}
         coins={state.coins.player}
         endsSum={ends ? ends.left + ends.right : null}
         hint={hint}
@@ -998,15 +1042,24 @@ export default function App() {
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
 
-      {roundFinished && !tableAnim && (
+      {roundFinished && !tableAnim && !celebrate && (
         <RoundOverlay
           state={state}
           rival={rival}
           onNext={nextRound}
           onContinue={continueToMap}
           autoContinue={!menuOpen && !devOpen}
-          onRestart={newGame}
+          onRestart={restartRun}
           onMenu={backToMenu}
+        />
+      )}
+
+      {celebrate && !tableAnim && (
+        <HardUnlockModal
+          onContinue={() => {
+            sound.playClick();
+            setHardUnlocked(true);
+          }}
         />
       )}
 
@@ -1026,6 +1079,6 @@ export default function App() {
       {devPanel}
     </div>
     {veil}
-    </>
+    </TileSkinContext.Provider>
   );
 }

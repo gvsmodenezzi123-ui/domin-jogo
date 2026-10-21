@@ -3,6 +3,7 @@ import { REGIONS } from '../data/campaign.js';
 import { generateCampaign } from '../engine/campaignMap.js';
 import { getRival } from '../data/rivals.js';
 import BuxariaLogo from './BuxariaLogo.jsx';
+import CaseSelect from './CaseSelect.jsx';
 import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
@@ -31,7 +32,8 @@ function saveSummary(save) {
   else if (node?.rivalId && !save.cleared.includes(node.id)) what = getRival(node.rivalId).name;
   else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type];
   else if (node) what = `${getRival(node.rivalId).name} vencido`;
-  return [where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
+  const maleta = save.mode === 'hard' ? 'Maleta Preta' : null;
+  return [maleta, where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
 }
 
 /**
@@ -95,7 +97,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.6.2</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.6.3</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -137,9 +139,13 @@ export default function TitleScreen({
   onSecretTap,
   onTap,
   devUnlocked = false,
+  hardUnlocked = false,
+  startPicking = false,
 }) {
   const [modal, setModal] = useState(null);
-  const [choosing, setChoosing] = useState(false);
+  const [choosing, setChoosing] = useState(startPicking);
+  // Patch 0.6.3: NOVO JOGO abre a mesa das maletas (Branca = normal, Preta = difícil)
+  const [picking, setPicking] = useState(startPicking);
   const showInstallHint = isIOS() && !isStandalone();
   const open = (id) => {
     onTap?.();
@@ -156,6 +162,14 @@ export default function TitleScreen({
   const back = () => {
     onTap?.();
     setChoosing(false);
+  };
+  const openCases = () => {
+    onTap?.();
+    setPicking(true);
+  };
+  const closeCases = () => {
+    onTap?.();
+    setPicking(false);
   };
 
   return (
@@ -202,14 +216,14 @@ export default function TitleScreen({
           </button>
         </div>
         <div className={`title-panel ${choosing ? '' : 'title-panel-off'}`} inert={!choosing}>
-          {choosing && <PlayChoices save={save} onNewGame={onNewGame} onContinue={onContinue} onBack={back} onTap={onTap} />}
+          {choosing && <PlayChoices save={save} onNewGame={openCases} onContinue={onContinue} onBack={back} onTap={onTap} />}
         </div>
       </nav>
 
       <footer className="relative z-[5] flex flex-col items-center gap-1">
         {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
         <p className="title-version">
-          PATCH 0.6.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.6.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </footer>
 
@@ -228,6 +242,7 @@ export default function TitleScreen({
           <Credits />
         </MenuModal>
       )}
+      {picking && <CaseSelect hardUnlocked={hardUnlocked} onPick={(mode) => onNewGame(mode)} onBack={closeCases} />}
     </main>
   );
 }

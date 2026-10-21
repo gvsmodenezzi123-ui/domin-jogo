@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useContext } from 'react';
 import { getEnhancement } from '../data/enhancedTiles.js';
+import { TileSkinContext } from './tileSkin.js';
 
 /**
  * Posições dos pips numa grade 3x3 [linha, coluna], pensadas para a metade de
@@ -67,7 +68,7 @@ function Half({ value, horizontal, unit }) {
 }
 
 /**
- * Pedra de dominó em osso amarelado envelhecido.
+ * Pedra de dominó em osso amarelado envelhecido (ou ébano, na Maleta Preta: TileSkinContext).
  *
  * values:      [primeiro, segundo] — esquerda/direita (deitada) ou cima/baixo (em pé)
  * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
@@ -105,6 +106,8 @@ function DominoTile({
   style,
   label,
 }) {
+  // Maleta Preta (Patch 0.6.3): as pedras comuns viram ébano com pips brancos
+  const skin = useContext(TileSkinContext);
   const isDouble = values[0] === values[1];
   // bucha na mesa: perpendicular à linha (em pé na horizontal, deitada na vertical)
   const crosswise = onBoard && isDouble && !faceDown;
@@ -143,9 +146,26 @@ function DominoTile({
   const stain = stainFor(values);
   const dividerThickness = Math.max(1, Math.round(unit * 0.06));
   const enh = getEnhancement(enhancement);
-  // osso envelhecido (padrão) ou material da peça aprimorada, que vem do CSS
+  const onyx = !enh && skin === 'onyx';
+  // osso envelhecido (padrão), ébano (Maleta Preta) ou material da peça aprimorada, que vem do CSS
   const surface = enh
     ? { '--d': `${depth}px` }
+    : onyx
+    ? {
+        '--d': `${depth}px`,
+        background: [
+          `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.07), transparent 46%)`,
+          'linear-gradient(150deg, #2b2724 0%, #1c1917 45%, #0f0d0c 100%)',
+        ].join(','),
+        boxShadow: [
+          'inset 1px 1px 0 rgba(255,255,255,.16)',
+          'inset -1px -1px 0 rgba(0,0,0,.75)',
+          'inset 0 0 0 1px rgba(120,113,108,.35)',
+          `0 ${depth}px 0 #0c0a09`,
+          `0 ${depth + 1}px 0 #000`,
+          'var(--cast)',
+        ].join(','),
+      }
     : {
         '--d': `${depth}px`,
         background: [
@@ -175,7 +195,7 @@ function DominoTile({
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
       } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
         enh && dimmed ? 'tile-enh-still' : ''
-      } ${enh && still ? 'tile-enh-rest' : ''} ${className}`}
+      } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${className}`}
       style={{ ...shared, ...surface }}
     >
       <Half value={values[0]} horizontal={horizontal} unit={unit} />

@@ -10,7 +10,7 @@
 
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, getRelic, isUsed } from '../data/relics.js';
-import { getRival } from '../data/rivals.js';
+import { rivalOf } from '../data/rivals.js';
 import {
   BASE_RULES,
   boardTilesInOrder,
@@ -30,7 +30,7 @@ export const relicsOf = (state, seat) => (state.relics[seat] ?? []).map(getRelic
 export const hasRelic = (state, seat, id) => (state.relics[seat] ?? []).includes(id);
 
 /** Regras próprias do rival da partida (ver `mechanics` em data/rivals.js). */
-export const rivalMechanics = (state) => getRival(state.rivalId).mechanics ?? {};
+export const rivalMechanics = (state) => rivalOf(state).mechanics ?? {};
 
 // ---------------------------------------------------------------------------
 // Baralho de cada lado

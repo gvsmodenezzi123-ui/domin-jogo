@@ -23,7 +23,8 @@ import { buildTioZeView, decideTioZeAction } from '../ai/tioZeAI.js';
 import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, RELIC_SLOTS, getRelic, markUsed } from '../data/relics.js';
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
-import { FIRST_RIVAL, RIVALS, getRival } from '../data/rivals.js';
+import { FIRST_RIVAL, RIVALS, getRival, rivalFor, rivalOf } from '../data/rivals.js';
+import { modeOf, playerMaxHearts } from '../data/difficulty.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
 import { availableNodes, campaignOf, coinReward, currentNode, regionIdOf } from './campaignMap.js';
 import {
@@ -122,6 +123,8 @@ export function createInitialState() {
     relics: bySeat([], []),
     decks: bySeat({}, {}), // { tileId: aprimoramento } — as pedras trocadas no baralho de cada lado
     rivalId: rival.id,
+    // Patch 0.6.3: maleta da run ('normal' = Maleta Branca, 'hard' = Maleta Preta, ver data/difficulty.js)
+    mode: 'normal',
     // Patch 0.6.1, mapa em teia (engine/campaignMap.js):
     //   node: id do nó onde você está (null antes do 1º); cleared: nós concluídos;
     //   path: o caminho percorrido; match: partidas jogadas; history: rivais enfrentados
@@ -198,7 +201,8 @@ function startRound(state, deck) {
 
 /** Nova partida contra `rivalId`: rival com os corações, talismãs e o baralho dele; os seus corações continuam. */
 function startMatch(state, rivalId, deck, { advance = true } = {}) {
-  const rival = getRival(rivalId);
+  // na Maleta Preta o rival senta com o baralho, os talismãs e os corações do modo difícil
+  const rival = rivalFor(rivalId, state.mode);
   let next = {
     ...state,
     rivalId: rival.id,
@@ -208,7 +212,7 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
     relics: { ...state.relics, tioZe: [...rival.relics] },
     decks: { ...state.decks, tioZe: { ...rival.deck } },
     hearts: bySeat(Math.max(1, state.hearts.player), rival.hearts),
-    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
+    maxHearts: bySeat(playerMaxHearts(state), rival.hearts),
     matchFx: createMatchFx(),
     coins: { ...state.coins, tioZe: rival.coins },
     round: 0,
@@ -228,11 +232,12 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
 function endMatch(state, winner) {
   if (winner === 'player') {
     const node = currentNode(state);
-    const rival = getRival(state.rivalId);
+    const rival = rivalOf(state);
     const boss = node ? node.boss : rival.boss;
     const runWon = node ? node.boss && node.region === campaignOf(state).regions.length : rival.id === FINAL_BOSS;
     const prize = MATCH_PRIZE + rival.prizeBonus;
-    const healed = boss ? MAX_HEARTS : Math.min(MAX_HEARTS, state.hearts.player + HEAL_AFTER_NODE);
+    const max = playerMaxHearts(state);
+    const healed = boss ? max : Math.min(max, state.hearts.player + HEAL_AFTER_NODE);
     const heal = healed - state.hearts.player;
     const cleared = node && !state.run.cleared.includes(node.id) ? [...state.run.cleared, node.id] : state.run.cleared;
     let next = {
@@ -247,7 +252,7 @@ function endMatch(state, winner) {
     };
     next = gainCoins(next, 'player', prize, 'prize');
     next = { ...next, roundResult: next.roundResult ? { ...next.roundResult, prize, heal } : next.roundResult };
-    return emit(next, { type: 'duelEnd', winner: 'player', prize, heal, runWon, boss, region: node?.region ?? rival.region });
+    return emit(next, { type: 'duelEnd', winner: 'player', prize, heal, runWon, boss, region: node?.region ?? rival.region, mode: state.mode });
   }
   const next = { ...state, phase: 'gameOver', duelWinner: 'tioZe', nextStarter: null, pending: null };
   return emit(next, { type: 'duelEnd', winner: 'tioZe' });
@@ -851,16 +856,23 @@ function leaveEvent(state) {
 /** Run nova, parada no mapa antes do primeiro nó (a teia sai da semente). */
 function newRun(state, action) {
   const relics = (action.relics ?? []).filter((id) => getRelic(id)).slice(0, RELIC_SLOTS);
+  const base = createInitialState();
+  // a maleta escolhida (Maleta Preta: 4 corações e $3 para começar)
+  const mode = modeOf(action.mode);
   const fresh = {
-    ...createInitialState(),
+    ...base,
     phase: 'map',
+    mode: mode.id,
+    hearts: { ...base.hearts, player: mode.maxHearts },
+    maxHearts: { ...base.maxHearts, player: mode.maxHearts },
+    coins: { ...base.coins, player: mode.startCoins },
     relics: bySeat(relics, []),
     decks: bySeat({ ...(action.playerDeck ?? {}) }, {}),
     seed: Number.isFinite(action.seed) ? action.seed >>> 0 : null,
     seq: state.seq,
     events: state.events,
   };
-  return emit(fresh, { type: 'runStart' });
+  return emit(fresh, { type: 'runStart', mode: mode.id });
 }
 
 /** CONTINUAR: volta para o mapa (ou para a loja / o mercado) exatamente como o save guardou. */
@@ -883,12 +895,14 @@ function loadRun(state, { save }) {
     seq: state.seq,
     events: state.events,
   };
-  const rival = getRival(currentNode(next)?.rivalId ?? FIRST_RIVAL);
+  const mode = save.mode === 'hard' ? 'hard' : 'normal';
+  const rival = rivalFor(currentNode(next)?.rivalId ?? FIRST_RIVAL, mode);
   next = {
     ...next,
+    mode,
     rivalId: rival.id,
-    hearts: bySeat(save.hearts, rival.hearts),
-    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
+    hearts: bySeat(Math.min(save.hearts, modeOf(mode).maxHearts), rival.hearts),
+    maxHearts: bySeat(modeOf(mode).maxHearts, rival.hearts),
     coins: bySeat(save.coins, rival.coins),
   };
   if (phase === 'shop') next = { ...next, shop: save.shop ? { ...save.shop } : buildShop(next, 0) };

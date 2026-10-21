@@ -5494,3 +5494,338 @@
     0 0 0 3px rgba(255, 90, 80, 0.45),
     0 10px 22px rgba(0, 0, 0, 0.55);
 }
+
+/* ---------- Patch 0.6.3: Dominó Preto (Maleta Preta) ----------
+   só as pedras comuns: ébano fosco, divisória grafite e pips brancos nítidos.
+   As de grife (.tile-enh-*) nunca recebem .tile-onyx. */
+.tile-onyx .domino-pip {
+  background: radial-gradient(circle at 40% 35%, #ffffff 0%, #f5f5f4 55%, #d6d3d1 100%);
+  box-shadow:
+    0 0 2px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.tile-onyx .domino-divider {
+  background: #57534e;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.tile-onyx .tile-lamp-light {
+  opacity: 0.45;
+}
+
+.map-hard-badge {
+  color: #c084fc;
+}
+
+/* ---------- Patch 0.6.3: mesa das maletas (NOVO JOGO) ----------
+   salão escuro, lâmpada pendurada com o cone de luz caindo num feltro quase preto,
+   e as duas maletas lado a lado */
+.case-scene {
+  color: var(--color-bone-50);
+  background:
+    radial-gradient(ellipse 60% 42% at 50% 46%, rgba(255, 214, 140, 0.12), transparent 70%),
+    #070605;
+}
+
+.case-lamp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 560px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.case-lamp .lamp-rig {
+  left: 50%;
+}
+
+.case-scroll {
+  position: relative;
+  z-index: 4;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(max(env(safe-area-inset-top), 12px) + 118px) max(14px, env(safe-area-inset-right, 0px)) max(env(safe-area-inset-bottom), 16px)
+    max(14px, env(safe-area-inset-left, 0px));
+}
+
+.case-title {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: #f4ecd2;
+  text-shadow: 0 3px 0 #000;
+}
+
+.case-title span {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  color: var(--color-bone-300);
+  text-shadow: none;
+}
+
+/* feltro escuro em elipse sob a luz */
+.case-felt {
+  position: relative;
+  margin-top: 14px;
+  display: grid;
+  width: 100%;
+  max-width: 440px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 22px 12px 18px;
+  border-radius: 50% / 22%;
+  background:
+    var(--felt-noise),
+    radial-gradient(ellipse 70% 60% at 50% 40%, #1f2a17 0%, #121a0d 60%, #080b05 100%);
+  background-size:
+    140px 140px,
+    100% 100%;
+  box-shadow:
+    inset 0 0 0 3px #0b0705,
+    inset 0 0 40px rgba(0, 0, 0, 0.75),
+    0 14px 26px rgba(0, 0, 0, 0.6);
+}
+
+.case-pick {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.case-art {
+  position: relative;
+  display: block;
+  width: 136px;
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.case-body,
+.case-chains,
+.case-lock {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.case-sprite {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
+}
+
+.case-pick:active .case-body {
+  transform: translateY(2px);
+}
+
+.case-chains,
+.case-lock {
+  pointer-events: none;
+}
+
+.case-chains.is-falling {
+  animation: caseChainsFall 760ms cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+}
+
+.case-lock.is-open {
+  animation: caseLockDrop 800ms ease-in forwards;
+}
+
+@keyframes caseChainsFall {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(70px) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+@keyframes caseLockDrop {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(-8px) rotate(-6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(80px) rotate(-28deg);
+    opacity: 0;
+  }
+}
+
+.case-open-pop {
+  animation: caseOpenPop 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  transform-origin: 50% 80%;
+}
+
+@keyframes caseOpenPop {
+  from {
+    transform: scaleY(0.7);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.case-shake {
+  animation: caseShake 420ms ease-in-out;
+}
+
+@keyframes caseShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+/* aura roxa/vermelha suave da Maleta Preta liberada */
+/* contorno roxo/vermelho colado na maleta liberada */
+.case-black.is-open .case-sprite {
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.85)) drop-shadow(0 0 14px rgba(200, 38, 29, 0.45)) drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
+}
+
+.case-aura {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5) 0%, rgba(168, 85, 247, 0.32) 40%, rgba(200, 38, 29, 0.2) 55%, transparent 72%);
+  animation: caseAura 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes caseAura {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.case-name {
+  margin-top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #000;
+}
+
+.case-tag {
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  letter-spacing: 0.06em;
+  color: #d9a946;
+}
+
+.case-pick-black .case-tag {
+  color: #c084fc;
+}
+
+.case-pick-black.is-locked .case-tag {
+  color: #9aa1a8;
+}
+
+.case-desc {
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-bone-200);
+}
+
+.case-pick-black.is-locked .case-desc {
+  opacity: 0.6;
+}
+
+.case-warn {
+  margin-top: 12px;
+  max-width: 360px;
+  padding: 8px 10px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.6;
+  text-align: center;
+  color: #fff1e6;
+  background: #8a1f17;
+  border: 2px solid #0b0705;
+  box-shadow: 0 3px 0 #000;
+}
+
+.case-back {
+  margin-top: 18px;
+  font-size: 12px;
+}
+
+/* recompensa por zerar a Maleta Branca */
+.unlock-case {
+  width: 132px;
+}
+
+.unlock-reward {
+  color: rgba(244, 236, 210, 0.45);
+  transition: color 300ms ease;
+}
+
+.unlock-reward span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: inherit;
+}
+
+.unlock-reward.is-on {
+  color: #d8b4fe;
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
+}
+
+.reduce-motion .case-aura,
+.reduce-motion .case-open-pop,
+.reduce-motion .case-shake {
+  animation: none !important;
+}
+
+.reduce-motion .case-chains.is-falling,
+.reduce-motion .case-lock.is-open {
+  animation: none !important;
+  opacity: 0;
+}

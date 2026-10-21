@@ -1,6 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { REGIONS } from '../data/campaign.js';
-import { AI_TIERS, getRival, tierOf } from '../data/rivals.js';
+import { AI_TIERS, getRival, rivalFor, tierOf } from '../data/rivals.js';
 import {
   COIN_EVENT_MAX,
   COIN_EVENT_MIN,
@@ -11,7 +11,6 @@ import {
   mapRegionId,
   mixSeed,
 } from '../engine/campaignMap.js';
-import { MAX_HEARTS } from '../engine/dominoLogic.js';
 import { rivalBlurb, rivalRules } from '../engine/rivalInfo.js';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
@@ -160,10 +159,11 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
 });
 
 /** Texto e botão do rodapé para o nó escolhido. */
-function NodeDetail({ node, status, known, farRegion, onEnter }) {
+function NodeDetail({ node, status, known, farRegion, mode, onEnter }) {
   const unknownLine = farRegion ? 'Ainda não chegou nessa região.' : 'Só aparece quando o caminho até aqui abrir.';
   const fight = node.type === 'combat' || node.type === 'boss';
-  const rival = fight ? getRival(node.rivalId) : null;
+  // na Maleta Preta o rodapé mostra o baralho, os talismãs e os corações do modo difícil
+  const rival = fight ? rivalFor(node.rivalId, mode) : null;
   const open = status === 'open';
   let art;
   let title;
@@ -172,7 +172,7 @@ function NodeDetail({ node, status, known, farRegion, onEnter }) {
   let action;
   let kind = NODE_LABEL[node.type];
   if (fight) {
-    const tier = AI_TIERS[tierOf(rival)];
+    const tier = AI_TIERS[tierOf(rival, mode)];
     if (known) kind = `${node.boss ? 'CHEFE' : 'MESA'} · IA ${tier.label}`;
     art = (
       <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
@@ -181,7 +181,7 @@ function NodeDetail({ node, status, known, farRegion, onEnter }) {
     );
     title = known ? rival.name.toUpperCase() : '???';
     line = known ? `${rival.title} · ${rival.hearts}♥` : unknownLine;
-    notes = known ? [rivalBlurb(rival.id), ...rivalRules(rival.id).map((r) => `• ${r}`)] : [];
+    notes = known ? [rivalBlurb(rival.id), ...rivalRules(rival.id, mode).map((r) => `• ${r}`)] : [];
     action = `SENTAR À MESA · ${rival.name.toUpperCase()}`;
   } else if (node.type === 'shop') {
     art = <ValtinhoSprite className="h-12 w-12 shrink-0" />;
@@ -282,6 +282,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-pixel text-[7px] text-bone-400">
+              {state.mode === 'hard' && <span className="map-hard-badge">MALETA PRETA · </span>}
               REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
               {open.length > 1 ? ` · ${open.length} CAMINHOS` : ''}
             </p>
@@ -292,7 +293,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           </button>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <HeartsBar current={state.hearts.player} max={MAX_HEARTS} pixel={2} label={`Você: ${state.hearts.player} de ${MAX_HEARTS} corações`} />
+          <HeartsBar current={state.hearts.player} max={state.maxHearts.player} pixel={2} label={`Você: ${state.hearts.player} de ${state.maxHearts.player} corações`} />
           <CoinCount value={state.coins.player} />
           <Hotbar relics={state.relics.player} size={24} press={press} label="Seus talismãs" />
         </div>
@@ -351,6 +352,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           status={status.get(selected.id)}
           known={revealed(status.get(selected.id))}
           farRegion={selected.region > regionId}
+          mode={state.mode}
           onEnter={onEnter}
         />
         <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER MESA: +2♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS</p>

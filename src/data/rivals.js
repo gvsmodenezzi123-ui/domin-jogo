@@ -899,16 +899,35 @@ export const AI_TIERS = Object.freeze({
   agressivo: Object.freeze({ id: 'agressivo', label: 'AGRESSIVA', maxEnhanced: 3, maxRelics: 2 }),
 });
 
-/** Nível de jogo do rival: chefes e a Região 3 são agressivos, a Região 2 calcula, a 1 joga no instinto. */
-export function tierOf(rival) {
+/**
+ * Nível de jogo do rival: chefes e a Região 3 são agressivos, a Região 2 calcula, a 1 joga
+ * no instinto. Na Maleta Preta (modo difícil) ninguém joga no instinto: as Regiões 1 e 2
+ * calculam e a 3 e os chefes atacam.
+ */
+export function tierOf(rival, mode = 'normal') {
   if (rival.boss || rival.region >= 3) return 'agressivo';
-  if (rival.region === 2) return 'calculista';
+  if (rival.region === 2 || mode === 'hard') return 'calculista';
   return 'intuitivo';
 }
 
-function tierStyle(rival) {
+function tierStyle(rival, mode = 'normal') {
   const base = rival.style;
-  const tier = tierOf(rival);
+  const tier = tierOf(rival, mode);
+  if (mode === 'hard') {
+    // Maleta Preta: contas precisas de tranca (sem achismo) e de múltiplo de 5; ataque mais forte
+    if (tier === 'calculista') {
+      return style({ ...base, five: Math.max(base.five, 8), fiveSetup: Math.max(base.fiveSetup, 4), trancaBias: 0, heartDrawMin: Math.min(base.heartDrawMin, 2) });
+    }
+    return style({
+      ...base,
+      five: Math.max(base.five, 8),
+      fiveSetup: Math.max(base.fiveSetup, 3),
+      pressure: base.pressure * 1.8,
+      trancaBias: 0,
+      heartDrawMin: Math.min(base.heartDrawMin, 2),
+      aggression: Math.max(base.aggression, 1.5),
+    });
+  }
   if (tier === 'calculista') return style({ ...base, five: Math.max(base.five, 7), fiveSetup: Math.max(base.fiveSetup, 3) });
   if (tier === 'agressivo') {
     return style({
@@ -925,7 +944,70 @@ function tierStyle(rival) {
 
 /** Pesos que a IA usa de fato com esse rival (o estilo dele + o nível da região). */
 export const PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id])])));
-export const playStyleOf = (id) => PLAY_STYLES[id] ?? PLAY_STYLES.tioZe;
+/** Os mesmos pesos na Maleta Preta. */
+export const HARD_PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id], 'hard')])));
+export const playStyleOf = (id, mode = 'normal') => {
+  const table = mode === 'hard' ? HARD_PLAY_STYLES : PLAY_STYLES;
+  return table[id] ?? table.tioZe;
+};
+
+// ---------------------------------------------------------------------------
+// Maleta Preta (Patch 0.6.3): o que muda em cada rival no modo difícil
+//   Região 1  1 pedra de grife e 1 talismã cada
+//   Região 2  2 pedras de grife e até 2 talismãs passivos (e contas precisas)
+//   Região 3  quase mini-chefes: 3 pedras de grife (Rubi, Fantasma) e 2 talismãs perigosos
+//   Chefes    Seu Arlindo: 6♥ e as buchas viram Chumbo (travam as pontas)
+//             Beto Cigano: 7♥, taxa de $3 a cada compra do dorme, 2 Ouros e 1 Rubi
+//             Comendador Moreira: 8♥, 2 talismãs Necróticos e imune à 1ª tranca
+// ---------------------------------------------------------------------------
+
+export const HARD_LOADOUTS = Object.freeze({
+  tioZe: { relics: ['cinzeiro'], deck: { '5-5': 'ouro' } },
+  tonho: { relics: ['giz'], deck: { '0-1': 'fantasma' } },
+  baiano: { relics: ['giz'], deck: { '0-5': 'ouro' } },
+  valdir: { relics: ['chaveDeFenda'], deck: { '3-5': 'chumbo' } },
+  neide: { relics: ['dedal'], deck: { '4-4': 'chumbo' } },
+  arlindo: { hearts: 6, relics: ['chaveDeFenda', 'caneca'], deck: { '6-6': 'chumbo', '5-5': 'chumbo', '4-4': 'chumbo', '3-3': 'chumbo' } },
+  marcao: { relics: ['cinzeiro', 'chaveDeFenda'], deck: { '4-6': 'chumbo', '5-6': 'ouro' } },
+  serginho: { relics: ['giz', 'cinzeiro'], deck: { '2-2': 'ouro', '0-5': 'fantasma' } },
+  cida: { relics: ['caneca', 'cinzeiro'], deck: { '1-4': 'ouro', '3-3': 'cristal' } },
+  paulinho: { relics: ['borracha', 'cinzeiro'], deck: { '0-5': 'cristal', '6-6': 'chumbo' } },
+  tiao: { relics: ['cinzeiro', 'giz'], deck: { '5-5': 'chumbo', '4-6': 'rubi' } },
+  beto: { hearts: 7, relics: ['anel', 'carteira'], deck: { '5-6': 'ouro', '3-3': 'ouro', '0-5': 'rubi' }, mechanics: { drawFee: 3 } },
+  carlinhos: { relics: ['maoGrande', 'anel'], deck: { '1-6': 'fantasma', '2-4': 'ouro', '0-3': 'rubi' } },
+  bigode: { relics: ['carteira', 'maoGrande'], deck: { '5-6': 'ouro', '2-6': 'ouro', '0-0': 'rubi' } },
+  sofia: { relics: ['dedal', 'anel'], deck: { '3-3': 'cristal', '1-1': 'fantasma', '2-5': 'rubi' } },
+  fausto: { relics: ['maoGrande', 'dedal'], deck: { '3-6': 'cristal', '1-4': 'cristal', '0-6': 'rubi' } },
+  alemao: { relics: ['buchaDeAco', 'dedal'], deck: { '6-6': 'chumbo', '4-5': 'chumbo', '5-5': 'fantasma' } },
+  comendador: { hearts: 8, relics: ['trancaCadaverica', 'falsaPartida'], deck: { '6-6': 'fantasma', '5-5': 'rubi', '4-6': 'ouro' } },
+});
+
+/** Os 18 rivais como eles sentam à mesa na Maleta Preta. */
+export const HARD_RIVALS = Object.freeze(
+  Object.fromEntries(
+    RIVAL_IDS.map((id) => {
+      const over = HARD_LOADOUTS[id] ?? {};
+      const base = RIVALS[id];
+      return [
+        id,
+        Object.freeze({
+          ...base,
+          hearts: over.hearts ?? base.hearts,
+          relics: over.relics ?? base.relics,
+          deck: over.deck ?? base.deck,
+          mechanics: { ...base.mechanics, ...over.mechanics },
+          hard: true,
+        }),
+      ];
+    }),
+  ),
+);
+
+/** O rival `id` no modo da run (normal ou 'hard'). */
+export const rivalFor = (id, mode = 'normal') => (mode === 'hard' ? HARD_RIVALS[id] : RIVALS[id]) ?? RIVALS.tioZe;
+
+/** O rival da mesa deste estado, no modo da run. */
+export const rivalOf = (state) => rivalFor(state.rivalId, state.mode);
 
 /** Fala do rival para a situação (cai nas falas do Tio Zé se ele não tiver uma própria). */
 export function pickRivalLine(rivalId, kind, seed = 0) {

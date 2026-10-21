@@ -60,6 +60,53 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.6.3: maletas de dominó (Modo Normal e Modo Difícil)
+
+### Mesa das maletas (`CaseSelect.jsx`, `art/CaseArt.jsx`, `TitleScreen.jsx`)
+
+O NOVO JOGO abre uma mesa de feltro escuro sob a lâmpada, com duas maletas em pixel art 48x48:
+
+- **Maleta Branca** (modo clássico): estojo de madeira marfim com fechos dourados e pedras de
+  osso. Sempre liberada; começa a run no modo normal.
+- **Maleta Preta** (modo difícil): couro preto, cantoneiras de metal escovado e pedras de ônix
+  com pips brancos.
+  - Trancada: fica presa por corrente e cadeado. Tocar avisa
+    "TRANCADO! DERROTE O COMENDADOR MOREIRA NO MODO NORMAL PARA DESBLOQUEAR.".
+  - Liberada: na primeira vez o cadeado abre e as correntes caem; depois ela fica aberta, com
+    uma aura roxa.
+- O NOVO JOGO no fim de uma run volta para esta mesa.
+
+### Desbloqueio (`HardUnlockModal.jsx`, `engine/progress.js`)
+
+- Zerar a campanha normal com a Maleta Preta ainda trancada abre, antes do final, uma lousa:
+  "CAMPANHA NORMAL CONCLUÍDA! VOCÊ QUEBROU A BANCA DO COMENDADOR!".
+- A Maleta Preta destranca na tela, com o som seco da corrente, e aparece
+  "NOVO MODO DESBLOQUEADO: DOMINÓ PRETO (MODO DIFÍCIL)".
+- A chave `buxaria_hard_mode_unlocked = true` vai para o localStorage na hora.
+  "Apagar tudo" nas Opções não tira o desbloqueio.
+- O painel DEV tem LIBERAR / TRANCAR A MALETA PRETA, para testar.
+
+### Dominó Preto (`DominoTile.jsx`, `tileSkin.js`)
+
+Na Maleta Preta as pedras comuns da partida (sua mão, a mesa e as do rival) ficam em ébano
+fosco (`#1c1917`), com a divisória grafite e os pips brancos. As pedras de grife não mudam:
+Ouro, Rubi, Cristal, Chumbo e Fantasma continuam com o material delas.
+
+### Calibragem do Modo Difícil (`data/difficulty.js`, `data/rivals.js` → `HARD_LOADOUTS`)
+
+| | Normal | Difícil |
+| --- | --- | --- |
+| Você | 5♥, $5 | 4♥ (teto 4), $3 |
+| Região 1 | só pedras comuns, IA intuitiva | 1 pedra de grife + 1 talismã, IA calculista |
+| Região 2 | 1–2 grifes, até 2 talismãs | 2 grifes, até 2 talismãs, contas precisas de tranca e de 5 |
+| Região 3 | até 3 grifes, 2 talismãs | 3 grifes (Rubi, Fantasma) + 2 talismãs perigosos, IA mais agressiva |
+| Seu Arlindo | 5♥ | 6♥, 4 buchas de Chumbo |
+| Beto Cigano | 6♥, taxa de $2 | 7♥, taxa de $3, 2 Ouros e 1 Rubi |
+| Comendador | 7♥, Dedal + Carteira | 8♥, Tranca Cadavérica + Falsa Partida, imune à 1ª tranca |
+
+Prêmio das mesas, loja, Mercado Negro e regras do dominó são iguais nos dois modos.
+O save guarda a maleta da run.
+
 ## Patch 0.6.2: 15 rivais por run, mapa limpo e "Nas duas pontas!"
 
 - **Elenco sorteado** (`engine/campaignMap.js` → `runCast`):

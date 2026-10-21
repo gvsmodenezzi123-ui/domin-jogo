@@ -995,6 +995,24 @@ export class SoundEngine {
     });
   }
 
+  /**
+   * Maleta Preta destrancando (Patch 0.6.3): o estalo seco do cadeado, a mola da argola e a
+   * corrente escorregando e caindo no feltro.
+   */
+  playChainUnlock() {
+    this.noise({ freq: 2600, filter: 'highpass', q: 0.9, peak: 0.34, dur: 0.03 });
+    this.tone({ type: 'triangle', freq: 170, freqEnd: 85, peak: 0.3, dur: 0.07, attack: 0.001 });
+    this.tone({ type: 'square', freq: 1250, freqEnd: 620, peak: 0.05, dur: 0.05, delay: 0.07 });
+    [0.16, 0.22, 0.27, 0.33, 0.42].forEach((delay, i) => this.noise({ freq: 3200 - i * 260, q: 3, peak: 0.16 - i * 0.02, dur: 0.025, delay }));
+    this.tone({ type: 'triangle', freq: 120, freqEnd: 70, peak: 0.18, dur: 0.09, delay: 0.5 });
+  }
+
+  /** Tocar na Maleta Preta trancada: a corrente sacode contra o cadeado. */
+  playChainRattle() {
+    [0, 0.06, 0.13].forEach((delay, i) => this.noise({ freq: 3000 - i * 300, q: 3, peak: 0.18, dur: 0.025, delay }));
+    this.tone({ type: 'square', freq: 240, freqEnd: 180, peak: 0.05, dur: 0.04, delay: 0.02 });
+  }
+
   /** Dano de coração: dois baques de batimento e um estalo rachando (a música abaixa). */
   playHeartHit() {
     this.duck();

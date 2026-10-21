@@ -5,7 +5,7 @@
 
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { getRelic } from '../data/relics.js';
-import { getRival } from '../data/rivals.js';
+import { rivalFor } from '../data/rivals.js';
 
 /** Jeito de jogar, em uma linha. */
 const BLURB = {
@@ -42,9 +42,9 @@ const MECHANIC_TEXT = {
 
 export const rivalBlurb = (id) => BLURB[id] ?? '';
 
-/** Regras da mesa desse rival, uma por linha. */
-export function rivalRules(id) {
-  const rival = getRival(id);
+/** Regras da mesa desse rival, uma por linha (no modo da run: a Maleta Preta muda o baralho dele). */
+export function rivalRules(id, mode = 'normal') {
+  const rival = rivalFor(id, mode);
   const lines = [];
   for (const [key, value] of Object.entries(rival.mechanics ?? {})) {
     if (value && MECHANIC_TEXT[key]) lines.push(MECHANIC_TEXT[key](value));

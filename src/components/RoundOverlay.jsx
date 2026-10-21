@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
 import { currentNode } from '../engine/campaignMap.js';
-import { DAMAGE, MAX_HEARTS, handSum } from '../engine/dominoLogic.js';
+import { DAMAGE, handSum } from '../engine/dominoLogic.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
@@ -172,7 +172,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             <p className="chalk-dim mt-1 font-term text-base">Saldo: ${coins.player}</p>
             <div className="mt-2 flex items-center justify-center gap-2 font-pixel text-[9px] text-[#ff8c7a]">
               <span>{rival.boss ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
-              <HeartsBar current={hearts.player} max={MAX_HEARTS} pixel={2} label={`Seus corações: ${hearts.player}`} />
+              <HeartsBar current={hearts.player} max={state.maxHearts.player} pixel={2} label={`Seus corações: ${hearts.player}`} />
             </div>
             <button type="button" data-tone="play" className="btn-pixel mt-5 w-full" onClick={onContinue}>
               {rival.boss ? 'SUBIR PARA A PRÓXIMA REGIÃO' : 'VOLTAR AO MAPA'}
@@ -208,9 +208,12 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
         {runWon && (
           <>
             <KnockedOut rival={rival} />
-            <p className="font-pixel text-[8px] text-bone-400">{state.stats.matchesWon} MESAS · {REGIONS.length} REGIÕES</p>
+            <p className="font-pixel text-[8px] text-bone-400">
+              {state.mode === 'hard' ? 'MALETA PRETA · ' : ''}
+              {state.stats.matchesWon} MESAS · {REGIONS.length} REGIÕES
+            </p>
             <h2 id="round-title" className="run-won-title mt-2 font-pixel text-[15px] leading-snug text-brass-300 text-shadow-pixel">
-              VOCÊ É O NOVO DONO DO BOTECO
+              {state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
             </h2>
             <p className="mt-2 font-term text-xl text-bone-200">
               {KIND_TITLE[result.kind]} O Comendador entrega a chave do boteco.
@@ -267,7 +270,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-4">
-              <HeartsBar current={hearts.player} max={MAX_HEARTS} pixel={2} label="Seus corações" />
+              <HeartsBar current={hearts.player} max={state.maxHearts.player} pixel={2} label="Seus corações" />
               <span className="font-pixel text-[8px] text-bone-400">×</span>
               <HeartsBar current={hearts.tioZe} max={state.maxHearts.tioZe} pixel={2} label={`Corações de ${rival.name}`} />
             </div>
