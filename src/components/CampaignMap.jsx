@@ -99,6 +99,12 @@ const STOP_ART = {
 const STOP_CAPTION = { shop: 'LOJA', black: 'BECO', coins: 'SEU TIÃO' };
 const STATUS_LABEL = { open: 'ABERTO', done: 'JÁ PASSOU', ahead: 'MAIS ADIANTE', gone: 'FORA DO CAMINHO' };
 
+/**
+ * Quem senta numa mesa só aparece quando o caminho até ela abre (ou depois de vencida).
+ * Até lá a polaroid mostra "?" (o chefe, só a silhueta), também na região em que você está.
+ */
+const revealed = (status) => status === 'open' || status === 'done';
+
 /** Um nó da teia: polaroid do rival (mesa) ou ficha com o NPC (loja, beco, Seu Tião). */
 const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect }) {
   const { node } = point;
@@ -154,7 +160,8 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
 });
 
 /** Texto e botão do rodapé para o nó escolhido. */
-function NodeDetail({ node, status, known, onEnter }) {
+function NodeDetail({ node, status, known, farRegion, onEnter }) {
+  const unknownLine = farRegion ? 'Ainda não chegou nessa região.' : 'Só aparece quando o caminho até aqui abrir.';
   const fight = node.type === 'combat' || node.type === 'boss';
   const rival = fight ? getRival(node.rivalId) : null;
   const open = status === 'open';
@@ -173,7 +180,7 @@ function NodeDetail({ node, status, known, onEnter }) {
       </div>
     );
     title = known ? rival.name.toUpperCase() : '???';
-    line = known ? `${rival.title} · ${rival.hearts}♥` : 'Ainda não chegou nessa região.';
+    line = known ? `${rival.title} · ${rival.hearts}♥` : unknownLine;
     notes = known ? [rivalBlurb(rival.id), ...rivalRules(rival.id).map((r) => `• ${r}`)] : [];
     action = `SENTAR À MESA · ${rival.name.toUpperCase()}`;
   } else if (node.type === 'shop') {
@@ -231,7 +238,8 @@ function NodeDetail({ node, status, known, onEnter }) {
  * Mapa da campanha em teia (Patch 0.6.1): as 3 regiões empilhadas, do Boteco (embaixo)
  * ao Submundo (no topo). Cada região sobe 6 andares: entrada, 4 andares de bifurcações
  * (mesas, Loja do Valtinho, Mercado Negro, Seu Tião) e o chefe. Os caminhos abertos
- * pulsam; o que você já percorreu fica riscado a giz; o que ficou para trás apaga.
+ * pulsam; o que você já percorreu fica riscado a giz; o que ficou para trás apaga. O rival
+ * de cada mesa só aparece quando o caminho até ela abre (antes disso, "?").
  * Tocar num nó mostra o que tem nele; o botão do rodapé entra no nó escolhido.
  */
 export default function CampaignMap({ state, onEnter, onMenu, press }) {
@@ -328,7 +336,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
               key={p.node.id}
               point={p}
               status={status.get(p.node.id)}
-              known={p.node.region <= regionId}
+              known={revealed(status.get(p.node.id))}
               selected={p.node.id === selectedId}
               tilt={(mixSeed(campaign.seed, `tilt-${p.node.id}`) % 7) - 3}
               onSelect={setPicked}
@@ -338,7 +346,13 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
       </div>
 
       <footer className="map-footer relative z-10 shrink-0 px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <NodeDetail node={selected} status={status.get(selected.id)} known={selected.region <= regionId} onEnter={onEnter} />
+        <NodeDetail
+          node={selected}
+          status={status.get(selected.id)}
+          known={revealed(status.get(selected.id))}
+          farRegion={selected.region > regionId}
+          onEnter={onEnter}
+        />
         <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER MESA: +2♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS</p>
       </footer>
     </div>

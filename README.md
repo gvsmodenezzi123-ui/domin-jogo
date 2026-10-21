@@ -71,6 +71,8 @@ O PWA precisa de HTTPS. Duas opções:
   Todo caminho tem de 1 a 3 mesas no meio, e sempre há uma bifurcação entre mesa e desvio.
   O save foi para a versão 3: saves da 0.6.1 não continuam.
 - **Mapa:** nós que você ainda não alcança ficam levemente apagados; os caminhos abertos pulsam.
+  O rival de cada mesa só aparece quando o caminho até ela abre (ou depois de vencido); até lá a
+  polaroid mostra "?", também na região em que você está (o chefe aparece só em silhueta).
 - **Painel DEV:** a seção ENTRAR DIRETO abre a loja, o Mercado Negro ou o Seu Tião da região
   atual, até no meio de uma mesa.
 - **Mesa:** o som e o menu saíram de cima da mão do rival. Agora ficam na fileira dos seus
