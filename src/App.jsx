@@ -11,9 +11,10 @@ import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import Shop from './components/Shop.jsx';
 import TableBoard from './components/TableBoard.jsx';
-import { flyTile } from './components/tileFlight.js';
+import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
+import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
-import { prefersReducedMotion } from './components/motion.js';
+import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useTripleTap } from './components/useTripleTap.js';
@@ -79,10 +80,10 @@ function saveDevFlag() {
   }
 }
 
-/** Voo da sua pedra, da mão até a ponta (ms). */
-const PLAYER_FLIGHT_MS = 360;
-/** Voo da pedra do rival, do topo até a ponta (ms). */
-const AI_FLIGHT_MS = 400;
+/** Da jogada até a sua pedra bater na ponta (levanta, desliza e cai), em ms. */
+const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
+/** Da jogada do rival até a pedra dele bater na ponta (vira, desliza e cai), em ms. */
+const AI_FLIGHT_MS = landTime(FLIGHT_RIVAL);
 /** Destaque da jogada do rival depois que a pedra pousa (anel amarelo + [a|b]). */
 const AI_SPOTLIGHT_MS = 800;
 /** Anel de impacto da sua bucha depois do pouso (ms). */
@@ -292,6 +293,7 @@ export default function App() {
   const rival = getRival(state.rivalId);
 
   useEffect(() => sound.setVolumes(settings), [settings]);
+  useEffect(() => applyReducedMotion(settings.reducedMotion), [settings.reducedMotion]);
 
   // Trilha: Boteco (jazz), Clube da Sinuca (funk) e Submundo/chefes (tensão). Só depois do 1º toque.
   const musicTrack = musicFor(state);
@@ -317,10 +319,11 @@ export default function App() {
   }, [state, menuOpen, devOpen, tableAnim]);
 
   /**
-   * Pedra jogada em cena: uma cópia sai da mão (sua: do leque; do rival: da vaga
-   * dele no topo), desliza até a ponta girando para a orientação da mesa e
-   * assenta com SLAM de osso na madeira e a mesa tremendo 150 ms. A do rival
-   * fica 800 ms em destaque antes de liberar a sua vez.
+   * Pedra jogada em cena: uma cópia é levantada da mão (sua: do leque; do rival:
+   * da vaga dele no topo, virando de costas para a face), desliza em curva até a
+   * ponta com rastro e sombra no pano, girando para a orientação da mesa, e cai
+   * com SLAM de osso na madeira: a mesa treme 150 ms e a lâmpada leva um tranco.
+   * A do rival fica 800 ms em destaque antes de liberar a sua vez.
    */
   const stagePlay = useCallback(
     (ev) => {
@@ -329,9 +332,11 @@ export default function App() {
       cancelFlight.current?.();
       const rival = ev.by !== 'player';
       let from = null;
+      let fromEl = null;
       if (rival) {
-        const slot = document.querySelector(`[data-rival-tile="${ev.tileId}"]`)?.getBoundingClientRect();
-        const hand = slot ?? rivalHandRef.current?.getBoundingClientRect();
+        fromEl = document.querySelector(`[data-rival-tile="${ev.tileId}"]`);
+        const src = fromEl?.firstElementChild ?? fromEl;
+        const hand = src?.getBoundingClientRect() ?? rivalHandRef.current?.getBoundingClientRect();
         if (hand) from = { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2, w: hand.width, h: hand.height, angle: 0 };
       } else if (pendingPlay.current?.tileId === ev.tileId) {
         from = pendingPlay.current.from;
@@ -342,13 +347,18 @@ export default function App() {
       cancelFlight.current = flyTile({
         tileId: ev.tileId,
         from,
-        duration: rival ? AI_FLIGHT_MS : PLAYER_FLIGHT_MS,
-        arc: rival ? 0 : 26,
+        fromEl,
+        timing: rival ? FLIGHT_RIVAL : FLIGHT_PLAYER,
+        arc: rival ? 24 : 54,
+        flip: rival,
         onLand: () => {
-          cancelFlight.current = null;
           sound.playBoneSlam(ev.double, ev.enhancement);
           shake(tableRef.current, ev.double ? 4 : 3, SLAM_SHAKE_MS);
+          kickLamp(ev.double ? 1.4 : 1);
           haptic(ev.double ? 22 : 12);
+        },
+        onDone: () => {
+          cancelFlight.current = null;
           const later = (fn, ms) => animTimers.current.push(setTimeout(fn, ms));
           if (rival) {
             const label = tileName(ev.tileId);

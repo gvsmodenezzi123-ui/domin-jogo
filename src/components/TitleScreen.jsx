@@ -4,7 +4,7 @@ import { getRival } from '../data/rivals.js';
 import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
-import { LampGlyph } from './UiGlyphs.jsx';
+import LampRig from './LampRig.jsx';
 
 function isStandalone() {
   if (typeof window === 'undefined') return false;
@@ -58,7 +58,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5.1</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -113,14 +113,13 @@ export default function TitleScreen({
         paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
       }}
     >
-      <div className="title-cone dynamic-light-cone pointer-events-none absolute inset-0" />
-      <div className="lamp-light pointer-events-none absolute inset-0" />
-
-      {/* candeeiro preso no teto: balança de verdade (pivô no fio) */}
-      <div className="swinging-lamp pointer-events-none relative flex flex-col items-center">
-        <span className="block h-10 w-[3px] bg-black" />
-        <LampGlyph size={120} className="lamp-sprite title-lamp" />
-      </div>
+      {/* candeeiro preso no teto: balança de verdade (pivô no fio) e o facho varre
+          o logo; quando a lâmpada falha, o salão inteiro escurece */}
+      <LampRig part="light" lamp={120} cord={40} beamWidth={380} className="z-[4]" />
+      <div aria-hidden="true" className="room-flicker pointer-events-none absolute inset-0 z-[2]" />
+      <LampRig part="body" lamp={120} cord={40} beamWidth={380} className="z-[3]" />
+      {/* espaço da lâmpada no topo (ela fica por cima, fora do fluxo) */}
+      <div aria-hidden="true" className="h-[160px] shrink-0" />
 
       <div className="relative mt-[9vh] flex flex-col items-center">
         {/* logo com relevo 3D duplo: face de osso, extrusão de sangue e sombra funda */}
@@ -128,7 +127,7 @@ export default function TitleScreen({
           BUXARIA
         </h1>
         <p className="mt-4 font-pixel text-[8px] tracking-widest text-bone-400">
-          PATCH 0.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.5.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </div>
 

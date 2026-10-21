@@ -83,7 +83,7 @@ export function discover(collection, seen) {
 // ---------------------------------------------------------------------------
 
 /** Volumes padrão do motor de som (engine/audioSynth.js). */
-export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.7, music: 0.4, haptics: true });
+export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.7, music: 0.4, haptics: true, reducedMotion: false });
 
 const clamp01 = (v, fallback) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
 
@@ -93,6 +93,7 @@ export function loadSettings() {
     sfx: clamp01(data?.sfx, DEFAULT_SETTINGS.sfx),
     music: clamp01(data?.music, DEFAULT_SETTINGS.music),
     haptics: typeof data?.haptics === 'boolean' ? data.haptics : DEFAULT_SETTINGS.haptics,
+    reducedMotion: typeof data?.reducedMotion === 'boolean' ? data.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
   };
 }
 

@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.5.0
+# Buxaria — Patch 0.5.1
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -52,6 +52,19 @@ O PWA precisa de HTTPS. Duas opções:
 - **Passar a vez** é sempre permitido com a mesa aberta. Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.5.1: luz viva e pedras deslizando
+
+- **Lâmpada pendurada de verdade** (`components/LampRig.jsx`): balança como pêndulo (±7°, pivô no fio)
+  e o facho + a mancha de luz ficam presos nela, varrendo o feltro e clareando as pedras por onde passam.
+  Na mesa e no menu.
+- **A lâmpada falha:** pisca duplo, zumbe e dá um apagão de ~¼ s; a mesa (ou o salão do menu) escurece junto.
+  Cada pedra batida dá um tranco na lâmpada (`components/lampKick.js`).
+- **Pedra deslizando até a ponta** (`components/tileFlight.js`): levanta da mão, desliza em curva girando
+  para a orientação da mesa, com rastro e sombra no pano, e cai com SLAM + tremida. A do rival sai da mão
+  dele no topo virando de costas para a face e fica 800 ms em destaque.
+- **OPÇÕES → ANIMAÇÕES: COMPLETAS/REDUZIDAS.** O "Reduzir Movimento" do iPhone não desliga mais as
+  animações sozinho (era o que deixava a mesa parada); quem quiser menos movimento escolhe aqui.
 
 ## Patch 0.5.0: arte 40x40 em tudo, física das jogadas e telas novas
 

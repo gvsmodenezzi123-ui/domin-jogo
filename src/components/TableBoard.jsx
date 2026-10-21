@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
-import { LampGlyph } from './UiGlyphs.jsx';
+import LampRig from './LampRig.jsx';
 
 /** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
 const BOARD_PADDING = 8;
@@ -35,11 +35,6 @@ const MARK_LABEL = {
   blocked: ' (travada nesta vez)',
   wild: ' (curinga na sua jogada)',
   both: ' (curinga na sua jogada)',
-};
-
-/** Feixe cônico da lâmpada sobre o feltro. */
-const LIGHT_CONE = {
-  background: 'radial-gradient(circle at 50% 0%, rgba(254, 240, 138, 0.22) 0%, rgba(254, 240, 138, 0.08) 45%, transparent 75%)',
 };
 
 /** Caixa (px do mundo) de uma pedra de `unit` px centrada no retângulo r (em unidades). */
@@ -104,12 +99,7 @@ export default function TableBoard({
         <div key={d} aria-hidden="true" className={`felt-decor felt-decor-${d} pointer-events-none absolute inset-0`} />
       ))}
       <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
-      {/* cone de luz da lâmpada: balança junto com ela e pisca como luz de bar */}
-      <div className="dynamic-light-cone pointer-events-none absolute inset-0" style={LIGHT_CONE} />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
-      <div className="swinging-lamp pointer-events-none absolute left-1/2 top-0 z-[6] flex -translate-x-1/2 flex-col items-center">
-        <LampGlyph size={64} className="lamp-sprite -mt-1" />
-      </div>
 
       <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING }}>
         {size.width > 0 && (
@@ -199,8 +189,14 @@ export default function TableBoard({
         )}
       </div>
 
+      {/* lâmpada pendurada: balança como pêndulo e o facho varre a mesa, clareando
+          as pedras por onde passa; quando ela falha, a mesa inteira escurece */}
+      <LampRig part="light" lamp={64} cord={2} beamWidth={300} />
+      <div aria-hidden="true" className="room-flicker pointer-events-none absolute inset-0" />
+
       {/* moldura chanfrada da mesa: aro escuro, quina iluminada em cima, sombra embaixo */}
       <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
+      <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
     </section>

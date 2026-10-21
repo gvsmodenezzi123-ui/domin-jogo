@@ -2487,38 +2487,178 @@
 
 @keyframes realLampSwing {
   0% {
-    transform: rotate(-3.5deg);
+    transform: rotate(calc(var(--swing-amp, 7deg) * -1));
   }
   50% {
-    transform: rotate(3.5deg);
+    transform: rotate(var(--swing-amp, 7deg));
   }
   100% {
-    transform: rotate(-3.5deg);
+    transform: rotate(calc(var(--swing-amp, 7deg) * -1));
   }
 }
 
 @keyframes realTavernFlicker {
   0%,
   100% {
-    opacity: 0.88;
-    filter: drop-shadow(0 0 22px rgba(251, 191, 36, 0.35));
+    opacity: 1;
   }
-  18% {
-    opacity: 0.74;
-    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.18));
+  11.9% {
+    opacity: 1;
   }
-  22% {
-    opacity: 0.98;
-    filter: drop-shadow(0 0 32px rgba(251, 191, 36, 0.48));
+  12.4% {
+    opacity: 0.3;
   }
-  62% {
-    opacity: 0.82;
+  13.2% {
+    opacity: 1;
   }
-  85% {
-    opacity: 0.68;
+  14% {
+    opacity: 0.5;
   }
-  87% {
-    opacity: 0.96;
+  14.8% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  46.5% {
+    opacity: 1;
+  }
+  70.8% {
+    opacity: 1;
+  }
+  71.4% {
+    opacity: 0.1;
+  }
+  74.6% {
+    opacity: 0.12;
+  }
+  75.2% {
+    opacity: 0.85;
+  }
+  75.9% {
+    opacity: 0.25;
+  }
+  76.8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  88.5% {
+    opacity: 0.45;
+  }
+  89.2% {
+    opacity: 1;
+  }
+}
+
+@keyframes lampSpriteFlicker {
+  0%,
+  100% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  11.9% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  12.4% {
+    filter: brightness(0.54) drop-shadow(0 6px 7px rgba(255, 217, 138, 0.18));
+  }
+  13.2% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  14% {
+    filter: brightness(0.68) drop-shadow(0 6px 9px rgba(255, 217, 138, 0.3));
+  }
+  14.8% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  45% {
+    filter: brightness(0.94) drop-shadow(0 6px 13px rgba(255, 217, 138, 0.54));
+  }
+  46.5% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  70.8% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  71.4% {
+    filter: brightness(0.41) drop-shadow(0 6px 5px rgba(255, 217, 138, 0.06));
+  }
+  74.6% {
+    filter: brightness(0.43) drop-shadow(0 6px 5px rgba(255, 217, 138, 0.07));
+  }
+  75.2% {
+    filter: brightness(0.9) drop-shadow(0 6px 12px rgba(255, 217, 138, 0.51));
+  }
+  75.9% {
+    filter: brightness(0.51) drop-shadow(0 6px 6px rgba(255, 217, 138, 0.15));
+  }
+  76.8% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  88% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+  88.5% {
+    filter: brightness(0.64) drop-shadow(0 6px 8px rgba(255, 217, 138, 0.27));
+  }
+  89.2% {
+    filter: brightness(1.0) drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  }
+}
+
+@keyframes roomBrownout {
+  0%,
+  100% {
+    opacity: 0.0;
+  }
+  11.9% {
+    opacity: 0.0;
+  }
+  12.4% {
+    opacity: 0.42;
+  }
+  13.2% {
+    opacity: 0.0;
+  }
+  14% {
+    opacity: 0.3;
+  }
+  14.8% {
+    opacity: 0.0;
+  }
+  45% {
+    opacity: 0.06;
+  }
+  46.5% {
+    opacity: 0.0;
+  }
+  70.8% {
+    opacity: 0.0;
+  }
+  71.4% {
+    opacity: 0.54;
+  }
+  74.6% {
+    opacity: 0.53;
+  }
+  75.2% {
+    opacity: 0.09;
+  }
+  75.9% {
+    opacity: 0.45;
+  }
+  76.8% {
+    opacity: 0.0;
+  }
+  88% {
+    opacity: 0.0;
+  }
+  88.5% {
+    opacity: 0.33;
+  }
+  89.2% {
+    opacity: 0.0;
   }
 }
 
@@ -2570,18 +2710,105 @@
 
 .swinging-lamp {
   transform-origin: 50% 0% !important;
-  animation: realLampSwing 6.5s ease-in-out infinite !important;
+  animation: realLampSwing var(--swing-period, 4.6s) ease-in-out infinite !important;
   will-change: transform;
 }
 
 .dynamic-light-cone {
   transform-origin: 50% 0% !important;
   animation:
-    realLampSwing 6.5s ease-in-out infinite,
-    realTavernFlicker 9s ease-in-out infinite !important;
+    realLampSwing var(--swing-period, 4.6s) ease-in-out infinite,
+    realTavernFlicker 7s linear infinite !important;
   mix-blend-mode: screen;
   pointer-events: none;
   will-change: transform, opacity;
+}
+
+/* lâmpada pendurada (components/LampRig.jsx): pivô no teto, tudo preso ao fio */
+.lamp-rig {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.lamp-kick {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+}
+
+.lamp-cord {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 3px;
+  translate: -50% 0;
+  background: #0b0705;
+  box-shadow: 1px 0 0 rgba(255, 220, 160, 0.12);
+}
+
+.lamp-body {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.lamp-flicker-sprite {
+  animation: lampSpriteFlicker 7s linear infinite;
+}
+
+.lamp-bulb-glow {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 236, 170, 0.75), rgba(255, 200, 110, 0.28) 45%, transparent 100%);
+  mix-blend-mode: screen;
+}
+
+.lamp-flicker-glow {
+  animation: realTavernFlicker 7s linear infinite;
+}
+
+/* facho: sai estreito do bulbo e abre até o feltro, apagando no fim */
+.lamp-beam {
+  position: absolute;
+  left: -60%;
+  right: -60%;
+  bottom: 0;
+  background: conic-gradient(
+    at 50% 0%,
+    transparent 0deg 159deg,
+    rgba(255, 220, 150, 0.12) 167deg,
+    rgba(255, 228, 165, 0.3) 176deg,
+    rgba(255, 236, 180, 0.36) 180deg,
+    rgba(255, 228, 165, 0.3) 184deg,
+    rgba(255, 220, 150, 0.12) 193deg,
+    transparent 201deg 360deg
+  );
+  -webkit-mask: linear-gradient(180deg, #000 0%, #000 40%, transparent 96%);
+  mask: linear-gradient(180deg, #000 0%, #000 40%, transparent 96%);
+}
+
+/* mancha de luz onde o facho bate no feltro: clareia o pano e as pedras embaixo */
+.lamp-pool {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 232, 170, 0.5) 0%, rgba(255, 216, 140, 0.26) 48%, rgba(255, 200, 120, 0.08) 78%, transparent 100%);
+}
+
+/* a mesa inteira escurece junto quando a lâmpada falha */
+.room-flicker {
+  background: #000;
+  opacity: 0;
+  animation: roomBrownout 7s linear infinite;
+  pointer-events: none;
 }
 
 .shimmer-active {
@@ -2631,7 +2858,23 @@
   z-index: 58;
   pointer-events: none;
   transform-origin: 50% 50%;
-  will-change: transform;
+  will-change: transform, opacity;
+}
+
+.tile-flight-ghost {
+  z-index: 57;
+}
+
+/* sombra da pedra no pano: fica embaixo enquanto ela está no ar */
+.tile-flight-shadow {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 56;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25) 60%, transparent 100%);
+  will-change: transform, opacity;
 }
 
 /* cabeçalho do rival: tudo com tamanho fixo (sem tremer quando ele fala ou joga) */
@@ -2715,58 +2958,63 @@
   will-change: transform, opacity;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lamp-light,
-  .heart-alive,
-  .end-badge-active,
-  .slot-ghost,
-  .animate-end-pulse,
-  .animate-tile-drop,
-  .animate-tile-in,
-  .animate-tile-slam,
-  .animate-power-wiggle,
-  .tile-ring-power,
-  .hand-float,
-  .tile-enh-fantasma,
-  .tile-enh-glow,
-  .tile-enh-layer::after,
-  .animate-relic-proc,
-  .rival-float,
-  .loading-bar,
-  .animate-balloon,
-  .animate-hotbar-full .relic-slot,
-  .felt-decor,
-  .atmo-layer,
-  .ai-spot-ring,
-  .map-node-current,
-  .title-cone,
-  .run-won-title,
-  .tile-enh-layer::before,
-  .swinging-lamp,
-  .dynamic-light-cone,
-  .shimmer-active::after,
-  .tile-enh-rubi,
-  .tile-enh-rubi .domino-pip,
-  .tile-enh-fantasma,
-  .tile-enh-cristal .tile-enh-layer,
-  .tile-shimmer-effect::after {
+/* ANIMAÇÕES: REDUZIDAS (Opções) */
+.reduce-motion .lamp-light,
+.reduce-motion .heart-alive,
+.reduce-motion .end-badge-active,
+.reduce-motion .slot-ghost,
+.reduce-motion .animate-end-pulse,
+.reduce-motion .animate-tile-drop,
+.reduce-motion .animate-tile-in,
+.reduce-motion .animate-tile-slam,
+.reduce-motion .animate-power-wiggle,
+.reduce-motion .tile-ring-power,
+.reduce-motion .hand-float,
+.reduce-motion .tile-enh-fantasma,
+.reduce-motion .tile-enh-glow,
+.reduce-motion .tile-enh-layer::after,
+.reduce-motion .animate-relic-proc,
+.reduce-motion .rival-float,
+.reduce-motion .loading-bar,
+.reduce-motion .animate-balloon,
+.reduce-motion .animate-hotbar-full .relic-slot,
+.reduce-motion .felt-decor,
+.reduce-motion .atmo-layer,
+.reduce-motion .ai-spot-ring,
+.reduce-motion .map-node-current,
+.reduce-motion .title-cone,
+.reduce-motion .run-won-title,
+.reduce-motion .tile-enh-layer::before,
+.reduce-motion .swinging-lamp,
+.reduce-motion .dynamic-light-cone,
+.reduce-motion .shimmer-active::after,
+.reduce-motion .tile-enh-rubi,
+.reduce-motion .tile-enh-rubi .domino-pip,
+.reduce-motion .tile-enh-fantasma,
+.reduce-motion .tile-enh-cristal .tile-enh-layer,
+.reduce-motion .tile-shimmer-effect::after {
     animation: none !important;
   }
 
-  .smoke-puff {
+.reduce-motion .smoke-puff {
     display: none;
   }
 
-  .tile-enh-glow {
+.reduce-motion .tile-enh-glow {
     opacity: 0.7;
   }
 
-  .impact-ring {
+.reduce-motion .impact-ring {
     display: none;
   }
 
-  .board-world,
-  .board-tile {
+.reduce-motion .board-world,
+.reduce-motion .board-tile {
     transition: none;
   }
+
+.reduce-motion .lamp-flicker-sprite,
+.reduce-motion .lamp-flicker-glow,
+.reduce-motion .room-flicker {
+  animation: none !important;
 }

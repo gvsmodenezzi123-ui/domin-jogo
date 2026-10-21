@@ -24,7 +24,7 @@ function Slider({ id, label, value, onChange }) {
 }
 
 /**
- * OPÇÕES: volume dos efeitos e da música, vibração e resetar o progresso
+ * OPÇÕES: volume dos efeitos e da música, vibração, animações e resetar o progresso
  * (apaga a run salva e o Livro de Boteco; pede confirmação).
  */
 export default function OptionsPanel({ settings, onChange, onResetProgress }) {
@@ -43,6 +43,15 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
         onClick={() => set({ haptics: !settings.haptics })}
       >
         VIBRAÇÃO: {settings.haptics ? 'LIGADA' : 'DESLIGADA'}
+      </button>
+      <button
+        type="button"
+        className="btn-pixel"
+        data-tone={settings.reducedMotion ? undefined : 'brass'}
+        aria-pressed={!settings.reducedMotion}
+        onClick={() => set({ reducedMotion: !settings.reducedMotion })}
+      >
+        ANIMAÇÕES: {settings.reducedMotion ? 'REDUZIDAS' : 'COMPLETAS'}
       </button>
       {onResetProgress && (
         <div className="options-danger px-3 py-2.5">
