@@ -7,7 +7,7 @@ import { pickRivalLine } from '../data/rivals.js';
 import { BASE_RULES, getOpenEnds, getPlacement, getValidSides } from './dominoLogic.js';
 import { requiredOpeningFor } from './powers.js';
 
-const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'dev']);
+const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'olhoMorte', 'dev']);
 
 function findLast(events, predicate) {
   for (let i = events.length - 1; i >= 0; i -= 1) {

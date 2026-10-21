@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildTioZeView, decideTioZeAction, scoreMove } from '../../ai/tioZeAI.js';
 import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../../data/relics.js';
-import { NODES, REGIONS, TOTAL_NODES } from '../../data/campaign.js';
-import { BOSS_IDS, RIVALS, RIVAL_IDS } from '../../data/rivals.js';
+import { REGIONS } from '../../data/campaign.js';
+import { AI_TIERS, BOSS_IDS, PLAY_STYLES, RIVALS, RIVAL_IDS, tierOf } from '../../data/rivals.js';
+import { ENHANCEMENTS } from '../../data/enhancedTiles.js';
+import { availableNodes, campaignOf, generateCampaign } from '../campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -21,7 +23,7 @@ import { relicBuyBlock, rerollCost, sellPriceOf } from '../shop.js';
 const t = (a, b) => makeTile(a, b);
 const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra });
 
-function newRun(seed = 42, extra = {}) {
+function newRun(seed = seedWithShop(42), extra = {}) {
   return gameReducer(createInitialState(), {
     type: 'START_DUEL',
     deck: shuffle(FULL_SET, createSeededRng(seed)),
@@ -30,11 +32,35 @@ function newRun(seed = 42, extra = {}) {
   });
 }
 
-/** Vence a partida na hora (painel DEV) e entra na loja. */
+/** 1ª semente cuja teia tem uma Loja do Valtinho logo no 2º andar da Região 1. */
+function seedWithShop(from = 1) {
+  let seed = from;
+  while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'shop')) seed += 1;
+  return seed;
+}
+
+/** Vence a 1ª mesa (painel DEV), volta ao mapa e entra na loja do 2º andar. */
 function toShop(state) {
   const won = dev(state, 'winMatch');
   expect(won.phase).toBe('matchWon');
-  return gameReducer(won, { type: 'OPEN_SHOP' });
+  const map = gameReducer(won, { type: 'OPEN_MAP' });
+  const shopId = availableNodes(map).find((id) => campaignOf(map).byId.get(id).type === 'shop');
+  expect(shopId).toBeTruthy();
+  return gameReducer(map, { type: 'CHOOSE_NODE', nodeId: shopId });
+}
+
+/** Sai da loja e anda pelo mapa (lojas, becos e eventos pelo caminho) até a próxima mesa. */
+function toNextFight(state, deck) {
+  let s = gameReducer(state, { type: 'LEAVE_SHOP' });
+  for (let i = 0; i < 6 && s.phase === 'map'; i += 1) {
+    const ids = availableNodes(s);
+    const fight = ids.find((id) => ['combat', 'boss'].includes(campaignOf(s).byId.get(id).type));
+    s = gameReducer(s, { type: 'CHOOSE_NODE', nodeId: fight ?? ids[0], deck });
+    if (s.phase === 'blackMarket') s = gameReducer(s, { type: 'LEAVE_MARKET' });
+    else if (s.phase === 'coinEvent') s = gameReducer(s, { type: 'LEAVE_EVENT' });
+    else if (s.phase === 'shop') s = gameReducer(s, { type: 'LEAVE_SHOP' });
+  }
+  return s;
 }
 
 /** Baralho com `mine` na sua mão e `theirs` na do rival (completando com o resto); sobra no dorme. */
@@ -64,13 +90,14 @@ describe('início da run', () => {
   });
 });
 
-describe('partida → loja → próximo rival', () => {
-  it('vencer a partida paga o prêmio e abre a loja com 3 talismãs e 2 peças de grife', () => {
+describe('partida → mapa → loja (caminho opcional) → próximo rival', () => {
+  it('vencer a partida paga o prêmio; a loja é um caminho do mapa, com 3 talismãs e 2 peças de grife', () => {
     const s = newRun();
     const won = dev(s, 'winMatch');
     expect(won.coins.player).toBe(s.coins.player + MATCH_PRIZE);
     expect(won.roundResult.prize).toBe(MATCH_PRIZE);
-    const shop = gameReducer(won, { type: 'OPEN_SHOP' });
+    expect(gameReducer(won, { type: 'OPEN_SHOP' })).toBe(won);
+    const shop = toShop(s);
     expect(shop.phase).toBe('shop');
     expect(shop.shop.relics).toHaveLength(3);
     expect(new Set(shop.shop.relics.map((o) => o.id)).size).toBe(3);
@@ -79,7 +106,7 @@ describe('partida → loja → próximo rival', () => {
       expect(FULL_SET.some((x) => x.id === offer.tileId)).toBe(true);
       expect(offer.price).toBeGreaterThan(0);
     }
-    expect(shop.shop.nextRivalId).toBe('tonho'); // o próximo nó do mapa
+    expect(shop.shop.nextRivalId).toBeUndefined(); // o próximo rival depende do caminho que você escolher
   });
 
   it('comprar talismã desconta as moedas e ocupa um slot; o item some da vitrine', () => {
@@ -95,7 +122,7 @@ describe('partida → loja → próximo rival', () => {
   });
 
   it('hotbar cheia bloqueia a compra até vender um talismã', () => {
-    let s = toShop(newRun(7, { relics: RELIC_IDS.slice(0, RELIC_SLOTS) }));
+    let s = toShop(newRun(seedWithShop(7), { relics: RELIC_IDS.slice(0, RELIC_SLOTS) }));
     s = dev(s, 'addCoins', { amount: 60 });
     expect(relicBuyBlock(s, s.shop.relics[0])).toBe('full');
     expect(gameReducer(s, { type: 'SHOP_BUY_RELIC', index: 0 })).toBe(s);
@@ -109,11 +136,11 @@ describe('partida → loja → próximo rival', () => {
 
   it('revenda paga metade do preço-base da raridade', () => {
     const byRarity = Object.fromEntries(RELIC_IDS.map((id) => [RELICS[id].rarity, sellPriceOf(id)]));
-    expect(byRarity).toEqual({ comum: 2, raro: 4, lendario: 7, mitico: 10 });
+    expect(byRarity).toEqual({ comum: 2, raro: 4, lendario: 7, mitico: 10, necrotico: 11 });
   });
 
   it('reembaralhar custa $3, $5, $8 e depois $12 na mesma visita; sem dinheiro, não deixa', () => {
-    let s = toShop(newRun(11));
+    let s = toShop(newRun(seedWithShop(11)));
     s = dev(s, 'addCoins', { amount: 60 });
     const before = s.shop;
     const coins = s.coins.player;
@@ -130,7 +157,6 @@ describe('partida → loja → próximo rival', () => {
     }
     expect(paid).toEqual([5, 8, 12, 12]);
     expect([0, 1, 2, 3, 9].map(rerollCost)).toEqual([3, 5, 8, 12, 12]);
-    expect(s.shop.nextRivalId).toBe(before.nextRivalId);
     const changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
     expect(changed(before.relics, s.shop.relics) || changed(before.tiles, s.shop.tiles)).toBe(true);
     const broke = { ...s, coins: { ...s.coins, player: 11 } };
@@ -138,7 +164,7 @@ describe('partida → loja → próximo rival', () => {
   });
 
   it('a peça de grife SUBSTITUI a comum no seu baralho (continua com 28) e chega aprimorada na sua mão', () => {
-    let s = toShop(newRun(5));
+    let s = toShop(newRun(seedWithShop(5)));
     s = dev(s, 'addCoins', { amount: 40 });
     const offer = s.shop.tiles[0];
     s = gameReducer(s, { type: 'SHOP_BUY_TILE', index: 0 });
@@ -147,8 +173,8 @@ describe('partida → loja → próximo rival', () => {
 
     const [a, b] = offer.tileId.split('-').map(Number);
     const tile = t(a, b);
-    // próxima partida: a pedra cai na sua mão → vem aprimorada
-    let m = gameReducer(s, { type: 'NEXT_MATCH', deck: deckWith([tile]) });
+    // próxima partida (saindo da loja para uma mesa do mapa): a pedra cai na sua mão → vem aprimorada
+    let m = toNextFight(s, deckWith([tile]));
     const ids = [...m.hands.player, ...m.hands.tioZe, ...m.boneyard].map((x) => x.id);
     expect(ids).toHaveLength(28);
     expect(new Set(ids).size).toBe(28);
@@ -175,17 +201,18 @@ describe('partida → loja → próximo rival', () => {
     expect(s.hands.player.at(-1)).toMatchObject({ id: '2-5', enhancement: 'ouro' });
   });
 
-  it('próximo adversário: rival da vitrine, corações cheios, moedas e talismãs mantidos', () => {
-    let s = toShop(newRun(9));
+  it('próximo adversário: o rival do nó escolhido, moedas e talismãs mantidos', () => {
+    let s = toShop(newRun(seedWithShop(9)));
     s = dev(s, 'addCoins', { amount: 40 });
     s = gameReducer(s, { type: 'SHOP_BUY_RELIC', index: 0 });
     const relic = s.relics.player[0];
     const coins = s.coins.player;
-    const rivalId = s.shop.nextRivalId;
-    const m = gameReducer(s, { type: 'NEXT_MATCH', deck: shuffle(FULL_SET, createSeededRng(1)) });
+    const m = toNextFight(s, shuffle(FULL_SET, createSeededRng(1)));
+    const rivalId = campaignOf(m).byId.get(m.run.node).rivalId;
     expect(m.phase).toBe('playing');
     expect(m.run.match).toBe(2);
     expect(m.rivalId).toBe(rivalId);
+    expect(REGIONS[0].nodes).toContain(rivalId);
     expect(m.relics.player).toEqual([relic]);
     expect(m.relics.tioZe).toEqual(RIVALS[rivalId].relics);
     expect(m.coins.player).toBe(coins);
@@ -212,7 +239,7 @@ describe('partida → loja → próximo rival', () => {
 describe('rivais', () => {
   it('18 rivais com retrato 16x16 em 4 humores, na ordem da campanha', () => {
     expect(RIVAL_IDS).toHaveLength(18);
-    expect(RIVAL_IDS).toEqual(NODES.map((n) => n.rivalId));
+    expect(RIVAL_IDS).toEqual(REGIONS.flatMap((r) => r.nodes));
     expect(BOSS_IDS).toEqual(['arlindo', 'beto', 'comendador']);
     for (const id of RIVAL_IDS) {
       const rival = RIVALS[id];
@@ -230,25 +257,30 @@ describe('rivais', () => {
     expect(RIVALS.arlindo.hearts).toBe(5);
     expect(RIVALS.arlindo.mechanics.doubleBuchaDamage).toBe(true);
     expect(RIVALS.neide.relics).toEqual(['dedal']);
-    expect(Object.values(RIVALS.valdir.deck)).toEqual(['chumbo']);
+    expect(RIVALS.valdir.deck).toEqual({}); // Região 1: 100% osso
+    expect(Object.values(RIVALS.marcao.deck)).toEqual(['chumbo']);
     expect(RIVALS.tiao.hearts).toBe(5);
     expect(RIVALS.beto.hearts).toBe(6);
     expect(RIVALS.beto.mechanics.drawFee).toBe(2);
-    expect(Object.values(RIVALS.bigode.deck)).toEqual(['ouro', 'ouro']);
-    expect(Object.values(RIVALS.fausto.deck)).toEqual(['cristal', 'cristal']);
+    expect(Object.values(RIVALS.bigode.deck)).toEqual(['ouro', 'ouro', 'rubi']);
+    expect(Object.values(RIVALS.fausto.deck)).toEqual(['cristal', 'cristal', 'rubi']);
     expect(RIVALS.comendador.hearts).toBe(7);
     expect(RIVALS.comendador.relics).toHaveLength(2);
     for (const relic of RIVALS.comendador.relics) expect(RELICS[relic].rarity).toBe('lendario');
   });
 
-  it('campanha: 3 regiões de 6 nós, chefe no 6º; a dificuldade sobe dentro da região', () => {
-    expect(TOTAL_NODES).toBe(18);
+  it('campanha: 3 regiões de 6 rivais (entrada, 4 comuns, chefe); a dificuldade sobe dentro da região', () => {
     expect(REGIONS.map((r) => r.name)).toEqual(['BOTECO DA ESQUINA', 'CLUBE DA SINUCA CLANDESTINO', 'SUBMUNDO DO JOGO DO BICHO']);
+    expect(REGIONS.map((r) => r.nodes)).toEqual([
+      ['tioZe', 'tonho', 'baiano', 'valdir', 'neide', 'arlindo'],
+      ['marcao', 'serginho', 'cida', 'paulinho', 'tiao', 'beto'],
+      ['carlinhos', 'bigode', 'sofia', 'fausto', 'alemao', 'comendador'],
+    ]);
     for (const region of REGIONS) {
-      const nodes = NODES.filter((n) => n.region === region.id);
-      expect(nodes).toHaveLength(6);
-      expect(nodes.map((n) => n.boss)).toEqual([false, false, false, false, false, true]);
-      const hearts = nodes.map((n) => RIVALS[n.rivalId].hearts);
+      expect(region.nodes).toHaveLength(6);
+      expect(region.nodes.map((id) => RIVALS[id].boss)).toEqual([false, false, false, false, false, true]);
+      for (const id of region.nodes) expect(RIVALS[id].region).toBe(region.id);
+      const hearts = region.nodes.map((id) => RIVALS[id].hearts);
       for (let i = 1; i < hearts.length; i += 1) expect(hearts[i]).toBeGreaterThanOrEqual(hearts[i - 1]);
       const total = Object.values(region.rarity).reduce((a, b) => a + b, 0);
       expect(total).toBe(100);
@@ -279,6 +311,83 @@ describe('rivais', () => {
     expect(scoreMove(marcao, leaveFive) - scoreMove(calm, leaveFive)).toBeGreaterThan(0);
   });
 
+  it('IA por região: R1 100% osso; R2 1–2 grifes e até 2 talismãs; R3 e chefes até 3 grifes e 2 talismãs fortes', () => {
+    for (const id of RIVAL_IDS) {
+      const rival = RIVALS[id];
+      const tier = AI_TIERS[tierOf(rival)];
+      const enhanced = Object.values(rival.deck);
+      expect(enhanced.length, id).toBeLessThanOrEqual(tier.maxEnhanced);
+      expect(rival.relics.length, id).toBeLessThanOrEqual(tier.maxRelics);
+      for (const [tileId, enh] of Object.entries(rival.deck)) {
+        expect(FULL_SET.some((x) => x.id === tileId), `${id}: ${tileId}`).toBe(true);
+        expect(ENHANCEMENTS[enh], `${id}: ${enh}`).toBeTruthy();
+      }
+      for (const relic of rival.relics) {
+        expect(RELICS[relic].rarity).not.toBe('necrotico');
+        expect(RELICS[relic].reveal, `${id}: ${relic} só serve para a sua tela`).toBeUndefined();
+        expect(RELICS[relic].drawOptions, `${id}: ${relic}`).toBeUndefined();
+        expect(RELICS[relic].ability, `${id}: ${relic}`).toBeUndefined();
+      }
+    }
+    for (const id of REGIONS[0].nodes.slice(0, 5)) {
+      expect(tierOf(RIVALS[id])).toBe('intuitivo');
+      expect(RIVALS[id].deck).toEqual({});
+    }
+    for (const id of REGIONS[1].nodes.slice(0, 5)) {
+      expect(tierOf(RIVALS[id])).toBe('calculista');
+      const n = Object.keys(RIVALS[id].deck).length;
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(2);
+      expect(PLAY_STYLES[id].five).toBeGreaterThanOrEqual(7);
+      expect(PLAY_STYLES[id].fiveSetup).toBeGreaterThan(0);
+    }
+    const strong = new Set(['raro', 'lendario', 'mitico']);
+    for (const id of [...REGIONS[2].nodes, ...BOSS_IDS]) {
+      expect(tierOf(RIVALS[id])).toBe('agressivo');
+      expect(PLAY_STYLES[id].aggression).toBeGreaterThan(0);
+      expect(RIVALS[id].relics).toHaveLength(2);
+      expect(RIVALS[id].relics.some((r) => strong.has(RELICS[r].rarity)), id).toBe(true);
+    }
+    const r3 = REGIONS[2].nodes.flatMap((id) => Object.values(RIVALS[id].deck));
+    expect(r3).toContain('rubi');
+    expect(r3).toContain('fantasma');
+  });
+
+  it('Região 2 conta uma jogada à frente atrás do múltiplo de 5; a Região 1 não', () => {
+    let s = newRun(4, { rivalId: 'marcao' });
+    s = {
+      ...s,
+      board: placeTile(createEmptyBoard(), t(2, 3), 'root'),
+      hands: { player: [t(6, 6), t(5, 6)], tioZe: [t(3, 6), t(2, 4)] },
+      turn: 'tioZe',
+      openingTileId: null,
+    };
+    const calculista = buildTioZeView(s, 'tioZe');
+    const instinto = buildTioZeView({ ...s, rivalId: 'tonho' }, 'tioZe');
+    expect(calculista.style.fiveSetup).toBeGreaterThan(0);
+    expect(instinto.style.fiveSetup).toBe(0);
+    // [3|6] na direita deixa 2 e 6 (8); a seguir o [2|4] na esquerda deixa 4 e 6 = 10 ✔
+    const move = { tile: t(3, 6), side: 'right' };
+    const noSetup = { ...calculista, style: { ...calculista.style, fiveSetup: 0 } };
+    expect(scoreMove(calculista, move) - scoreMove(noSetup, move)).toBe(PLAY_STYLES.marcao.fiveSetup);
+  });
+
+  it('Região 3 e chefes soltam o Rubi quando você está sem a ponta', () => {
+    let s = newRun(4, { rivalId: 'bigode' });
+    s = {
+      ...s,
+      board: placeTile(createEmptyBoard(), t(0, 3), 'root'),
+      hands: { player: [t(6, 6), t(5, 6)], tioZe: [{ ...t(0, 0), enhancement: 'rubi' }, t(3, 4), t(1, 2)] },
+      memory: { playerMissing: [0] },
+      turn: 'tioZe',
+      openingTileId: null,
+    };
+    const rubi = { tile: s.hands.tioZe[0], side: 'left' };
+    const agressivo = buildTioZeView(s, 'tioZe');
+    const calmo = { ...agressivo, style: { ...agressivo.style, aggression: 0 } };
+    expect(scoreMove(agressivo, rubi) - scoreMove(calmo, rubi)).toBeGreaterThanOrEqual(10);
+  });
+
   it('Beto Cigano joga rápido e paga um pote maior', () => {
     expect(RIVALS.beto.reflexMs).toBeLessThan(RIVALS.tioZe.reflexMs);
     const s = newRun(2, { rivalId: 'beto' });
@@ -298,21 +407,25 @@ describe('simulação de runs inteiras', () => {
     ].map((x) => x.id);
   }
 
-  it('80 runs passam por partidas, loja e rivais sem travar nem perder pedras', () => {
+  it('80 runs andam pela teia (mesas, loja, mercado, Seu Tião) sem travar nem perder pedras', () => {
     const rng = createSeededRng(31337);
     let matchesWon = 0;
     let shopsVisited = 0;
+    const kinds = new Set();
     const rivalsSeen = new Set();
     for (let run = 0; run < 80; run += 1) {
-      let s = gameReducer(createInitialState(), {
-        type: 'START_DUEL',
-        deck: shuffle(FULL_SET, rng),
-        seed: Math.floor(rng() * 2 ** 31),
-      });
-      for (let step = 0; step < 6000 && s.phase !== 'gameOver' && s.run.match <= 4; step += 1) {
+      let s = gameReducer(createInitialState(), { type: 'NEW_RUN', seed: Math.floor(rng() * 2 ** 31) });
+      for (let step = 0; step < 6000 && s.phase !== 'gameOver' && s.phase !== 'runWon' && s.run.match <= 4; step += 1) {
         let next;
-        if (s.phase === 'roundOver') next = gameReducer(s, { type: 'NEXT_ROUND', deck: shuffle(FULL_SET, rng) });
-        else if (s.phase === 'matchWon') next = gameReducer(s, { type: 'OPEN_SHOP' });
+        if (s.phase === 'map') {
+          const ids = availableNodes(s);
+          const id = ids[Math.floor(rng() * ids.length)];
+          kinds.add(campaignOf(s).byId.get(id).type);
+          next = gameReducer(s, { type: 'CHOOSE_NODE', nodeId: id, deck: shuffle(FULL_SET, rng) });
+          // às vezes o rival da partida dá uma mãozinha: o jogador simulado é fraco
+          if (next.phase === 'playing' && rng() < 0.5) next = dev(next, 'damageTioZe');
+        } else if (s.phase === 'roundOver') next = gameReducer(s, { type: 'NEXT_ROUND', deck: shuffle(FULL_SET, rng) });
+        else if (s.phase === 'matchWon') next = gameReducer(s, { type: 'OPEN_MAP' });
         else if (s.phase === 'shop') {
           shopsVisited += 1;
           let shop = dev(s, 'addCoins', { amount: 20 });
@@ -320,16 +433,14 @@ describe('simulação de runs inteiras', () => {
           shop = gameReducer(shop, { type: 'SHOP_BUY_RELIC', index: Math.floor(rng() * 3) });
           shop = gameReducer(shop, { type: 'SHOP_BUY_TILE', index: Math.floor(rng() * 2) });
           if (rng() < 0.3) shop = gameReducer(shop, { type: 'SHOP_REROLL' });
-          if (rng() < 0.5) {
-            next = gameReducer(shop, { type: 'NEXT_MATCH', deck: shuffle(FULL_SET, rng) });
-          } else {
-            const map = gameReducer(shop, { type: 'LEAVE_SHOP' });
-            expect(map.phase).toBe('map');
-            next = gameReducer(map, { type: 'ENTER_NODE', deck: shuffle(FULL_SET, rng) });
-          }
-          // às vezes o rival da partida dá uma mãozinha: o jogador simulado é fraco
-          if (rng() < 0.5) next = dev(next, 'damageTioZe');
-        } else if (s.pending?.type === 'drawChoice') next = gameReducer(s, { type: 'DRAW_PICK', tileId: s.pending.options.at(-1).id });
+          next = gameReducer(shop, { type: 'LEAVE_SHOP' });
+          expect(next.phase).toBe('map');
+        } else if (s.phase === 'blackMarket') {
+          let market = dev(s, 'addCoins', { amount: 30 });
+          if (market.relics.player.length < RELIC_SLOTS) market = gameReducer(market, { type: 'MARKET_BUY', index: Math.floor(rng() * 3) });
+          next = gameReducer(market, { type: 'LEAVE_MARKET' });
+        } else if (s.phase === 'coinEvent') next = gameReducer(s, { type: 'LEAVE_EVENT' });
+        else if (s.pending?.type === 'drawChoice') next = gameReducer(s, { type: 'DRAW_PICK', tileId: s.pending.options.at(-1).id });
         else if (s.pending?.type === 'discard') next = gameReducer(s, { type: 'DISCARD', tileId: s.hands.player[0].id });
         else if (s.turn === 'tioZe') next = gameReducer(s, { type: 'TIO_ZE_ACT' });
         else if (canUndo(s) && rng() < 0.5) next = gameReducer(s, { type: 'UNDO' });
@@ -337,8 +448,12 @@ describe('simulação de runs inteiras', () => {
         expect(next, `run ${run}, passo ${step}, fase ${s.phase}`).not.toBe(s);
         if (s.phase !== 'matchWon' && next.phase === 'matchWon') matchesWon += 1;
         s = next;
-        rivalsSeen.add(s.rivalId);
         if (s.phase === 'playing') {
+          rivalsSeen.add(s.rivalId);
+          // o rival da mesa é o do nó escolhido, da região certa
+          const node = campaignOf(s).byId.get(s.run.node);
+          expect(s.rivalId).toBe(node.rivalId);
+          expect(RIVALS[s.rivalId].region).toBe(node.region);
           const ids = canonical(s);
           expect(ids).toHaveLength(28);
           expect(new Set(ids).size).toBe(28);
@@ -352,8 +467,9 @@ describe('simulação de runs inteiras', () => {
       }
     }
     expect(matchesWon).toBeGreaterThan(40);
-    expect(shopsVisited).toBeGreaterThan(40);
-    expect(rivalsSeen.size).toBeGreaterThanOrEqual(4);
+    expect(shopsVisited).toBeGreaterThan(5);
+    for (const kind of ['black', 'coins', 'combat', 'shop']) expect([...kinds]).toContain(kind);
+    expect(rivalsSeen.size).toBeGreaterThanOrEqual(5);
   }, 60000);
 
   it('o estado inicial e as constantes batem', () => {

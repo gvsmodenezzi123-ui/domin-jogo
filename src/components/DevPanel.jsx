@@ -50,7 +50,7 @@ export default function DevPanel({ state, onAction, onClose }) {
               PAINEL DEV
             </h2>
             <p className="mt-1 font-term text-base leading-none text-bone-400">
-              nó {state.run.node + 1} · partida {state.run.match} · rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'rival'} · {state.phase}
+              nó {state.run.node ?? '—'} · partida {state.run.match} · rodada {state.round} · vez: {state.turn === 'player' ? 'você' : 'rival'} · {state.phase}
             </p>
           </div>
           <button type="button" className="btn-pixel btn-mini" onClick={onClose}>
@@ -152,7 +152,7 @@ export default function DevPanel({ state, onAction, onClose }) {
             </select>
           </label>
           <button type="button" data-tone="brass" className="btn-pixel mt-2 w-full" disabled={!playing} onClick={() => dev('winMatch')}>
-            VENCER O NÓ (IR PRA LOJA)
+            VENCER O NÓ (VOLTA AO MAPA)
           </button>
         </section>
 

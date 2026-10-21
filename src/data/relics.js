@@ -18,6 +18,9 @@
  *   drawOptions                    quantas pedras você vê ao comprar (só o jogador escolhe)
  *   reveal                         o que a SUA tela mostra da mão do rival
  *   ability: 'undo'                botão de desfazer (Relógio Quebrado, só o jogador)
+ *   heartDrawCost                  a compra paga com coração custa N corações (Pacto do Coveiro)
+ *   trancaDamage                   dano da tranca para quem perde a soma, dos dois lados (Tranca Cadavérica)
+ *   cheatDeath                     1x por partida o golpe fatal deixa o dono com 1 coração (Falsa Partida)
  *
  * Ícones: mapas de pixels 12x12 (cada caractere aponta para a paleta; '.' é vazio).
  */
@@ -505,8 +508,159 @@ export const RELICS = Object.freeze({
       '..kkkkkkk...',
     ],
   }),
+
+  // ---------------------------------------------------------------------------
+  // Necróticos (Patch 0.6.1): só no Mercado Negro do Corvo da Madrugada.
+  // ---------------------------------------------------------------------------
+
+  pactoCoveiro: Object.freeze({
+    id: 'pactoCoveiro',
+    name: 'Pacto do Coveiro',
+    short: 'PACTO',
+    art: 'pactoCoveiro',
+    rarity: 'necrotico',
+    price: 22,
+    description: 'Toda batida sua dá +2 de dano. Em troca, a 3ª compra do dorme no mesmo turno custa 2 corações.',
+    order: 5,
+    batidaDamage: (damage) => damage + 2,
+    heartDrawCost: 2,
+    palette: { k: K, w: '#8a5a32', m: '#c9cfd4', r: '#a3121b' },
+    icon: [
+      '..kk........',
+      '..kwk.......',
+      '...kwk......',
+      '....kwk.....',
+      '.....kwk....',
+      '......kwkk..',
+      '......kmmmk.',
+      '.kkk..kmmmmk',
+      'krrrk.kmmmmk',
+      'krkrk..kmmk.',
+      'krrrk...kk..',
+      '.kkk........',
+    ],
+  }),
+
+  ossoEnsanguentado: Object.freeze({
+    id: 'ossoEnsanguentado',
+    name: 'Osso Ensanguentado',
+    short: 'OSSO',
+    art: 'ossoEnsanguentado',
+    rarity: 'necrotico',
+    price: 18,
+    description: 'Cada bucha sua que entra na mesa arranca $3 do bolso do rival para o seu.',
+    onPlay(state, { owner, foe, tile }) {
+      if (!isDouble(tile)) return state;
+      const taken = Math.min(3, state.coins[foe]);
+      if (taken <= 0) return state;
+      const next = gainCoins(loseCoins(state, foe, taken, 'ossoEnsanguentado'), owner, taken, 'ossoEnsanguentado');
+      return relicProc(next, owner, 'ossoEnsanguentado', `OSSO: +$${taken} DO ${mine(owner) ? 'RIVAL' : 'SEU BOLSO'}`);
+    },
+    palette: { k: K, w: '#efe4c4', r: '#b3121c' },
+    icon: [
+      '............',
+      '.kk......kk.',
+      'kwwk....kwwk',
+      'kwwwkkkkwwwk',
+      '.kwwwwwwwwk.',
+      'kwwwkkkkwwwk',
+      'kwwk.r..kwwk',
+      '.kk..r...kk.',
+      '.....r...r..',
+      '.....r...r..',
+      '.........r..',
+      '............',
+    ],
+  }),
+
+  olhoMorte: Object.freeze({
+    id: 'olhoMorte',
+    name: 'Olho da Morte',
+    short: 'OLHO DA MORTE',
+    art: 'olhoMorte',
+    rarity: 'necrotico',
+    price: 26,
+    description: 'Com o rival em 1 coração, qualquer pedra sua com 0 ou 6 que entra na mesa acaba a partida na hora.',
+    onPlay(state, { owner, foe, tile }) {
+      if (state.hearts[foe] !== 1) return state;
+      const marked = [tile.a, tile.b].some((v) => v === 0 || v === 6);
+      if (!marked) return state;
+      const next = directDamage(state, foe, 1, 'olhoMorte');
+      return relicProc(next, owner, 'olhoMorte', 'OLHO DA MORTE: FIM DE PARTIDA');
+    },
+    palette: { k: K, w: '#efe4c4', r: '#d1121c' },
+    icon: [
+      '...kkkkkk...',
+      '..kwwwwwwk..',
+      '.kwwwwwwwwk.',
+      '.kwkkwwkkwk.',
+      '.kwkkwwkrwk.',
+      '.kwkkwwkkwk.',
+      '.kwwwkkwwwk.',
+      '..kwwwwwwk..',
+      '...kwkwkwk..',
+      '...kkkkkkk..',
+      '............',
+      '............',
+    ],
+  }),
+
+  trancaCadaverica: Object.freeze({
+    id: 'trancaCadaverica',
+    name: 'Tranca Cadavérica',
+    short: 'TRANCA CADAVÉRICA',
+    art: 'trancaCadaverica',
+    rarity: 'necrotico',
+    price: 20,
+    description: 'Rodada que termina em tranca custa 3 corações a quem perder na soma. Vale para os dois lados.',
+    trancaDamage: 3,
+    palette: { k: K, m: '#7d848a', w: '#e9dcb4', r: '#9e1a14' },
+    icon: [
+      '....kkkk....',
+      '...kmmmmk...',
+      '..kmk..kmk..',
+      '..kmk..kmk..',
+      '.kkkkkkkkkk.',
+      '.kwwwwwwwwk.',
+      '.kwwwkkwwwk.',
+      '.kwwkrrkwwk.',
+      '.kwwwkkwwwk.',
+      '.kwwwkkwwwk.',
+      '.kwwwwwwwwk.',
+      '.kkkkkkkkkk.',
+    ],
+  }),
+
+  falsaPartida: Object.freeze({
+    id: 'falsaPartida',
+    name: 'Falsa Partida',
+    short: 'FALSA PARTIDA',
+    art: 'falsaPartida',
+    rarity: 'necrotico',
+    price: 24,
+    description: 'Uma vez por partida, um golpe que mataria você deixa você com 1 coração, e o rival é obrigado a comprar 2 pedras do dorme.',
+    cheatDeath: true,
+    palette: { k: K, r: '#c8261d', d: '#5e5a5f', w: '#efe4c4' },
+    icon: [
+      '............',
+      '.kkk...kkk..',
+      'krrrk.kdddk.',
+      'krrrrkwddddk',
+      'krrrrkdddddk',
+      '.krrrkwdddk.',
+      '..krrkddk...',
+      '...krwdk....',
+      '....kkk.....',
+      '............',
+      '............',
+      '............',
+    ],
+  }),
 });
 
 export const RELIC_IDS = Object.freeze(Object.keys(RELICS));
+
+/** Talismãs Necróticos: só no Mercado Negro (a Loja do Valtinho nunca vende). */
+export const NECROTIC_IDS = Object.freeze(RELIC_IDS.filter((id) => RELICS[id].rarity === 'necrotico'));
 
 export const getRelic = (id) => RELICS[id] ?? null;

@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
-import { regionOf } from '../data/campaign.js';
 import { ENHANCEMENTS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELIC_SLOTS, getRelic } from '../data/relics.js';
-import { getRival } from '../data/rivals.js';
 import { sound } from '../engine/audioSynth.js';
+import { availableNodes, regionOfState } from '../engine/campaignMap.js';
 import { haptic } from '../engine/progress.js';
 import { relicBuyBlock, sellPriceOf, tileBuyBlock } from '../engine/shop.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
 import RelicIcon from './RelicIcon.jsx';
-import RivalAvatar from './RivalAvatar.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { DiceCupIcon, ValtinhoSprite } from './art/SceneArt.jsx';
@@ -105,7 +103,8 @@ function Valtinho() {
  *     2 pedras de grife inclinadas no expositor com fita adesiva
  *   frente do balcão: a sua Bolsa de Talismãs (4 nichos, toque para vender a 50%)
  *   copo de dados (REEMBARALHAR) e a placa de madeira para voltar ao mapa
- * Segurar qualquer mercadoria mostra o efeito.
+ * Segurar qualquer mercadoria mostra o efeito. Desde o Patch 0.6.1 a loja é um caminho
+ * opcional da teia: sair dela volta para o mapa, que mostra as próximas bifurcações.
  */
 export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press }) {
   const [sellId, setSellId] = useState(null);
@@ -114,8 +113,8 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
   const [shaking, setShaking] = useState(0);
   const { shop } = state;
   const coins = state.coins.player;
-  const nextRival = getRival(shop.nextRivalId);
-  const region = regionOf(state.run.node);
+  const region = regionOfState(state);
+  const exits = availableNodes({ ...state, run: { ...state.run, cleared: [...state.run.cleared, state.run.node] } }).length;
   const coinFx = lastShopCoins(state.events);
   const upgraded = Object.entries(state.decks.player);
   const selling = sellId ? getRelic(sellId) : null;
@@ -340,12 +339,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
             <span className="shop-nail shop-nail-br" aria-hidden="true" />
             <span className="shop-plank-title">VOLTAR AO MAPA →</span>
             <span className="shop-plank-next">
-              <span className="shop-plank-avatar">
-                <RivalAvatar rival={nextRival} mood="smug" size={22} />
-              </span>
-              <span>
-                PRÓXIMO{nextRival.boss ? ' · CHEFE' : ''}: {nextRival.name} · {nextRival.hearts}♥
-              </span>
+              <span>{exits > 1 ? `${exits} CAMINHOS SEGUEM DAQUI` : 'A TRILHA SEGUE PARA CIMA'}</span>
             </span>
           </button>
         </footer>

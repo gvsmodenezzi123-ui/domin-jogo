@@ -1,6 +1,8 @@
 /**
- * Campanha: 3 regiões com 6 nós cada (18 rivais). Os nós 1–5 de cada região
- * são rivais comuns com dificuldade subindo; o nó 6 é o chefe da região.
+ * Campanha: 3 regiões, 6 rivais cada (18 no total). Desde o Patch 0.6.1 o caminho
+ * não é mais uma fila fixa: cada run sorteia uma teia de nós por região (ver
+ * engine/campaignMap.js). Em `nodes`, a ordem é: o rival de abertura (andar 1), os
+ * 4 comuns (espalhados pelos andares 2–5) e o chefe (andar 6).
  *
  * Também mora aqui o que muda conforme a região: a chance de cada raridade na
  * Loja Clandestina, o clima da mesa (`atmosphere`) e a faixa de música
@@ -38,25 +40,11 @@ export const REGIONS = Object.freeze([
   }),
 ]);
 
-export const NODES_PER_REGION = 6;
-
 /** Faixa das mesas de chefe (em qualquer região). */
 export const BOSS_MUSIC = 'bossFight';
 
-/** Todos os nós em ordem: { index, region, slot (1–6), rivalId, boss }. */
-export const NODES = Object.freeze(
-  REGIONS.flatMap((region, r) =>
-    region.nodes.map((rivalId, i) =>
-      Object.freeze({ index: r * NODES_PER_REGION + i, region: region.id, slot: i + 1, rivalId, boss: i === NODES_PER_REGION - 1 }),
-    ),
-  ),
-);
-
-export const TOTAL_NODES = NODES.length;
-
-export const nodeAt = (index) => NODES[Math.max(0, Math.min(TOTAL_NODES - 1, index))];
-
-export const regionOf = (index) => REGIONS[nodeAt(index).region - 1];
+/** Chefe final: vencer ele encerra a run. */
+export const FINAL_BOSS = 'comendador';
 
 /** Reembaralhar a loja fica mais caro a cada uso na mesma visita: $3, $5, $8, depois $12. */
 export const REROLL_COSTS = Object.freeze([3, 5, 8, 12]);

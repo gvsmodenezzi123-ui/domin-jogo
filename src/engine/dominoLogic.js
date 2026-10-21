@@ -385,10 +385,12 @@ export function getDrawCost(drawsThisTurn) {
 
 /**
  * Verifica se a próxima compra é possível.
- * Comprar com coração exige pelo menos 2 corações: a compra nunca mata.
+ * Comprar com coração exige um coração a mais do que o custo: a compra nunca mata.
+ * `heartCost`: quantos corações custa a compra paga com coração (Pacto do Coveiro: 2).
  */
-export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts }) {
-  const cost = getDrawCost(drawsThisTurn);
+export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts, heartCost = 1 }) {
+  const base = getDrawCost(drawsThisTurn);
+  const cost = base?.type === 'heart' && heartCost !== base.amount ? { type: 'heart', amount: heartCost } : base;
   if (boneyardCount <= 0) return { allowed: false, reason: 'empty', cost };
   if (!cost) return { allowed: false, reason: 'limit', cost: null };
   if (cost.type === 'coins' && coins < cost.amount) return { allowed: false, reason: 'coins', cost };

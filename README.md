@@ -59,6 +59,76 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.6.1: campanha em teia, Mercado Negro e Seu Tião
+
+A campanha deixou de ser uma trilha fixa de "luta → loja → próximo". Cada run sorteia, pela
+semente, uma **teia de caminhos** no estilo Slay the Spire / FTL, e os 18 rivais estão nela.
+
+### Teia procedural (`engine/campaignMap.js`, `data/campaign.js`, `CampaignMap.jsx`)
+
+- 3 regiões × 6 andares, de baixo para cima:
+  - **andar 1**: um rival de entrada (Tio Zé, Marcão do Guincho, Carlinhos Mão Leve);
+  - **andares 2 a 5**: 2 ou 3 caminhos (esquerda, centro, direita) que se cruzam só entre vizinhos.
+    Eles misturam **COMBATE** (um dos 4 rivais comuns da região), **LOJA DO VALTINHO**,
+    **MERCADO NEGRO** e o **SEU TIÃO DAS MOEDAS**;
+  - **andar 6**: todos os caminhos convergem no chefe (Seu Arlindo, Beto Cigano, Comendador Moreira).
+- Escalação por região:
+  - R1: Tio Zé · Tonho do Gás, Baiano da Sinuca, Valdir Borracheiro, Dona Neide · Seu Arlindo;
+  - R2: Marcão do Guincho · Serginho 22, Cida da Marmita, Paulinho Pente Fino, Tião Navalha · Beto Cigano;
+  - R3: Carlinhos Mão Leve · Bigode de Ouro, Madama Sofia, Doutor Fausto, Alemão do Ferro Velho · Comendador Moreira.
+- Garantias de cada sorteio (se uma falha, sorteia de novo com a mesma semente):
+  - os 4 comuns de cada região estão em algum nó, então os 18 estão no mapa. Quem fica fora do
+    caminho que você escolhe não é enfrentado nesta run;
+  - todo caminho tem 2 ou 3 mesas nos andares do meio e nunca o mesmo rival duas vezes;
+  - toda região tem loja, mercado e Seu Tião, e nenhum caminho passa por dois especiais iguais seguidos;
+  - pelo menos duas bifurcações põem lado a lado uma mesa e um desvio sem luta.
+- A loja virou um caminho opcional: vencer a mesa volta direto ao mapa.
+- O mapa mostra a teia inteira:
+  - os caminhos abertos pulsam e o que você percorreu fica riscado a giz;
+  - o que ficou para trás apaga;
+  - regiões futuras mostram só o tipo do nó (e a silhueta do chefe).
+- O save (v2) guarda só a semente, o nó atual e o caminho; a teia é refeita dela.
+
+### Mercado Negro (`BlackMarketModal.jsx`, `engine/blackMarket.js`)
+
+O beco do **Corvo da Madrugada** (encapuzado, olhos vermelhos, 48x48) vende 3 dos 5 talismãs da
+nova raridade **NECRÓTICA** ($18 a $26). Eles nunca aparecem na loja do Valtinho:
+
+| Talismã | Efeito |
+| --- | --- |
+| Pacto do Coveiro | +2 de dano em toda batida sua; a 3ª compra do turno custa 2 corações |
+| Osso Ensanguentado | cada bucha sua que entra na mesa arranca $3 do rival |
+| Olho da Morte | rival em 1♥: qualquer pedra com 0 ou 6 que você jogar acaba a partida |
+| Tranca Cadavérica | rodada em tranca custa 3♥ a quem perder a soma (vale para os dois) |
+| Falsa Partida | 1x por partida, o golpe fatal deixa você com 1♥ e o rival compra 2 |
+
+### Seu Tião das Moedas (`CoinEventModal.jsx`)
+
+O velho no engradado de cerveja dá uma gorjeta de **$1 a $12**, fixa pela semente:
+
+- cada dólar é uma moeda voando para o contador;
+- cada moeda toca um "tim" metálico um semitom acima do anterior;
+- a contagem fecha com o tilintar do caixa.
+
+### IA por região (`data/rivals.js` → `AI_TIERS`, `ai/tioZeAI.js`)
+
+- **R1, intuitiva**: baralho 100% osso. Cada um joga no instinto do próprio estilo.
+- **R2, calculista**: 1 ou 2 pedras de grife e até 2 talismãs passivos. Conta uma jogada à frente
+  para fechar múltiplo de 5.
+- **R3 e chefes, agressiva**: até 3 pedras de grife (com Rubi e Fantasma) e 2 talismãs fortes.
+  Arma a batida e solta Rubi, Chumbo e Fantasma quando você está sem a ponta. Ninguém espia a sua mão.
+
+### Corte de cena (`ScreenTransition.jsx`)
+
+Uma camada preta global (`.screen-transition-overlay`, sem toque) faz o corte em:
+
+- escolher nó no mapa;
+- voltar ao mapa depois da vitória;
+- entrar e sair da loja, do beco e do Seu Tião;
+- novo jogo, continuar e menu.
+
+Ela escurece em 350 ms, a cena troca por baixo e ela clareia em mais 350 ms.
+
 ## Patch 0.5.5: menu limpo, balões inteiros, botões de placa e a Loja como cena
 
 ### Tela inicial (`TitleScreen.jsx`, `BuxariaLogo.jsx`)

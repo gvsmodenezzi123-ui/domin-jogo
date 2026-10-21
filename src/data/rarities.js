@@ -4,6 +4,7 @@
  *
  *   Comum (verde, $4–6)     Raro (azul, $7–10)
  *   Lendário (roxo, $12–16) Mítico (dourado/sangue, $18–25)
+ *   Necrótico (verde-cadáver, $18–26, só no Mercado Negro)
  */
 export const RARITIES = Object.freeze({
   comum: Object.freeze({ id: 'comum', label: 'COMUM', color: '#6fd35a', basePrice: 5, sellPrice: 2, weight: 6 }),
@@ -18,8 +19,18 @@ export const RARITIES = Object.freeze({
     sellPrice: 10,
     weight: 1,
   }),
+  // Patch 0.6.1: só no Mercado Negro (nunca na Loja do Valtinho). Poder alto, preço alto e um custo.
+  necrotico: Object.freeze({
+    id: 'necrotico',
+    label: 'NECRÓTICO',
+    color: '#8fe36a',
+    accent: '#1a3a12',
+    basePrice: 22,
+    sellPrice: 11,
+    weight: 0,
+  }),
 });
 
-export const RARITY_ORDER = Object.freeze(['comum', 'raro', 'lendario', 'mitico']);
+export const RARITY_ORDER = Object.freeze(['comum', 'raro', 'lendario', 'mitico', 'necrotico']);
 
 export const getRarity = (id) => RARITIES[id] ?? RARITIES.comum;

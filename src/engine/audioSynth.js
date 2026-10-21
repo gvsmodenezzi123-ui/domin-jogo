@@ -81,6 +81,8 @@ const VOICE_PROFILES = {
   alemao: { baseFreq: 85, mod: 25, type: 'square', speed: 95 }, // ferro velho
   comendador: { baseFreq: 95, mod: 35, type: 'triangle', speed: 110 }, // grave, sem pressa
   valtinho: { baseFreq: 118, mod: 42, type: 'triangle', speed: 72 }, // atendente da Loja Clandestina, com o palito na boca
+  corvo: { baseFreq: 72, mod: 18, type: 'sawtooth', speed: 105 }, // Corvo da Madrugada: sussurro grave no escuro do beco
+  seuTiao: { baseFreq: 150, mod: 55, type: 'triangle', speed: 90 }, // Seu Tião das Moedas: velho risonho, sem pressa
 };
 
 /** ids do jogo → perfis acima. */
@@ -169,10 +171,29 @@ export const TRACKS = {
     rim: [],
     brush: [4, 12],
   },
+  // Mercado Negro (Patch 0.6.1): beco noturno, menor e lento, só escovinha e um bumbo abafado
+  becoNoir: {
+    bpm: 78,
+    swing: 0.1,
+    level: 0.8,
+    chords: [
+      { root: 36, ep: [51, 55, 62] }, // Cm9
+      { root: 44, ep: [51, 55, 60] }, // Abmaj7
+      { root: 41, ep: [51, 56, 60] }, // Fm7
+      { root: 43, ep: [53, 59, 62] }, // G7
+    ],
+    bass: { 0: 0, 10: 7 },
+    comp: { 0: 1.4 },
+    kick: [0],
+    rim: [],
+    brush: [6, 14],
+  },
 };
 
 /** Faixa da Loja Clandestina (entra depois da fanfarra da vitória). */
 export const SHOP_MUSIC = 'lojaLounge';
+/** Faixa do beco do Corvo da Madrugada. */
+export const MARKET_MUSIC = 'becoNoir';
 
 /** Duração da semicolcheia `step` (com swing nas do contratempo). */
 export function stepDuration(track, step, tempo = 1) {
@@ -864,6 +885,17 @@ export class SoundEngine {
   playCoinJingle() {
     this.tone({ freq: 987.77, peak: 0.28, dur: 0.08 }); // B5
     this.tone({ freq: 1318.51, peak: 0.3, dur: 0.24, delay: 0.08 }); // E6
+  }
+
+  /**
+   * Seu Tião das Moedas (Patch 0.6.1): cada moeda que cai no contador dá um "tim" metálico,
+   * um semitom acima da anterior (o som cresce com a pilha). Duas parciais inarmônicas
+   * (o timbre de metal) e nada mais: com as moedas espaçadas, cabe no orçamento de vozes.
+   */
+  playCoinTing(step = 0) {
+    const freq = 880 * 2 ** (Math.min(step, 18) / 12);
+    this.tone({ type: 'triangle', freq, peak: 0.16 + Math.min(step, 12) * 0.006, dur: 0.09, attack: 0.002 });
+    this.tone({ freq: freq * 2.76, peak: 0.05, dur: 0.06, attack: 0.001 });
   }
 
   /** Nome antigo do cristal (Patch 0.4). */

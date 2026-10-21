@@ -369,8 +369,8 @@ describe('talismãs (seus)', () => {
     expect(s.fx.undo).toBeNull();
   });
 
-  it('todas as 15 relíquias têm raridade, preço e ícone 12x12 com paleta', () => {
-    expect(RELIC_IDS).toHaveLength(15);
+  it('todas as 20 relíquias (15 da loja + 5 Necróticas) têm raridade, preço e ícone 12x12 com paleta', () => {
+    expect(RELIC_IDS).toHaveLength(20);
     for (const id of RELIC_IDS) {
       const relic = RELICS[id];
       expect(relic.id).toBe(id);
@@ -384,7 +384,7 @@ describe('talismãs (seus)', () => {
       }
     }
     // faixas de preço por raridade
-    const range = { comum: [4, 6], raro: [7, 10], lendario: [12, 16], mitico: [18, 25] };
+    const range = { comum: [4, 6], raro: [7, 10], lendario: [12, 16], mitico: [18, 25], necrotico: [18, 26] };
     for (const item of [...Object.values(RELICS), ...Object.values(ENHANCEMENTS)]) {
       const [lo, hi] = range[item.rarity];
       expect(item.price, item.id).toBeGreaterThanOrEqual(lo);
@@ -442,24 +442,24 @@ describe('talismãs e pedras dos rivais', () => {
     expect(s.fx.frozen.player).toEqual([]);
   });
 
-  it('o rival nunca recebe as SUAS pedras aprimoradas; o Valdir recebe o Chumbo dele', () => {
+  it('o rival nunca recebe as SUAS pedras aprimoradas; o Marcão recebe o Chumbo dele', () => {
     const deck = [
       ...[t(0, 0), t(0, 1), t(0, 2), t(0, 3), t(0, 4), t(0, 5), t(0, 6)],
-      ...[t(3, 5), t(1, 1), t(1, 2), t(1, 3), t(1, 4), t(1, 5), t(1, 6)],
+      ...[t(4, 6), t(1, 1), t(1, 2), t(1, 3), t(1, 4), t(1, 5), t(1, 6)],
     ];
     const used = new Set(deck.map((x) => x.id));
     const full = [...deck, ...FULL_SET.filter((x) => !used.has(x.id))];
     const s = gameReducer(createInitialState(), {
       type: 'START_DUEL',
       deck: full,
-      rivalId: 'valdir',
+      rivalId: 'marcao',
       playerDeck: { '1-1': 'ouro', '0-0': 'rubi' },
     });
     const byId = (seat, id) => s.hands[seat].find((x) => x.id === id);
     expect(byId('player', '0-0').enhancement).toBe('rubi');
     expect(byId('tioZe', '1-1').enhancement).toBeUndefined(); // o seu [1|1] de ouro, na mão dele, é comum
-    expect(byId('tioZe', '3-5').enhancement).toBe('chumbo');
-    expect(s.hearts.tioZe).toBe(3);
+    expect(byId('tioZe', '4-6').enhancement).toBe('chumbo');
+    expect(s.hearts.tioZe).toBe(4);
   });
 });
 

@@ -40,5 +40,45 @@ export function loseCoins(state, who, amount, source) {
 export function directDamage(state, who, amount, reason) {
   if (amount <= 0 || state.hearts[who] <= 0) return state;
   const hearts = { ...state.hearts, [who]: Math.max(0, state.hearts[who] - amount) };
-  return emit({ ...state, hearts }, { type: 'heartLost', who, amount, reason, direct: true });
+  const next = emit({ ...state, hearts }, { type: 'heartLost', who, amount, reason, direct: true });
+  return hearts[who] === 0 ? cheatDeath(next, who) : next;
+}
+
+const otherSeat = (seat) => (seat === 'player' ? 'tioZe' : 'player');
+
+/**
+ * Falsa Partida (talismã Necrótico): uma vez por partida, quem tem o talismã e acabou de
+ * zerar fica com 1 coração, e o adversário é obrigado a comprar 2 pedras do dorme. Com a
+ * rodada em jogo, ele compra agora; se a rodada já acabou, compra no começo da próxima.
+ */
+export function cheatDeath(state, who) {
+  if (state.hearts[who] > 0) return state;
+  if (!(state.relics?.[who] ?? []).includes('falsaPartida')) return state;
+  const fx = state.matchFx ?? {};
+  if (fx.falsaUsed?.[who]) return state;
+  const foe = otherSeat(who);
+  let next = {
+    ...state,
+    hearts: { ...state.hearts, [who]: 1 },
+    matchFx: { ...fx, falsaUsed: { ...fx.falsaUsed, [who]: true } },
+  };
+  next = emit(next, { type: 'heartGained', who, amount: 1, reason: 'falsaPartida' });
+  if (next.phase === 'playing' && next.boneyard.length) {
+    // a pedra chega como ela é no baralho de quem compra (sem importar powers.js: evita ciclo)
+    const dress = (t) => {
+      const enhancement = next.decks?.[foe]?.[t.id];
+      return enhancement ? { id: t.id, a: t.a, b: t.b, enhancement } : { id: t.id, a: t.a, b: t.b };
+    };
+    const taken = next.boneyard.slice(0, 2).map(dress);
+    next = {
+      ...next,
+      boneyard: next.boneyard.slice(taken.length),
+      hands: { ...next.hands, [foe]: [...next.hands[foe], ...taken] },
+    };
+    for (const tile of taken) next = emit(next, { type: 'drawTile', by: foe, tileId: tile.id, cost: null, forced: true });
+  } else {
+    next = { ...next, matchFx: { ...next.matchFx, forcedDraw: { ...next.matchFx.forcedDraw, [foe]: 2 } } };
+  }
+  const text = who === 'player' ? 'FALSA PARTIDA: VIVO COM 1♥, RIVAL COMPRA 2' : 'FALSA PARTIDA DELE: VIVO COM 1♥';
+  return proc(next, { source: 'relic', id: 'falsaPartida', text, tone: who === 'player' ? 'player' : 'enemy', owner: who });
 }

@@ -53,9 +53,13 @@ export function rivalRules(id) {
   if (relics.length) lines.push(`Talismã${relics.length > 1 ? 's' : ''}: ${relics.map((r) => r.name).join(' e ')}.`);
   const counts = {};
   for (const enh of Object.values(rival.deck ?? {})) counts[enh] = (counts[enh] ?? 0) + 1;
-  for (const [enh, n] of Object.entries(counts)) {
-    const e = getEnhancement(enh);
-    if (e) lines.push(`${n} pedra${n > 1 ? 's' : ''} de ${e.name} no baralho dele.`);
-  }
+  const parts = Object.entries(counts)
+    .map(([enh, n]) => {
+      const e = getEnhancement(enh);
+      return e ? `${n} de ${e.name}` : null;
+    })
+    .filter(Boolean);
+  if (parts.length === 1 && counts[Object.keys(counts)[0]] === 1) lines.push(`1 pedra de ${getEnhancement(Object.keys(counts)[0]).name} no baralho dele.`);
+  else if (parts.length) lines.push(`Pedras de grife no baralho: ${parts.join(', ')}.`);
   return lines;
 }

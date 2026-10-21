@@ -19,6 +19,11 @@
  *
  * Ele não espia a sua mão: só vê a própria mão, a mesa, contagens públicas e
  * a memória do que você fez. Respeita as pontas congeladas pelo Chumbo.
+ *
+ * Patch 0.6.1: o nível sai da região (data/rivals.js, AI_TIERS). Na Região 1 cada um
+ * joga no instinto do próprio estilo; na 2 eles contam uma jogada à frente atrás do
+ * múltiplo de 5; na 3 e nos chefes também armam a batida e soltam Rubi, Fantasma e
+ * Chumbo quando você está sem a ponta.
  */
 
 import {
@@ -37,8 +42,8 @@ import {
   pipSum,
   placeTile,
 } from '../engine/dominoLogic.js';
-import { DEFAULT_STYLE, getRival } from '../data/rivals.js';
-import { knownPlayerTiles, passAvailabilityFor, requiredOpeningFor, rulesFor } from '../engine/powers.js';
+import { DEFAULT_STYLE, playStyleOf } from '../data/rivals.js';
+import { heartDrawCostFor, knownPlayerTiles, passAvailabilityFor, requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
 /** Delay reflexivo entre cada ação do Tio Zé. */
 export const TIO_ZE_REFLEX_MS = 700;
@@ -55,14 +60,15 @@ export function buildTioZeView(state, seat = 'tioZe') {
     opponentHandCount: state.hands[opponent].length,
     coins: state.coins[seat],
     hearts: state.hearts[seat],
+    heartDrawCost: heartDrawCostFor(state, seat),
     drawsThisTurn: state.drawsThisTurn,
     openingTileId: requiredOpeningFor(state, seat),
     consecutivePasses: state.consecutivePasses,
     suspectedMissing: seat === 'tioZe' ? state.memory.playerMissing : [],
     // regras de encaixe da cadeira (pontas travadas pelo Chumbo, talismãs de encaixe)
     rules: rulesFor(state, seat),
-    // jeito de jogar: cada rival tem o seu (o jogador simulado usa o padrão)
-    style: seat === 'tioZe' ? getRival(state.rivalId).style : DEFAULT_STYLE,
+    // jeito de jogar: o de cada rival + o nível da região (o jogador simulado usa o padrão)
+    style: seat === 'tioZe' ? playStyleOf(state.rivalId) : DEFAULT_STYLE,
     // pedras suas que ele enxerga (Paulinho Pente Fino, Madama Sofia)
     knownTiles: seat === 'tioZe' ? knownPlayerTiles(state) : [],
     // a cadeira do jogador segue a regra do passe do Patch 0.5.4 (simulações jogam por ela)
@@ -133,6 +139,24 @@ export function scoreMove(view, move) {
     score += canPlayOn(known, ends.left) || canPlayOn(known, ends.right) ? -4 : 2;
   }
 
+  // calculista (Região 2+): conta uma jogada à frente para fechar múltiplo de 5 na próxima
+  if (style.fiveSetup) {
+    const setsUpFive = remaining.some((t) =>
+      ['left', 'right'].some((s) => canPlayOn(t, ends[s]) && isMultipleOfFive(placeTile(after, t, s))),
+    );
+    if (setsUpFive) score += style.fiveSetup;
+  }
+
+  // agressivo (Região 3 e chefes): arma a batida, usa Rubi/Fantasma/Chumbo na hora que dói
+  if (style.aggression) {
+    if (remaining.length === 1 && followers > 0) score += 8 * style.aggression;
+    const squeezes = missing.has(ends.left) || missing.has(ends.right);
+    if (tile.enhancement === 'rubi') score += (squeezes ? 10 : -4) * style.aggression;
+    if (tile.enhancement === 'chumbo') score += (squeezes ? 6 : 1) * style.aggression;
+    if (tile.enhancement === 'fantasma') score += (followers > 0 ? 5 : -3) * style.aggression;
+    if (view.opponentHandCount <= 2) score += pipSum(tile) * 0.5 * style.aggression;
+  }
+
   // tranca fechada: só se a menor soma estiver do lado dele
   if (isTrancaFechada(after)) score += trancaFavors(view, remaining) ? 40 : -60;
 
@@ -182,6 +206,7 @@ export function decideTioZeAction(view) {
     boneyardCount: view.boneyardCount,
     coins: view.coins,
     hearts: view.hearts,
+    heartCost: view.heartDrawCost ?? 1,
   });
   if (availability.allowed && willPay(availability.cost, view)) {
     return { type: 'DRAW', actor };

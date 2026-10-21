@@ -45,6 +45,11 @@ export const RELIC_ART = pick({
   maoGrande: Art.MaoGrandeIcon,
   relogio: Art.RelogioIcon,
   barbante: Art.BarbanteIcon,
+  pactoCoveiro: Art.PactoCoveiroIcon,
+  ossoEnsanguentado: Art.OssoEnsanguentadoIcon,
+  olhoMorte: Art.OlhoMorteIcon,
+  trancaCadaverica: Art.TrancaCadavericaIcon,
+  falsaPartida: Art.FalsaPartidaIcon,
 });
 
 /** Ponta acesa do cigarro do Tio Zé, na grade de 40: a fumaça sobe daqui (não sai quando ele está ferido). */

@@ -1,6 +1,16 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { NODES, REGIONS, TOTAL_NODES, regionOf } from '../data/campaign.js';
-import { getRival } from '../data/rivals.js';
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { REGIONS } from '../data/campaign.js';
+import { AI_TIERS, getRival, tierOf } from '../data/rivals.js';
+import {
+  COIN_EVENT_MAX,
+  COIN_EVENT_MIN,
+  FLOORS,
+  NODE_LABEL,
+  availableNodes,
+  campaignOf,
+  mapRegionId,
+  mixSeed,
+} from '../engine/campaignMap.js';
 import { MAX_HEARTS } from '../engine/dominoLogic.js';
 import { rivalBlurb, rivalRules } from '../engine/rivalInfo.js';
 import CoinCount from './CoinCount.jsx';
@@ -8,112 +18,255 @@ import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import { MenuGlyph } from './UiGlyphs.jsx';
+import { CorvoSprite, TiaoMoedasSprite } from './art/NecroticArt.jsx';
+import { ValtinhoSprite } from './art/SceneArt.jsx';
 
-/** Altura de cada degrau da trilha (px) e do cabeçalho de cada região. */
-const STEP = 96;
-const REGION_HEAD = 64;
-/** Zigue-zague da trilha (posição horizontal de cada nó dentro da região, em %). */
-const ZIGZAG = [50, 28, 70, 34, 66, 50];
+/** Altura de cada andar (px), cabeçalho de cada região e folga embaixo. */
+const STEP = 98;
+const HEAD = 66;
+const BOTTOM = 26;
+const PER_REGION = HEAD + STEP * FLOORS;
+/** Esquerda, centro e direita (em % da largura). */
+const LANE_X = [19, 50, 81];
 
-/** Posições na trilha: o nó 1 embaixo, o chefe final no topo. */
-function useTrail() {
-  return useMemo(() => {
-    const perRegion = REGION_HEAD + STEP * 6;
-    const bottomPad = 40;
-    const height = perRegion * REGIONS.length + bottomPad;
-    const points = NODES.map((node) => {
-      const r = node.region - 1;
-      const fromBottom = r * perRegion + (node.slot - 1) * STEP + 64;
-      return { ...node, x: ZIGZAG[node.slot - 1], y: height - fromBottom };
-    });
-    // as regiões cobrem a trilha inteira (a primeira desce até o fim)
-    const regions = REGIONS.map((region, r) => ({
-      ...region,
-      top: height - bottomPad - (r + 1) * perRegion,
-      height: perRegion + (r === 0 ? bottomPad : 0),
-    }));
-    return { height, points, regions };
-  }, []);
+/** Posição de cada nó (o andar 1 da região 1 embaixo, o Comendador no topo) e as ligações. */
+function layoutOf(campaign) {
+  const height = BOTTOM + PER_REGION * campaign.regions.length;
+  const points = new Map();
+  for (const region of campaign.regions) {
+    const r = region.id - 1;
+    for (const node of region.nodes) {
+      // nos andares do meio cada nó sai um pouco do trilho (a teia fica orgânica, fixa pela semente)
+      const middle = node.floor > 1 && node.floor < FLOORS;
+      const h = mixSeed(campaign.seed, node.id);
+      const jx = middle ? (h % 9) - 4 : 0;
+      const jy = middle ? ((h >>> 8) % 15) - 7 : 0;
+      // a placa da região fica embaixo (é por onde você entra), os andares sobem a partir dela
+      const fromBottom = BOTTOM + r * PER_REGION + HEAD + STEP * (node.floor - 0.5);
+      points.set(node.id, { node, x: LANE_X[node.lane] + jx, y: Math.round(height - fromBottom + jy) });
+    }
+  }
+  const regions = campaign.regions.map((region, r) => ({
+    ...REGIONS[region.id - 1],
+    top: height - BOTTOM - (r + 1) * PER_REGION,
+    height: PER_REGION + (r === 0 ? BOTTOM : 0),
+  }));
+  const edges = [];
+  for (const region of campaign.regions) {
+    for (const node of region.nodes) for (const to of node.next) edges.push([node.id, to]);
+    // do chefe derrotado sobe para a entrada da próxima região
+    if (region.id < campaign.regions.length) edges.push([region.boss, campaign.regions[region.id].entry]);
+  }
+  return { height, points, regions, edges };
 }
 
-/** Estado de cada nó: vencido, atual ou trancado. */
-function nodeStatus(index, run) {
-  if (run.cleared.includes(index)) return 'cleared';
-  if (index === run.node) return 'current';
-  return 'locked';
+/** Para onde a teia ainda leva a partir dos nós abertos. */
+function reachableFrom(campaign, open) {
+  const seen = new Set();
+  const stack = [...open];
+  while (stack.length) {
+    const id = stack.pop();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const node = campaign.byId.get(id);
+    if (node.boss && node.region < campaign.regions.length) stack.push(campaign.regions[node.region].entry);
+    else stack.push(...node.next);
+  }
+  return seen;
 }
 
-/** Marcas no feltro de cada região (posição em %, tamanho em px): fundo de copo e cinzas. */
-const REGION_MARKS = [
-  { rings: [[14, 22, 46], [82, 58, 54], [24, 86, 40]], ash: [[70, 18], [12, 64], [88, 88]] },
-  { rings: [[78, 26, 50], [18, 52, 44], [66, 84, 58]], ash: [[30, 14], [86, 70], [10, 92]] },
-  { rings: [[20, 30, 56], [84, 44, 42], [44, 80, 50]], ash: [[64, 12], [8, 70], [90, 92]] },
-];
+/** open = dá para entrar agora · done = já passou · ahead = mais adiante · gone = ficou fora do caminho. */
+function statusesOf(state, campaign) {
+  const open = availableNodes(state);
+  const done = new Set(state.run.cleared);
+  const ahead = reachableFrom(campaign, open);
+  const openSet = new Set(open);
+  const status = new Map();
+  for (const id of campaign.byId.keys()) {
+    if (done.has(id)) status.set(id, 'done');
+    else if (openSet.has(id)) status.set(id, 'open');
+    else if (ahead.has(id)) status.set(id, 'ahead');
+    else status.set(id, 'gone');
+  }
+  return { status, open };
+}
 
-/** Polaroid inclina um pouco, alternando, como foto jogada na mesa. */
-const TILT = [-4, 3, -2, 4, -3, 2];
+const STOP_ART = {
+  shop: (cls) => <ValtinhoSprite className={cls} />,
+  black: (cls) => <CorvoSprite className={cls} />,
+  coins: (cls) => <TiaoMoedasSprite className={cls} />,
+};
+const STOP_CAPTION = { shop: 'LOJA', black: 'BECO', coins: 'SEU TIÃO' };
+const STATUS_LABEL = { open: 'ABERTO', done: 'JÁ PASSOU', ahead: 'MAIS ADIANTE', gone: 'FORA DO CAMINHO' };
 
-function MapNode({ point, status, selected, onSelect }) {
-  const rival = getRival(point.rivalId);
-  const known = status !== 'locked';
-  const photo = point.boss ? 64 : 50;
+/** Um nó da teia: polaroid do rival (mesa) ou ficha com o NPC (loja, beco, Seu Tião). */
+const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect }) {
+  const { node } = point;
+  const fight = node.type === 'combat' || node.type === 'boss';
+  const rival = fight ? getRival(node.rivalId) : null;
+  const label = fight
+    ? `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}`
+    : NODE_LABEL[node.type];
+  const cls = `web-node web-${status} ${selected ? 'web-selected' : ''}`;
+  if (fight) {
+    const photo = node.boss ? 56 : 40;
+    return (
+      <button
+        type="button"
+        className={`${cls} map-polaroid web-fight ${node.boss ? 'map-node-boss' : ''}`}
+        style={{ left: `${point.x}%`, top: point.y, rotate: `${tilt}deg` }}
+        onClick={() => onSelect(node.id)}
+        aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
+        aria-pressed={selected}
+      >
+        <span aria-hidden="true" className="polaroid-tape" />
+        <span className="polaroid-photo" style={{ width: photo, height: photo }}>
+          {known ? (
+            <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={photo} smoke={false} />
+          ) : node.boss ? (
+            <span className="block map-silhouette">
+              <RivalAvatar rival={rival} mood="idle" size={photo} smoke={false} />
+            </span>
+          ) : (
+            <span className="map-node-lock font-pixel">?</span>
+          )}
+          {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
+        </span>
+        <span className="polaroid-caption font-pixel">{known ? rival.name.toUpperCase() : '???'}</span>
+        {node.boss && <span className="map-boss-tag font-pixel">CHEFE</span>}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
-      className={`map-node map-polaroid map-node-${status} ${point.boss ? 'map-node-boss' : ''} ${selected ? 'map-node-selected' : ''}`}
-      style={{ left: `${point.x}%`, top: point.y, rotate: `${TILT[point.slot - 1]}deg` }}
-      onClick={() => onSelect(point.index)}
-      aria-label={
-        known
-          ? `${point.index + 1}º nó: ${rival.name}${status === 'cleared' ? ' (vencido)' : ' (próximo)'}`
-          : `${point.index + 1}º nó: trancado${point.boss ? ' (chefe)' : ''}`
-      }
+      className={`${cls} web-stop web-stop-${node.type}`}
+      style={{ left: `${point.x}%`, top: point.y }}
+      onClick={() => onSelect(node.id)}
+      aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
       aria-pressed={selected}
     >
-      <span aria-hidden="true" className="polaroid-tape" />
-      <span className="polaroid-photo" style={{ width: photo, height: photo }}>
-        <span className={`block ${known ? '' : 'map-silhouette'}`}>
-          <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'idle'} size={photo} smoke={known} />
-        </span>
-        {!known && <span className="map-node-lock font-pixel">?</span>}
-        {status === 'cleared' && <span aria-hidden="true" className="chalk-x" />}
-      </span>
-      <span className="polaroid-caption font-pixel">{known ? rival.name.toUpperCase() : '???'}</span>
-      {point.boss && <span className="map-boss-tag font-pixel">CHEFE</span>}
+      <span className="web-stop-chip">{STOP_ART[node.type]('web-stop-art')}</span>
+      <span className="web-stop-caption font-pixel">{STOP_CAPTION[node.type]}</span>
+      {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
     </button>
+  );
+});
+
+/** Texto e botão do rodapé para o nó escolhido. */
+function NodeDetail({ node, status, known, onEnter }) {
+  const fight = node.type === 'combat' || node.type === 'boss';
+  const rival = fight ? getRival(node.rivalId) : null;
+  const open = status === 'open';
+  let art;
+  let title;
+  let line;
+  let notes;
+  let action;
+  let kind = NODE_LABEL[node.type];
+  if (fight) {
+    const tier = AI_TIERS[tierOf(rival)];
+    if (known) kind = `${node.boss ? 'CHEFE' : 'MESA'} · IA ${tier.label}`;
+    art = (
+      <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
+        <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={46} smoke={known} />
+      </div>
+    );
+    title = known ? rival.name.toUpperCase() : '???';
+    line = known ? `${rival.title} · ${rival.hearts}♥` : 'Ainda não chegou nessa região.';
+    notes = known ? [rivalBlurb(rival.id), ...rivalRules(rival.id).map((r) => `• ${r}`)] : [];
+    action = `SENTAR À MESA · ${rival.name.toUpperCase()}`;
+  } else if (node.type === 'shop') {
+    art = <ValtinhoSprite className="h-12 w-12 shrink-0" />;
+    title = 'LOJA DO VALTINHO';
+    line = 'Talismãs e pedras de grife. Desvio sem luta.';
+    notes = ['O balcão de sempre: compre, venda a 50% e reembaralhe a vitrine.'];
+    action = 'ENTRAR NA LOJA';
+  } else if (node.type === 'black') {
+    art = <CorvoSprite className="h-12 w-12 shrink-0" />;
+    title = 'MERCADO NEGRO';
+    line = 'O Corvo da Madrugada, no beco escuro.';
+    notes = ['Só talismãs Necróticos, de $18 a $26. Fortes, e cobram o preço deles.'];
+    action = 'ENTRAR NO BECO';
+  } else {
+    art = <TiaoMoedasSprite className="h-12 w-12 shrink-0" />;
+    title = 'SEU TIÃO DAS MOEDAS';
+    line = 'Um velho no engradado de cerveja.';
+    notes = [`Gorjeta na hora: de $${COIN_EVENT_MIN} a $${COIN_EVENT_MAX}. Sem mesa, sem risco.`];
+    action = 'SENTAR COM O SEU TIÃO';
+  }
+  return (
+    <>
+      <div className="flex gap-3">
+        {art}
+        <div className="min-w-0 flex-1">
+          <p className="font-pixel text-[7px] text-bone-400">
+            ANDAR {node.floor}/{FLOORS} · {kind} · {STATUS_LABEL[status]}
+          </p>
+          <p className="mt-1 truncate font-pixel text-[10px] text-bone-50">{title}</p>
+          <p className="truncate font-term text-[16px] leading-none text-bone-300">{line}</p>
+        </div>
+      </div>
+      {notes.length > 0 && (
+        <ul className="web-notes mt-1.5 grid gap-0.5 font-term text-[15px] leading-[1.05] text-bone-200">
+          {notes.map((n, i) => (
+            <li key={n} className={i > 0 && fight ? 'text-brass-300' : ''}>
+              {n}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open ? (
+        <button type="button" data-tone="play" className="btn-pixel mt-2 w-full text-[11px]" onClick={() => onEnter(node.id)}>
+          {action}
+        </button>
+      ) : (
+        <p className="web-hint mt-2 font-pixel text-[8px] leading-relaxed">TOQUE NUM CAMINHO ACESO PARA SEGUIR</p>
+      )}
+    </>
   );
 }
 
 /**
- * Mapa da campanha: trilha vertical de 18 nós (3 regiões × 6), de baixo para
- * cima. Os vencidos ganham um X de giz; o próximo pulsa. Tocar num nó mostra o
- * rival embaixo; SENTAR À MESA entra no próximo nó.
+ * Mapa da campanha em teia (Patch 0.6.1): as 3 regiões empilhadas, do Boteco (embaixo)
+ * ao Submundo (no topo). Cada região sobe 6 andares: entrada, 4 andares de bifurcações
+ * (mesas, Loja do Valtinho, Mercado Negro, Seu Tião) e o chefe. Os caminhos abertos
+ * pulsam; o que você já percorreu fica riscado a giz; o que ficou para trás apaga.
+ * Tocar num nó mostra o que tem nele; o botão do rodapé entra no nó escolhido.
  */
 export default function CampaignMap({ state, onEnter, onMenu, press }) {
-  const { run } = state;
-  const { height, points, regions } = useTrail();
-  const [selected, setSelected] = useState(run.node);
+  const campaign = campaignOf(state);
+  const { height, points, regions, edges } = useMemo(() => layoutOf(campaign), [campaign]);
+  const { status, open } = useMemo(() => statusesOf(state, campaign), [state, campaign]);
+  const [picked, setPicked] = useState(null);
   const scrollRef = useRef(null);
-  const region = regionOf(run.node);
+  const regionId = mapRegionId(state);
+  const region = REGIONS[regionId - 1];
+  const selectedId = picked && points.has(picked) ? picked : (open[0] ?? state.run.node ?? campaign.regions[0].entry);
+  const selected = points.get(selectedId).node;
+  const focusY = open.length ? Math.round(open.reduce((sum, id) => sum + points.get(id).y, 0) / open.length) : 0;
+  const floorNow = open.length ? points.get(open[0]).node.floor : FLOORS;
 
-  // abre centrado no próximo nó
+  // abre com os próximos caminhos no meio da tela
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
-    const point = points[run.node];
-    el.scrollTop = Math.max(0, point.y - el.clientHeight / 2);
-  }, [points, run.node]);
+    if (el) el.scrollTop = Math.max(0, focusY - el.clientHeight * 0.55);
+  }, [focusY]);
 
-  const point = points[selected] ?? points[run.node];
-  const status = nodeStatus(point.index, run);
-  const known = status !== 'locked';
-  const rival = getRival(point.rivalId);
-  const rules = known ? rivalRules(rival.id) : [];
-  const path = points.map((p) => `${p.x},${p.y}`).join(' ');
-  const donePath = points
-    .filter((p) => p.index <= run.node)
-    .map((p) => `${p.x},${p.y}`)
-    .join(' ');
+  const path = state.run.path;
+  const stepOf = new Map(path.map((id, i) => [id, i]));
+  const edgeClass = ([a, b]) => {
+    if (stepOf.has(a) && stepOf.get(b) === stepOf.get(a) + 1) return 'web-edge-done';
+    if (a === state.run.node && status.get(b) === 'open') return 'web-edge-open';
+    if (status.get(a) === 'gone' || status.get(b) === 'gone') return 'web-edge-gone';
+    return 'web-edge';
+  };
+  const curve = ([a, b]) => {
+    const p = points.get(a);
+    const q = points.get(b);
+    const bend = ((mixSeed(campaign.seed, `${a}>${b}`) % 7) - 3) * 0.8;
+    return `M${p.x} ${p.y} Q${(p.x + q.x) / 2 + bend} ${(p.y + q.y) / 2} ${q.x} ${q.y}`;
+  };
 
   return (
     <div className={`map-screen map-atmo-${region.atmosphere} fixed inset-0 z-[55] flex flex-col`} role="main" aria-label="Mapa da campanha">
@@ -121,7 +274,8 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-pixel text-[7px] text-bone-400">
-              NÓ {Math.min(run.node + 1, TOTAL_NODES)}/{TOTAL_NODES} · REGIÃO {region.id}
+              REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
+              {open.length > 1 ? ` · ${open.length} CAMINHOS` : ''}
             </p>
             <h1 className="mt-1 truncate font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">{region.name}</h1>
           </div>
@@ -141,24 +295,13 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           {regions.map((r) => (
             <section
               key={r.id}
-              className={`map-region map-region-${r.atmosphere} absolute inset-x-0`}
+              className={`map-region map-region-${r.atmosphere} absolute inset-x-0 ${r.id === regionId ? '' : 'web-region-far'}`}
               style={{ top: r.top, height: r.height }}
               aria-label={r.name}
-            >
-              {REGION_MARKS[r.id - 1].rings.map(([x, y, d]) => (
-                <span key={`ring-${x}-${y}`} aria-hidden="true" className="map-ring pointer-events-none absolute" style={{ left: `${x}%`, top: `${y}%`, width: d, height: d }} />
-              ))}
-              {REGION_MARKS[r.id - 1].ash.map(([x, y]) => (
-                <span key={`ash-${x}-${y}`} aria-hidden="true" className="map-ash pointer-events-none absolute" style={{ left: `${x}%`, top: `${y}%` }} />
-              ))}
-              <div className="map-region-head absolute inset-x-3 top-2 text-center">
-                <p className="font-pixel text-[9px] leading-snug text-bone-50 text-shadow-pixel">{r.name}</p>
-                <p className="font-term text-[15px] leading-none text-bone-300">{r.subtitle}</p>
-              </div>
-            </section>
+            />
           ))}
 
-          {/* trilha riscada a giz de sinuca (o filtro deixa o traço áspero) */}
+          {/* caminhos riscados a giz de sinuca (o filtro deixa o traço áspero) */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <filter id="chalk-rough" x="-5%" y="-1%" width="110%" height="102%">
@@ -167,47 +310,36 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
               </filter>
             </defs>
             <g filter="url(#chalk-rough)">
-              <polyline points={path} className="map-path" vectorEffect="non-scaling-stroke" />
-              <polyline points={path} className="map-path map-path-echo" vectorEffect="non-scaling-stroke" transform="translate(0.4 1.5)" />
-              <polyline points={donePath} className="map-path-done" vectorEffect="non-scaling-stroke" />
+              {edges.map((edge) => (
+                <path key={`${edge[0]}>${edge[1]}`} d={curve(edge)} className={edgeClass(edge)} vectorEffect="non-scaling-stroke" />
+              ))}
             </g>
           </svg>
 
-          {points.map((p) => (
-            <MapNode key={p.index} point={p} status={nodeStatus(p.index, run)} selected={p.index === selected} onSelect={setSelected} />
+          {regions.map((r) => (
+            <div key={`head-${r.id}`} className="map-region-head web-region-head absolute inset-x-3 text-center" style={{ top: r.top + PER_REGION - HEAD + 8 }}>
+              <p className="font-pixel text-[9px] leading-snug text-bone-50 text-shadow-pixel">{r.name}</p>
+              <p className="font-term text-[15px] leading-none text-bone-300">{r.subtitle}</p>
+            </div>
+          ))}
+
+          {[...points.values()].map((p) => (
+            <WebNode
+              key={p.node.id}
+              point={p}
+              status={status.get(p.node.id)}
+              known={p.node.region <= regionId}
+              selected={p.node.id === selectedId}
+              tilt={(mixSeed(campaign.seed, `tilt-${p.node.id}`) % 7) - 3}
+              onSelect={setPicked}
+            />
           ))}
         </div>
       </div>
 
       <footer className="map-footer relative z-10 shrink-0 px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <div className="flex gap-3">
-          <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
-            <RivalAvatar rival={rival} mood={status === 'cleared' ? 'hurt' : 'smug'} size={48} smoke={known} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-pixel text-[7px] text-bone-400">
-              {point.boss ? 'CHEFE DA REGIÃO' : `${point.slot}º DA REGIÃO`} · {status === 'cleared' ? 'VENCIDO' : status === 'current' ? 'PRÓXIMO' : 'TRANCADO'}
-            </p>
-            <p className="mt-1 truncate font-pixel text-[10px] text-bone-50">{known ? rival.name.toUpperCase() : '???'}</p>
-            <p className="truncate font-term text-[16px] leading-none text-bone-300">
-              {known ? `${rival.title} · ${rival.hearts}♥` : 'Ainda não chegou lá.'}
-            </p>
-          </div>
-        </div>
-        {known && (
-          <ul className="mt-1.5 grid gap-0.5 font-term text-[16px] leading-[1.05] text-bone-200">
-            <li>{rivalBlurb(rival.id)}</li>
-            {rules.map((line) => (
-              <li key={line} className="text-brass-300">
-                • {line}
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER: +2♥ · CHEFE: CURA TUDO</p>
-        <button type="button" data-tone="play" className="btn-pixel mt-2 w-full text-[11px]" onClick={onEnter}>
-          SENTAR À MESA · {getRival(points[run.node].rivalId).name.toUpperCase()}
-        </button>
+        <NodeDetail node={selected} status={status.get(selected.id)} known={selected.region <= regionId} onEnter={onEnter} />
+        <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER MESA: +2♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS</p>
       </footer>
     </div>
   );

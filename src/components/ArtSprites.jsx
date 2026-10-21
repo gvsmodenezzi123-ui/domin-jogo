@@ -20,3 +20,13 @@ export { AnelIcon, BarbanteIcon, CarteiraIcon, EspelhoIcon, MaoGrandeIcon, Relog
 
 // Interface
 export { CoinIcon, EyeIcon, HeartIcon, LampIcon, MenuIcon, SpeakerIcon } from './art/UiIcons.jsx';
+// Patch 0.6.1: talismãs Necróticos, o Corvo da Madrugada e o Seu Tião das Moedas
+export {
+  CorvoSprite,
+  FalsaPartidaIcon,
+  OlhoMorteIcon,
+  OssoEnsanguentadoIcon,
+  PactoCoveiroIcon,
+  TiaoMoedasSprite,
+  TrancaCadavericaIcon,
+} from './art/NecroticArt.jsx';

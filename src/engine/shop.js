@@ -12,7 +12,8 @@
  * quantas vezes você reembaralhou).
  */
 
-import { regionOf, rerollCost } from '../data/campaign.js';
+import { rerollCost } from '../data/campaign.js';
+import { mixSeed, regionOfState } from './campaignMap.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { RARITIES } from '../data/rarities.js';
 import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
@@ -22,8 +23,7 @@ export const SHOP_RELIC_OFFERS = 3;
 export const SHOP_TILE_OFFERS = 2;
 
 export function shopRng(state, rerolls, salt = 0) {
-  const seed = (state.seed ?? 0) >>> 0;
-  return createSeededRng((seed ^ Math.imul(state.run.node + 7, 0x9e3779b1) ^ Math.imul(rerolls + 1 + salt * 31, 0x85ebca6b)) >>> 0);
+  return createSeededRng(mixSeed(state.seed ?? 0, `loja-${state.run.node ?? 'x'}-${rerolls}-${salt}`));
 }
 
 /**
@@ -78,12 +78,12 @@ function pickWeighted(pool, weightOf, count, rng) {
   return picked;
 }
 
-/** Monta a vitrine da loja (raridade conforme a região do próximo nó). */
+/** Monta a vitrine da loja (raridade conforme a região do nó). Necróticos nunca: só no Mercado Negro. */
 export function buildShop(state, rerolls = 0) {
   const rng = shopRng(state, rerolls);
-  const chances = regionOf(state.run.node).rarity;
+  const chances = regionOfState(state).rarity;
   const owned = new Set(state.relics.player);
-  const relicPool = RELIC_IDS.filter((id) => !owned.has(id));
+  const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico');
   const relics = pickByRarity(relicPool, (id) => RELICS[id].rarity, chances, SHOP_RELIC_OFFERS, rng).map((id) => ({
     id,
     price: RELICS[id].price,

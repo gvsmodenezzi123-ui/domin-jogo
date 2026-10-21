@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { NODES, TOTAL_NODES } from '../../data/campaign.js';
+import { REGIONS } from '../../data/campaign.js';
 import { RELICS } from '../../data/relics.js';
 import { ENHANCEMENTS } from '../../data/enhancedTiles.js';
 import { RIVALS } from '../../data/rivals.js';
+import { availableNodes, campaignOf, currentNode, generateCampaign } from '../campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -25,14 +26,26 @@ const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra })
 const lastOf = (s, type) => [...s.events].reverse().find((e) => e.type === type);
 
 const freshRun = (seed = 7) => act(createInitialState(), 'NEW_RUN', { seed });
+const nodeOfId = (s, id) => campaignOf(s).byId.get(id);
 
-/** Vence o nó atual pelo mapa: entra, vence (DEV), abre a loja e volta para o mapa. */
-function clearNode(s, seed = 1) {
-  let next = act(s, 'ENTER_NODE', { deck: deck(seed) });
-  next = dev(next, 'winMatch');
-  if (next.phase === 'runWon') return next;
-  next = act(next, 'OPEN_SHOP');
-  return act(next, 'LEAVE_SHOP');
+/** Entra no nó `id` e conclui: vence a mesa (DEV) ou sai da loja, do mercado ou do evento. */
+function visit(s, id, seed = 1) {
+  let next = act(s, 'CHOOSE_NODE', { nodeId: id, deck: deck(seed) });
+  if (next.phase === 'playing') {
+    next = dev(next, 'winMatch');
+    return next.phase === 'runWon' ? next : act(next, 'OPEN_MAP');
+  }
+  if (next.phase === 'shop') return act(next, 'LEAVE_SHOP');
+  if (next.phase === 'blackMarket') return act(next, 'LEAVE_MARKET');
+  if (next.phase === 'coinEvent') return act(next, 'LEAVE_EVENT');
+  return next;
+}
+
+/** Anda pelo mapa escolhendo sempre com `pick` até o fim da run (ou `limit` nós). */
+function walk(s, pick = (ids) => ids[0], limit = 99) {
+  let next = s;
+  for (let i = 0; i < limit && next.phase === 'map'; i += 1) next = visit(next, pick(availableNodes(next), next), i + 10);
+  return next;
 }
 
 /** Mesa montada contra `rivalId` (pontas 3 e 4 por padrão). */
@@ -50,73 +63,119 @@ function table(rivalId, { player, tioZe, board = placeTile(createEmptyBoard(), t
   };
 }
 
-describe('mapa da campanha', () => {
-  it('NOVO JOGO para no mapa, no 1º nó (Tio Zé)', () => {
+describe('mapa da campanha em teia (Patch 0.6.1)', () => {
+  it('NOVO JOGO para no mapa antes do 1º nó; o único caminho é a entrada da região 1 (Tio Zé)', () => {
     const s = freshRun();
     expect(s.phase).toBe('map');
-    expect(s.run).toMatchObject({ node: 0, cleared: [], match: 0 });
-    expect(s.rivalId).toBe('tioZe');
-    expect(s.hearts.player).toBe(MAX_HEARTS);
+    expect(s.run).toMatchObject({ node: null, cleared: [], path: [], match: 0 });
+    const [entry] = availableNodes(s);
+    expect(availableNodes(s)).toHaveLength(1);
+    expect(nodeOfId(s, entry)).toMatchObject({ region: 1, floor: 1, type: 'combat', rivalId: 'tioZe' });
     expect(act(s, 'PLAY', { actor: 'player', tileId: '0-0', side: 'root' })).toBe(s);
   });
 
-  it('entrar no nó abre a mesa; vencer marca o X, libera o próximo e volta ao mapa pela loja', () => {
-    let s = act(freshRun(), 'ENTER_NODE', { deck: deck() });
+  it('vencer a mesa conclui o nó e volta direto ao mapa (sem loja obrigatória), com os caminhos do próximo andar', () => {
+    let s = freshRun();
+    const [entry] = availableNodes(s);
+    s = act(s, 'CHOOSE_NODE', { nodeId: entry, deck: deck() });
     expect(s.phase).toBe('playing');
     expect(s.rivalId).toBe('tioZe');
     s = dev(s, 'winMatch');
     expect(s.phase).toBe('matchWon');
-    expect(s.run.cleared).toEqual([0]);
-    expect(s.run.node).toBe(1);
-    s = act(s, 'OPEN_SHOP');
-    expect(s.shop.nextRivalId).toBe('tonho');
-    s = act(s, 'LEAVE_SHOP');
+    expect(s.run.cleared).toEqual([entry]);
+    s = act(s, 'OPEN_MAP');
     expect(s.phase).toBe('map');
     expect(s.shop).toBeNull();
-    expect(s.rivalId).toBe('tonho');
-    s = act(s, 'ENTER_NODE', { deck: deck(2) });
-    expect(s.rivalId).toBe('tonho');
-    expect(s.hearts.tioZe).toBe(RIVALS.tonho.hearts);
+    const next = availableNodes(s);
+    expect(next).toEqual([...nodeOfId(s, entry).next]);
+    expect(next.length).toBeGreaterThanOrEqual(2);
+    for (const id of next) expect(nodeOfId(s, id).floor).toBe(2);
+  });
+
+  it('só dá para entrar nos nós ligados ao atual (e combate precisa de baralho)', () => {
+    const s = freshRun(5);
+    const far = generateCampaign(s.seed).regions[0].boss;
+    expect(act(s, 'CHOOSE_NODE', { nodeId: far, deck: deck() })).toBe(s);
+    expect(act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s)[0] })).toBe(s);
   });
 
   it('os seus corações continuam entre os nós: vencer cura 2, vencer chefe cura tudo', () => {
-    let s = act(freshRun(), 'ENTER_NODE', { deck: deck() });
+    let s = act(freshRun(), 'CHOOSE_NODE', { nodeId: availableNodes(freshRun())[0], deck: deck() });
     s = { ...s, hearts: { ...s.hearts, player: 1 } };
     s = dev(s, 'winMatch');
     expect(s.hearts.player).toBe(3);
     expect(s.roundResult.heal).toBe(2);
-    s = act(act(s, 'OPEN_SHOP'), 'LEAVE_SHOP');
-    s = act(s, 'ENTER_NODE', { deck: deck(3) });
-    expect(s.hearts.player).toBe(3); // não volta cheio na mesa nova
 
-    // chefe da região 1 (nó 6)
     let boss = dev(s, 'setRival', { rivalId: 'arlindo', deck: deck(4) });
-    expect(boss.run.node).toBe(5);
+    expect(currentNode(boss)).toMatchObject({ boss: true, region: 1, floor: 6 });
     boss = { ...boss, hearts: { ...boss.hearts, player: 1 } };
     boss = dev(boss, 'winMatch');
     expect(boss.hearts.player).toBe(MAX_HEARTS);
     expect(lastOf(boss, 'duelEnd')).toMatchObject({ boss: true, heal: MAX_HEARTS - 1 });
   });
 
-  it('as 18 mesas em ordem; vencer o Comendador encerra a run', () => {
-    let s = freshRun(3);
-    const seen = [];
-    for (let i = 0; i < TOTAL_NODES; i += 1) {
-      expect(s.phase).toBe('map');
-      seen.push(s.rivalId);
-      s = clearNode(s, i + 10);
+  it('uma run inteira sobe as 3 regiões andar por andar e o Comendador encerra a run', () => {
+    for (const seed of [3, 11, 42]) {
+      const s = walk(freshRun(seed));
+      expect(s.phase).toBe('runWon');
+      expect(lastOf(s, 'duelEnd')).toMatchObject({ runWon: true });
+      const visited = s.run.path.map((id) => nodeOfId(s, id));
+      expect(visited.map((n) => `${n.region}-${n.floor}`)).toEqual(REGIONS.flatMap((r) => [1, 2, 3, 4, 5, 6].map((f) => `${r.id}-${f}`)));
+      expect(visited.filter((n) => n.boss).map((n) => n.rivalId)).toEqual(['arlindo', 'beto', 'comendador']);
+      expect(s.run.cleared).toEqual(s.run.path);
+      const fights = visited.filter((n) => n.type === 'combat' || n.type === 'boss');
+      expect(s.stats.matchesWon).toBe(fights.length);
+      expect(s.coins.player).toBeGreaterThanOrEqual(MATCH_PRIZE * fights.length);
     }
-    expect(seen).toEqual(NODES.map((n) => n.rivalId));
-    expect(s.phase).toBe('runWon');
-    expect(s.run.cleared).toHaveLength(TOTAL_NODES);
-    expect(lastOf(s, 'duelEnd')).toMatchObject({ runWon: true });
-    expect(s.coins.player).toBeGreaterThanOrEqual(MATCH_PRIZE * TOTAL_NODES);
+  });
+
+  it('caminhos diferentes enfrentam rivais diferentes', () => {
+    const left = walk(freshRun(9), (ids) => ids[0]);
+    const right = walk(freshRun(9), (ids) => ids[ids.length - 1]);
+    expect(left.run.path).not.toEqual(right.run.path);
+    expect(left.run.history).not.toEqual(right.run.history);
+  });
+
+  it('loja, mercado negro e Seu Tião são caminhos: entrar, mexer e sair conclui o nó', () => {
+    // procura uma semente com cada tipo de nó no 2º andar da região 1
+    for (const type of ['shop', 'black', 'coins']) {
+      let seed = 1;
+      while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === type)) seed += 1;
+      let s = visit(freshRun(seed), availableNodes(freshRun(seed))[0]);
+      const target = availableNodes(s).find((id) => nodeOfId(s, id).type === type);
+      expect(target, `semente ${seed}`).toBeTruthy();
+      const before = s.coins.player;
+      s = act(s, 'CHOOSE_NODE', { nodeId: target });
+      expect(s.phase).toBe({ shop: 'shop', black: 'blackMarket', coins: 'coinEvent' }[type]);
+      if (type === 'coins') {
+        expect(s.coinEvent.reward).toBeGreaterThanOrEqual(1);
+        expect(s.coinEvent.reward).toBeLessThanOrEqual(12);
+        expect(s.coins.player).toBe(before + s.coinEvent.reward);
+        expect(s.run.cleared).toContain(target);
+      }
+      if (type === 'black') expect(s.market.offers.every((o) => RELICS[o.id].rarity === 'necrotico')).toBe(true);
+      s = act(s, { shop: 'LEAVE_SHOP', black: 'LEAVE_MARKET', coins: 'LEAVE_EVENT' }[type]);
+      expect(s.phase).toBe('map');
+      expect(s.run.cleared).toContain(target);
+      expect(availableNodes(s)).toEqual([...nodeOfId(s, target).next]);
+    }
+  });
+
+  it('o prêmio do Seu Tião é fixo pela semente (sair e voltar não sorteia de novo)', () => {
+    let seed = 1;
+    while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'coins')) seed += 1;
+    const go = () => {
+      const s = visit(freshRun(seed), availableNodes(freshRun(seed))[0]);
+      const target = availableNodes(s).find((id) => nodeOfId(s, id).type === 'coins');
+      return act(s, 'CHOOSE_NODE', { nodeId: target }).coinEvent.reward;
+    };
+    expect(go()).toBe(go());
   });
 });
 
 describe('save da run', () => {
-  it('CONTINUAR volta exatamente: nó, vida, moedas, talismãs e pedras de grife', () => {
-    let s = clearNode(clearNode(freshRun(21), 1), 2);
+  it('CONTINUAR volta exatamente: nó, caminho, vida, moedas, talismãs e pedras de grife', () => {
+    let s = walk(freshRun(21), (ids) => ids[0], 3);
     s = { ...s, hearts: { ...s.hearts, player: 3 }, coins: { ...s.coins, player: 17 } };
     s = { ...s, relics: { ...s.relics, player: ['caneca', 'dedal'] }, decks: { ...s.decks, player: { '2-5': 'ouro', '6-6': 'rubi' } } };
     const save = JSON.parse(JSON.stringify(snapshotRun(s, 'map', 1234)));
@@ -129,52 +188,63 @@ describe('save da run', () => {
     expect(loaded.coins.player).toBe(17);
     expect(loaded.relics.player).toEqual(['caneca', 'dedal']);
     expect(loaded.decks.player).toEqual({ '2-5': 'ouro', '6-6': 'rubi' });
-    expect(loaded.rivalId).toBe('baiano');
     expect(loaded.seed).toBe(s.seed);
-
-    const table = act(loaded, 'ENTER_NODE', { deck: deck(5) });
-    expect(table.rivalId).toBe('baiano');
-    expect(table.hearts.player).toBe(3);
+    expect(availableNodes(loaded)).toEqual(availableNodes(s));
   });
 
-  it('save tirado na loja reabre a loja do mesmo nó', () => {
-    let s = act(freshRun(4), 'ENTER_NODE', { deck: deck() });
-    s = act(dev(s, 'winMatch'), 'OPEN_SHOP');
-    const loaded = act(createInitialState(), 'LOAD_RUN', { save: snapshotRun(s, 'shop') });
-    expect(loaded.phase).toBe('shop');
-    expect(loaded.shop.relics).toHaveLength(3);
-    expect(loaded.shop.nextRivalId).toBe('tonho');
-    expect(act(loaded, 'LEAVE_SHOP').phase).toBe('map');
-  });
-
-  it('a vitrine salva volta igual (o que você comprou continua vendido)', () => {
-    let s = act(freshRun(8), 'ENTER_NODE', { deck: deck() });
-    s = act(dev(s, 'winMatch'), 'OPEN_SHOP');
+  it('save tirado na loja reabre a mesma vitrine; o que você comprou continua vendido', () => {
+    let seed = 1;
+    while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'shop')) seed += 1;
+    let s = visit(freshRun(seed), availableNodes(freshRun(seed))[0]);
+    s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s).find((id) => nodeOfId(s, id).type === 'shop') });
     s = dev(s, 'addCoins', { amount: 40 });
     s = act(s, 'SHOP_BUY_RELIC', { index: 1 });
     s = act(s, 'SHOP_REROLL');
     s = act(s, 'SHOP_BUY_RELIC', { index: 0 });
     const loaded = act(createInitialState(), 'LOAD_RUN', { save: JSON.parse(JSON.stringify(snapshotRun(s, 'shop'))) });
+    expect(loaded.phase).toBe('shop');
     expect(loaded.shop.relics).toEqual(s.shop.relics);
     expect(loaded.shop.tiles).toEqual(s.shop.tiles);
     expect(loaded.shop.rerollCost).toBe(5);
     expect(loaded.relics.player).toEqual(s.relics.player);
     expect(snapshotRun(s, 'map').shop).toBeNull();
+    const left = act(loaded, 'LEAVE_SHOP');
+    expect(left.phase).toBe('map');
+    expect(left.run.cleared).toContain(s.run.node);
   });
 
-  it('save quebrado ou de outra versão é ignorado', () => {
+  it('save tirado no Mercado Negro reabre o beco com a mesma vitrine', () => {
+    let seed = 1;
+    while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'black')) seed += 1;
+    let s = visit(freshRun(seed), availableNodes(freshRun(seed))[0]);
+    s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s).find((id) => nodeOfId(s, id).type === 'black') });
+    s = dev(s, 'addCoins', { amount: 60 });
+    s = act(s, 'MARKET_BUY', { index: 0 });
+    const loaded = act(createInitialState(), 'LOAD_RUN', { save: JSON.parse(JSON.stringify(snapshotRun(s, 'blackMarket'))) });
+    expect(loaded.phase).toBe('blackMarket');
+    expect(loaded.market.offers).toEqual(s.market.offers);
+    expect(loaded.relics.player).toEqual(s.relics.player);
+  });
+
+  it('save quebrado, de outra versão ou com nó que não existe nesta teia é ignorado', () => {
     const s = createInitialState();
-    const good = snapshotRun(freshRun(), 'map');
+    const good = snapshotRun(walk(freshRun(), (ids) => ids[0], 2), 'map');
+    expect(isValidSave(good)).toBe(true);
     for (const bad of [
       null,
+      { ...good, v: 1 },
       { ...good, v: 99 },
-      { ...good, node: 18 },
+      { ...good, node: 3 },
+      { ...good, node: 'r9-f1-l1' },
+      { ...good, cleared: ['nada'] },
+      { ...good, path: 'r1-f1-l1' },
       { ...good, hearts: 0 },
       { ...good, relics: ['naoExiste'] },
       { ...good, deck: { '1-1': 'plutonio' } },
       { ...good, resume: 'playing' },
       { ...good, deck: { '9-9': 'ouro' } },
       { ...good, shop: { relics: [{ id: 'naoExiste', price: 1, sold: false }], tiles: [], rerolls: 0, rerollCost: 3 } },
+      { ...good, market: { offers: [{ id: 'naoExiste', price: 1, sold: false }] } },
     ]) {
       expect(isValidSave(bad)).toBe(false);
       expect(act(s, 'LOAD_RUN', { save: bad })).toBe(s);
@@ -183,10 +253,11 @@ describe('save da run', () => {
 });
 
 describe('loja por região', () => {
-  function rarities(node, samples = 160) {
-    const count = { comum: 0, raro: 0, lendario: 0, mitico: 0 };
+  function rarities(regionId, samples = 160) {
+    const count = { comum: 0, raro: 0, lendario: 0, mitico: 0, necrotico: 0 };
     for (let seed = 1; seed <= samples; seed += 1) {
-      const s = { ...freshRun(seed), run: { node, cleared: [], match: 1, history: [] } };
+      const fresh = freshRun(seed);
+      const s = { ...fresh, run: { ...fresh.run, node: `r${regionId}-f1-l1` } };
       for (let r = 0; r < 3; r += 1) {
         const shop = buildShop(s, r);
         for (const o of shop.relics) count[RELICS[o.id].rarity] += 1;
@@ -203,13 +274,14 @@ describe('loja por região', () => {
     expect(r1.lendario / total).toBeLessThan(0.12);
   });
 
-  it('quanto mais fundo no submundo, mais lendário e mítico', () => {
+  it('quanto mais fundo no submundo, mais lendário e mítico; Necrótico nunca na loja do Valtinho', () => {
     const r1 = rarities(1);
-    const r2 = rarities(7);
-    const r3 = rarities(13);
+    const r2 = rarities(2);
+    const r3 = rarities(3);
     expect(r2.mitico).toBeGreaterThan(0);
     expect(r3.mitico).toBeGreaterThan(r2.mitico);
     expect(r3.lendario).toBeGreaterThan(r1.lendario);
+    expect(r1.necrotico + r2.necrotico + r3.necrotico).toBe(0);
   });
 });
 

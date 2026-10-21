@@ -22,8 +22,10 @@
 import { buildTioZeView, decideTioZeAction } from '../ai/tioZeAI.js';
 import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, RELIC_SLOTS, getRelic, markUsed } from '../data/relics.js';
-import { HEAL_AFTER_NODE, NODES, TOTAL_NODES, nodeAt } from '../data/campaign.js';
-import { RIVALS, getRival } from '../data/rivals.js';
+import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
+import { FIRST_RIVAL, RIVALS, getRival } from '../data/rivals.js';
+import { buildMarket, marketBuyBlock } from './blackMarket.js';
+import { availableNodes, campaignOf, coinReward, currentNode } from './campaignMap.js';
 import {
   DAMAGE,
   MAX_HEARTS,
@@ -46,7 +48,7 @@ import {
   resolveTranca,
   tileId as canonicalId,
 } from './dominoLogic.js';
-import { directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
+import { cheatDeath, directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
 import {
   applyBatidaDamage,
   canUndo,
@@ -55,6 +57,7 @@ import {
   drawOptionsFor,
   enhancedTilesInPlay,
   hasRelic,
+  heartDrawCostFor,
   passAvailabilityFor,
   plainTiles,
   playerTurnExhausted,
@@ -62,6 +65,7 @@ import {
   requiredOpeningFor,
   rulesFor,
   runRelicHook,
+  trancaDamageFor,
   trancaRulesFor,
   trancaTileValues,
 } from './powers.js';
@@ -89,8 +93,13 @@ export function createRoundFx() {
   };
 }
 
+/** Efeitos que valem a partida inteira: escudo do Comendador, Falsa Partida e a compra forçada dela. */
+export function createMatchFx() {
+  return { shieldUsed: false, falsaUsed: bySeat(false, false), forcedDraw: null };
+}
+
 export function createInitialState() {
-  const rival = getRival(nodeAt(0).rivalId);
+  const rival = getRival(FIRST_RIVAL);
   return {
     phase: 'title',
     round: 0,
@@ -113,10 +122,14 @@ export function createInitialState() {
     relics: bySeat([], []),
     decks: bySeat({}, {}), // { tileId: aprimoramento } — as pedras trocadas no baralho de cada lado
     rivalId: rival.id,
-    // node: próximo nó a jogar; cleared: nós vencidos; match: partidas jogadas
-    run: { node: 0, cleared: [], match: 0, history: [] },
-    matchFx: { shieldUsed: false }, // efeitos que valem a partida inteira (escudo do Comendador)
+    // Patch 0.6.1, mapa em teia (engine/campaignMap.js):
+    //   node: id do nó onde você está (null antes do 1º); cleared: nós concluídos;
+    //   path: o caminho percorrido; match: partidas jogadas; history: rivais enfrentados
+    run: { node: null, cleared: [], path: [], match: 0, history: [] },
+    matchFx: createMatchFx(), // efeitos que valem a partida inteira
     shop: null,
+    market: null, // Mercado Negro do Corvo da Madrugada
+    coinEvent: null, // prêmio do Seu Tião das Moedas
     fx: createRoundFx(),
     pending: null,
     seed: null,
@@ -160,6 +173,18 @@ function startRound(state, deck) {
     },
   };
 
+  // Falsa Partida no fim da rodada passada: quem foi poupado faz o adversário comprar agora
+  const forced = next.matchFx?.forcedDraw;
+  if (forced) {
+    for (const seat of SEATS) {
+      const count = forced[seat] ?? 0;
+      if (!count) continue;
+      const taken = next.boneyard.slice(0, count).map((t) => dressTile(next, seat, t));
+      next = { ...next, boneyard: next.boneyard.slice(taken.length), hands: { ...next.hands, [seat]: [...next.hands[seat], ...taken] } };
+    }
+    next = { ...next, matchFx: { ...next.matchFx, forcedDraw: null } };
+  }
+
   let starter = state.nextStarter;
   let openingTileId = null;
   if (!starter) {
@@ -184,7 +209,7 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
     decks: { ...state.decks, tioZe: { ...rival.deck } },
     hearts: bySeat(Math.max(1, state.hearts.player), rival.hearts),
     maxHearts: bySeat(MAX_HEARTS, rival.hearts),
-    matchFx: { shieldUsed: false },
+    matchFx: createMatchFx(),
     coins: { ...state.coins, tioZe: rival.coins },
     round: 0,
     nextStarter: null,
@@ -197,17 +222,19 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
 }
 
 /**
- * Alguém zerou: se foi o rival, você vence o nó (prêmio, cura, loja; depois do
- * último chefe, a run); se foi você, a run acaba.
+ * Alguém zerou: se foi o rival, você vence o nó (prêmio e cura; o nó fica concluído e
+ * o mapa abre os próximos caminhos; o chefe final encerra a run); se foi você, a run acaba.
  */
 function endMatch(state, winner) {
   if (winner === 'player') {
-    const node = nodeAt(state.run.node);
-    const prize = MATCH_PRIZE + getRival(state.rivalId).prizeBonus;
-    const healed = node.boss ? MAX_HEARTS : Math.min(MAX_HEARTS, state.hearts.player + HEAL_AFTER_NODE);
+    const node = currentNode(state);
+    const rival = getRival(state.rivalId);
+    const boss = node ? node.boss : rival.boss;
+    const runWon = node ? node.boss && node.region === campaignOf(state).regions.length : rival.id === FINAL_BOSS;
+    const prize = MATCH_PRIZE + rival.prizeBonus;
+    const healed = boss ? MAX_HEARTS : Math.min(MAX_HEARTS, state.hearts.player + HEAL_AFTER_NODE);
     const heal = healed - state.hearts.player;
-    const nextNode = state.run.node + 1;
-    const runWon = nextNode >= TOTAL_NODES;
+    const cleared = node && !state.run.cleared.includes(node.id) ? [...state.run.cleared, node.id] : state.run.cleared;
     let next = {
       ...state,
       phase: runWon ? 'runWon' : 'matchWon',
@@ -215,12 +242,12 @@ function endMatch(state, winner) {
       nextStarter: null,
       pending: null,
       hearts: { ...state.hearts, player: healed },
-      run: { ...state.run, node: Math.min(nextNode, TOTAL_NODES - 1), cleared: [...state.run.cleared, state.run.node] },
+      run: { ...state.run, cleared },
       stats: { ...state.stats, matchesWon: state.stats.matchesWon + 1 },
     };
     next = gainCoins(next, 'player', prize, 'prize');
     next = { ...next, roundResult: next.roundResult ? { ...next.roundResult, prize, heal } : next.roundResult };
-    return emit(next, { type: 'duelEnd', winner: 'player', prize, heal, runWon, boss: node.boss });
+    return emit(next, { type: 'duelEnd', winner: 'player', prize, heal, runWon, boss, region: node?.region ?? rival.region });
   }
   const next = { ...state, phase: 'gameOver', duelWinner: 'tioZe', nextStarter: null, pending: null };
   return emit(next, { type: 'duelEnd', winner: 'tioZe' });
@@ -240,6 +267,10 @@ function finishRound(state, incoming) {
     result = { ...result, damage: 0, shielded: true };
     next = { ...next, matchFx: { ...next.matchFx, shieldUsed: true } };
     next = proc(next, { source: 'rival', id: next.rivalId, text: 'IMUNE À PRIMEIRA TRANCA', tone: 'enemy', owner: 'tioZe' });
+  }
+  if (result.cadaverica && result.damage > 0) {
+    const text = result.loser === 'player' ? `TRANCA CADAVÉRICA: −${result.damage}♥ EM VOCÊ` : `TRANCA CADAVÉRICA: −${result.damage}♥ NO RIVAL`;
+    next = proc(next, { source: 'relic', id: 'trancaCadaverica', text, tone: result.loser === 'player' ? 'enemy' : 'player', owner: 'player' });
   }
   if (result.winner) {
     // Ouro: bônus por pedra de ouro do vencedor na mão ou na mesa
@@ -262,7 +293,10 @@ function finishRound(state, incoming) {
   };
   next = emit({ ...next, hearts, stats }, { type: 'heartLost', who: loser, amount: result.damage, reason: result.kind });
 
-  if (hearts[loser] === 0) return endMatch(next, result.winner);
+  // Falsa Partida: o golpe fatal deixa o dono com 1 coração (uma vez por partida)
+  // (a rodada já acabou: a compra forçada do rival fica para o começo da próxima)
+  if (hearts[loser] === 0) next = cheatDeath({ ...next, phase: 'roundOver' }, loser);
+  if (next.hearts[loser] === 0) return endMatch(next, result.winner);
   return { ...next, phase: 'roundOver', nextStarter: result.winner };
 }
 
@@ -290,11 +324,17 @@ function checkKnockout(state) {
 }
 
 function trancaResult(state, reason) {
-  return {
+  let result = {
     ...resolveTranca(state.hands, trancaTileValues(state)),
     reason,
     lastTileId: state.lastPlay?.tileId ?? null,
   };
+  // Tranca Cadavérica (de qualquer um dos lados): quem perde a soma toma 3 corações
+  const cadaverica = trancaDamageFor(state);
+  if (cadaverica && result.winner && result.damage > 0 && cadaverica > result.damage) {
+    result = { ...result, damage: cadaverica, baseDamage: result.damage, cadaverica: true };
+  }
+  return result;
 }
 
 function checkTranca(state) {
@@ -500,6 +540,7 @@ function drawTile(state, { actor }) {
     boneyardCount: state.boneyard.length,
     coins: state.coins[actor],
     hearts: state.hearts[actor],
+    heartCost: heartDrawCostFor(state, actor),
   });
   if (!availability.allowed) return state;
 
@@ -670,13 +711,6 @@ function tioZeAct(state) {
 // Loja Clandestina (src/engine/shop.js monta a vitrine)
 // ---------------------------------------------------------------------------
 
-function openShop(state) {
-  if (state.phase !== 'matchWon') return state;
-  const nextRivalId = nodeAt(state.run.node).rivalId;
-  const next = { ...state, phase: 'shop', shop: { ...buildShop(state, 0), nextRivalId } };
-  return emit(next, { type: 'shopOpen', nextRivalId });
-}
-
 function buyRelic(state, { index }) {
   if (state.phase !== 'shop') return state;
   const offer = state.shop.relics[index];
@@ -717,30 +751,96 @@ function rerollShop(state) {
   if (state.phase !== 'shop' || state.coins.player < state.shop.rerollCost) return state;
   let next = loseCoins(state, 'player', state.shop.rerollCost, 'reroll');
   const rerolls = state.shop.rerolls + 1;
-  next = { ...next, shop: { ...buildShop(next, rerolls), nextRivalId: state.shop.nextRivalId } };
+  next = { ...next, shop: buildShop(next, rerolls) };
   return emit(next, { type: 'shopReroll', rerolls });
 }
 
-/** Sai da loja para o mapa (o próximo nó já está liberado). */
+/** Conclui o nó em que você está (loja, mercado ou evento visitado; combate vencido). */
+function clearCurrent(state) {
+  const id = state.run.node;
+  if (!id || state.run.cleared.includes(id)) return state;
+  return { ...state, run: { ...state.run, cleared: [...state.run.cleared, id] } };
+}
+
+/** Volta para o mapa da teia (sai da loja, do mercado, do evento ou da vitória). */
+function backToMap(state, extra = {}) {
+  const next = clearCurrent({ ...state, phase: 'map', shop: null, market: null, coinEvent: null, ...extra });
+  return emit(next, { type: 'mapOpen', node: next.run.node });
+}
+
+/** Sai da loja para o mapa. */
 function leaveShop(state) {
   if (state.phase !== 'shop') return state;
-  return emit({ ...state, phase: 'map', shop: null, rivalId: nodeAt(state.run.node).rivalId }, { type: 'mapOpen', node: state.run.node });
+  return backToMap(state);
 }
 
-/** Do mapa para a mesa do nó atual. */
-function enterNode(state, { deck }) {
+/** Depois de vencer o nó: o mapa abre os próximos caminhos (a loja agora é um caminho, não uma parada fixa). */
+function continueToMap(state) {
+  if (state.phase !== 'matchWon') return state;
+  return backToMap(state);
+}
+
+/**
+ * No mapa, escolhe um dos próximos nós (`nodeId`; sem ele, só vale se houver uma opção).
+ *   combate/chefe → a mesa daquele rival (precisa de `deck`)
+ *   loja          → Loja do Valtinho
+ *   mercado negro → o beco do Corvo da Madrugada
+ *   moedas        → o Seu Tião paga na hora ($1 a $12, fixo pela semente) e o nó já conta como feito
+ */
+function chooseNode(state, { nodeId, deck }) {
   if (state.phase !== 'map') return state;
-  return startMatch(state, nodeAt(state.run.node).rivalId, deck);
+  const options = availableNodes(state);
+  const id = nodeId ?? (options.length === 1 ? options[0] : null);
+  if (!id || !options.includes(id)) return state;
+  const node = campaignOf(state).byId.get(id);
+  if ((node.type === 'combat' || node.type === 'boss') && !deck) return state;
+  const path = state.run.path.at(-1) === id ? state.run.path : [...state.run.path, id];
+  let next = { ...state, run: { ...state.run, node: id, path } };
+  next = emit(next, { type: 'nodeEnter', node: id, kind: node.type });
+  switch (node.type) {
+    case 'combat':
+    case 'boss':
+      return startMatch(next, node.rivalId, deck);
+    case 'shop':
+      next = { ...next, phase: 'shop', shop: buildShop(next, 0) };
+      return emit(next, { type: 'shopOpen' });
+    case 'black':
+      next = { ...next, phase: 'blackMarket', market: buildMarket(next) };
+      return emit(next, { type: 'marketOpen' });
+    default: {
+      const reward = coinReward(state.seed, id);
+      next = clearCurrent({ ...next, phase: 'coinEvent', coinEvent: { reward } });
+      next = gainCoins(next, 'player', reward, 'tiao');
+      return emit(next, { type: 'coinEvent', reward });
+    }
+  }
 }
 
-/** Atalho (testes e simulação): sai da loja direto para a mesa do próximo nó. */
-function nextMatch(state, { deck, rivalId }) {
-  if (state.phase !== 'shop') return state;
-  const id = rivalId && RIVALS[rivalId] ? rivalId : state.shop.nextRivalId;
-  return startMatch({ ...state, shop: null }, id, deck);
+/** Mercado Negro: compra um Necrótico da vitrine. */
+function marketBuy(state, { index }) {
+  if (state.phase !== 'blackMarket') return state;
+  const offer = state.market.offers[index];
+  if (marketBuyBlock(state, offer)) return state;
+  let next = loseCoins(state, 'player', offer.price, 'market');
+  next = {
+    ...next,
+    relics: { ...next.relics, player: [...next.relics.player, offer.id] },
+    market: { ...next.market, offers: next.market.offers.map((o, i) => (i === index ? { ...o, sold: true } : o)) },
+  };
+  return emit(next, { type: 'marketBuy', id: offer.id, price: offer.price });
 }
 
-/** Run nova, parada no mapa antes do primeiro nó. */
+function leaveMarket(state) {
+  if (state.phase !== 'blackMarket') return state;
+  return backToMap(state);
+}
+
+function leaveEvent(state) {
+  if (state.phase !== 'coinEvent') return state;
+  return backToMap(state);
+}
+
+/** Run nova, parada no mapa antes do primeiro nó (a teia sai da semente). */
 function newRun(state, action) {
   const relics = (action.relics ?? []).filter((id) => getRelic(id)).slice(0, RELIC_SLOTS);
   const fresh = {
@@ -755,33 +855,36 @@ function newRun(state, action) {
   return emit(fresh, { type: 'runStart' });
 }
 
-/** CONTINUAR: volta para o mapa (ou para a loja) exatamente como o save guardou. */
+/** CONTINUAR: volta para o mapa (ou para a loja / o mercado) exatamente como o save guardou. */
 function loadRun(state, { save }) {
   if (!isValidSave(save)) return state;
-  const rival = getRival(nodeAt(save.node).rivalId);
+  const phase = save.resume === 'shop' ? 'shop' : save.resume === 'blackMarket' ? 'blackMarket' : 'map';
   let next = {
     ...createInitialState(),
-    phase: save.resume === 'shop' ? 'shop' : 'map',
+    phase,
     seed: save.seed ?? null,
-    rivalId: rival.id,
-    run: { node: save.node, cleared: [...save.cleared], match: save.match, history: [...save.history] },
-    hearts: bySeat(save.hearts, rival.hearts),
-    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
-    coins: bySeat(save.coins, rival.coins),
+    run: { node: save.node, cleared: [...save.cleared], path: [...save.path], match: save.match, history: [...save.history] },
+    coins: bySeat(save.coins, 0),
     relics: bySeat([...save.relics], []),
     decks: bySeat({ ...save.deck }, {}),
     stats: {
       roundsWon: { ...createInitialState().stats.roundsWon, ...save.stats?.roundsWon },
       coinsEarned: save.stats?.coinsEarned ?? 0,
-      matchesWon: save.stats?.matchesWon ?? save.cleared.length,
+      matchesWon: save.stats?.matchesWon ?? 0,
     },
     seq: state.seq,
     events: state.events,
   };
-  if (next.phase === 'shop') {
-    const shop = save.shop ? { ...save.shop } : buildShop(next, 0);
-    next = { ...next, shop: { ...shop, nextRivalId: rival.id } };
-  }
+  const rival = getRival(currentNode(next)?.rivalId ?? FIRST_RIVAL);
+  next = {
+    ...next,
+    rivalId: rival.id,
+    hearts: bySeat(save.hearts, rival.hearts),
+    maxHearts: bySeat(MAX_HEARTS, rival.hearts),
+    coins: bySeat(save.coins, rival.coins),
+  };
+  if (phase === 'shop') next = { ...next, shop: save.shop ? { ...save.shop } : buildShop(next, 0) };
+  if (phase === 'blackMarket') next = { ...next, market: save.market ? { offers: save.market.offers.map((o) => ({ ...o })) } : buildMarket(next) };
   return emit(next, { type: 'runLoaded', node: save.node });
 }
 
@@ -853,9 +956,10 @@ function devAction(state, action) {
     }
     case 'setRival': {
       if (!RIVALS[action.rivalId] || !action.deck) return state;
-      // pula o mapa para o nó desse rival (região, loja e chefes batem com ele)
-      const node = Math.max(0, NODES.findIndex((n) => n.rivalId === action.rivalId));
-      const jumped = { ...state, pending: null, shop: null, run: { ...state.run, node, cleared: state.run.cleared.filter((i) => i < node) } };
+      // pula para um nó desse rival na teia desta run (região, loja e chefe batem com ele)
+      const node = [...campaignOf(state).byId.values()].find((n) => n.rivalId === action.rivalId);
+      const run = node ? { ...state.run, node: node.id, path: [node.id], cleared: [] } : state.run;
+      const jumped = { ...state, pending: null, shop: null, market: null, coinEvent: null, run };
       return startMatch(jumped, action.rivalId, action.deck, { advance: state.run.match === 0 });
     }
     case 'emptyTioZeHand': {
@@ -896,11 +1000,15 @@ export function gameReducer(state, action) {
     case 'LOAD_RUN':
       return loadRun(state, action);
     case 'ENTER_NODE':
-      return enterNode(state, action);
+    case 'CHOOSE_NODE':
+      return chooseNode(state, action);
     case 'START_DUEL': {
       // atalho: run nova (baralho 100% comum, sem talismãs) direto na mesa do 1º nó
-      const next = newRun(state, action);
-      const rivalId = action.rivalId && RIVALS[action.rivalId] ? action.rivalId : nodeAt(0).rivalId;
+      const fresh = newRun(state, action);
+      const rivalId = action.rivalId && RIVALS[action.rivalId] ? action.rivalId : FIRST_RIVAL;
+      // a mesa fica num nó de verdade da teia: ao vencer, o mapa segue dali
+      const node = [...campaignOf(fresh).byId.values()].find((n) => n.rivalId === rivalId);
+      const next = node ? { ...fresh, run: { ...fresh.run, node: node.id, path: [node.id] } } : fresh;
       return startMatch(next, rivalId, action.deck);
     }
     case 'NEXT_ROUND':
@@ -922,8 +1030,8 @@ export function gameReducer(state, action) {
       return undoTioZePlay(state);
     case 'TIO_ZE_ACT':
       return tioZeAct(state);
-    case 'OPEN_SHOP':
-      return openShop(state);
+    case 'OPEN_MAP':
+      return continueToMap(state);
     case 'SHOP_BUY_RELIC':
       return buyRelic(state, action);
     case 'SHOP_BUY_TILE':
@@ -934,8 +1042,12 @@ export function gameReducer(state, action) {
       return rerollShop(state);
     case 'LEAVE_SHOP':
       return leaveShop(state);
-    case 'NEXT_MATCH':
-      return nextMatch(state, action);
+    case 'MARKET_BUY':
+      return marketBuy(state, action);
+    case 'LEAVE_MARKET':
+      return leaveMarket(state);
+    case 'LEAVE_EVENT':
+      return leaveEvent(state);
     case 'DEV':
       return devAction(state, action);
     case 'RETURN_TO_TITLE':

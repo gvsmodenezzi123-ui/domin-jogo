@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
+import BlackMarketModal from './components/BlackMarketModal.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
+import CoinEventModal from './components/CoinEventModal.jsx';
 import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
 import FloatingTexts from './components/FloatingTexts.jsx';
@@ -9,6 +11,7 @@ import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
 import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
+import { ScreenVeil, useSceneTransition } from './components/ScreenTransition.jsx';
 import Shop from './components/Shop.jsx';
 import TableBoard from './components/TableBoard.jsx';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
@@ -19,16 +22,16 @@ import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
-import { BOSS_MUSIC, REGIONS, regionOf } from './data/campaign.js';
+import { BOSS_MUSIC, REGIONS } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { getRival } from './data/rivals.js';
-import { SHOP_MUSIC, sound } from './engine/audioSynth.js';
+import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
+import { mapRegionId, regionIdOf } from './engine/campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
   boardTilesInOrder,
-  getDrawAvailability,
   getOpenEnds,
   getPlayableMoves,
   getValidSides,
@@ -38,6 +41,7 @@ import { bonusFloat, buildPlayerHint, deriveHurtKey, deriveTioZeMood, deriveTioZ
 import { createInitialState, gameReducer } from './engine/gameReducer.js';
 import {
   canUndo,
+  drawAvailabilityFor,
   endMarksFor,
   knownPlayerTiles,
   passAvailabilityFor,
@@ -61,7 +65,7 @@ import { snapshotRun } from './engine/save.js';
 import { sellPriceOf } from './engine/shop.js';
 
 const newDeck = () => shuffle(FULL_SET);
-/** Semente da run: sorteia as vitrines da loja. */
+/** Semente da run: sorteia a teia de caminhos, as vitrines e as gorjetas do Seu Tião. */
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const DEV_KEY = 'buxaria:dev';
@@ -156,10 +160,15 @@ function runEventFx(ev, shell, table, offset = 0) {
       at(() => sound.playCoinJingle());
       break;
     case 'coins':
-      if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev') at(() => sound.playCoinJingle());
+      // a gorjeta do Seu Tião tem o som dela (uma moeda por vez, CoinEventModal)
+      if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev' && ev.source !== 'tiao') at(() => sound.playCoinJingle());
       break;
     case 'shopBuy':
+    case 'marketBuy':
       at(() => sound.playPurchase());
+      break;
+    case 'marketOpen':
+      at(() => sound.playChime('enemy'));
       break;
     case 'shopOpen':
       at(() => sound.playChime('info'));
@@ -199,12 +208,14 @@ function runEventFx(ev, shell, table, offset = 0) {
 
 /**
  * Faixa da tela atual: menu e Boteco na bossa, Clube da Sinuca no funk, Submundo e chefes no tenso.
- * A Loja Clandestina tem a trilha suave dela (entra depois da fanfarra da vitória).
+ * A Loja Clandestina tem a trilha suave dela e o beco do Corvo, a dele (Patch 0.6.1).
  */
 function musicFor(state) {
   if (state.phase === 'title') return REGIONS[0].music;
   if (state.phase === 'shop') return SHOP_MUSIC;
-  if (state.phase === 'map') return regionOf(state.run.node).music;
+  if (state.phase === 'blackMarket') return MARKET_MUSIC;
+  if (state.phase === 'map') return REGIONS[mapRegionId(state) - 1].music;
+  if (state.phase === 'coinEvent') return REGIONS[regionIdOf(state) - 1].music;
   const rival = getRival(state.rivalId);
   return rival.boss ? BOSS_MUSIC : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
 }
@@ -262,7 +273,7 @@ function inspectInfo(payload, state, rival) {
   if (!relic) return null;
   let extra = null;
   if (payload.owner === 'tioZe') extra = `DE ${rival.name.toUpperCase()}: O EFEITO É DELE, CONTRA VOCÊ`;
-  else if (payload.owner === 'shop') extra = `PREÇO: $${relic.price}`;
+  else if (payload.owner === 'shop' || payload.owner === 'market') extra = `PREÇO: $${relic.price}`;
   else if (state.phase === 'shop') extra = `VENDE POR $${sellPriceOf(relic.id)}`;
   return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
 }
@@ -273,7 +284,12 @@ function seenNow(state) {
   for (const t of [...state.hands.player, ...boardTilesInOrder(state.board)]) if (t.enhancement) tiles.add(t.enhancement);
   for (const offer of state.shop?.tiles ?? []) tiles.add(offer.enhancement);
   return {
-    relics: [...state.relics.player, ...(state.phase === 'map' ? [] : state.relics.tioZe), ...(state.shop?.relics ?? []).map((o) => o.id)],
+    relics: [
+      ...state.relics.player,
+      ...(state.phase === 'playing' || state.phase === 'roundOver' ? state.relics.tioZe : []),
+      ...(state.shop?.relics ?? []).map((o) => o.id),
+      ...(state.market?.offers ?? []).map((o) => o.id),
+    ],
     tiles: [...tiles],
     rivals: state.phase === 'playing' ? [state.rivalId] : [],
   };
@@ -309,6 +325,8 @@ export default function App() {
   // o livro é gravado direto no storage durante a run; a tela do menu lê quando você volta
   const bookRef = useRef(collection);
   const rival = getRival(state.rivalId);
+  // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
+  const { stage: veilStage, go: cutTo } = useSceneTransition();
 
   useEffect(() => sound.setVolumes(settings), [settings]);
   useEffect(() => applyReducedMotion(settings.reducedMotion), [settings.reducedMotion]);
@@ -443,10 +461,12 @@ export default function App() {
     }
   }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
 
-  // Save: no mapa e na loja (e ao vencer o nó); some quando a run acaba.
+  // Save: no mapa, na loja e no beco (ao vencer o nó e depois do Seu Tião, volta no mapa);
+  // some quando a run acaba.
   useEffect(() => {
-    if (state.phase === 'map') writeRunSave(snapshotRun(state, 'map', Date.now()));
-    else if (state.phase === 'shop' || state.phase === 'matchWon') writeRunSave(snapshotRun(state, 'shop', Date.now()));
+    if (state.phase === 'map' || state.phase === 'matchWon' || state.phase === 'coinEvent') writeRunSave(snapshotRun(state, 'map', Date.now()));
+    else if (state.phase === 'shop') writeRunSave(snapshotRun(state, 'shop', Date.now()));
+    else if (state.phase === 'blackMarket') writeRunSave(snapshotRun(state, 'blackMarket', Date.now()));
     else if (state.phase === 'gameOver' || state.phase === 'runWon') clearRunSave();
   }, [state]);
 
@@ -510,14 +530,8 @@ export default function App() {
     isPlayerTurn || discardMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
   const selectedSides = useStableValue(selectedTile && !discardMode ? getValidSides(selectedTile, state.board, playerRules) : []);
 
-  const draw = useStableValue(
-    getDrawAvailability({
-      drawsThisTurn: state.drawsThisTurn,
-      boneyardCount: state.boneyard.length,
-      coins: state.coins.player,
-      hearts: state.hearts.player,
-    }),
-  );
+  // a escada de compra do jogador (o Pacto do Coveiro deixa a 3ª compra mais cara)
+  const draw = useStableValue(drawAvailabilityFor(state, 'player'));
   const boardOpen = Boolean(state.board.root);
   const canDraw = isPlayerTurn && boardOpen && draw.allowed;
   // Patch 0.5.4: sem jogada a 1ª compra é obrigatória; podendo jogar, o passe custa $3
@@ -636,10 +650,12 @@ export default function App() {
   const newGame = () => {
     wakeAudio();
     sound.playClick();
-    resetTable();
-    clearRunSave();
-    setSave(null);
-    dispatch({ type: 'NEW_RUN', seed: newSeed() });
+    cutTo(() => {
+      resetTable();
+      clearRunSave();
+      setSave(null);
+      dispatch({ type: 'NEW_RUN', seed: newSeed() });
+    });
   };
 
   const continueRun = () => {
@@ -650,14 +666,19 @@ export default function App() {
     }
     wakeAudio();
     sound.playClick();
-    resetTable();
-    dispatch({ type: 'LOAD_RUN', save: saved });
+    cutTo(() => {
+      resetTable();
+      dispatch({ type: 'LOAD_RUN', save: saved });
+    });
   };
 
-  const enterNode = () => {
+  /** Mapa: entra no nó escolhido (mesa, loja, beco ou Seu Tião), com corte de cena. */
+  const enterNode = (nodeId) => {
     sound.playClick();
-    resetTable();
-    dispatch({ type: 'ENTER_NODE', deck: newDeck() });
+    cutTo(() => {
+      resetTable();
+      dispatch({ type: 'CHOOSE_NODE', nodeId, deck: newDeck() });
+    });
   };
 
   const nextRound = () => {
@@ -666,28 +687,34 @@ export default function App() {
     dispatch({ type: 'NEXT_ROUND', deck: newDeck() });
   };
 
-  const openShop = useCallback(() => {
-    setSelectedId(null);
-    clearFloats();
-    dispatch({ type: 'OPEN_SHOP' });
-  }, [clearFloats]);
+  // venceu a mesa: volta para o mapa da teia (no botão ou sozinho depois de uns segundos)
+  const continueToMap = useCallback(() => {
+    cutTo(() => {
+      setSelectedId(null);
+      clearFloats();
+      dispatch({ type: 'OPEN_MAP' });
+    });
+  }, [clearFloats, cutTo]);
 
   const shopAction = (action) => {
     sound.playClick();
     dispatch(action);
   };
 
-  const leaveShop = () => {
+  /** Sai da loja, do beco ou do Seu Tião para o mapa, com corte de cena. */
+  const leaveTo = (type) => () => {
     sound.playClick();
-    dispatch({ type: 'LEAVE_SHOP' });
+    cutTo(() => dispatch({ type }));
   };
 
   const backToMenu = () => {
     sound.playClick();
-    resetTable();
-    dispatch({ type: 'RETURN_TO_TITLE' });
-    setSave(loadRunSave());
-    setCollection(bookRef.current);
+    cutTo(() => {
+      resetTable();
+      dispatch({ type: 'RETURN_TO_TITLE' });
+      setSave(loadRunSave());
+      setCollection(bookRef.current);
+    });
   };
 
   const openMenu = useStableHandler(() => {
@@ -750,8 +777,11 @@ export default function App() {
     if (action.op === 'forceTranca' || action.op === 'winMatch' || action.op === 'setRival') setDevOpen(false);
   };
 
+  const veil = <ScreenVeil stage={veilStage} />;
+
   if (state.phase === 'title') {
     return (
+      <>
       <div className="app-shell h-full">
         <TitleScreen
           save={save}
@@ -766,16 +796,20 @@ export default function App() {
           devUnlocked={devUnlocked}
         />
       </div>
+      {veil}
+      </>
     );
   }
 
+  // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
+  const sceneChip = ['shop', 'blackMarket', 'coinEvent'].includes(state.phase);
   const devPanel = devOpen && <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} />;
   // no mapa fica ao lado do menu; na loja, em cima do botão de voltar (o saldo mora no topo)
   const devChip = devUnlocked && (
     <button
       type="button"
-      className={`dev-chip fixed z-[60] ${state.phase === 'shop' ? 'right-3' : 'right-14'}`}
-      style={state.phase === 'shop' ? { bottom: 'calc(max(env(safe-area-inset-bottom), 12px) + 64px)' } : { top: 'max(env(safe-area-inset-top), 12px)' }}
+      className={`dev-chip fixed z-[60] ${sceneChip ? 'right-3' : 'right-14'}`}
+      style={sceneChip ? { bottom: 'calc(max(env(safe-area-inset-bottom), 12px) + 64px)' } : { top: 'max(env(safe-area-inset-top), 12px)' }}
       onClick={() => setDevOpen(true)}
     >
       DEV
@@ -784,31 +818,69 @@ export default function App() {
 
   if (state.phase === 'map') {
     return (
-      <div ref={shellRef} className="app-shell h-full">
-        <CampaignMap state={state} onEnter={enterNode} onMenu={backToMenu} press={press} />
-        {devChip}
-        <InfoBalloon info={balloon} />
-        {devPanel}
-      </div>
+      <>
+        <div ref={shellRef} className="app-shell h-full">
+          <CampaignMap key={state.run.node ?? 'start'} state={state} onEnter={enterNode} onMenu={backToMenu} press={press} />
+          {devChip}
+          <InfoBalloon info={balloon} />
+          {devPanel}
+        </div>
+        {veil}
+      </>
+    );
+  }
+
+  if (state.phase === 'blackMarket') {
+    return (
+      <>
+        <div ref={shellRef} className="app-shell h-full">
+          <BlackMarketModal
+            state={state}
+            press={press}
+            onBuy={(index) => shopAction({ type: 'MARKET_BUY', index })}
+            onLeave={leaveTo('LEAVE_MARKET')}
+          />
+          {devChip}
+          <InfoBalloon info={balloon} />
+          {devPanel}
+        </div>
+        {veil}
+      </>
+    );
+  }
+
+  if (state.phase === 'coinEvent') {
+    return (
+      <>
+        <div ref={shellRef} className="app-shell h-full">
+          <CoinEventModal state={state} onLeave={leaveTo('LEAVE_EVENT')} />
+          {devChip}
+          {devPanel}
+        </div>
+        {veil}
+      </>
     );
   }
 
   if (state.phase === 'shop') {
     return (
-      <div ref={shellRef} className="app-shell h-full">
-        <Shop
-          state={state}
-          press={press}
-          onBuyRelic={(index) => shopAction({ type: 'SHOP_BUY_RELIC', index })}
-          onBuyTile={(index) => shopAction({ type: 'SHOP_BUY_TILE', index })}
-          onSell={(id) => shopAction({ type: 'SHOP_SELL_RELIC', id })}
-          onReroll={() => shopAction({ type: 'SHOP_REROLL' })}
-          onLeave={leaveShop}
-        />
-        {devChip}
-        <InfoBalloon info={balloon} />
-        {devPanel}
-      </div>
+      <>
+        <div ref={shellRef} className="app-shell h-full">
+          <Shop
+            state={state}
+            press={press}
+            onBuyRelic={(index) => shopAction({ type: 'SHOP_BUY_RELIC', index })}
+            onBuyTile={(index) => shopAction({ type: 'SHOP_BUY_TILE', index })}
+            onSell={(id) => shopAction({ type: 'SHOP_SELL_RELIC', id })}
+            onReroll={() => shopAction({ type: 'SHOP_REROLL' })}
+            onLeave={leaveTo('LEAVE_SHOP')}
+          />
+          {devChip}
+          <InfoBalloon info={balloon} />
+          {devPanel}
+        </div>
+        {veil}
+      </>
     );
   }
 
@@ -818,6 +890,7 @@ export default function App() {
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
+    <>
     <div
       ref={shellRef}
       className="app-shell flex h-full flex-col overflow-hidden"
@@ -911,8 +984,8 @@ export default function App() {
           state={state}
           rival={rival}
           onNext={nextRound}
-          onShop={openShop}
-          autoShop={!menuOpen && !devOpen}
+          onContinue={continueToMap}
+          autoContinue={!menuOpen && !devOpen}
           onRestart={newGame}
           onMenu={backToMenu}
         />
@@ -933,5 +1006,7 @@ export default function App() {
       <InfoBalloon info={balloon} />
       {devPanel}
     </div>
+    {veil}
+    </>
   );
 }

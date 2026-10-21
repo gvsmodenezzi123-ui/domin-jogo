@@ -1,6 +1,7 @@
 /**
- * Os 18 personagens da campanha (3 regiões × 6 nós; o 6º de cada região é chefe).
- * A ordem da campanha fica em data/campaign.js.
+ * Os 18 personagens da campanha (3 regiões; cada uma com 1 rival de entrada, 4 comuns
+ * espalhados pela teia de caminhos e o chefe no topo). A escalação fica em data/campaign.js,
+ * a teia em engine/campaignMap.js. O nível da IA sai da região (ver AI_TIERS abaixo).
  *
  * Cada rival tem:
  *   region / boss      região (1–3) e se é o chefe dela
@@ -198,6 +199,8 @@ export const DEFAULT_STYLE = Object.freeze({
   lockEnds: 0, // deixar as duas pontas iguais (caminho da tranca)
   trancaBias: 0, // folga para passar e trancar (fração da soma estimada)
   heartDrawMin: 3, // só gasta coração para comprar com pelo menos isso
+  fiveSetup: 0, // prepara múltiplo de 5 para a próxima jogada (conta uma vez à frente)
+  aggression: 0, // arma batida, solta Rubi/Fantasma na hora certa, pressiona mais
 });
 
 const style = (overrides) => Object.freeze({ ...DEFAULT_STYLE, ...overrides });
@@ -311,7 +314,7 @@ export const RIVALS = Object.freeze({
     hearts: 3,
     coins: 5,
     relics: [],
-    deck: { '3-5': 'chumbo' },
+    deck: {},
     mechanics: {},
     style: style({ heavy: 1.4, pressure: 4 }),
     reflexMs: 850,
@@ -391,8 +394,8 @@ export const RIVALS = Object.freeze({
     rarity: 'lendario',
     hearts: 5,
     coins: 8,
-    relics: ['chaveDeFenda'],
-    deck: {},
+    relics: ['chaveDeFenda', 'caneca'],
+    deck: { '6-6': 'rubi' },
     mechanics: { doubleBuchaDamage: true },
     style: style({ doubles: 1.8, earlyDoubles: 16 }),
     reflexMs: 1000,
@@ -436,7 +439,7 @@ export const RIVALS = Object.freeze({
     hearts: 4,
     coins: 6,
     relics: ['cinzeiro'],
-    deck: {},
+    deck: { '4-6': 'chumbo' },
     mechanics: {},
     style: style({ heavy: 2.2, doubles: 0.8, pressure: 6, heartDrawMin: 2 }),
     reflexMs: 650,
@@ -479,8 +482,8 @@ export const RIVALS = Object.freeze({
     rarity: 'comum',
     hearts: 4,
     coins: 6,
-    relics: [],
-    deck: {},
+    relics: ['giz'],
+    deck: { '2-2': 'ouro', '0-5': 'ouro' },
     mechanics: {},
     style: style({ five: 5, pressure: 4, heavy: 1.2 }),
     reflexMs: 600,
@@ -514,8 +517,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 4,
     coins: 6,
-    relics: [],
-    deck: {},
+    relics: ['caneca'],
+    deck: { '1-4': 'ouro' },
     mechanics: { healOnPlayerPass: true },
     style: style({ follow: 3, lockEnds: 2 }),
     reflexMs: 800,
@@ -549,8 +552,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 4,
     coins: 6,
-    relics: [],
-    deck: {},
+    relics: ['borracha'],
+    deck: { '0-5': 'cristal' },
     mechanics: { exposeHeaviest: true },
     style: style({ pressure: 5, follow: 2.5 }),
     reflexMs: 750,
@@ -584,8 +587,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 5,
     coins: 6,
-    relics: [],
-    deck: {},
+    relics: ['cinzeiro', 'giz'],
+    deck: { '5-5': 'chumbo', '4-6': 'ouro' },
     mechanics: {},
     style: style({ five: 9, pressure: 4, heavy: 1.3 }),
     reflexMs: 600,
@@ -628,8 +631,8 @@ export const RIVALS = Object.freeze({
     rarity: 'mitico',
     hearts: 6,
     coins: 15,
-    relics: ['anel'],
-    deck: {},
+    relics: ['anel', 'carteira'],
+    deck: { '6-6': 'fantasma', '0-5': 'rubi', '3-3': 'ouro' },
     mechanics: { drawFee: 2 },
     style: style({ five: 7, pressure: 5, heavy: 1.2, lockEnds: 3 }),
     reflexMs: 600,
@@ -673,8 +676,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 5,
     coins: 8,
-    relics: [],
-    deck: {},
+    relics: ['maoGrande', 'cinzeiro'],
+    deck: { '1-6': 'fantasma', '2-4': 'ouro' },
     mechanics: { stealOnCross: 2 },
     style: style({ pressure: 5, five: 5, lockEnds: 2 }),
     reflexMs: 650,
@@ -708,8 +711,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 5,
     coins: 20,
-    relics: [],
-    deck: { '5-6': 'ouro', '2-6': 'ouro' },
+    relics: ['carteira', 'anel'],
+    deck: { '5-6': 'ouro', '2-6': 'ouro', '0-0': 'rubi' },
     mechanics: {},
     style: style({ five: 7, heavy: 1.3 }),
     reflexMs: 800,
@@ -743,8 +746,8 @@ export const RIVALS = Object.freeze({
     rarity: 'lendario',
     hearts: 5,
     coins: 8,
-    relics: [],
-    deck: {},
+    relics: ['dedal', 'cinzeiro'],
+    deck: { '3-3': 'cristal', '1-1': 'fantasma' },
     mechanics: { predictDoubles: true },
     style: style({ pressure: 4, follow: 3 }),
     reflexMs: 900,
@@ -778,8 +781,8 @@ export const RIVALS = Object.freeze({
     rarity: 'lendario',
     hearts: 5,
     coins: 10,
-    relics: [],
-    deck: { '3-6': 'cristal', '1-4': 'cristal' },
+    relics: ['maoGrande', 'carteira'],
+    deck: { '3-6': 'cristal', '1-4': 'cristal', '0-6': 'rubi' },
     mechanics: {},
     style: style({ five: 6, follow: 3, pressure: 4 }),
     reflexMs: 850,
@@ -813,8 +816,8 @@ export const RIVALS = Object.freeze({
     rarity: 'raro',
     hearts: 5,
     coins: 8,
-    relics: [],
-    deck: {},
+    relics: ['buchaDeAco', 'chaveDeFenda'],
+    deck: { '6-6': 'chumbo', '4-5': 'chumbo', '5-5': 'fantasma' },
     mechanics: { trancaWeight: 2 },
     style: style({ heavy: 2.4, doubles: 1.4, trancaBias: -0.4, pressure: 5 }),
     reflexMs: 850,
@@ -849,7 +852,7 @@ export const RIVALS = Object.freeze({
     hearts: 7,
     coins: 30,
     relics: ['dedal', 'carteira'],
-    deck: {},
+    deck: { '6-6': 'fantasma', '5-5': 'rubi', '4-6': 'ouro' },
     mechanics: { trancaShield: true },
     style: style({ five: 7, pressure: 6, heavy: 1.4, follow: 3, trancaBias: 0.1 }),
     reflexMs: 1000,
@@ -881,6 +884,48 @@ export const FIRST_RIVAL = 'tioZe';
 export const BOSS_IDS = Object.freeze(RIVAL_IDS.filter((id) => RIVALS[id].boss));
 
 export const getRival = (id) => RIVALS[id] ?? RIVALS.tioZe;
+
+// ---------------------------------------------------------------------------
+// IA adaptativa por região (Patch 0.6.1)
+//   intuitivo   Região 1: baralho 100% osso, joga pelo instinto (o estilo dele, sem conta à frente)
+//   calculista  Região 2: 1–2 pedras de grife, até 2 talismãs passivos, caça múltiplo de 5
+//   agressivo   Região 3 e chefes: até 3 pedras de grife (Rubi, Fantasma), 2 talismãs fortes,
+//               arma a batida e aperta. Ninguém trapaceia: todos só veem a própria mão e a mesa.
+// ---------------------------------------------------------------------------
+
+export const AI_TIERS = Object.freeze({
+  intuitivo: Object.freeze({ id: 'intuitivo', label: 'INTUITIVO', maxEnhanced: 0, maxRelics: 1 }),
+  calculista: Object.freeze({ id: 'calculista', label: 'CALCULISTA', maxEnhanced: 2, maxRelics: 2 }),
+  agressivo: Object.freeze({ id: 'agressivo', label: 'AGRESSIVO', maxEnhanced: 3, maxRelics: 2 }),
+});
+
+/** Nível de jogo do rival: chefes e a Região 3 são agressivos, a Região 2 calcula, a 1 joga no instinto. */
+export function tierOf(rival) {
+  if (rival.boss || rival.region >= 3) return 'agressivo';
+  if (rival.region === 2) return 'calculista';
+  return 'intuitivo';
+}
+
+function tierStyle(rival) {
+  const base = rival.style;
+  const tier = tierOf(rival);
+  if (tier === 'calculista') return style({ ...base, five: Math.max(base.five, 7), fiveSetup: Math.max(base.fiveSetup, 3) });
+  if (tier === 'agressivo') {
+    return style({
+      ...base,
+      five: Math.max(base.five, 7),
+      fiveSetup: Math.max(base.fiveSetup, 2),
+      pressure: base.pressure * 1.5,
+      heartDrawMin: Math.min(base.heartDrawMin, 2),
+      aggression: Math.max(base.aggression, 1),
+    });
+  }
+  return base;
+}
+
+/** Pesos que a IA usa de fato com esse rival (o estilo dele + o nível da região). */
+export const PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id])])));
+export const playStyleOf = (id) => PLAY_STYLES[id] ?? PLAY_STYLES.tioZe;
 
 /** Fala do rival para a situação (cai nas falas do Tio Zé se ele não tiver uma própria). */
 export function pickRivalLine(rivalId, kind, seed = 0) {

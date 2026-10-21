@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TOTAL_NODES, nodeAt } from '../data/campaign.js';
+import { REGIONS } from '../data/campaign.js';
+import { generateCampaign } from '../engine/campaignMap.js';
 import { getRival } from '../data/rivals.js';
 import BuxariaLogo from './BuxariaLogo.jsx';
 import CollectionBook from './CollectionBook.jsx';
@@ -18,6 +19,21 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+const AFTER_STOP = { shop: 'saiu da loja', black: 'saiu do beco', coins: 'passou pelo Seu Tião' };
+
+/** "Região 2 · andar 3 · Loja do Valtinho · 4♥ · $17" a partir do save (a teia sai da semente). */
+function saveSummary(save) {
+  const node = save.node ? generateCampaign(save.seed ?? 0).byId.get(save.node) : null;
+  const where = node ? `Região ${node.region}/${REGIONS.length} · andar ${node.floor}` : 'Entrada do boteco';
+  let what = '';
+  if (save.resume === 'shop') what = 'na loja';
+  else if (save.resume === 'blackMarket') what = 'no Mercado Negro';
+  else if (node?.rivalId && !save.cleared.includes(node.id)) what = getRival(node.rivalId).name;
+  else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type];
+  else if (node) what = `${getRival(node.rivalId).name} vencido`;
+  return [where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
+}
+
 /**
  * Escolha depois do JOGAR, no mesmo lugar, só em texto: CONTINUAR (dourado se há run
  * salva, apagado se não), NOVO JOGO e VOLTAR. Com run salva, o NOVO JOGO pede confirmação
@@ -25,7 +41,7 @@ function isIOS() {
  */
 function PlayChoices({ save, onNewGame, onContinue, onBack, onTap }) {
   const [confirm, setConfirm] = useState(false);
-  const next = save ? getRival(nodeAt(save.node).rivalId) : null;
+  const summary = save ? saveSummary(save) : null;
   if (confirm) {
     return (
       <div className="title-choices">
@@ -51,7 +67,7 @@ function PlayChoices({ save, onNewGame, onContinue, onBack, onTap }) {
       <button type="button" className={`text-action title-choice ${save ? 'title-choice-gold' : ''}`} disabled={!save} onClick={onContinue}>
         CONTINUAR
         <span className="title-choice-note">
-          {save ? `Nó ${save.node + 1}/${TOTAL_NODES} · ${next?.name} · ${save.hearts}♥ · $${save.coins}` : 'Nenhuma run salva'}
+          {summary ?? 'Nenhuma run salva'}
         </span>
       </button>
       <button
@@ -79,7 +95,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5.5</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.6.1</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -88,7 +104,7 @@ function Credits() {
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">NA MESA</span>
-        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite.
+        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite, espalhados por uma teia de caminhos que muda a cada run. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas.
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">SOM</span>
@@ -193,7 +209,7 @@ export default function TitleScreen({
       <footer className="relative z-[5] flex flex-col items-center gap-1">
         {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
         <p className="title-version">
-          PATCH 0.5.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.6.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </footer>
 

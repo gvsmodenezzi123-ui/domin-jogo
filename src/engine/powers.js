@@ -195,13 +195,24 @@ export function hasPlayFor(state, seat) {
   return getPlayableMoves(state.hands[seat], state.board, requiredOpeningFor(state, seat), rulesFor(state, seat)).length > 0;
 }
 
-/** A próxima compra de `seat` neste turno (escada grátis → $3 → 1 coração). */
+/** Quantos corações custa a compra paga com coração para `seat` (Pacto do Coveiro: 2). */
+export function heartDrawCostFor(state, seat) {
+  return relicsOf(state, seat).reduce((cost, relic) => Math.max(cost, relic.heartDrawCost ?? 1), 1);
+}
+
+/** Dano da tranca para quem perde a soma (Tranca Cadavérica, em qualquer um dos lados: 3). */
+export function trancaDamageFor(state) {
+  return [...relicsOf(state, 'player'), ...relicsOf(state, 'tioZe')].reduce((dmg, relic) => Math.max(dmg, relic.trancaDamage ?? 0), 0);
+}
+
+/** A próxima compra de `seat` neste turno (escada grátis → $3 → coração). */
 export function drawAvailabilityFor(state, seat) {
   return getDrawAvailability({
     drawsThisTurn: state.drawsThisTurn,
     boneyardCount: state.boneyard.length,
     coins: state.coins[seat],
     hearts: state.hearts[seat],
+    heartCost: heartDrawCostFor(state, seat),
   });
 }
 
