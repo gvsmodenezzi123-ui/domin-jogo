@@ -108,8 +108,7 @@ export default function TableBoard({
       <div className="dynamic-light-cone pointer-events-none absolute inset-0" style={LIGHT_CONE} />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
       <div className="swinging-lamp pointer-events-none absolute left-1/2 top-0 z-[6] flex -translate-x-1/2 flex-col items-center">
-        <span className="block h-2 w-[2px] bg-black/80" />
-        <LampGlyph size={44} className="lamp-sprite" />
+        <LampGlyph size={64} className="lamp-sprite -mt-1" />
       </div>
 
       <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING }}>

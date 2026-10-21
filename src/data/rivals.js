@@ -235,6 +235,7 @@ export const RIVALS = Object.freeze({
   }),
   tonho: Object.freeze({
     id: 'tonho',
+    art: 'tonho', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Tonho do Gás',
     title: 'Entrega em 10 Minutos',
     region: 1,
@@ -269,6 +270,7 @@ export const RIVALS = Object.freeze({
   }),
   baiano: Object.freeze({
     id: 'baiano',
+    art: 'baiano', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Baiano da Sinuca',
     title: 'O Rei do Giz',
     region: 1,
@@ -303,6 +305,7 @@ export const RIVALS = Object.freeze({
   }),
   valdir: Object.freeze({
     id: 'valdir',
+    art: 'valdir', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Valdir Borracheiro',
     title: 'Calibra na Marra',
     region: 1,
@@ -337,6 +340,7 @@ export const RIVALS = Object.freeze({
   }),
   neide: Object.freeze({
     id: 'neide',
+    art: 'neide', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Dona Neide',
     title: 'A Rainha da Tranca',
     region: 1,
@@ -382,6 +386,7 @@ export const RIVALS = Object.freeze({
   }),
   arlindo: Object.freeze({
     id: 'arlindo',
+    art: 'arlindo', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Seu Arlindo',
     title: 'O Rei da Bucha',
     region: 1,
@@ -425,6 +430,7 @@ export const RIVALS = Object.freeze({
   }),
   marcao: Object.freeze({
     id: 'marcao',
+    art: 'marcao', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Marcão do Guincho',
     title: 'O Rebocador',
     region: 2,
@@ -468,6 +474,7 @@ export const RIVALS = Object.freeze({
   }),
   serginho: Object.freeze({
     id: 'serginho',
+    art: 'serginho', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Serginho 22',
     title: 'O Ligeirinho',
     region: 2,
@@ -502,6 +509,7 @@ export const RIVALS = Object.freeze({
   }),
   cida: Object.freeze({
     id: 'cida',
+    art: 'cida', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Cida da Marmita',
     title: 'Prato Feito',
     region: 2,
@@ -536,6 +544,7 @@ export const RIVALS = Object.freeze({
   }),
   paulinho: Object.freeze({
     id: 'paulinho',
+    art: 'paulinho', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Paulinho Pente Fino',
     title: 'Olho de Lince',
     region: 2,
@@ -570,6 +579,7 @@ export const RIVALS = Object.freeze({
   }),
   tiao: Object.freeze({
     id: 'tiao',
+    art: 'tiao', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Tião Navalha',
     title: 'O Malandro Perigoso',
     region: 2,
@@ -613,6 +623,7 @@ export const RIVALS = Object.freeze({
   }),
   beto: Object.freeze({
     id: 'beto',
+    art: 'beto', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Beto Cigano',
     title: 'O Banqueiro',
     region: 2,
@@ -657,6 +668,7 @@ export const RIVALS = Object.freeze({
   }),
   carlinhos: Object.freeze({
     id: 'carlinhos',
+    art: 'carlinhos', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Carlinhos Mão Leve',
     title: 'O Batedor de Carteira',
     region: 3,
@@ -691,6 +703,7 @@ export const RIVALS = Object.freeze({
   }),
   bigode: Object.freeze({
     id: 'bigode',
+    art: 'bigode', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Bigode de Ouro',
     title: 'O Banqueiro do Bicho',
     region: 3,
@@ -725,6 +738,7 @@ export const RIVALS = Object.freeze({
   }),
   sofia: Object.freeze({
     id: 'sofia',
+    art: 'sofia', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Madama Sofia',
     title: 'A Vidente',
     region: 3,
@@ -759,6 +773,7 @@ export const RIVALS = Object.freeze({
   }),
   fausto: Object.freeze({
     id: 'fausto',
+    art: 'fausto', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Doutor Fausto',
     title: 'O Alquimista',
     region: 3,
@@ -793,6 +808,7 @@ export const RIVALS = Object.freeze({
   }),
   alemao: Object.freeze({
     id: 'alemao',
+    art: 'alemao', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Alemão do Ferro Velho',
     title: 'O Sucateiro',
     region: 3,
@@ -827,6 +843,7 @@ export const RIVALS = Object.freeze({
   }),
   comendador: Object.freeze({
     id: 'comendador',
+    art: 'comendador', // retrato 40x40 em components/ArtSprites.jsx
     name: 'Comendador Moreira',
     title: 'O Dono do Boteco',
     region: 3,

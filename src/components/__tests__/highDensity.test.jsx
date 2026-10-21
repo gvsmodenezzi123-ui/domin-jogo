@@ -15,9 +15,25 @@ describe('sprites de alta densidade', () => {
     }
   });
 
-  it('todo `art` em data/ aponta para um desenho que existe', () => {
-    for (const relic of Object.values(RELICS)) if (relic.art) expect(RELIC_ART[relic.art], relic.id).toBeTruthy();
-    for (const rival of Object.values(RIVALS)) if (rival.art) expect(RIVAL_ART[rival.art], rival.id).toBeTruthy();
+  it('os 15 talismãs e os 18 rivais têm arte 40x40 própria', () => {
+    const relicArt = new Set();
+    for (const relic of Object.values(RELICS)) {
+      expect(RELIC_ART[relic.art], relic.id).toBeTruthy();
+      relicArt.add(RELIC_ART[relic.art]);
+    }
+    expect(relicArt.size).toBe(Object.keys(RELICS).length);
+    const rivalArt = new Set();
+    for (const rival of Object.values(RIVALS)) {
+      expect(RIVAL_ART[rival.art], rival.id).toBeTruthy();
+      rivalArt.add(RIVAL_ART[rival.art]);
+      // todo retrato desenha os 4 humores e a boca falando, em 40x40
+      for (const mood of ['idle', 'thinking', 'smug', 'hurt']) {
+        const Art = RIVAL_ART[rival.art];
+        const html = renderToStaticMarkup(<Art className="w-12 h-12" mood={mood} isSpeaking={mood === 'idle'} />);
+        expect(html, `${rival.id}.${mood}`).toContain('viewBox="0 0 40 40"');
+      }
+    }
+    expect(rivalArt.size).toBe(Object.keys(RIVALS).length);
     expect(RELICS.caneca.art).toBe('canecaChopp');
     expect(RELICS.dadoViciado.art).toBe('dadoViciado');
     expect(RELICS.olhoDeVidro.art).toBe('olhoVidro');

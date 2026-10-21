@@ -1,48 +1,61 @@
-import PixelSprite from './PixelSprite.jsx';
-import {
-  COIN,
-  COIN_PALETTE,
-  EYE,
-  EYE_PALETTE,
-  HEART_BROKEN,
-  HEART_FULL,
-  HEART_PALETTE,
-  LAMP,
-  LAMP_PALETTE,
-  MENU_ICON,
-  SPEAKER_OFF,
-  SPEAKER_ON,
-  SPEAKER_PALETTE,
-} from './sprites.js';
+import { CoinIcon, EyeIcon, HeartIcon, LampIcon, MenuIcon, SpeakerIcon } from './ArtSprites.jsx';
 
 /**
- * Ícones de interface num tamanho em px. Ponto único de troca: o resto do
- * jogo pede `<CoinGlyph size={12} />` e não sabe de que arte ele vem.
+ * Ícones de interface num tamanho em px, desenhados em 40x40 (ArtSprites.jsx).
+ * Ponto único de troca: o resto do jogo pede `<CoinGlyph size={12} />`.
  */
-const sprite = (rows, palette, size, className) => (
-  <PixelSprite rows={rows} palette={palette} pixel={size / Math.max(rows.length, rows[0].length)} className={className} />
-);
+function Box({ size, className = '', children }) {
+  return (
+    <span className={`inline-flex shrink-0 ${className}`} style={{ width: size, height: size }}>
+      {children}
+    </span>
+  );
+}
 
 export function CoinGlyph({ size = 14, className = '' }) {
-  return sprite(COIN, COIN_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <CoinIcon className="h-full w-full" />
+    </Box>
+  );
 }
 
 export function HeartGlyph({ size = 14, broken = false, className = '' }) {
-  return sprite(broken ? HEART_BROKEN : HEART_FULL, HEART_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <HeartIcon className="h-full w-full" broken={broken} />
+    </Box>
+  );
 }
 
 export function SpeakerGlyph({ size = 18, muted = false, className = '' }) {
-  return sprite(muted ? SPEAKER_OFF : SPEAKER_ON, SPEAKER_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <SpeakerIcon className="h-full w-full" muted={muted} />
+    </Box>
+  );
 }
 
 export function MenuGlyph({ size = 18, className = '' }) {
-  return sprite(MENU_ICON, SPEAKER_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <MenuIcon className="h-full w-full" />
+    </Box>
+  );
 }
 
 export function LampGlyph({ size = 40, className = '' }) {
-  return sprite(LAMP, LAMP_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <LampIcon className="h-full w-full" />
+    </Box>
+  );
 }
 
 export function EyeGlyph({ size = 14, className = '' }) {
-  return sprite(EYE, EYE_PALETTE, size, className);
+  return (
+    <Box size={size} className={className}>
+      <EyeIcon className="h-full w-full" />
+    </Box>
+  );
 }

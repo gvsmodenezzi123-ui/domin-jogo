@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.5
+# Buxaria — Patch 0.5.0
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -52,6 +52,27 @@ O PWA precisa de HTTPS. Duas opções:
 - **Passar a vez** é sempre permitido com a mesa aberta. Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.5.0: arte 40x40 em tudo, física das jogadas e telas novas
+
+- **Arte 40x40 em 100% do jogo** (`components/ArtSprites.jsx`, SVG com `crispEdges`, sem imagens):
+  os 18 rivais (4 humores + boca falando cada), os 15 talismãs (volume 3D, sombra no chão, brilho)
+  e os ícones de interface (moeda, coração inteiro/quebrado, som, menu, lâmpada, olho).
+  `art` em `data/rivals.js` e `data/relics.js` aponta para cada desenho (`components/artRegistry.js`).
+- **Cabeçalho do rival travado** (`RivalBench.jsx`): caixa de 96px, bloco fixo de 160px à esquerda
+  (retrato, status, nome, corações, moedas, dorme, talismãs), fala em posição absoluta numa linha e
+  a mão presa à direita. Cada pedra do rival tem vaga fixa (`RivalHand.jsx`): jogar uma não mexe
+  nas outras.
+- **Física das jogadas** (`components/tileFlight.js`): a pedra sai da sua mão (ou do topo, do rival),
+  desliza 360–400 ms até a ponta girando para a orientação da mesa (bucha chega atravessada) e
+  assenta com SLAM de osso na madeira e tremida de 150 ms. A do rival fica 800 ms em destaque.
+- **Luz** (`index.css`): `.swinging-lamp` e `.dynamic-light-cone` (balanço e flicker de bar),
+  `.shimmer-active` (feixe especular). Pedras de grife: ouro com feixe cruzando, cristal holográfico
+  (`holoPrismCycle`), rubi batendo (`rubyHeartbeat`) com pips em brasa, fantasma flutuando
+  (`ghostEthereal`), chumbo fosco com rachadura em relevo.
+- **Telas:** logo com relevo 3D duplo e botões que afundam 3px; mapa com polaroids, trilha a giz,
+  marcas de copo e cinzas; loja em 4 quadrantes sem rolagem; Livro de Boteco encadernado em couro
+  com abas de fita; vitória numa lousa de bar com o rival nocauteado e as moedas contando.
 
 ## Patch 0.5: arte em alta densidade e cards com relevo
 
