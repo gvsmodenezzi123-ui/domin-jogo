@@ -107,6 +107,14 @@ Ouro, Rubi, Cristal, Chumbo e Fantasma continuam com o material delas.
 Prêmio das mesas, loja, Mercado Negro e regras do dominó são iguais nos dois modos.
 O save guarda a maleta da run.
 
+### Correção: balão de fala do rival (`RivalSpeech.jsx`)
+
+Desde o 0.5.5 o balão do rival não sumia: ficava na mesa até a próxima fala e podia cobrir
+uma ponta. A regra de saída estava numa camada de CSS que perdia para a de entrada. Agora:
+
+- ele some sozinho uns 2 segundos depois de terminar a frase;
+- ele some na hora quando você escolhe uma pedra, para as pontas ficarem à vista.
+
 ## Patch 0.6.2: 15 rivais por run, mapa limpo e "Nas duas pontas!"
 
 - **Elenco sorteado** (`engine/campaignMap.js` → `runCast`):

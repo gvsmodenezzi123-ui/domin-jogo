@@ -34,6 +34,7 @@ function RivalBench({
   mood,
   hurtKey,
   speech,
+  hushSpeech = false,
   handRef,
   roundKey,
   press,
@@ -95,6 +96,7 @@ function RivalBench({
           onMouth={setMouthOpen}
           tail="up"
           tailX={26}
+          hush={hushSpeech}
           className="speech-rival z-40"
         />
       )}

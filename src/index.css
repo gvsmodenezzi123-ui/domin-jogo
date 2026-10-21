@@ -5829,3 +5829,17 @@
   animation: none !important;
   opacity: 0;
 }
+
+/* ---------- Patch 0.6.3: balão de fala some de verdade ----------
+   o .speech-leaving antigo mora dentro de @layer components e perdia para o
+   .speech-balloon (fora de camada) do Patch 0.5.5: o balão nunca saía da mesa até a
+   próxima fala e podia ficar em cima de uma ponta. Aqui, fora de camada, ele vence. */
+.speech-balloon.speech-leaving {
+  animation: speech-out 260ms ease-in forwards;
+}
+
+.reduce-motion .speech-balloon.speech-leaving {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+}

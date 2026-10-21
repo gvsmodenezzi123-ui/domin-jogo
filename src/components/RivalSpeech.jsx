@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { SILENT_CHARS, sound } from '../engine/audioSynth.js';
 
 /** Depois de terminar de falar, o balão fica isto na tela antes de sumir (ms). */
-const LINGER_MS = 1800;
+const LINGER_MS = 1600;
 /** Tempo mínimo do balão na tela, mesmo para fala curta (ms). */
-const MIN_VISIBLE_MS = 2600;
+const MIN_VISIBLE_MS = 2400;
 
 /**
  * Balão de fala (rivais na mesa e o Valtinho na Loja). Patch 0.5.5:
@@ -19,8 +19,10 @@ const MIN_VISIBLE_MS = 2600;
  *
  * `onMouth(aberta)` avisa o retrato para mexer a boca a cada letra. Uma fala nova
  * (key nova no pai) corta a anterior. `linger: false` deixa o balão na tela até a próxima fala.
+ * `hush` (Patch 0.6.3): some na hora, sem esperar (na mesa, quando você escolhe uma pedra,
+ * para o balão não cobrir as pontas onde ela pode entrar).
  */
-export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX = 24, linger = true, className = '', style }) {
+export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX = 24, linger = true, hush = false, className = '', style }) {
   const [shown, setShown] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [bornAt] = useState(() => performance.now());
@@ -48,7 +50,7 @@ export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX =
 
   return (
     <div
-      className={`speech-balloon speech-tail-${tail} pointer-events-none ${leaving ? 'speech-leaving' : ''} ${className}`}
+      className={`speech-balloon speech-tail-${tail} pointer-events-none ${leaving || hush ? 'speech-leaving' : ''} ${className}`}
       style={{ ...style, '--tail-x': typeof tailX === 'number' ? `${tailX}px` : tailX }}
       role="status"
       aria-label={text}
