@@ -5,11 +5,18 @@
 //   - os ícones de interface (moeda, coração, som, menu, lâmpada, olho).
 // Nenhuma imagem externa: tudo é <rect>/<path> desenhado em código.
 
-/* eslint-disable react-refresh/only-export-components -- este arquivo só re-exporta componentes de arte */
-export * from './HighDensitySprites.jsx';
-export * from './art/RivalsRegion1.jsx';
-export * from './art/RivalsRegion2.jsx';
-export * from './art/RivalsRegion3.jsx';
-export * from './art/RelicsA.jsx';
-export * from './art/RelicsB.jsx';
-export * from './art/UiIcons.jsx';
+// Região 1 — Boteco da Esquina
+export { TioZeAvatar } from './HighDensitySprites.jsx';
+export { ArlindoAvatar, BaianoAvatar, NeideAvatar, TonhoAvatar, ValdirAvatar } from './art/RivalsRegion1.jsx';
+// Região 2 — Clube da Sinuca Clandestino
+export { BetoAvatar, CidaAvatar, MarcaoAvatar, PaulinhoAvatar, SerginhoAvatar, TiaoAvatar } from './art/RivalsRegion2.jsx';
+// Região 3 — Submundo do Jogo do Bicho
+export { AlemaoAvatar, BigodeAvatar, CarlinhosAvatar, ComendadorAvatar, FaustoAvatar, SofiaAvatar } from './art/RivalsRegion3.jsx';
+
+// Talismãs
+export { CanecaChoppIcon, DadoViciadoIcon, OlhoVidroIcon } from './HighDensitySprites.jsx';
+export { BorrachaIcon, BuchaDeAcoIcon, ChaveDeFendaIcon, CinzeiroIcon, DedalIcon, GizIcon } from './art/RelicsA.jsx';
+export { AnelIcon, BarbanteIcon, CarteiraIcon, EspelhoIcon, MaoGrandeIcon, RelogioIcon } from './art/RelicsB.jsx';
+
+// Interface
+export { CoinIcon, EyeIcon, HeartIcon, LampIcon, MenuIcon, SpeakerIcon } from './art/UiIcons.jsx';

@@ -18,70 +18,70 @@ function TonhoEyes({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="23" y="15" width="5" height="1" fill="#3e2716" />
-      <rect x="23" y="16" width="2" height="1" fill="#3e2716" />
-      <rect x="13" y="17" width="4" height="1" fill="#3e2716" />
-      <rect x="11" y="18" width="4" height="1" fill="#3e2716" />
-      {/* Olhos */}
-      <rect x="12" y="19" width="2" height="3" fill="#efe6cf" />
-      <rect x="24" y="19" width="2" height="3" fill="#efe6cf" />
-      <rect x="14" y="21" width="2" height="1" fill="#efe6cf" />
-      <rect x="26" y="21" width="2" height="1" fill="#efe6cf" />
-      <rect x="12" y="22" width="4" height="1" fill="#a96d47" />
-      <rect x="24" y="22" width="4" height="1" fill="#a96d47" />
-      <rect x="15" y="19" width="1" height="2" fill="#120c08" />
-      <rect x="27" y="19" width="1" height="2" fill="#120c08" />
-      <rect x="14" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="26" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="14" y="19" width="1" height="1" fill="#ffffff" />
-      <rect x="26" y="19" width="1" height="1" fill="#ffffff" />
+        {/* Sobrancelhas */}
+        <rect x="23" y="15" width="5" height="1" fill="#3e2716" />
+        <rect x="23" y="16" width="2" height="1" fill="#3e2716" />
+        <rect x="13" y="17" width="4" height="1" fill="#3e2716" />
+        <rect x="11" y="18" width="4" height="1" fill="#3e2716" />
+        {/* Olhos */}
+        <rect x="12" y="19" width="2" height="3" fill="#efe6cf" />
+        <rect x="24" y="19" width="2" height="3" fill="#efe6cf" />
+        <rect x="14" y="21" width="2" height="1" fill="#efe6cf" />
+        <rect x="26" y="21" width="2" height="1" fill="#efe6cf" />
+        <rect x="12" y="22" width="4" height="1" fill="#a96d47" />
+        <rect x="24" y="22" width="4" height="1" fill="#a96d47" />
+        <rect x="15" y="19" width="1" height="2" fill="#120c08" />
+        <rect x="27" y="19" width="1" height="2" fill="#120c08" />
+        <rect x="14" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="26" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="14" y="19" width="1" height="1" fill="#ffffff" />
+        <rect x="26" y="19" width="1" height="1" fill="#ffffff" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="26" y="16" width="2" height="2" fill="#3e2716" />
-      <rect x="12" y="17" width="3" height="2" fill="#3e2716" />
-      <rect x="23" y="17" width="3" height="1" fill="#3e2716" />
-      <rect x="15" y="18" width="2" height="1" fill="#3e2716" />
-      {/* Olhos */}
-      <rect x="12" y="19" width="4" height="1" fill="#a96d47" />
-      <rect x="24" y="19" width="4" height="1" fill="#a96d47" />
-      <rect x="12" y="22" width="4" height="1" fill="#a96d47" />
-      <rect x="24" y="22" width="4" height="1" fill="#a96d47" />
-      <rect x="12" y="20" width="4" height="1" fill="#21140a" />
-      <rect x="24" y="20" width="4" height="1" fill="#21140a" />
-      <rect x="12" y="21" width="1" height="1" fill="#efe6cf" />
-      <rect x="15" y="21" width="1" height="1" fill="#efe6cf" />
-      <rect x="24" y="21" width="1" height="1" fill="#efe6cf" />
-      <rect x="27" y="21" width="1" height="1" fill="#efe6cf" />
-      <rect x="13" y="21" width="2" height="1" fill="#120c08" />
-      <rect x="25" y="21" width="2" height="1" fill="#120c08" />
+        {/* Sobrancelhas */}
+        <rect x="26" y="16" width="2" height="2" fill="#3e2716" />
+        <rect x="12" y="17" width="3" height="2" fill="#3e2716" />
+        <rect x="23" y="17" width="3" height="1" fill="#3e2716" />
+        <rect x="15" y="18" width="2" height="1" fill="#3e2716" />
+        {/* Olhos */}
+        <rect x="12" y="19" width="4" height="1" fill="#a96d47" />
+        <rect x="24" y="19" width="4" height="1" fill="#a96d47" />
+        <rect x="12" y="22" width="4" height="1" fill="#a96d47" />
+        <rect x="24" y="22" width="4" height="1" fill="#a96d47" />
+        <rect x="12" y="20" width="4" height="1" fill="#21140a" />
+        <rect x="24" y="20" width="4" height="1" fill="#21140a" />
+        <rect x="12" y="21" width="1" height="1" fill="#efe6cf" />
+        <rect x="15" y="21" width="1" height="1" fill="#efe6cf" />
+        <rect x="24" y="21" width="1" height="1" fill="#efe6cf" />
+        <rect x="27" y="21" width="1" height="1" fill="#efe6cf" />
+        <rect x="13" y="21" width="2" height="1" fill="#120c08" />
+        <rect x="25" y="21" width="2" height="1" fill="#120c08" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="11" y="17" width="3" height="1" fill="#3e2716" />
-      <rect x="26" y="17" width="3" height="1" fill="#3e2716" />
-      <rect x="14" y="18" width="3" height="1" fill="#3e2716" />
-      <rect x="23" y="18" width="3" height="1" fill="#3e2716" />
-      {/* Olhos */}
-      <rect x="12" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="14" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="25" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="27" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="13" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="26" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="12" y="21" width="1" height="1" fill="#120c08" />
-      <rect x="14" y="21" width="1" height="1" fill="#120c08" />
-      <rect x="25" y="21" width="1" height="1" fill="#120c08" />
-      <rect x="27" y="21" width="1" height="1" fill="#120c08" />
+        {/* Sobrancelhas */}
+        <rect x="11" y="17" width="3" height="1" fill="#3e2716" />
+        <rect x="26" y="17" width="3" height="1" fill="#3e2716" />
+        <rect x="14" y="18" width="3" height="1" fill="#3e2716" />
+        <rect x="23" y="18" width="3" height="1" fill="#3e2716" />
+        {/* Olhos */}
+        <rect x="12" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="14" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="25" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="27" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="13" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="26" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="12" y="21" width="1" height="1" fill="#120c08" />
+        <rect x="14" y="21" width="1" height="1" fill="#120c08" />
+        <rect x="25" y="21" width="1" height="1" fill="#120c08" />
+        <rect x="27" y="21" width="1" height="1" fill="#120c08" />
       </>
     );
   }
@@ -116,46 +116,46 @@ function TonhoMouth({ mood, speaking }) {
   if (speaking) {
     return (
       <>
-      {/* Boca */}
-      <rect x="16" y="28" width="8" height="2" fill="#2a0d08" />
-      <rect x="16" y="30" width="2" height="1" fill="#2a0d08" />
-      <rect x="22" y="30" width="2" height="1" fill="#2a0d08" />
-      <rect x="18" y="30" width="4" height="1" fill="#b8473c" />
+        {/* Boca */}
+        <rect x="16" y="28" width="8" height="2" fill="#2a0d08" />
+        <rect x="16" y="30" width="2" height="1" fill="#2a0d08" />
+        <rect x="22" y="30" width="2" height="1" fill="#2a0d08" />
+        <rect x="18" y="30" width="4" height="1" fill="#b8473c" />
       </>
     );
   }
   if (mood === 'thinking') {
     return (
       <>
-      {/* Boca */}
-      <rect x="19" y="28" width="3" height="1" fill="#2a0d08" />
-      <rect x="19" y="29" width="3" height="1" fill="#e6ae82" />
+        {/* Boca */}
+        <rect x="19" y="28" width="3" height="1" fill="#2a0d08" />
+        <rect x="19" y="29" width="3" height="1" fill="#e6ae82" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Boca */}
-      <rect x="24" y="27" width="1" height="1" fill="#2a0d08" />
-      <rect x="21" y="28" width="3" height="1" fill="#2a0d08" />
-      <rect x="17" y="29" width="4" height="1" fill="#2a0d08" />
-      <rect x="18" y="30" width="3" height="1" fill="#a96d47" />
+        {/* Boca */}
+        <rect x="24" y="27" width="1" height="1" fill="#2a0d08" />
+        <rect x="21" y="28" width="3" height="1" fill="#2a0d08" />
+        <rect x="17" y="29" width="4" height="1" fill="#2a0d08" />
+        <rect x="18" y="30" width="3" height="1" fill="#a96d47" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Boca */}
-      <rect x="16" y="28" width="1" height="2" fill="#2a0d08" />
-      <rect x="23" y="28" width="1" height="2" fill="#2a0d08" />
-      <rect x="17" y="29" width="6" height="1" fill="#2a0d08" />
-      <rect x="17" y="28" width="2" height="1" fill="#efe6cf" />
-      <rect x="20" y="28" width="1" height="1" fill="#efe6cf" />
-      <rect x="22" y="28" width="1" height="1" fill="#efe6cf" />
-      <rect x="19" y="28" width="1" height="1" fill="#21140a" />
-      <rect x="21" y="28" width="1" height="1" fill="#21140a" />
+        {/* Boca */}
+        <rect x="16" y="28" width="1" height="2" fill="#2a0d08" />
+        <rect x="23" y="28" width="1" height="2" fill="#2a0d08" />
+        <rect x="17" y="29" width="6" height="1" fill="#2a0d08" />
+        <rect x="17" y="28" width="2" height="1" fill="#efe6cf" />
+        <rect x="20" y="28" width="1" height="1" fill="#efe6cf" />
+        <rect x="22" y="28" width="1" height="1" fill="#efe6cf" />
+        <rect x="19" y="28" width="1" height="1" fill="#21140a" />
+        <rect x="21" y="28" width="1" height="1" fill="#21140a" />
       </>
     );
   }
@@ -173,34 +173,34 @@ function TonhoExtras({ mood }) {
   if (mood === 'smug') {
     return (
       <>
-      {/* Gotas de suor */}
-      <rect x="27" y="16" width="1" height="2" fill="#f4fcff" />
-      <rect x="28" y="17" width="1" height="1" fill="#a9d9ec" />
-      <rect x="27" y="18" width="1" height="1" fill="#a9d9ec" />
-      <rect x="28" y="18" width="1" height="1" fill="#5b95b0" />
+        {/* Gotas de suor */}
+        <rect x="27" y="16" width="1" height="2" fill="#f4fcff" />
+        <rect x="28" y="17" width="1" height="1" fill="#a9d9ec" />
+        <rect x="27" y="18" width="1" height="1" fill="#a9d9ec" />
+        <rect x="28" y="18" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Gotas de suor */}
-      <rect x="5" y="6" width="1" height="2" fill="#f4fcff" />
-      <rect x="32" y="13" width="1" height="2" fill="#f4fcff" />
-      <rect x="27" y="16" width="1" height="2" fill="#f4fcff" />
-      <rect x="11" y="26" width="1" height="2" fill="#f4fcff" />
-      <rect x="6" y="7" width="1" height="1" fill="#a9d9ec" />
-      <rect x="5" y="8" width="1" height="1" fill="#a9d9ec" />
-      <rect x="33" y="14" width="1" height="1" fill="#a9d9ec" />
-      <rect x="32" y="15" width="1" height="1" fill="#a9d9ec" />
-      <rect x="28" y="17" width="1" height="1" fill="#a9d9ec" />
-      <rect x="27" y="18" width="1" height="1" fill="#a9d9ec" />
-      <rect x="12" y="27" width="1" height="1" fill="#a9d9ec" />
-      <rect x="11" y="28" width="1" height="1" fill="#a9d9ec" />
-      <rect x="6" y="8" width="1" height="1" fill="#5b95b0" />
-      <rect x="33" y="15" width="1" height="1" fill="#5b95b0" />
-      <rect x="28" y="18" width="1" height="1" fill="#5b95b0" />
-      <rect x="12" y="28" width="1" height="1" fill="#5b95b0" />
+        {/* Gotas de suor */}
+        <rect x="5" y="6" width="1" height="2" fill="#f4fcff" />
+        <rect x="32" y="13" width="1" height="2" fill="#f4fcff" />
+        <rect x="27" y="16" width="1" height="2" fill="#f4fcff" />
+        <rect x="11" y="26" width="1" height="2" fill="#f4fcff" />
+        <rect x="6" y="7" width="1" height="1" fill="#a9d9ec" />
+        <rect x="5" y="8" width="1" height="1" fill="#a9d9ec" />
+        <rect x="33" y="14" width="1" height="1" fill="#a9d9ec" />
+        <rect x="32" y="15" width="1" height="1" fill="#a9d9ec" />
+        <rect x="28" y="17" width="1" height="1" fill="#a9d9ec" />
+        <rect x="27" y="18" width="1" height="1" fill="#a9d9ec" />
+        <rect x="12" y="27" width="1" height="1" fill="#a9d9ec" />
+        <rect x="11" y="28" width="1" height="1" fill="#a9d9ec" />
+        <rect x="6" y="8" width="1" height="1" fill="#5b95b0" />
+        <rect x="33" y="15" width="1" height="1" fill="#5b95b0" />
+        <rect x="28" y="18" width="1" height="1" fill="#5b95b0" />
+        <rect x="12" y="28" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
@@ -484,58 +484,58 @@ function BaianoEyes({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="23" y="15" width="4" height="1" fill="#120c09" />
-      <rect x="27" y="16" width="1" height="1" fill="#120c09" />
-      <rect x="13" y="17" width="4" height="1" fill="#120c09" />
-      {/* Olhos */}
-      <rect x="13" y="18" width="2" height="2" fill="#e8ddc4" />
-      <rect x="23" y="18" width="2" height="2" fill="#e8ddc4" />
-      <rect x="15" y="19" width="2" height="1" fill="#e8ddc4" />
-      <rect x="25" y="19" width="2" height="1" fill="#e8ddc4" />
-      <rect x="13" y="20" width="4" height="1" fill="#55311b" />
-      <rect x="23" y="20" width="4" height="1" fill="#55311b" />
-      <rect x="15" y="18" width="2" height="1" fill="#0d0705" />
-      <rect x="25" y="18" width="2" height="1" fill="#0d0705" />
+        {/* Sobrancelhas */}
+        <rect x="23" y="15" width="4" height="1" fill="#120c09" />
+        <rect x="27" y="16" width="1" height="1" fill="#120c09" />
+        <rect x="13" y="17" width="4" height="1" fill="#120c09" />
+        {/* Olhos */}
+        <rect x="13" y="18" width="2" height="2" fill="#e8ddc4" />
+        <rect x="23" y="18" width="2" height="2" fill="#e8ddc4" />
+        <rect x="15" y="19" width="2" height="1" fill="#e8ddc4" />
+        <rect x="25" y="19" width="2" height="1" fill="#e8ddc4" />
+        <rect x="13" y="20" width="4" height="1" fill="#55311b" />
+        <rect x="23" y="20" width="4" height="1" fill="#55311b" />
+        <rect x="15" y="18" width="2" height="1" fill="#0d0705" />
+        <rect x="25" y="18" width="2" height="1" fill="#0d0705" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="23" y="16" width="4" height="1" fill="#120c09" />
-      <rect x="12" y="17" width="5" height="1" fill="#120c09" />
-      <rect x="27" y="17" width="1" height="1" fill="#120c09" />
-      {/* Olhos */}
-      <rect x="13" y="18" width="4" height="1" fill="#120c09" />
-      <rect x="23" y="18" width="4" height="1" fill="#120c09" />
-      <rect x="13" y="20" width="4" height="1" fill="#55311b" />
-      <rect x="23" y="20" width="4" height="1" fill="#55311b" />
-      <rect x="13" y="19" width="1" height="1" fill="#e8ddc4" />
-      <rect x="16" y="19" width="1" height="1" fill="#e8ddc4" />
-      <rect x="23" y="19" width="1" height="1" fill="#e8ddc4" />
-      <rect x="26" y="19" width="1" height="1" fill="#e8ddc4" />
-      <rect x="14" y="19" width="2" height="1" fill="#0d0705" />
-      <rect x="24" y="19" width="2" height="1" fill="#0d0705" />
+        {/* Sobrancelhas */}
+        <rect x="23" y="16" width="4" height="1" fill="#120c09" />
+        <rect x="12" y="17" width="5" height="1" fill="#120c09" />
+        <rect x="27" y="17" width="1" height="1" fill="#120c09" />
+        {/* Olhos */}
+        <rect x="13" y="18" width="4" height="1" fill="#120c09" />
+        <rect x="23" y="18" width="4" height="1" fill="#120c09" />
+        <rect x="13" y="20" width="4" height="1" fill="#55311b" />
+        <rect x="23" y="20" width="4" height="1" fill="#55311b" />
+        <rect x="13" y="19" width="1" height="1" fill="#e8ddc4" />
+        <rect x="16" y="19" width="1" height="1" fill="#e8ddc4" />
+        <rect x="23" y="19" width="1" height="1" fill="#e8ddc4" />
+        <rect x="26" y="19" width="1" height="1" fill="#e8ddc4" />
+        <rect x="14" y="19" width="2" height="1" fill="#0d0705" />
+        <rect x="24" y="19" width="2" height="1" fill="#0d0705" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Sobrancelhas */}
-      <rect x="13" y="16" width="2" height="1" fill="#120c09" />
-      <rect x="25" y="16" width="2" height="1" fill="#120c09" />
-      <rect x="15" y="17" width="2" height="1" fill="#120c09" />
-      <rect x="23" y="17" width="2" height="1" fill="#120c09" />
-      {/* Olhos */}
-      <rect x="13" y="18" width="2" height="1" fill="#0d0705" />
-      <rect x="25" y="18" width="2" height="1" fill="#0d0705" />
-      <rect x="15" y="19" width="2" height="1" fill="#0d0705" />
-      <rect x="23" y="19" width="2" height="1" fill="#0d0705" />
-      <rect x="13" y="20" width="2" height="1" fill="#0d0705" />
-      <rect x="25" y="20" width="2" height="1" fill="#0d0705" />
+        {/* Sobrancelhas */}
+        <rect x="13" y="16" width="2" height="1" fill="#120c09" />
+        <rect x="25" y="16" width="2" height="1" fill="#120c09" />
+        <rect x="15" y="17" width="2" height="1" fill="#120c09" />
+        <rect x="23" y="17" width="2" height="1" fill="#120c09" />
+        {/* Olhos */}
+        <rect x="13" y="18" width="2" height="1" fill="#0d0705" />
+        <rect x="25" y="18" width="2" height="1" fill="#0d0705" />
+        <rect x="15" y="19" width="2" height="1" fill="#0d0705" />
+        <rect x="23" y="19" width="2" height="1" fill="#0d0705" />
+        <rect x="13" y="20" width="2" height="1" fill="#0d0705" />
+        <rect x="25" y="20" width="2" height="1" fill="#0d0705" />
       </>
     );
   }
@@ -568,57 +568,57 @@ function BaianoMouth({ mood, speaking }) {
   if (speaking) {
     return (
       <>
-      {/* Boca */}
-      <rect x="15" y="25" width="1" height="1" fill="#1c0905" />
-      <rect x="24" y="25" width="1" height="1" fill="#1c0905" />
-      <rect x="16" y="26" width="8" height="1" fill="#1c0905" />
-      <rect x="16" y="27" width="2" height="1" fill="#1c0905" />
-      <rect x="22" y="27" width="2" height="1" fill="#1c0905" />
-      <rect x="16" y="25" width="8" height="1" fill="#f2ecd9" />
-      <rect x="17" y="28" width="6" height="1" fill="#8c4a34" />
-      <rect x="18" y="27" width="4" height="1" fill="#a8423a" />
+        {/* Boca */}
+        <rect x="15" y="25" width="1" height="1" fill="#1c0905" />
+        <rect x="24" y="25" width="1" height="1" fill="#1c0905" />
+        <rect x="16" y="26" width="8" height="1" fill="#1c0905" />
+        <rect x="16" y="27" width="2" height="1" fill="#1c0905" />
+        <rect x="22" y="27" width="2" height="1" fill="#1c0905" />
+        <rect x="16" y="25" width="8" height="1" fill="#f2ecd9" />
+        <rect x="17" y="28" width="6" height="1" fill="#8c4a34" />
+        <rect x="18" y="27" width="4" height="1" fill="#a8423a" />
       </>
     );
   }
   if (mood === 'thinking') {
     return (
       <>
-      {/* Boca */}
-      <rect x="17" y="26" width="6" height="1" fill="#5e2c1e" />
-      <rect x="18" y="27" width="4" height="1" fill="#8c4a34" />
+        {/* Boca */}
+        <rect x="17" y="26" width="6" height="1" fill="#5e2c1e" />
+        <rect x="18" y="27" width="4" height="1" fill="#8c4a34" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Boca */}
-      <rect x="25" y="24" width="1" height="1" fill="#1c0905" />
-      <rect x="24" y="25" width="1" height="1" fill="#1c0905" />
-      <rect x="19" y="26" width="5" height="1" fill="#1c0905" />
-      <rect x="17" y="27" width="6" height="1" fill="#8c4a34" />
-      <rect x="19" y="25" width="5" height="1" fill="#f2ecd9" />
-      <rect x="15" y="26" width="4" height="1" fill="#5e2c1e" />
+        {/* Boca */}
+        <rect x="25" y="24" width="1" height="1" fill="#1c0905" />
+        <rect x="24" y="25" width="1" height="1" fill="#1c0905" />
+        <rect x="19" y="26" width="5" height="1" fill="#1c0905" />
+        <rect x="17" y="27" width="6" height="1" fill="#8c4a34" />
+        <rect x="19" y="25" width="5" height="1" fill="#f2ecd9" />
+        <rect x="15" y="26" width="4" height="1" fill="#5e2c1e" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Boca */}
-      <rect x="15" y="25" width="1" height="3" fill="#1c0905" />
-      <rect x="18" y="25" width="1" height="2" fill="#1c0905" />
-      <rect x="21" y="25" width="1" height="2" fill="#1c0905" />
-      <rect x="24" y="25" width="1" height="3" fill="#1c0905" />
-      <rect x="16" y="26" width="2" height="1" fill="#1c0905" />
-      <rect x="19" y="26" width="2" height="1" fill="#1c0905" />
-      <rect x="22" y="26" width="2" height="1" fill="#1c0905" />
-      <rect x="16" y="27" width="1" height="1" fill="#1c0905" />
-      <rect x="23" y="27" width="1" height="1" fill="#1c0905" />
-      <rect x="16" y="25" width="2" height="1" fill="#f2ecd9" />
-      <rect x="19" y="25" width="2" height="1" fill="#f2ecd9" />
-      <rect x="22" y="25" width="2" height="1" fill="#f2ecd9" />
-      <rect x="17" y="27" width="6" height="1" fill="#f2ecd9" />
+        {/* Boca */}
+        <rect x="15" y="25" width="1" height="3" fill="#1c0905" />
+        <rect x="18" y="25" width="1" height="2" fill="#1c0905" />
+        <rect x="21" y="25" width="1" height="2" fill="#1c0905" />
+        <rect x="24" y="25" width="1" height="3" fill="#1c0905" />
+        <rect x="16" y="26" width="2" height="1" fill="#1c0905" />
+        <rect x="19" y="26" width="2" height="1" fill="#1c0905" />
+        <rect x="22" y="26" width="2" height="1" fill="#1c0905" />
+        <rect x="16" y="27" width="1" height="1" fill="#1c0905" />
+        <rect x="23" y="27" width="1" height="1" fill="#1c0905" />
+        <rect x="16" y="25" width="2" height="1" fill="#f2ecd9" />
+        <rect x="19" y="25" width="2" height="1" fill="#f2ecd9" />
+        <rect x="22" y="25" width="2" height="1" fill="#f2ecd9" />
+        <rect x="17" y="27" width="6" height="1" fill="#f2ecd9" />
       </>
     );
   }
@@ -641,11 +641,11 @@ function BaianoExtras({ mood }) {
   if (mood === 'hurt') {
     return (
       <>
-      {/* Suor de dor */}
-      <rect x="10" y="14" width="1" height="2" fill="#f4fcff" />
-      <rect x="11" y="15" width="1" height="1" fill="#a9d9ec" />
-      <rect x="10" y="16" width="1" height="1" fill="#a9d9ec" />
-      <rect x="11" y="16" width="1" height="1" fill="#5b95b0" />
+        {/* Suor de dor */}
+        <rect x="10" y="14" width="1" height="2" fill="#f4fcff" />
+        <rect x="11" y="15" width="1" height="1" fill="#a9d9ec" />
+        <rect x="10" y="16" width="1" height="1" fill="#a9d9ec" />
+        <rect x="11" y="16" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
@@ -931,74 +931,74 @@ function ValdirEyes({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Sobrancelhas grossas */}
-      <rect x="22" y="14" width="7" height="2" fill="#24170e" />
-      <rect x="11" y="15" width="2" height="2" fill="#24170e" />
-      <rect x="14" y="15" width="1" height="2" fill="#24170e" />
-      <rect x="15" y="16" width="3" height="1" fill="#24170e" />
-      <rect x="28" y="16" width="1" height="1" fill="#24170e" />
-      <rect x="16" y="17" width="2" height="1" fill="#24170e" />
-      <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
-      <rect x="13" y="16" width="1" height="1" fill="#b8845a" />
-      {/* Olhos miúdos */}
-      <rect x="14" y="18" width="2" height="2" fill="#e6dcc4" />
-      <rect x="26" y="18" width="2" height="2" fill="#e6dcc4" />
-      <rect x="12" y="19" width="2" height="1" fill="#e6dcc4" />
-      <rect x="24" y="19" width="2" height="1" fill="#e6dcc4" />
-      <rect x="12" y="17" width="4" height="1" fill="#5c3921" />
-      <rect x="24" y="17" width="4" height="1" fill="#5c3921" />
-      <rect x="12" y="20" width="4" height="1" fill="#8a5a38" />
-      <rect x="24" y="20" width="4" height="1" fill="#8a5a38" />
-      <rect x="12" y="18" width="2" height="1" fill="#0f0a07" />
-      <rect x="24" y="18" width="2" height="1" fill="#0f0a07" />
+        {/* Sobrancelhas grossas */}
+        <rect x="22" y="14" width="7" height="2" fill="#24170e" />
+        <rect x="11" y="15" width="2" height="2" fill="#24170e" />
+        <rect x="14" y="15" width="1" height="2" fill="#24170e" />
+        <rect x="15" y="16" width="3" height="1" fill="#24170e" />
+        <rect x="28" y="16" width="1" height="1" fill="#24170e" />
+        <rect x="16" y="17" width="2" height="1" fill="#24170e" />
+        <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
+        <rect x="13" y="16" width="1" height="1" fill="#b8845a" />
+        {/* Olhos miúdos */}
+        <rect x="14" y="18" width="2" height="2" fill="#e6dcc4" />
+        <rect x="26" y="18" width="2" height="2" fill="#e6dcc4" />
+        <rect x="12" y="19" width="2" height="1" fill="#e6dcc4" />
+        <rect x="24" y="19" width="2" height="1" fill="#e6dcc4" />
+        <rect x="12" y="17" width="4" height="1" fill="#5c3921" />
+        <rect x="24" y="17" width="4" height="1" fill="#5c3921" />
+        <rect x="12" y="20" width="4" height="1" fill="#8a5a38" />
+        <rect x="24" y="20" width="4" height="1" fill="#8a5a38" />
+        <rect x="12" y="18" width="2" height="1" fill="#0f0a07" />
+        <rect x="24" y="18" width="2" height="1" fill="#0f0a07" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Sobrancelhas grossas */}
-      <rect x="22" y="15" width="7" height="2" fill="#24170e" />
-      <rect x="11" y="16" width="7" height="1" fill="#24170e" />
-      <rect x="11" y="17" width="1" height="1" fill="#24170e" />
-      <rect x="16" y="17" width="2" height="1" fill="#24170e" />
-      <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
-      {/* Olhos miúdos */}
-      <rect x="12" y="18" width="4" height="1" fill="#8a5a38" />
-      <rect x="24" y="18" width="4" height="1" fill="#8a5a38" />
-      <rect x="12" y="20" width="4" height="1" fill="#8a5a38" />
-      <rect x="24" y="20" width="4" height="1" fill="#8a5a38" />
-      <rect x="12" y="17" width="4" height="1" fill="#5c3921" />
-      <rect x="24" y="17" width="4" height="1" fill="#5c3921" />
-      <rect x="12" y="19" width="1" height="1" fill="#e6dcc4" />
-      <rect x="15" y="19" width="1" height="1" fill="#e6dcc4" />
-      <rect x="24" y="19" width="1" height="1" fill="#e6dcc4" />
-      <rect x="27" y="19" width="1" height="1" fill="#e6dcc4" />
-      <rect x="13" y="19" width="2" height="1" fill="#0f0a07" />
-      <rect x="25" y="19" width="2" height="1" fill="#0f0a07" />
+        {/* Sobrancelhas grossas */}
+        <rect x="22" y="15" width="7" height="2" fill="#24170e" />
+        <rect x="11" y="16" width="7" height="1" fill="#24170e" />
+        <rect x="11" y="17" width="1" height="1" fill="#24170e" />
+        <rect x="16" y="17" width="2" height="1" fill="#24170e" />
+        <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
+        {/* Olhos miúdos */}
+        <rect x="12" y="18" width="4" height="1" fill="#8a5a38" />
+        <rect x="24" y="18" width="4" height="1" fill="#8a5a38" />
+        <rect x="12" y="20" width="4" height="1" fill="#8a5a38" />
+        <rect x="24" y="20" width="4" height="1" fill="#8a5a38" />
+        <rect x="12" y="17" width="4" height="1" fill="#5c3921" />
+        <rect x="24" y="17" width="4" height="1" fill="#5c3921" />
+        <rect x="12" y="19" width="1" height="1" fill="#e6dcc4" />
+        <rect x="15" y="19" width="1" height="1" fill="#e6dcc4" />
+        <rect x="24" y="19" width="1" height="1" fill="#e6dcc4" />
+        <rect x="27" y="19" width="1" height="1" fill="#e6dcc4" />
+        <rect x="13" y="19" width="2" height="1" fill="#0f0a07" />
+        <rect x="25" y="19" width="2" height="1" fill="#0f0a07" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Sobrancelhas grossas */}
-      <rect x="14" y="15" width="3" height="2" fill="#24170e" />
-      <rect x="23" y="15" width="3" height="2" fill="#24170e" />
-      <rect x="11" y="16" width="3" height="2" fill="#24170e" />
-      <rect x="26" y="16" width="3" height="2" fill="#24170e" />
-      <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
-      {/* Olhos miúdos */}
-      <rect x="12" y="18" width="1" height="1" fill="#0f0a07" />
-      <rect x="14" y="18" width="1" height="1" fill="#0f0a07" />
-      <rect x="24" y="18" width="1" height="1" fill="#0f0a07" />
-      <rect x="26" y="18" width="1" height="1" fill="#0f0a07" />
-      <rect x="13" y="19" width="1" height="1" fill="#0f0a07" />
-      <rect x="25" y="19" width="1" height="1" fill="#0f0a07" />
-      <rect x="12" y="20" width="1" height="1" fill="#0f0a07" />
-      <rect x="14" y="20" width="1" height="1" fill="#0f0a07" />
-      <rect x="24" y="20" width="1" height="1" fill="#0f0a07" />
-      <rect x="26" y="20" width="1" height="1" fill="#0f0a07" />
+        {/* Sobrancelhas grossas */}
+        <rect x="14" y="15" width="3" height="2" fill="#24170e" />
+        <rect x="23" y="15" width="3" height="2" fill="#24170e" />
+        <rect x="11" y="16" width="3" height="2" fill="#24170e" />
+        <rect x="26" y="16" width="3" height="2" fill="#24170e" />
+        <rect x="13" y="15" width="1" height="1" fill="#e2b387" />
+        {/* Olhos miúdos */}
+        <rect x="12" y="18" width="1" height="1" fill="#0f0a07" />
+        <rect x="14" y="18" width="1" height="1" fill="#0f0a07" />
+        <rect x="24" y="18" width="1" height="1" fill="#0f0a07" />
+        <rect x="26" y="18" width="1" height="1" fill="#0f0a07" />
+        <rect x="13" y="19" width="1" height="1" fill="#0f0a07" />
+        <rect x="25" y="19" width="1" height="1" fill="#0f0a07" />
+        <rect x="12" y="20" width="1" height="1" fill="#0f0a07" />
+        <rect x="14" y="20" width="1" height="1" fill="#0f0a07" />
+        <rect x="24" y="20" width="1" height="1" fill="#0f0a07" />
+        <rect x="26" y="20" width="1" height="1" fill="#0f0a07" />
       </>
     );
   }
@@ -1038,55 +1038,55 @@ function ValdirMouth({ mood, speaking }) {
   if (speaking) {
     return (
       <>
-      {/* Boca */}
-      <rect x="16" y="26" width="1" height="3" fill="#260c07" />
-      <rect x="19" y="26" width="1" height="2" fill="#260c07" />
-      <rect x="23" y="26" width="1" height="3" fill="#260c07" />
-      <rect x="17" y="27" width="2" height="1" fill="#260c07" />
-      <rect x="20" y="27" width="3" height="1" fill="#260c07" />
-      <rect x="17" y="28" width="1" height="1" fill="#260c07" />
-      <rect x="22" y="28" width="1" height="1" fill="#260c07" />
-      <rect x="17" y="26" width="2" height="1" fill="#e9e0c6" />
-      <rect x="20" y="26" width="3" height="1" fill="#e9e0c6" />
-      <rect x="18" y="28" width="4" height="1" fill="#a8423a" />
+        {/* Boca */}
+        <rect x="16" y="26" width="1" height="3" fill="#260c07" />
+        <rect x="19" y="26" width="1" height="2" fill="#260c07" />
+        <rect x="23" y="26" width="1" height="3" fill="#260c07" />
+        <rect x="17" y="27" width="2" height="1" fill="#260c07" />
+        <rect x="20" y="27" width="3" height="1" fill="#260c07" />
+        <rect x="17" y="28" width="1" height="1" fill="#260c07" />
+        <rect x="22" y="28" width="1" height="1" fill="#260c07" />
+        <rect x="17" y="26" width="2" height="1" fill="#e9e0c6" />
+        <rect x="20" y="26" width="3" height="1" fill="#e9e0c6" />
+        <rect x="18" y="28" width="4" height="1" fill="#a8423a" />
       </>
     );
   }
   if (mood === 'thinking') {
     return (
       <>
-      {/* Boca */}
-      <rect x="15" y="27" width="5" height="1" fill="#260c07" />
-      <rect x="16" y="28" width="3" height="1" fill="#a46a48" />
+        {/* Boca */}
+        <rect x="15" y="27" width="5" height="1" fill="#260c07" />
+        <rect x="16" y="28" width="3" height="1" fill="#a46a48" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Boca */}
-      <rect x="21" y="26" width="3" height="1" fill="#260c07" />
-      <rect x="16" y="27" width="5" height="1" fill="#260c07" />
-      <rect x="17" y="28" width="4" height="1" fill="#a46a48" />
+        {/* Boca */}
+        <rect x="21" y="26" width="3" height="1" fill="#260c07" />
+        <rect x="16" y="27" width="5" height="1" fill="#260c07" />
+        <rect x="17" y="28" width="4" height="1" fill="#a46a48" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Boca */}
-      <rect x="15" y="26" width="1" height="3" fill="#260c07" />
-      <rect x="19" y="26" width="1" height="2" fill="#260c07" />
-      <rect x="24" y="26" width="1" height="3" fill="#260c07" />
-      <rect x="16" y="27" width="3" height="1" fill="#260c07" />
-      <rect x="20" y="27" width="4" height="1" fill="#260c07" />
-      <rect x="16" y="28" width="1" height="1" fill="#260c07" />
-      <rect x="21" y="28" width="1" height="1" fill="#260c07" />
-      <rect x="23" y="28" width="1" height="1" fill="#260c07" />
-      <rect x="16" y="26" width="3" height="1" fill="#e9e0c6" />
-      <rect x="20" y="26" width="4" height="1" fill="#e9e0c6" />
-      <rect x="17" y="28" width="4" height="1" fill="#e9e0c6" />
-      <rect x="22" y="28" width="1" height="1" fill="#e9e0c6" />
+        {/* Boca */}
+        <rect x="15" y="26" width="1" height="3" fill="#260c07" />
+        <rect x="19" y="26" width="1" height="2" fill="#260c07" />
+        <rect x="24" y="26" width="1" height="3" fill="#260c07" />
+        <rect x="16" y="27" width="3" height="1" fill="#260c07" />
+        <rect x="20" y="27" width="4" height="1" fill="#260c07" />
+        <rect x="16" y="28" width="1" height="1" fill="#260c07" />
+        <rect x="21" y="28" width="1" height="1" fill="#260c07" />
+        <rect x="23" y="28" width="1" height="1" fill="#260c07" />
+        <rect x="16" y="26" width="3" height="1" fill="#e9e0c6" />
+        <rect x="20" y="26" width="4" height="1" fill="#e9e0c6" />
+        <rect x="17" y="28" width="4" height="1" fill="#e9e0c6" />
+        <rect x="22" y="28" width="1" height="1" fill="#e9e0c6" />
       </>
     );
   }
@@ -1104,35 +1104,35 @@ function ValdirExtras({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Palito de dente */}
-      <rect x="14" y="27" width="1" height="1" fill="#ecd9a0" />
-      <rect x="12" y="28" width="2" height="1" fill="#ecd9a0" />
-      <rect x="11" y="29" width="1" height="1" fill="#ecd9a0" />
-      <rect x="12" y="29" width="2" height="1" fill="#a88f55" />
+        {/* Palito de dente */}
+        <rect x="14" y="27" width="1" height="1" fill="#ecd9a0" />
+        <rect x="12" y="28" width="2" height="1" fill="#ecd9a0" />
+        <rect x="11" y="29" width="1" height="1" fill="#ecd9a0" />
+        <rect x="12" y="29" width="2" height="1" fill="#a88f55" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Palito de dente */}
-      <rect x="27" y="24" width="1" height="1" fill="#ecd9a0" />
-      <rect x="25" y="25" width="2" height="1" fill="#ecd9a0" />
-      <rect x="24" y="26" width="1" height="1" fill="#ecd9a0" />
-      <rect x="25" y="26" width="2" height="1" fill="#a88f55" />
+        {/* Palito de dente */}
+        <rect x="27" y="24" width="1" height="1" fill="#ecd9a0" />
+        <rect x="25" y="25" width="2" height="1" fill="#ecd9a0" />
+        <rect x="24" y="26" width="1" height="1" fill="#ecd9a0" />
+        <rect x="25" y="26" width="2" height="1" fill="#a88f55" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Fio de sangue */}
-      <rect x="24" y="28" width="1" height="3" fill="#c8261d" />
-      {/* Suor */}
-      <rect x="29" y="16" width="1" height="2" fill="#f4fcff" />
-      <rect x="30" y="17" width="1" height="1" fill="#a9d9ec" />
-      <rect x="29" y="18" width="1" height="1" fill="#a9d9ec" />
-      <rect x="30" y="18" width="1" height="1" fill="#5b95b0" />
+        {/* Fio de sangue */}
+        <rect x="24" y="28" width="1" height="3" fill="#c8261d" />
+        {/* Suor */}
+        <rect x="29" y="16" width="1" height="2" fill="#f4fcff" />
+        <rect x="30" y="17" width="1" height="1" fill="#a9d9ec" />
+        <rect x="29" y="18" width="1" height="1" fill="#a9d9ec" />
+        <rect x="30" y="18" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
@@ -1466,147 +1466,147 @@ function NeideEyes({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Sobrancelhas pintadas */}
-      <rect x="23" y="14" width="3" height="1" fill="#6e6a66" />
-      <rect x="22" y="15" width="1" height="1" fill="#6e6a66" />
-      <rect x="26" y="15" width="1" height="1" fill="#6e6a66" />
-      <rect x="13" y="16" width="4" height="1" fill="#6e6a66" />
-      {/* Óculos de gatinho */}
-      <rect x="9" y="17" width="2" height="1" fill="#420e1e" />
-      <rect x="29" y="17" width="2" height="1" fill="#420e1e" />
-      <rect x="17" y="18" width="1" height="3" fill="#420e1e" />
-      <rect x="28" y="18" width="1" height="2" fill="#420e1e" />
-      <rect x="12" y="20" width="1" height="1" fill="#420e1e" />
-      <rect x="27" y="20" width="1" height="1" fill="#420e1e" />
-      <rect x="13" y="21" width="4" height="1" fill="#420e1e" />
-      <rect x="23" y="21" width="4" height="1" fill="#420e1e" />
-      <rect x="14" y="17" width="4" height="1" fill="#741c36" />
-      <rect x="25" y="17" width="4" height="1" fill="#741c36" />
-      <rect x="11" y="18" width="1" height="2" fill="#741c36" />
-      <rect x="19" y="18" width="4" height="1" fill="#741c36" />
-      <rect x="22" y="19" width="1" height="2" fill="#741c36" />
-      <rect x="15" y="18" width="2" height="3" fill="#cfdfdc" />
-      <rect x="26" y="18" width="2" height="2" fill="#cfdfdc" />
-      <rect x="13" y="20" width="2" height="1" fill="#cfdfdc" />
-      <rect x="23" y="20" width="4" height="1" fill="#cfdfdc" />
-      <rect x="11" y="17" width="3" height="1" fill="#a8344f" />
-      <rect x="22" y="17" width="3" height="1" fill="#a8344f" />
-      <rect x="18" y="18" width="1" height="1" fill="#a8344f" />
-      <rect x="10" y="16" width="1" height="1" fill="#e8b854" />
-      <rect x="29" y="16" width="1" height="1" fill="#e8b854" />
-      <rect x="11" y="16" width="1" height="1" fill="#a87a28" />
-      <rect x="28" y="16" width="1" height="1" fill="#a87a28" />
-      {/* Olhos atrás das lentes */}
-      <rect x="14" y="18" width="1" height="2" fill="#1a0f0b" />
-      <rect x="25" y="18" width="1" height="2" fill="#1a0f0b" />
-      <rect x="13" y="19" width="1" height="1" fill="#1a0f0b" />
-      <rect x="24" y="19" width="1" height="1" fill="#1a0f0b" />
-      {/* Brilho das lentes */}
-      <rect x="13" y="18" width="1" height="1" fill="#e9f2f0" />
-      <rect x="24" y="18" width="1" height="1" fill="#e9f2f0" />
-      <rect x="12" y="19" width="1" height="1" fill="#e9f2f0" />
-      <rect x="23" y="19" width="1" height="1" fill="#e9f2f0" />
-      <rect x="12" y="18" width="1" height="1" fill="#ffffff" />
-      <rect x="23" y="18" width="1" height="1" fill="#ffffff" />
+        {/* Sobrancelhas pintadas */}
+        <rect x="23" y="14" width="3" height="1" fill="#6e6a66" />
+        <rect x="22" y="15" width="1" height="1" fill="#6e6a66" />
+        <rect x="26" y="15" width="1" height="1" fill="#6e6a66" />
+        <rect x="13" y="16" width="4" height="1" fill="#6e6a66" />
+        {/* Óculos de gatinho */}
+        <rect x="9" y="17" width="2" height="1" fill="#420e1e" />
+        <rect x="29" y="17" width="2" height="1" fill="#420e1e" />
+        <rect x="17" y="18" width="1" height="3" fill="#420e1e" />
+        <rect x="28" y="18" width="1" height="2" fill="#420e1e" />
+        <rect x="12" y="20" width="1" height="1" fill="#420e1e" />
+        <rect x="27" y="20" width="1" height="1" fill="#420e1e" />
+        <rect x="13" y="21" width="4" height="1" fill="#420e1e" />
+        <rect x="23" y="21" width="4" height="1" fill="#420e1e" />
+        <rect x="14" y="17" width="4" height="1" fill="#741c36" />
+        <rect x="25" y="17" width="4" height="1" fill="#741c36" />
+        <rect x="11" y="18" width="1" height="2" fill="#741c36" />
+        <rect x="19" y="18" width="4" height="1" fill="#741c36" />
+        <rect x="22" y="19" width="1" height="2" fill="#741c36" />
+        <rect x="15" y="18" width="2" height="3" fill="#cfdfdc" />
+        <rect x="26" y="18" width="2" height="2" fill="#cfdfdc" />
+        <rect x="13" y="20" width="2" height="1" fill="#cfdfdc" />
+        <rect x="23" y="20" width="4" height="1" fill="#cfdfdc" />
+        <rect x="11" y="17" width="3" height="1" fill="#a8344f" />
+        <rect x="22" y="17" width="3" height="1" fill="#a8344f" />
+        <rect x="18" y="18" width="1" height="1" fill="#a8344f" />
+        <rect x="10" y="16" width="1" height="1" fill="#e8b854" />
+        <rect x="29" y="16" width="1" height="1" fill="#e8b854" />
+        <rect x="11" y="16" width="1" height="1" fill="#a87a28" />
+        <rect x="28" y="16" width="1" height="1" fill="#a87a28" />
+        {/* Olhos atrás das lentes */}
+        <rect x="14" y="18" width="1" height="2" fill="#1a0f0b" />
+        <rect x="25" y="18" width="1" height="2" fill="#1a0f0b" />
+        <rect x="13" y="19" width="1" height="1" fill="#1a0f0b" />
+        <rect x="24" y="19" width="1" height="1" fill="#1a0f0b" />
+        {/* Brilho das lentes */}
+        <rect x="13" y="18" width="1" height="1" fill="#e9f2f0" />
+        <rect x="24" y="18" width="1" height="1" fill="#e9f2f0" />
+        <rect x="12" y="19" width="1" height="1" fill="#e9f2f0" />
+        <rect x="23" y="19" width="1" height="1" fill="#e9f2f0" />
+        <rect x="12" y="18" width="1" height="1" fill="#ffffff" />
+        <rect x="23" y="18" width="1" height="1" fill="#ffffff" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Sobrancelhas pintadas */}
-      <rect x="23" y="15" width="4" height="1" fill="#6e6a66" />
-      <rect x="13" y="16" width="4" height="1" fill="#6e6a66" />
-      {/* Óculos de gatinho */}
-      <rect x="9" y="17" width="2" height="1" fill="#420e1e" />
-      <rect x="29" y="17" width="2" height="1" fill="#420e1e" />
-      <rect x="17" y="18" width="1" height="3" fill="#420e1e" />
-      <rect x="28" y="18" width="1" height="2" fill="#420e1e" />
-      <rect x="12" y="20" width="1" height="1" fill="#420e1e" />
-      <rect x="27" y="20" width="1" height="1" fill="#420e1e" />
-      <rect x="13" y="21" width="4" height="1" fill="#420e1e" />
-      <rect x="23" y="21" width="4" height="1" fill="#420e1e" />
-      <rect x="14" y="17" width="4" height="1" fill="#741c36" />
-      <rect x="25" y="17" width="4" height="1" fill="#741c36" />
-      <rect x="11" y="18" width="1" height="2" fill="#741c36" />
-      <rect x="19" y="18" width="4" height="1" fill="#741c36" />
-      <rect x="22" y="19" width="1" height="2" fill="#741c36" />
-      <rect x="11" y="17" width="3" height="1" fill="#a8344f" />
-      <rect x="22" y="17" width="3" height="1" fill="#a8344f" />
-      <rect x="18" y="18" width="1" height="1" fill="#a8344f" />
-      <rect x="13" y="20" width="1" height="1" fill="#cfdfdc" />
-      <rect x="16" y="20" width="1" height="1" fill="#cfdfdc" />
-      <rect x="23" y="20" width="2" height="1" fill="#cfdfdc" />
-      <rect x="10" y="16" width="1" height="1" fill="#e8b854" />
-      <rect x="29" y="16" width="1" height="1" fill="#e8b854" />
-      <rect x="11" y="16" width="1" height="1" fill="#a87a28" />
-      <rect x="28" y="16" width="1" height="1" fill="#a87a28" />
-      {/* Olhos atrás das lentes */}
-      <rect x="13" y="19" width="4" height="1" fill="#420e1e" />
-      <rect x="24" y="19" width="4" height="1" fill="#420e1e" />
-      <rect x="14" y="18" width="2" height="1" fill="#d6b49e" />
-      <rect x="25" y="18" width="2" height="1" fill="#d6b49e" />
-      <rect x="14" y="20" width="2" height="1" fill="#1a0f0b" />
-      <rect x="25" y="20" width="2" height="1" fill="#1a0f0b" />
-      {/* Brilho das lentes */}
-      <rect x="12" y="18" width="1" height="1" fill="#ffffff" />
-      <rect x="16" y="18" width="1" height="1" fill="#ffffff" />
-      <rect x="23" y="18" width="1" height="1" fill="#ffffff" />
-      <rect x="27" y="18" width="1" height="1" fill="#ffffff" />
-      <rect x="13" y="18" width="1" height="1" fill="#e9f2f0" />
-      <rect x="24" y="18" width="1" height="1" fill="#e9f2f0" />
-      <rect x="12" y="19" width="1" height="1" fill="#e9f2f0" />
-      <rect x="23" y="19" width="1" height="1" fill="#e9f2f0" />
+        {/* Sobrancelhas pintadas */}
+        <rect x="23" y="15" width="4" height="1" fill="#6e6a66" />
+        <rect x="13" y="16" width="4" height="1" fill="#6e6a66" />
+        {/* Óculos de gatinho */}
+        <rect x="9" y="17" width="2" height="1" fill="#420e1e" />
+        <rect x="29" y="17" width="2" height="1" fill="#420e1e" />
+        <rect x="17" y="18" width="1" height="3" fill="#420e1e" />
+        <rect x="28" y="18" width="1" height="2" fill="#420e1e" />
+        <rect x="12" y="20" width="1" height="1" fill="#420e1e" />
+        <rect x="27" y="20" width="1" height="1" fill="#420e1e" />
+        <rect x="13" y="21" width="4" height="1" fill="#420e1e" />
+        <rect x="23" y="21" width="4" height="1" fill="#420e1e" />
+        <rect x="14" y="17" width="4" height="1" fill="#741c36" />
+        <rect x="25" y="17" width="4" height="1" fill="#741c36" />
+        <rect x="11" y="18" width="1" height="2" fill="#741c36" />
+        <rect x="19" y="18" width="4" height="1" fill="#741c36" />
+        <rect x="22" y="19" width="1" height="2" fill="#741c36" />
+        <rect x="11" y="17" width="3" height="1" fill="#a8344f" />
+        <rect x="22" y="17" width="3" height="1" fill="#a8344f" />
+        <rect x="18" y="18" width="1" height="1" fill="#a8344f" />
+        <rect x="13" y="20" width="1" height="1" fill="#cfdfdc" />
+        <rect x="16" y="20" width="1" height="1" fill="#cfdfdc" />
+        <rect x="23" y="20" width="2" height="1" fill="#cfdfdc" />
+        <rect x="10" y="16" width="1" height="1" fill="#e8b854" />
+        <rect x="29" y="16" width="1" height="1" fill="#e8b854" />
+        <rect x="11" y="16" width="1" height="1" fill="#a87a28" />
+        <rect x="28" y="16" width="1" height="1" fill="#a87a28" />
+        {/* Olhos atrás das lentes */}
+        <rect x="13" y="19" width="4" height="1" fill="#420e1e" />
+        <rect x="24" y="19" width="4" height="1" fill="#420e1e" />
+        <rect x="14" y="18" width="2" height="1" fill="#d6b49e" />
+        <rect x="25" y="18" width="2" height="1" fill="#d6b49e" />
+        <rect x="14" y="20" width="2" height="1" fill="#1a0f0b" />
+        <rect x="25" y="20" width="2" height="1" fill="#1a0f0b" />
+        {/* Brilho das lentes */}
+        <rect x="12" y="18" width="1" height="1" fill="#ffffff" />
+        <rect x="16" y="18" width="1" height="1" fill="#ffffff" />
+        <rect x="23" y="18" width="1" height="1" fill="#ffffff" />
+        <rect x="27" y="18" width="1" height="1" fill="#ffffff" />
+        <rect x="13" y="18" width="1" height="1" fill="#e9f2f0" />
+        <rect x="24" y="18" width="1" height="1" fill="#e9f2f0" />
+        <rect x="12" y="19" width="1" height="1" fill="#e9f2f0" />
+        <rect x="23" y="19" width="1" height="1" fill="#e9f2f0" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Sobrancelhas pintadas */}
-      <rect x="15" y="15" width="2" height="1" fill="#6e6a66" />
-      <rect x="23" y="15" width="2" height="1" fill="#6e6a66" />
-      <rect x="13" y="16" width="2" height="1" fill="#6e6a66" />
-      <rect x="25" y="16" width="2" height="1" fill="#6e6a66" />
-      {/* Óculos de gatinho */}
-      <rect x="9" y="18" width="2" height="1" fill="#420e1e" />
-      <rect x="17" y="19" width="1" height="3" fill="#420e1e" />
-      <rect x="29" y="19" width="2" height="1" fill="#420e1e" />
-      <rect x="28" y="20" width="1" height="2" fill="#420e1e" />
-      <rect x="12" y="21" width="1" height="1" fill="#420e1e" />
-      <rect x="13" y="22" width="4" height="1" fill="#420e1e" />
-      <rect x="27" y="22" width="1" height="1" fill="#420e1e" />
-      <rect x="23" y="23" width="4" height="1" fill="#420e1e" />
-      <rect x="14" y="19" width="3" height="1" fill="#cfdfdc" />
-      <rect x="12" y="20" width="2" height="1" fill="#cfdfdc" />
-      <rect x="16" y="20" width="1" height="2" fill="#cfdfdc" />
-      <rect x="24" y="20" width="2" height="1" fill="#cfdfdc" />
-      <rect x="27" y="20" width="1" height="2" fill="#cfdfdc" />
-      <rect x="14" y="21" width="2" height="1" fill="#cfdfdc" />
-      <rect x="23" y="21" width="1" height="2" fill="#cfdfdc" />
-      <rect x="26" y="21" width="1" height="1" fill="#cfdfdc" />
-      <rect x="24" y="22" width="2" height="1" fill="#cfdfdc" />
-      <rect x="14" y="18" width="4" height="1" fill="#741c36" />
-      <rect x="11" y="19" width="1" height="2" fill="#741c36" />
-      <rect x="19" y="19" width="3" height="1" fill="#741c36" />
-      <rect x="25" y="19" width="4" height="1" fill="#741c36" />
-      <rect x="22" y="20" width="1" height="3" fill="#741c36" />
-      <rect x="11" y="18" width="3" height="1" fill="#a8344f" />
-      <rect x="18" y="19" width="1" height="1" fill="#a8344f" />
-      <rect x="22" y="19" width="3" height="1" fill="#a8344f" />
-      <rect x="10" y="17" width="1" height="1" fill="#e8b854" />
-      <rect x="29" y="18" width="1" height="1" fill="#e8b854" />
-      <rect x="11" y="17" width="1" height="1" fill="#a87a28" />
-      <rect x="28" y="18" width="1" height="1" fill="#a87a28" />
-      {/* Olhos espremidos */}
-      <rect x="13" y="19" width="1" height="1" fill="#1a0f0b" />
-      <rect x="14" y="20" width="2" height="1" fill="#1a0f0b" />
-      <rect x="26" y="20" width="1" height="1" fill="#1a0f0b" />
-      <rect x="13" y="21" width="1" height="1" fill="#1a0f0b" />
-      <rect x="24" y="21" width="2" height="1" fill="#1a0f0b" />
-      <rect x="26" y="22" width="1" height="1" fill="#1a0f0b" />
-      <rect x="12" y="19" width="1" height="1" fill="#ffffff" />
-      <rect x="23" y="20" width="1" height="1" fill="#ffffff" />
+        {/* Sobrancelhas pintadas */}
+        <rect x="15" y="15" width="2" height="1" fill="#6e6a66" />
+        <rect x="23" y="15" width="2" height="1" fill="#6e6a66" />
+        <rect x="13" y="16" width="2" height="1" fill="#6e6a66" />
+        <rect x="25" y="16" width="2" height="1" fill="#6e6a66" />
+        {/* Óculos de gatinho */}
+        <rect x="9" y="18" width="2" height="1" fill="#420e1e" />
+        <rect x="17" y="19" width="1" height="3" fill="#420e1e" />
+        <rect x="29" y="19" width="2" height="1" fill="#420e1e" />
+        <rect x="28" y="20" width="1" height="2" fill="#420e1e" />
+        <rect x="12" y="21" width="1" height="1" fill="#420e1e" />
+        <rect x="13" y="22" width="4" height="1" fill="#420e1e" />
+        <rect x="27" y="22" width="1" height="1" fill="#420e1e" />
+        <rect x="23" y="23" width="4" height="1" fill="#420e1e" />
+        <rect x="14" y="19" width="3" height="1" fill="#cfdfdc" />
+        <rect x="12" y="20" width="2" height="1" fill="#cfdfdc" />
+        <rect x="16" y="20" width="1" height="2" fill="#cfdfdc" />
+        <rect x="24" y="20" width="2" height="1" fill="#cfdfdc" />
+        <rect x="27" y="20" width="1" height="2" fill="#cfdfdc" />
+        <rect x="14" y="21" width="2" height="1" fill="#cfdfdc" />
+        <rect x="23" y="21" width="1" height="2" fill="#cfdfdc" />
+        <rect x="26" y="21" width="1" height="1" fill="#cfdfdc" />
+        <rect x="24" y="22" width="2" height="1" fill="#cfdfdc" />
+        <rect x="14" y="18" width="4" height="1" fill="#741c36" />
+        <rect x="11" y="19" width="1" height="2" fill="#741c36" />
+        <rect x="19" y="19" width="3" height="1" fill="#741c36" />
+        <rect x="25" y="19" width="4" height="1" fill="#741c36" />
+        <rect x="22" y="20" width="1" height="3" fill="#741c36" />
+        <rect x="11" y="18" width="3" height="1" fill="#a8344f" />
+        <rect x="18" y="19" width="1" height="1" fill="#a8344f" />
+        <rect x="22" y="19" width="3" height="1" fill="#a8344f" />
+        <rect x="10" y="17" width="1" height="1" fill="#e8b854" />
+        <rect x="29" y="18" width="1" height="1" fill="#e8b854" />
+        <rect x="11" y="17" width="1" height="1" fill="#a87a28" />
+        <rect x="28" y="18" width="1" height="1" fill="#a87a28" />
+        {/* Olhos espremidos */}
+        <rect x="13" y="19" width="1" height="1" fill="#1a0f0b" />
+        <rect x="14" y="20" width="2" height="1" fill="#1a0f0b" />
+        <rect x="26" y="20" width="1" height="1" fill="#1a0f0b" />
+        <rect x="13" y="21" width="1" height="1" fill="#1a0f0b" />
+        <rect x="24" y="21" width="2" height="1" fill="#1a0f0b" />
+        <rect x="26" y="22" width="1" height="1" fill="#1a0f0b" />
+        <rect x="12" y="19" width="1" height="1" fill="#ffffff" />
+        <rect x="23" y="20" width="1" height="1" fill="#ffffff" />
       </>
     );
   }
@@ -1661,47 +1661,47 @@ function NeideMouth({ mood, speaking }) {
   if (speaking) {
     return (
       <>
-      {/* Boca de batom vinho */}
-      <rect x="17" y="27" width="6" height="1" fill="#2a0a10" />
-      <rect x="17" y="28" width="1" height="1" fill="#2a0a10" />
-      <rect x="22" y="28" width="1" height="1" fill="#2a0a10" />
-      <rect x="17" y="26" width="6" height="1" fill="#7a1730" />
-      <rect x="17" y="29" width="6" height="1" fill="#b03250" />
-      <rect x="18" y="28" width="4" height="1" fill="#b8473c" />
+        {/* Boca de batom vinho */}
+        <rect x="17" y="27" width="6" height="1" fill="#2a0a10" />
+        <rect x="17" y="28" width="1" height="1" fill="#2a0a10" />
+        <rect x="22" y="28" width="1" height="1" fill="#2a0a10" />
+        <rect x="17" y="26" width="6" height="1" fill="#7a1730" />
+        <rect x="17" y="29" width="6" height="1" fill="#b03250" />
+        <rect x="18" y="28" width="4" height="1" fill="#b8473c" />
       </>
     );
   }
   if (mood === 'thinking') {
     return (
       <>
-      {/* Boca de batom vinho */}
-      <rect x="19" y="27" width="3" height="1" fill="#7a1730" />
-      <rect x="19" y="28" width="3" height="1" fill="#b03250" />
-      <rect x="18" y="27" width="1" height="1" fill="#b27a56" />
+        {/* Boca de batom vinho */}
+        <rect x="19" y="27" width="3" height="1" fill="#7a1730" />
+        <rect x="19" y="28" width="3" height="1" fill="#b03250" />
+        <rect x="18" y="27" width="1" height="1" fill="#b27a56" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Boca de batom vinho */}
-      <rect x="24" y="25" width="1" height="1" fill="#7a1730" />
-      <rect x="21" y="26" width="3" height="1" fill="#7a1730" />
-      <rect x="17" y="27" width="4" height="1" fill="#7a1730" />
-      <rect x="18" y="28" width="4" height="1" fill="#b03250" />
+        {/* Boca de batom vinho */}
+        <rect x="24" y="25" width="1" height="1" fill="#7a1730" />
+        <rect x="21" y="26" width="3" height="1" fill="#7a1730" />
+        <rect x="17" y="27" width="4" height="1" fill="#7a1730" />
+        <rect x="18" y="28" width="4" height="1" fill="#b03250" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Boca de batom vinho */}
-      <rect x="16" y="27" width="1" height="2" fill="#2a0a10" />
-      <rect x="23" y="27" width="1" height="2" fill="#2a0a10" />
-      <rect x="17" y="28" width="6" height="1" fill="#2a0a10" />
-      <rect x="16" y="26" width="8" height="1" fill="#7a1730" />
-      <rect x="16" y="29" width="8" height="1" fill="#b03250" />
-      <rect x="17" y="27" width="6" height="1" fill="#efe7d4" />
+        {/* Boca de batom vinho */}
+        <rect x="16" y="27" width="1" height="2" fill="#2a0a10" />
+        <rect x="23" y="27" width="1" height="2" fill="#2a0a10" />
+        <rect x="17" y="28" width="6" height="1" fill="#2a0a10" />
+        <rect x="16" y="26" width="8" height="1" fill="#7a1730" />
+        <rect x="16" y="29" width="8" height="1" fill="#b03250" />
+        <rect x="17" y="27" width="6" height="1" fill="#efe7d4" />
       </>
     );
   }
@@ -1724,11 +1724,11 @@ function NeideExtras({ mood }) {
   if (mood === 'hurt') {
     return (
       <>
-      {/* Suor de nervoso */}
-      <rect x="26" y="14" width="1" height="2" fill="#f4fcff" />
-      <rect x="27" y="15" width="1" height="1" fill="#a9d9ec" />
-      <rect x="26" y="16" width="1" height="1" fill="#a9d9ec" />
-      <rect x="27" y="16" width="1" height="1" fill="#5b95b0" />
+        {/* Suor de nervoso */}
+        <rect x="26" y="14" width="1" height="2" fill="#f4fcff" />
+        <rect x="27" y="15" width="1" height="1" fill="#a9d9ec" />
+        <rect x="26" y="16" width="1" height="1" fill="#a9d9ec" />
+        <rect x="27" y="16" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
@@ -2065,88 +2065,88 @@ function ArlindoEyes({ mood }) {
   if (mood === 'thinking') {
     return (
       <>
-      {/* Sobrancelhas brancas grossas */}
-      <rect x="23" y="13" width="3" height="2" fill="#e8e2d4" />
-      <rect x="22" y="14" width="1" height="1" fill="#e8e2d4" />
-      <rect x="26" y="14" width="3" height="1" fill="#e8e2d4" />
-      <rect x="14" y="15" width="3" height="2" fill="#e8e2d4" />
-      <rect x="11" y="16" width="3" height="1" fill="#e8e2d4" />
-      <rect x="17" y="16" width="1" height="1" fill="#e8e2d4" />
-      <rect x="21" y="15" width="7" height="1" fill="#958e7e" />
-      <rect x="12" y="17" width="7" height="1" fill="#958e7e" />
-      <rect x="26" y="13" width="2" height="1" fill="#fdfbf5" />
-      <rect x="12" y="15" width="2" height="1" fill="#fdfbf5" />
-      {/* Olhos de velho malandro */}
-      <rect x="13" y="18" width="1" height="2" fill="#efe6cf" />
-      <rect x="24" y="18" width="1" height="2" fill="#efe6cf" />
-      <rect x="14" y="19" width="2" height="1" fill="#efe6cf" />
-      <rect x="25" y="19" width="2" height="1" fill="#efe6cf" />
-      <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
-      <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
-      <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
-      <rect x="14" y="18" width="2" height="1" fill="#120c08" />
-      <rect x="25" y="18" width="2" height="1" fill="#120c08" />
-      <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
+        {/* Sobrancelhas brancas grossas */}
+        <rect x="23" y="13" width="3" height="2" fill="#e8e2d4" />
+        <rect x="22" y="14" width="1" height="1" fill="#e8e2d4" />
+        <rect x="26" y="14" width="3" height="1" fill="#e8e2d4" />
+        <rect x="14" y="15" width="3" height="2" fill="#e8e2d4" />
+        <rect x="11" y="16" width="3" height="1" fill="#e8e2d4" />
+        <rect x="17" y="16" width="1" height="1" fill="#e8e2d4" />
+        <rect x="21" y="15" width="7" height="1" fill="#958e7e" />
+        <rect x="12" y="17" width="7" height="1" fill="#958e7e" />
+        <rect x="26" y="13" width="2" height="1" fill="#fdfbf5" />
+        <rect x="12" y="15" width="2" height="1" fill="#fdfbf5" />
+        {/* Olhos de velho malandro */}
+        <rect x="13" y="18" width="1" height="2" fill="#efe6cf" />
+        <rect x="24" y="18" width="1" height="2" fill="#efe6cf" />
+        <rect x="14" y="19" width="2" height="1" fill="#efe6cf" />
+        <rect x="25" y="19" width="2" height="1" fill="#efe6cf" />
+        <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
+        <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
+        <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
+        <rect x="14" y="18" width="2" height="1" fill="#120c08" />
+        <rect x="25" y="18" width="2" height="1" fill="#120c08" />
+        <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Sobrancelhas brancas grossas */}
-      <rect x="14" y="14" width="3" height="2" fill="#e8e2d4" />
-      <rect x="23" y="14" width="3" height="2" fill="#e8e2d4" />
-      <rect x="11" y="15" width="3" height="1" fill="#e8e2d4" />
-      <rect x="17" y="15" width="1" height="1" fill="#e8e2d4" />
-      <rect x="22" y="15" width="1" height="1" fill="#e8e2d4" />
-      <rect x="26" y="15" width="3" height="1" fill="#e8e2d4" />
-      <rect x="12" y="16" width="7" height="1" fill="#958e7e" />
-      <rect x="21" y="16" width="7" height="1" fill="#958e7e" />
-      <rect x="12" y="14" width="2" height="1" fill="#fdfbf5" />
-      <rect x="26" y="14" width="2" height="1" fill="#fdfbf5" />
-      {/* Olhos de velho malandro */}
-      <rect x="13" y="18" width="3" height="1" fill="#a46e48" />
-      <rect x="24" y="18" width="3" height="1" fill="#a46e48" />
-      <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
-      <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
-      <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
-      <rect x="14" y="19" width="2" height="1" fill="#120c08" />
-      <rect x="24" y="19" width="2" height="1" fill="#120c08" />
-      <rect x="13" y="19" width="1" height="1" fill="#efe6cf" />
-      <rect x="26" y="19" width="1" height="1" fill="#efe6cf" />
-      <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
+        {/* Sobrancelhas brancas grossas */}
+        <rect x="14" y="14" width="3" height="2" fill="#e8e2d4" />
+        <rect x="23" y="14" width="3" height="2" fill="#e8e2d4" />
+        <rect x="11" y="15" width="3" height="1" fill="#e8e2d4" />
+        <rect x="17" y="15" width="1" height="1" fill="#e8e2d4" />
+        <rect x="22" y="15" width="1" height="1" fill="#e8e2d4" />
+        <rect x="26" y="15" width="3" height="1" fill="#e8e2d4" />
+        <rect x="12" y="16" width="7" height="1" fill="#958e7e" />
+        <rect x="21" y="16" width="7" height="1" fill="#958e7e" />
+        <rect x="12" y="14" width="2" height="1" fill="#fdfbf5" />
+        <rect x="26" y="14" width="2" height="1" fill="#fdfbf5" />
+        {/* Olhos de velho malandro */}
+        <rect x="13" y="18" width="3" height="1" fill="#a46e48" />
+        <rect x="24" y="18" width="3" height="1" fill="#a46e48" />
+        <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
+        <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
+        <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
+        <rect x="14" y="19" width="2" height="1" fill="#120c08" />
+        <rect x="24" y="19" width="2" height="1" fill="#120c08" />
+        <rect x="13" y="19" width="1" height="1" fill="#efe6cf" />
+        <rect x="26" y="19" width="1" height="1" fill="#efe6cf" />
+        <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Sobrancelhas brancas grossas */}
-      <rect x="18" y="14" width="1" height="2" fill="#e8e2d4" />
-      <rect x="21" y="14" width="1" height="2" fill="#e8e2d4" />
-      <rect x="14" y="15" width="4" height="1" fill="#e8e2d4" />
-      <rect x="22" y="15" width="4" height="1" fill="#e8e2d4" />
-      <rect x="11" y="16" width="4" height="1" fill="#e8e2d4" />
-      <rect x="25" y="16" width="4" height="1" fill="#e8e2d4" />
-      <rect x="15" y="16" width="2" height="1" fill="#958e7e" />
-      <rect x="23" y="16" width="2" height="1" fill="#958e7e" />
-      <rect x="11" y="17" width="3" height="1" fill="#958e7e" />
-      <rect x="26" y="17" width="3" height="1" fill="#958e7e" />
-      <rect x="16" y="14" width="2" height="1" fill="#fdfbf5" />
-      <rect x="22" y="14" width="2" height="1" fill="#fdfbf5" />
-      <rect x="13" y="15" width="1" height="1" fill="#fdfbf5" />
-      <rect x="26" y="15" width="1" height="1" fill="#fdfbf5" />
-      {/* Olhos de velho malandro */}
-      <rect x="13" y="18" width="1" height="1" fill="#120c08" />
-      <rect x="15" y="18" width="1" height="1" fill="#120c08" />
-      <rect x="24" y="18" width="1" height="1" fill="#120c08" />
-      <rect x="26" y="18" width="1" height="1" fill="#120c08" />
-      <rect x="14" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="25" y="19" width="1" height="1" fill="#120c08" />
-      <rect x="13" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="15" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="24" y="20" width="1" height="1" fill="#120c08" />
-      <rect x="26" y="20" width="1" height="1" fill="#120c08" />
+        {/* Sobrancelhas brancas grossas */}
+        <rect x="18" y="14" width="1" height="2" fill="#e8e2d4" />
+        <rect x="21" y="14" width="1" height="2" fill="#e8e2d4" />
+        <rect x="14" y="15" width="4" height="1" fill="#e8e2d4" />
+        <rect x="22" y="15" width="4" height="1" fill="#e8e2d4" />
+        <rect x="11" y="16" width="4" height="1" fill="#e8e2d4" />
+        <rect x="25" y="16" width="4" height="1" fill="#e8e2d4" />
+        <rect x="15" y="16" width="2" height="1" fill="#958e7e" />
+        <rect x="23" y="16" width="2" height="1" fill="#958e7e" />
+        <rect x="11" y="17" width="3" height="1" fill="#958e7e" />
+        <rect x="26" y="17" width="3" height="1" fill="#958e7e" />
+        <rect x="16" y="14" width="2" height="1" fill="#fdfbf5" />
+        <rect x="22" y="14" width="2" height="1" fill="#fdfbf5" />
+        <rect x="13" y="15" width="1" height="1" fill="#fdfbf5" />
+        <rect x="26" y="15" width="1" height="1" fill="#fdfbf5" />
+        {/* Olhos de velho malandro */}
+        <rect x="13" y="18" width="1" height="1" fill="#120c08" />
+        <rect x="15" y="18" width="1" height="1" fill="#120c08" />
+        <rect x="24" y="18" width="1" height="1" fill="#120c08" />
+        <rect x="26" y="18" width="1" height="1" fill="#120c08" />
+        <rect x="14" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="25" y="19" width="1" height="1" fill="#120c08" />
+        <rect x="13" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="15" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="24" y="20" width="1" height="1" fill="#120c08" />
+        <rect x="26" y="20" width="1" height="1" fill="#120c08" />
       </>
     );
   }
@@ -2185,51 +2185,51 @@ function ArlindoMouth({ mood, speaking }) {
   if (speaking) {
     return (
       <>
-      {/* Boca debaixo do bigodão */}
-      <rect x="16" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="23" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="17" y="30" width="1" height="1" fill="#2a0d08" />
-      <rect x="22" y="30" width="1" height="1" fill="#2a0d08" />
-      <rect x="17" y="29" width="6" height="1" fill="#efe6cf" />
-      <rect x="17" y="31" width="6" height="1" fill="#b06650" />
-      <rect x="18" y="30" width="4" height="1" fill="#b8473c" />
+        {/* Boca debaixo do bigodão */}
+        <rect x="16" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="23" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="17" y="30" width="1" height="1" fill="#2a0d08" />
+        <rect x="22" y="30" width="1" height="1" fill="#2a0d08" />
+        <rect x="17" y="29" width="6" height="1" fill="#efe6cf" />
+        <rect x="17" y="31" width="6" height="1" fill="#b06650" />
+        <rect x="18" y="30" width="4" height="1" fill="#b8473c" />
       </>
     );
   }
   if (mood === 'thinking') {
     return (
       <>
-      {/* Boca debaixo do bigodão */}
-      <rect x="18" y="29" width="3" height="1" fill="#b06650" />
-      <rect x="17" y="29" width="1" height="1" fill="#a46e48" />
+        {/* Boca debaixo do bigodão */}
+        <rect x="18" y="29" width="3" height="1" fill="#b06650" />
+        <rect x="17" y="29" width="1" height="1" fill="#a46e48" />
       </>
     );
   }
   if (mood === 'smug') {
     return (
       <>
-      {/* Boca debaixo do bigodão */}
-      <rect x="19" y="29" width="5" height="1" fill="#efe6cf" />
-      <rect x="18" y="30" width="5" height="1" fill="#b06650" />
-      <rect x="24" y="28" width="1" height="1" fill="#2a0d08" />
-      <rect x="18" y="29" width="1" height="1" fill="#2a0d08" />
+        {/* Boca debaixo do bigodão */}
+        <rect x="19" y="29" width="5" height="1" fill="#efe6cf" />
+        <rect x="18" y="30" width="5" height="1" fill="#b06650" />
+        <rect x="24" y="28" width="1" height="1" fill="#2a0d08" />
+        <rect x="18" y="29" width="1" height="1" fill="#2a0d08" />
       </>
     );
   }
   if (mood === 'hurt') {
     return (
       <>
-      {/* Boca debaixo do bigodão */}
-      <rect x="15" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="18" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="21" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="24" y="29" width="1" height="2" fill="#2a0d08" />
-      <rect x="16" y="30" width="2" height="1" fill="#2a0d08" />
-      <rect x="19" y="30" width="2" height="1" fill="#2a0d08" />
-      <rect x="22" y="30" width="2" height="1" fill="#2a0d08" />
-      <rect x="16" y="29" width="2" height="1" fill="#efe6cf" />
-      <rect x="19" y="29" width="2" height="1" fill="#efe6cf" />
-      <rect x="22" y="29" width="2" height="1" fill="#efe6cf" />
+        {/* Boca debaixo do bigodão */}
+        <rect x="15" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="18" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="21" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="24" y="29" width="1" height="2" fill="#2a0d08" />
+        <rect x="16" y="30" width="2" height="1" fill="#2a0d08" />
+        <rect x="19" y="30" width="2" height="1" fill="#2a0d08" />
+        <rect x="22" y="30" width="2" height="1" fill="#2a0d08" />
+        <rect x="16" y="29" width="2" height="1" fill="#efe6cf" />
+        <rect x="19" y="29" width="2" height="1" fill="#efe6cf" />
+        <rect x="22" y="29" width="2" height="1" fill="#efe6cf" />
       </>
     );
   }
@@ -2248,47 +2248,47 @@ function ArlindoExtras({ mood }) {
   if (mood === 'hurt') {
     return (
       <>
-      {/* Coroa de rei gasta (meio torta) */}
-      <rect x="32" y="3" width="1" height="1" fill="#0b0806" />
-      <rect x="29" y="4" width="3" height="1" fill="#0b0806" />
-      <rect x="33" y="4" width="1" height="3" fill="#0b0806" />
-      <rect x="25" y="5" width="4" height="1" fill="#0b0806" />
-      <rect x="23" y="6" width="2" height="1" fill="#0b0806" />
-      <rect x="34" y="6" width="1" height="1" fill="#0b0806" />
-      <rect x="22" y="7" width="1" height="2" fill="#0b0806" />
-      <rect x="35" y="7" width="1" height="2" fill="#0b0806" />
-      <rect x="23" y="9" width="1" height="1" fill="#0b0806" />
-      <rect x="34" y="9" width="1" height="1" fill="#0b0806" />
-      <rect x="24" y="10" width="10" height="1" fill="#0b0806" />
-      <rect x="29" y="5" width="3" height="1" fill="#f0c95a" />
-      <rect x="26" y="6" width="4" height="1" fill="#f0c95a" />
-      <rect x="24" y="7" width="2" height="2" fill="#f0c95a" />
-      <rect x="27" y="7" width="1" height="2" fill="#f0c95a" />
-      <rect x="23" y="8" width="1" height="1" fill="#f0c95a" />
-      <rect x="26" y="8" width="1" height="1" fill="#f0c95a" />
-      <rect x="32" y="5" width="1" height="1" fill="#c99a2e" />
-      <rect x="30" y="6" width="2" height="2" fill="#c99a2e" />
-      <rect x="32" y="7" width="1" height="2" fill="#c99a2e" />
-      <rect x="30" y="8" width="1" height="1" fill="#c99a2e" />
-      <rect x="34" y="8" width="1" height="1" fill="#c99a2e" />
-      <rect x="24" y="9" width="4" height="1" fill="#c99a2e" />
-      <rect x="32" y="6" width="1" height="1" fill="#8c661a" />
-      <rect x="33" y="7" width="1" height="3" fill="#8c661a" />
-      <rect x="28" y="9" width="5" height="1" fill="#8c661a" />
-      <rect x="32" y="4" width="1" height="1" fill="#fff2b8" />
-      <rect x="25" y="6" width="1" height="1" fill="#fff2b8" />
-      <rect x="23" y="7" width="1" height="1" fill="#fff2b8" />
-      <rect x="34" y="7" width="1" height="1" fill="#fff2b8" />
-      <rect x="29" y="7" width="1" height="2" fill="#c8261d" />
-      <rect x="28" y="8" width="1" height="1" fill="#c8261d" />
-      <rect x="26" y="7" width="1" height="1" fill="#241806" />
-      <rect x="28" y="7" width="1" height="1" fill="#ff7a6a" />
-      <rect x="31" y="8" width="1" height="1" fill="#3a78c8" />
-      {/* Suor */}
-      <rect x="12" y="11" width="1" height="2" fill="#f4fcff" />
-      <rect x="13" y="12" width="1" height="1" fill="#a9d9ec" />
-      <rect x="12" y="13" width="1" height="1" fill="#a9d9ec" />
-      <rect x="13" y="13" width="1" height="1" fill="#5b95b0" />
+        {/* Coroa de rei gasta (meio torta) */}
+        <rect x="32" y="3" width="1" height="1" fill="#0b0806" />
+        <rect x="29" y="4" width="3" height="1" fill="#0b0806" />
+        <rect x="33" y="4" width="1" height="3" fill="#0b0806" />
+        <rect x="25" y="5" width="4" height="1" fill="#0b0806" />
+        <rect x="23" y="6" width="2" height="1" fill="#0b0806" />
+        <rect x="34" y="6" width="1" height="1" fill="#0b0806" />
+        <rect x="22" y="7" width="1" height="2" fill="#0b0806" />
+        <rect x="35" y="7" width="1" height="2" fill="#0b0806" />
+        <rect x="23" y="9" width="1" height="1" fill="#0b0806" />
+        <rect x="34" y="9" width="1" height="1" fill="#0b0806" />
+        <rect x="24" y="10" width="10" height="1" fill="#0b0806" />
+        <rect x="29" y="5" width="3" height="1" fill="#f0c95a" />
+        <rect x="26" y="6" width="4" height="1" fill="#f0c95a" />
+        <rect x="24" y="7" width="2" height="2" fill="#f0c95a" />
+        <rect x="27" y="7" width="1" height="2" fill="#f0c95a" />
+        <rect x="23" y="8" width="1" height="1" fill="#f0c95a" />
+        <rect x="26" y="8" width="1" height="1" fill="#f0c95a" />
+        <rect x="32" y="5" width="1" height="1" fill="#c99a2e" />
+        <rect x="30" y="6" width="2" height="2" fill="#c99a2e" />
+        <rect x="32" y="7" width="1" height="2" fill="#c99a2e" />
+        <rect x="30" y="8" width="1" height="1" fill="#c99a2e" />
+        <rect x="34" y="8" width="1" height="1" fill="#c99a2e" />
+        <rect x="24" y="9" width="4" height="1" fill="#c99a2e" />
+        <rect x="32" y="6" width="1" height="1" fill="#8c661a" />
+        <rect x="33" y="7" width="1" height="3" fill="#8c661a" />
+        <rect x="28" y="9" width="5" height="1" fill="#8c661a" />
+        <rect x="32" y="4" width="1" height="1" fill="#fff2b8" />
+        <rect x="25" y="6" width="1" height="1" fill="#fff2b8" />
+        <rect x="23" y="7" width="1" height="1" fill="#fff2b8" />
+        <rect x="34" y="7" width="1" height="1" fill="#fff2b8" />
+        <rect x="29" y="7" width="1" height="2" fill="#c8261d" />
+        <rect x="28" y="8" width="1" height="1" fill="#c8261d" />
+        <rect x="26" y="7" width="1" height="1" fill="#241806" />
+        <rect x="28" y="7" width="1" height="1" fill="#ff7a6a" />
+        <rect x="31" y="8" width="1" height="1" fill="#3a78c8" />
+        {/* Suor */}
+        <rect x="12" y="11" width="1" height="2" fill="#f4fcff" />
+        <rect x="13" y="12" width="1" height="1" fill="#a9d9ec" />
+        <rect x="12" y="13" width="1" height="1" fill="#a9d9ec" />
+        <rect x="13" y="13" width="1" height="1" fill="#5b95b0" />
       </>
     );
   }
@@ -2362,6 +2362,7 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="33" y="9" width="1" height="1" fill="#090a0f" />
       <rect x="33" y="23" width="1" height="11" fill="#090a0f" />
       <rect x="32" y="24" width="1" height="9" fill="#090a0f" />
+      <rect x="7" y="25" width="1" height="8" fill="#090a0f" />
       <rect x="8" y="26" width="1" height="7" fill="#090a0f" />
       <rect x="31" y="26" width="1" height="7" fill="#090a0f" />
       <rect x="9" y="27" width="1" height="6" fill="#090a0f" />
@@ -2407,9 +2408,8 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="34" y="16" width="1" height="2" fill="#e8e2d4" />
       <rect x="35" y="17" width="1" height="2" fill="#e8e2d4" />
       <rect x="5" y="18" width="1" height="2" fill="#e8e2d4" />
-      <rect x="6" y="19" width="1" height="2" fill="#e8e2d4" />
+      <rect x="6" y="19" width="1" height="1" fill="#e8e2d4" />
       <rect x="7" y="20" width="1" height="1" fill="#e8e2d4" />
-      <rect x="5" y="21" width="1" height="1" fill="#e8e2d4" />
       <rect x="7" y="9" width="3" height="1" fill="#0b0806" />
       <rect x="30" y="9" width="3" height="1" fill="#0b0806" />
       <rect x="5" y="10" width="2" height="1" fill="#0b0806" />
@@ -2430,11 +2430,8 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="36" y="17" width="1" height="2" fill="#0b0806" />
       <rect x="4" y="19" width="1" height="1" fill="#0b0806" />
       <rect x="35" y="19" width="1" height="1" fill="#0b0806" />
-      <rect x="5" y="20" width="1" height="1" fill="#0b0806" />
       <rect x="34" y="20" width="1" height="1" fill="#0b0806" />
-      <rect x="4" y="21" width="1" height="1" fill="#0b0806" />
       <rect x="35" y="21" width="1" height="1" fill="#0b0806" />
-      <rect x="5" y="22" width="1" height="1" fill="#0b0806" />
       <rect x="33" y="22" width="2" height="1" fill="#0b0806" />
       <rect x="32" y="23" width="1" height="1" fill="#0b0806" />
       <rect x="6" y="14" width="1" height="1" fill="#958e7e" />
@@ -2529,7 +2526,6 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="19" y="18" width="1" height="1" fill="#f6d0a8" />
       <rect x="18" y="20" width="2" height="1" fill="#f6d0a8" />
       {/* Bigodão branco */}
-      <rect x="7" y="22" width="1" height="1" fill="#e8e2d4" />
       <rect x="19" y="23" width="4" height="3" fill="#e8e2d4" />
       <rect x="8" y="24" width="1" height="1" fill="#e8e2d4" />
       <rect x="14" y="24" width="5" height="2" fill="#e8e2d4" />
@@ -2550,9 +2546,8 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="20" y="28" width="1" height="1" fill="#e8e2d4" />
       <rect x="22" y="28" width="1" height="1" fill="#e8e2d4" />
       <rect x="24" y="28" width="1" height="1" fill="#e8e2d4" />
-      <rect x="6" y="21" width="2" height="1" fill="#0b0806" />
+      <rect x="7" y="21" width="1" height="4" fill="#0b0806" />
       <rect x="30" y="21" width="2" height="1" fill="#0b0806" />
-      <rect x="6" y="22" width="1" height="1" fill="#0b0806" />
       <rect x="8" y="22" width="1" height="1" fill="#0b0806" />
       <rect x="29" y="22" width="1" height="1" fill="#0b0806" />
       <rect x="31" y="22" width="1" height="4" fill="#0b0806" />
@@ -2666,40 +2661,44 @@ export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaki
       <rect x="15" y="33" width="1" height="1" fill="#e0503f" />
       <rect x="19" y="34" width="2" height="1" fill="#e0503f" />
       {/* Bucha 6|6 de marfim */}
-      <rect x="0" y="23" width="8" height="1" fill="#1c1410" />
-      <rect x="0" y="24" width="1" height="12" fill="#1c1410" />
-      <rect x="7" y="24" width="1" height="9" fill="#1c1410" />
-      <rect x="1" y="30" width="2" height="1" fill="#1c1410" />
-      <rect x="4" y="30" width="2" height="1" fill="#1c1410" />
-      <rect x="3" y="25" width="1" height="5" fill="#efe5c8" />
-      <rect x="2" y="26" width="1" height="1" fill="#efe5c8" />
-      <rect x="4" y="26" width="1" height="1" fill="#efe5c8" />
-      <rect x="2" y="28" width="1" height="1" fill="#efe5c8" />
-      <rect x="4" y="28" width="1" height="1" fill="#efe5c8" />
-      <rect x="3" y="31" width="1" height="5" fill="#efe5c8" />
-      <rect x="2" y="32" width="1" height="1" fill="#efe5c8" />
-      <rect x="4" y="32" width="1" height="1" fill="#efe5c8" />
-      <rect x="2" y="34" width="1" height="1" fill="#efe5c8" />
-      <rect x="4" y="34" width="1" height="1" fill="#efe5c8" />
-      <rect x="1" y="24" width="5" height="1" fill="#fffaee" />
-      <rect x="1" y="25" width="1" height="5" fill="#fffaee" />
-      <rect x="1" y="31" width="1" height="5" fill="#fffaee" />
-      <rect x="2" y="25" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="25" width="1" height="1" fill="#1c1917" />
-      <rect x="2" y="27" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="27" width="1" height="1" fill="#1c1917" />
-      <rect x="2" y="29" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="29" width="1" height="1" fill="#1c1917" />
-      <rect x="2" y="31" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="31" width="1" height="1" fill="#1c1917" />
-      <rect x="2" y="33" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="33" width="1" height="1" fill="#1c1917" />
-      <rect x="2" y="35" width="1" height="1" fill="#1c1917" />
-      <rect x="4" y="35" width="1" height="1" fill="#1c1917" />
-      <rect x="5" y="25" width="1" height="5" fill="#cdbf98" />
-      <rect x="5" y="31" width="1" height="5" fill="#cdbf98" />
-      <rect x="6" y="24" width="1" height="9" fill="#8f8160" />
-      <rect x="3" y="30" width="1" height="1" fill="#f0c95a" />
+      <rect x="3" y="22" width="1" height="6" fill="#efe5c8" />
+      <rect x="2" y="23" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="23" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="25" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="25" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="27" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="27" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="29" width="3" height="1" fill="#efe5c8" />
+      <rect x="3" y="30" width="1" height="6" fill="#efe5c8" />
+      <rect x="2" y="31" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="31" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="33" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="33" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="35" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="35" width="1" height="1" fill="#efe5c8" />
+      <rect x="0" y="20" width="7" height="1" fill="#1c1410" />
+      <rect x="0" y="21" width="1" height="15" fill="#1c1410" />
+      <rect x="1" y="28" width="2" height="1" fill="#1c1410" />
+      <rect x="4" y="28" width="2" height="1" fill="#1c1410" />
+      <rect x="1" y="21" width="4" height="1" fill="#fffaee" />
+      <rect x="1" y="22" width="1" height="6" fill="#fffaee" />
+      <rect x="1" y="29" width="1" height="7" fill="#fffaee" />
+      <rect x="5" y="21" width="1" height="7" fill="#cdbf98" />
+      <rect x="5" y="29" width="1" height="7" fill="#cdbf98" />
+      <rect x="6" y="21" width="1" height="12" fill="#8f8160" />
+      <rect x="2" y="22" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="22" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="24" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="24" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="26" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="26" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="30" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="30" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="32" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="32" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="34" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="34" width="1" height="1" fill="#1c1917" />
+      <rect x="3" y="28" width="1" height="1" fill="#f0c95a" />
       {/* Mão segurando a pedra (anel de ouro) */}
       <rect x="6" y="33" width="3" height="1" fill="#0b0806" />
       <rect x="9" y="34" width="1" height="3" fill="#0b0806" />
