@@ -163,7 +163,7 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
               <span>{rival.boss ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
               <HeartsBar current={hearts.player} max={MAX_HEARTS} pixel={2} label={`Seus corações: ${hearts.player}`} />
             </div>
-            <button type="button" data-tone="brass" className="btn-pixel mt-5 w-full" onClick={onShop}>
+            <button type="button" data-tone="shop" className="btn-pixel mt-5 w-full" onClick={onShop}>
               ENTRAR NA LOJA CLANDESTINA
             </button>
             <div className="loading-bar mt-2" style={{ animationDuration: `${AUTO_SHOP_MS}ms` }} aria-hidden="true" />
@@ -264,7 +264,7 @@ export default function RoundOverlay({ state, rival, onNext, onShop, autoShop = 
               Dano: batida {DAMAGE.normal} · bucha {DAMAGE.bucha} · cruzada {DAMAGE.cruzada} · tranca {DAMAGE.tranca}
             </p>
 
-            <button type="button" data-tone="brass" className="btn-pixel mt-4 w-full" onClick={onNext}>
+            <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onNext}>
               PRÓXIMA RODADA
             </button>
           </>

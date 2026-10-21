@@ -205,7 +205,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           </ul>
         )}
         <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER: +2♥ · CHEFE: CURA TUDO</p>
-        <button type="button" data-tone="blood" className="btn-pixel mt-2 w-full text-[11px]" onClick={onEnter}>
+        <button type="button" data-tone="play" className="btn-pixel mt-2 w-full text-[11px]" onClick={onEnter}>
           SENTAR À MESA · {getRival(points[run.node].rivalId).name.toUpperCase()}
         </button>
       </footer>

@@ -1,25 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { regionOf } from '../data/campaign.js';
 import { ENHANCEMENTS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELIC_SLOTS, getRelic } from '../data/relics.js';
 import { getRival } from '../data/rivals.js';
+import { sound } from '../engine/audioSynth.js';
 import { haptic } from '../engine/progress.js';
 import { relicBuyBlock, sellPriceOf, tileBuyBlock } from '../engine/shop.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
-import Hotbar from './Hotbar.jsx';
+import LampRig from './LampRig.jsx';
 import RelicIcon from './RelicIcon.jsx';
-import { RetroCard } from './RetroCard.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
+import RivalSpeech from './RivalSpeech.jsx';
+import { CoinGlyph } from './UiGlyphs.jsx';
+import { DiceCupIcon, ValtinhoSprite } from './art/SceneArt.jsx';
 
-function RarityBadge({ rarity }) {
-  const tier = getRarity(rarity);
-  return (
-    <span className={`rarity-badge ${tier.id === 'mitico' ? 'rarity-badge-mythic' : ''}`} style={{ '--rarity': tier.color }}>
-      {tier.label}
-    </span>
-  );
+/** Falas do Valtinho ao abrir a loja (uma por visita) e reagindo ao que você faz. */
+const GREETINGS = ['Só mercadoria quente...', 'Vai levar ou vai ficar só olhando?', 'O Tio Zé mandou te cobrar o dobro...'];
+const REACTIONS = {
+  relic: 'Boa escolha. Não conta pra ninguém onde comprou.',
+  tile: 'Essa pedra aí é de primeira.',
+  sell: 'Te dou isso aqui e olhe lá.',
+  reroll: 'Deixa eu ver o que tem lá no fundo...',
+  coins: 'Sem dinheiro, sem mercadoria.',
+  full: 'Bolsa cheia, campeão. Vende alguma coisa antes.',
+};
+
+/** Último evento da loja desta visita (abriu, comprou, vendeu, reembaralhou). */
+function lastShopEvent(events) {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const ev = events[i];
+    if (['shopOpen', 'shopBuy', 'shopSell', 'shopReroll', 'runLoaded'].includes(ev.type)) return ev;
+  }
+  return null;
 }
 
 /** Última movimentação de moedas na loja: o "+$4" / "−$8" que sobe do saldo. */
@@ -32,38 +46,122 @@ function lastShopCoins(events) {
   return null;
 }
 
+/** O que o Valtinho está dizendo agora: a reclamação local mais nova ou a reação ao último evento. */
+function npcLine(events, complaint) {
+  const ev = lastShopEvent(events);
+  const at = ev?.seq ?? 0;
+  if (complaint && complaint.at >= at) return { key: `c${complaint.n}`, text: REACTIONS[complaint.kind] };
+  if (!ev || ev.type === 'shopOpen' || ev.type === 'runLoaded') return { key: `g${at}`, text: GREETINGS[at % GREETINGS.length] };
+  if (ev.type === 'shopBuy') return { key: `e${at}`, text: REACTIONS[ev.kind] };
+  if (ev.type === 'shopSell') return { key: `e${at}`, text: REACTIONS.sell };
+  return { key: `e${at}`, text: REACTIONS.reroll };
+}
+
 const tileLabel = (tileId) => {
   const [a, b] = tileId.split('-');
   return `[${a}|${b}]`;
 };
 
+function Price({ amount, short = false }) {
+  return (
+    <span className={`shop-price ${short ? 'shop-price-short' : ''}`}>
+      <CoinGlyph size={12} />${amount}
+    </span>
+  );
+}
+
+/** Valtinho do Bar: respira devagar e pisca de vez em quando. */
+function Valtinho() {
+  const [blink, setBlink] = useState(false);
+  useEffect(() => {
+    let timer = 0;
+    const loop = () => {
+      timer = setTimeout(
+        () => {
+          setBlink(true);
+          timer = setTimeout(() => {
+            setBlink(false);
+            loop();
+          }, 140);
+        },
+        2200 + Math.random() * 3200,
+      );
+    };
+    loop();
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="shop-npc" aria-hidden="true">
+      <ValtinhoSprite blink={blink} className="shop-npc-sprite" />
+    </div>
+  );
+}
+
 /**
- * Loja Clandestina (depois de cada nó vencido), em grade:
- *   topo      saldo + a sua hotbar (toque para vender)
- *   em cima   3 talismãs em cartas quadradas
- *   embaixo   2 peças de grife em cartas largas, com o material animado
- * Segurar uma carta mostra o efeito. Reembaralhar sobe de preço a cada uso.
+ * Loja Clandestina (Patch 0.5.5): uma cena de balcão de boteco, não um formulário.
+ *   toldo listrado · lâmpada pendurada com o cone de luz sobre o balcão
+ *   o Valtinho do Bar atrás do balcão, com as falas dele
+ *   balcão de madeira: 3 talismãs no veludo com etiqueta de papel pardo,
+ *     2 pedras de grife inclinadas no expositor com fita adesiva
+ *   frente do balcão: a sua Bolsa de Talismãs (4 nichos, toque para vender a 50%)
+ *   copo de dados (REEMBARALHAR) e a placa de madeira para voltar ao mapa
+ * Segurar qualquer mercadoria mostra o efeito.
  */
 export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press }) {
   const [sellId, setSellId] = useState(null);
   const [alert, setAlert] = useState(0);
+  const [complaint, setComplaint] = useState(null);
+  const [shaking, setShaking] = useState(0);
   const { shop } = state;
   const coins = state.coins.player;
-  const full = state.relics.player.length >= RELIC_SLOTS;
   const nextRival = getRival(shop.nextRivalId);
   const region = regionOf(state.run.node);
   const coinFx = lastShopCoins(state.events);
   const upgraded = Object.entries(state.decks.player);
   const selling = sellId ? getRelic(sellId) : null;
+  const line = npcLine(state.events, complaint);
+  const canReroll = coins >= shop.rerollCost;
+
+  const complain = (kind) => {
+    setComplaint((c) => ({ kind, at: state.seq, n: (c?.n ?? 0) + 1 }));
+    haptic([30, 40, 30]);
+  };
 
   const buyRelic = (index) => {
-    const block = relicBuyBlock(state, shop.relics[index]);
+    const offer = shop.relics[index];
+    if (offer.sold) return;
+    const block = relicBuyBlock(state, offer);
     if (block === 'full') {
       setAlert((n) => n + 1);
-      haptic([30, 40, 30]);
+      complain('full');
+      return;
+    }
+    if (block === 'coins') {
+      complain('coins');
       return;
     }
     if (!block) onBuyRelic(index);
+  };
+
+  const buyTile = (index) => {
+    const offer = shop.tiles[index];
+    if (offer.sold) return;
+    const block = tileBuyBlock(state, offer);
+    if (block === 'coins') {
+      complain('coins');
+      return;
+    }
+    if (!block) onBuyTile(index);
+  };
+
+  const reroll = () => {
+    if (!canReroll) {
+      complain('coins');
+      return;
+    }
+    setShaking((n) => n + 1);
+    sound.playDiceShake();
+    onReroll();
   };
 
   const confirmSell = () => {
@@ -72,198 +170,204 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
   };
 
   return (
-    <div className={`shop-screen map-atmo-${region.atmosphere} fixed inset-0 z-[55] overflow-hidden`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
-      {/* 4 quadrantes que cabem na tela (sem rolagem): saldo + hotbar · talismãs · peças · saída */}
-      <div
-        className="shop-grid mx-auto grid h-full w-full max-w-[460px] gap-2 px-3"
-        style={{
-          paddingTop: 'max(env(safe-area-inset-top), 10px)',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
-        }}
-      >
-        {/* Q1: título, saldo e hotbar (venda a 50%) */}
-        <div className="shop-panel shop-quadrant px-3 pb-2.5 pt-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <h1 id="shop-title" className="font-pixel text-[11px] leading-snug text-bone-50 text-shadow-pixel">
+    <div className={`shop-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <div className="shop-scroll">
+        {/* toldo listrado com a barra denteada */}
+        <header className="shop-awning">
+          <div className="shop-awning-inner">
+            <h1 id="shop-title" className="shop-sign">
               LOJA CLANDESTINA
-              <span className="block text-[7px] text-brass-300">{region.name}</span>
+              <span className="shop-sign-region">{region.name}</span>
             </h1>
-            <span className="relative shrink-0">
+            <span className="shop-cash" aria-label={`Seu saldo: ${coins} moedas`}>
               <CoinCount value={coins} className="text-[14px]" />
               {coinFx && (
-                <span
-                  key={coinFx.seq}
-                  className={`coin-float absolute right-0 top-0 font-pixel text-[10px] ${coinFx.amount > 0 ? 'text-[#9fe08a]' : 'text-blood-400'}`}
-                >
+                <span key={coinFx.seq} className={`coin-float absolute right-1 top-0 font-pixel text-[10px] ${coinFx.amount > 0 ? 'text-[#9fe08a]' : 'text-blood-400'}`}>
                   {coinFx.amount > 0 ? `+$${coinFx.amount}` : `−$${-coinFx.amount}`}
                 </span>
               )}
             </span>
           </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="font-pixel text-[7px] leading-relaxed text-bone-400">
-              SEUS TALISMÃS {state.relics.player.length}/{RELIC_SLOTS}
-              <span className="block text-bone-200">TOQUE PARA VENDER (50%)</span>
-            </p>
-            <Hotbar
-              key={`hotbar-${alert}`}
-              relics={state.relics.player}
-              size={38}
-              press={press}
-              onTap={setSellId}
-              label="Seus talismãs (toque para vender)"
-              className={alert ? 'animate-hotbar-full' : ''}
-            />
-          </div>
-          {alert > 0 && (
-            <p key={`alert-${alert}`} className="shop-alert animate-shop-alert mt-2 px-2 py-1.5 text-center font-pixel text-[8px] leading-relaxed" role="alert">
-              HOTBAR CHEIA! VENDA UM TALISMÃ ANTES
-            </p>
-          )}
-        </div>
+        </header>
 
-        {/* Q2: talismãs em 3 cartas quadradas */}
-        <section className="shop-quadrant flex min-h-0 flex-col" aria-labelledby="shop-relics">
-          <h2 id="shop-relics" className="shop-label">
-            TALISMÃS
-          </h2>
-          <ul className="mt-1.5 grid min-h-0 flex-1 grid-cols-3 gap-2">
+        {/* parede do fundo: lâmpada, prateleira e o Valtinho atrás do balcão */}
+        <section className="shop-backwall" aria-label="Atendente">
+          <div className="shop-lamp-zone" aria-hidden="true">
+            <LampRig part="light" lamp={44} cord={14} beamWidth={320} />
+            <LampRig part="body" lamp={44} cord={14} beamWidth={320} className="z-[6]" />
+          </div>
+          <div className="shop-shelf" aria-hidden="true" />
+          <div className="shop-npc-wrap">
+            <RivalSpeech key={line.key} text={line.text} voice="valtinho" tail="down" tailX="50%" linger={false} className="shop-npc-speech" />
+            <Valtinho />
+          </div>
+        </section>
+
+        {/* balcão de madeira com as marcas de copo */}
+        <section className="shop-counter" aria-label="Balcão">
+          <h2 className="sr-only">Talismãs à venda</h2>
+          <ul className="shop-goods">
             {shop.relics.map((offer, index) => {
               const relic = getRelic(offer.id);
-              const block = relicBuyBlock(state, offer);
               const tier = getRarity(relic.rarity);
+              const block = relicBuyBlock(state, offer);
               return (
-                <RetroCard
-                  as="li"
-                  key={`${offer.id}-${shop.rerolls}`}
-                  rarity={relic.rarity}
-                  className={`shop-card ${offer.sold ? 'shop-item-sold' : ''}`}
-                  style={{ '--rarity': tier.color }}
-                  {...press({ kind: 'relic', id: offer.id, owner: 'shop' })}
-                >
-                  <span className="shop-card-icon">
-                    <RelicIcon relic={relic} size={36} />
-                  </span>
-                  <p className="shop-card-name font-pixel">{relic.short}</p>
-                  <RarityBadge rarity={relic.rarity} />
+                <li key={`${offer.id}-${shop.rerolls}`} className="shop-good" style={{ '--rarity': tier.color }}>
                   <button
                     type="button"
-                    data-tone={block === 'coins' || offer.sold ? undefined : 'brass'}
-                    className="btn-pixel btn-buy mt-auto w-full"
-                    disabled={offer.sold || block === 'coins'}
+                    className={`scene-tap shop-good-btn ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
                     onClick={() => buyRelic(index)}
-                    aria-label={offer.sold ? `${relic.name}: vendido` : `Comprar ${relic.name} por ${offer.price} moedas`}
+                    aria-label={offer.sold ? `${relic.name}: vendido` : `Comprar ${relic.name} (${tier.label.toLowerCase()}) por ${offer.price} moedas`}
+                    {...press({ kind: 'relic', id: offer.id, owner: 'shop' })}
                   >
-                    {offer.sold ? 'VENDIDO' : `$${offer.price}`}
-                    {!offer.sold && full && <span className="block text-[6px] text-blood-700">CHEIA</span>}
+                    <span className="shop-velvet" aria-hidden="true" />
+                    {/* a vaga continua lá depois de vendido: a etiqueta não pula */}
+                    <span className="shop-good-art">{!offer.sold && <RelicIcon relic={relic} size={48} />}</span>
+                    <span className="shop-tag">
+                      <span className="shop-tag-rarity">{tier.label}</span>
+                      <span className="shop-tag-name">{relic.short}</span>
+                      {offer.sold ? <span className="shop-tag-sold">VENDIDO</span> : <Price amount={offer.price} />}
+                    </span>
                   </button>
-                </RetroCard>
+                </li>
               );
             })}
           </ul>
-        </section>
 
-        {/* Q3: peças de grife em 2 cartas largas, com o material animado */}
-        <section className="shop-quadrant flex min-h-0 flex-col" aria-labelledby="shop-tiles">
-          <h2 id="shop-tiles" className="shop-label">
-            PEÇAS DE GRIFE
-          </h2>
-          <ul className="mt-1.5 grid min-h-0 flex-1 grid-cols-2 gap-2">
+          <h2 className="sr-only">Pedras de grife</h2>
+          <div className="shop-display">
             {shop.tiles.map((offer, index) => {
               const enhancement = ENHANCEMENTS[offer.enhancement];
               const [a, b] = offer.tileId.split('-').map(Number);
-              const block = tileBuyBlock(state, offer);
-              const tier = getRarity(enhancement.rarity);
               const label = tileLabel(offer.tileId);
+              const block = tileBuyBlock(state, offer);
               return (
-                <RetroCard
-                  as="li"
+                <button
                   key={`${offer.tileId}-${shop.rerolls}`}
-                  rarity={enhancement.rarity}
-                  className={`shop-card shop-card-wide ${offer.sold ? 'shop-item-sold' : ''}`}
-                  style={{ '--rarity': tier.color }}
+                  type="button"
+                  className={`scene-tap shop-grife ${index === 0 ? 'shop-grife-left' : 'shop-grife-right'} ${offer.sold ? 'is-sold' : ''} ${
+                    block === 'coins' && !offer.sold ? 'is-short' : ''
+                  }`}
+                  onClick={() => buyTile(index)}
+                  aria-label={
+                    offer.sold ? `${label} de ${enhancement.name}: vendido` : `Comprar ${label} de ${enhancement.name} por ${offer.price} moedas, substitui o seu ${label} comum`
+                  }
                   {...press({ kind: 'offerTile', tileId: offer.tileId, enhancement: offer.enhancement })}
                 >
-                  <div className="flex w-full items-center gap-2.5">
-                    <span className="shop-tile-stage">
-                      <DominoTile values={[a, b]} unit={21} depth={3} enhancement={offer.enhancement} />
-                    </span>
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="font-pixel text-[8px] leading-snug text-bone-50">{enhancement.name.toUpperCase()}</p>
-                      <RarityBadge rarity={enhancement.rarity} />
-                      <p className="mt-1 font-term text-[15px] leading-[1.05] text-brass-300">Substitui {label}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    data-tone={block ? undefined : 'brass'}
-                    className="btn-pixel btn-buy mt-2 w-full"
-                    disabled={Boolean(block)}
-                    onClick={() => onBuyTile(index)}
-                    aria-label={offer.sold ? `${label} de ${enhancement.name}: vendido` : `Comprar ${label} de ${enhancement.name} por ${offer.price} moedas`}
-                  >
-                    {offer.sold ? 'VENDIDO' : `$${offer.price}`}
-                  </button>
-                </RetroCard>
+                  <span className="shop-grife-tile">
+                    {!offer.sold && <DominoTile values={[a, b]} unit={22} depth={3} enhancement={offer.enhancement} shimmer />}
+                  </span>
+                  <span className="shop-tape">
+                    <span className="shop-tape-name">{enhancement.name.toUpperCase()}</span>
+                    {offer.sold ? (
+                      <span className="shop-tag-sold">VENDIDO</span>
+                    ) : (
+                      <>
+                        <span className="shop-tape-sub">Substitui {label} comum</span>
+                        <Price amount={offer.price} short />
+                      </>
+                    )}
+                  </span>
+                </button>
               );
             })}
-          </ul>
-        </section>
+          </div>
 
-        {/* Q4: reembaralhar, seu baralho, próximo nó e a saída */}
-        <div className="shop-quadrant self-end">
-          <div className="flex items-center gap-2">
-            <div className="avatar-frame shrink-0">
-              <RivalAvatar rival={nextRival} mood="smug" size={32} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-pixel text-[7px] text-bone-400">PRÓXIMO NÓ{nextRival.boss ? ' · CHEFE' : ''}</p>
-              <p className="mt-0.5 truncate font-pixel text-[8px] text-bone-50">{nextRival.name.toUpperCase()}</p>
-              <p className="truncate font-term text-[14px] leading-none text-bone-300">
-                {nextRival.title} · {nextRival.hearts}♥ · BARALHO: {upgraded.length} DE GRIFE
-              </p>
-            </div>
-            <div className="flex max-w-[86px] shrink-0 flex-wrap justify-end gap-1">
-              {upgraded.map(([tileId, enhancement]) => {
-                const [a, b] = tileId.split('-').map(Number);
+          {/* frente do balcão: a Bolsa de Talismãs, 4 nichos entalhados */}
+          <div key={`pouch-${alert}`} className={`shop-pouch ${alert ? 'animate-hotbar-full' : ''}`}>
+            <p className="shop-pouch-label">
+              BOLSA DE TALISMÃS {state.relics.player.length}/{RELIC_SLOTS}
+              <span>Toque para vender (50%)</span>
+            </p>
+            <div className="shop-niches" role="group" aria-label="Seus talismãs (toque para vender)">
+              {Array.from({ length: RELIC_SLOTS }, (_, i) => {
+                const relic = getRelic(state.relics.player[i]);
+                if (!relic) return <span key={`empty-${i}`} className="shop-niche shop-niche-empty" aria-hidden="true" />;
                 return (
-                  <span key={tileId} {...press({ kind: 'offerTile', tileId, enhancement })}>
-                    <DominoTile values={[a, b]} unit={9} depth={1} enhancement={enhancement} />
-                  </span>
+                  <button
+                    key={relic.id}
+                    type="button"
+                    className="scene-tap shop-niche relic-slot"
+                    style={{ '--rarity': getRarity(relic.rarity).color }}
+                    onClick={() => setSellId(relic.id)}
+                    aria-label={`${relic.name}: vender por ${sellPriceOf(relic.id)} moedas`}
+                    {...press({ kind: 'relic', id: relic.id, owner: 'player' })}
+                  >
+                    <RelicIcon relic={relic} size={34} />
+                  </button>
                 );
               })}
             </div>
+            {upgraded.length > 0 && (
+              <div className="shop-deck" aria-label={`Seu baralho tem ${upgraded.length} pedras de grife`}>
+                <span>SEU BARALHO</span>
+                {upgraded.map(([tileId, enhancement]) => {
+                  const [a, b] = tileId.split('-').map(Number);
+                  return (
+                    <span key={tileId} {...press({ kind: 'offerTile', tileId, enhancement })}>
+                      <DominoTile values={[a, b]} unit={8} depth={1} enhancement={enhancement} still />
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="mt-2 grid grid-cols-[1fr_1.25fr] gap-2">
-            <button type="button" className="btn-pixel" disabled={coins < shop.rerollCost} onClick={onReroll}>
-              REEMBARALHAR
-              <span className="block text-[8px] text-brass-300">${shop.rerollCost}</span>
-            </button>
-            <button type="button" data-tone="blood" className="btn-pixel text-[10px]" onClick={onLeave}>
-              VOLTAR AO MAPA →
-            </button>
-          </div>
-        </div>
+          {alert > 0 && (
+            <p key={`alert-${alert}`} className="shop-alert animate-shop-alert px-2 py-1.5 text-center font-pixel text-[8px] leading-relaxed" role="alert">
+              BOLSA CHEIA! VENDA UM TALISMÃ ANTES
+            </p>
+          )}
+        </section>
+
+        {/* copo de dados e a placa de madeira */}
+        <footer className="shop-controls">
+          <button
+            type="button"
+            className={`scene-tap shop-dice ${canReroll ? '' : 'is-short'}`}
+            onClick={reroll}
+            aria-label={`Reembaralhar a vitrine por ${shop.rerollCost} moedas`}
+          >
+            <span key={shaking} className={shaking ? 'shop-dice-shake' : ''}>
+              <DiceCupIcon className="h-14 w-14" />
+            </span>
+            <span className="shop-dice-label">REEMBARALHAR</span>
+            <Price amount={shop.rerollCost} short />
+          </button>
+          <button type="button" className="scene-tap shop-plank" onClick={onLeave}>
+            <span className="shop-nail shop-nail-tl" aria-hidden="true" />
+            <span className="shop-nail shop-nail-tr" aria-hidden="true" />
+            <span className="shop-nail shop-nail-bl" aria-hidden="true" />
+            <span className="shop-nail shop-nail-br" aria-hidden="true" />
+            <span className="shop-plank-title">VOLTAR AO MAPA →</span>
+            <span className="shop-plank-next">
+              <span className="shop-plank-avatar">
+                <RivalAvatar rival={nextRival} mood="smug" size={22} />
+              </span>
+              <span>
+                PRÓXIMO{nextRival.boss ? ' · CHEFE' : ''}: {nextRival.name} · {nextRival.hearts}♥
+              </span>
+            </span>
+          </button>
+        </footer>
       </div>
 
       {selling && (
         <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">
-          <div className="overlay-card w-full max-w-[280px] px-4 py-4 text-center">
-            <div className="mx-auto w-fit">
-              <RelicIcon relic={selling} size={44} />
+          <div className="shop-receipt w-full max-w-[280px] px-4 py-4 text-center">
+            <p className="shop-receipt-head">VALTINHO DO BAR · COMPRA</p>
+            <div className="mx-auto mt-2 w-fit">
+              <RelicIcon relic={selling} size={48} />
             </div>
-            <p id="sell-title" className="mt-2 font-pixel text-[9px] leading-snug text-bone-50">
+            <p id="sell-title" className="mt-2 font-pixel text-[9px] leading-snug">
               {selling.name.toUpperCase()}
             </p>
-            <p className="mt-1">
-              <RarityBadge rarity={selling.rarity} />
-            </p>
+            <p className="shop-receipt-note">{getRarity(selling.rarity).label} · revenda a 50%</p>
             <div className="mt-3 grid gap-2">
               <button type="button" data-tone="blood" className="btn-pixel" onClick={confirmSell}>
-                VENDER POR ${sellPriceOf(selling.id)}?
+                VENDER POR ${sellPriceOf(selling.id)}
               </button>
               <button type="button" className="btn-pixel" onClick={() => setSellId(null)}>
-                CANCELAR
+                FICAR COM ELE
               </button>
             </div>
           </div>

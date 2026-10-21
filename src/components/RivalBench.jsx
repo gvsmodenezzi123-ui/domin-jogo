@@ -14,7 +14,8 @@ import { MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
  *   - caixa fixa de 96px de altura (h-24), sem estouro;
  *   - bloco fixo de 160px à esquerda (w-40): retrato 40x40, status
  *     ("PENSANDO..."), nome, corações, moedas, dorme e os talismãs dele;
- *   - balão da fala em posição absoluta (não empurra ninguém), uma linha;
+ *   - balão da fala (Patch 0.5.5) fora da caixa travada: cresce para baixo, sobre o
+ *     feltro, com a frase inteira e a cauda apontando para o retrato;
  *   - mão do rival presa à direita, cada pedra na sua vaga (RivalHand.jsx);
  *   - som e menu no canto de baixo à direita.
  */
@@ -73,12 +74,9 @@ function RivalBench({
                 <span className="font-pixel text-[7px] leading-none text-bone-300">{boneyardCount}</span>
               </span>
             </div>
-            <Hotbar relics={relics} size={20} cols={4} flashes={flashes} press={press} owner="tioZe" label={`Talismãs de ${rival.name}`} />
+            <Hotbar relics={relics} size={20} cols={4} flashes={flashes} press={press} owner="tioZe" bare label={`Talismãs de ${rival.name}`} />
           </div>
         </div>
-
-        {/* fala: absoluta, uma linha, nunca empurra a fileira */}
-        {speech && <RivalSpeech key={speech.key} text={speech.text} voice={rival.id} onMouth={setMouthOpen} />}
 
         {/* mão do rival presa à direita: só a pedra jogada anima */}
         <RivalHand
@@ -104,6 +102,20 @@ function RivalBench({
           </button>
         </div>
       </div>
+
+      {/* fala: logo abaixo do cabeçalho, sobre o feltro, com a cauda subindo até o retrato
+          (o retrato fica centrado em x = 38 px; o balão começa em 12 px) */}
+      {speech && (
+        <RivalSpeech
+          key={speech.key}
+          text={speech.text}
+          voice={rival.id}
+          onMouth={setMouthOpen}
+          tail="up"
+          tailX={26}
+          className="speech-rival z-40"
+        />
+      )}
     </header>
   );
 }

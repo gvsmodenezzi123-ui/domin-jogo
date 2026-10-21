@@ -126,6 +126,7 @@ const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, can
         spent={spentRelics}
         ready={canUndo ? READY_RELOGIO : NONE}
         press={press}
+        bare
         label="Seus talismãs"
       />
       <div className="ml-auto flex items-center gap-2">
@@ -280,7 +281,7 @@ const ActionBar = memo(function ActionBar({
           <div className="flex gap-2">
             {selectedSides.length > 0 ? (
               selectedSides.map((side) => (
-                <button key={side} type="button" data-tone="brass" className="btn-pixel flex-1" onClick={() => onPlay(side)}>
+                <button key={side} type="button" data-tone="play" className="btn-pixel flex-1" onClick={() => onPlay(side)}>
                   {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
                 </button>
               ))

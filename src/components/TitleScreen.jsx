@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { TOTAL_NODES, nodeAt } from '../data/campaign.js';
 import { getRival } from '../data/rivals.js';
+import BuxariaLogo from './BuxariaLogo.jsx';
 import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
 import LampRig from './LampRig.jsx';
+import { BookIcon, GearIcon } from './art/SceneArt.jsx';
 
 function isStandalone() {
   if (typeof window === 'undefined') return false;
@@ -16,40 +18,59 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-function PlayMenu({ save, onNewGame, onContinue }) {
+/**
+ * Escolha depois do JOGAR, no mesmo lugar, só em texto: CONTINUAR (dourado se há run
+ * salva, apagado se não), NOVO JOGO e VOLTAR. Com run salva, o NOVO JOGO pede confirmação
+ * ali mesmo, também em texto.
+ */
+function PlayChoices({ save, onNewGame, onContinue, onBack, onTap }) {
   const [confirm, setConfirm] = useState(false);
   const next = save ? getRival(nodeAt(save.node).rivalId) : null;
+  if (confirm) {
+    return (
+      <div className="title-choices">
+        <p className="title-confirm">Começar do zero apaga a run salva.</p>
+        <button type="button" className="text-action title-choice title-choice-danger" onClick={onNewGame}>
+          APAGAR E COMEÇAR
+        </button>
+        <button
+          type="button"
+          className="text-action title-choice title-choice-quiet"
+          onClick={() => {
+            onTap?.();
+            setConfirm(false);
+          }}
+        >
+          VOLTAR
+        </button>
+      </div>
+    );
+  }
   return (
-    <div className="grid gap-2.5">
-      <button
-        type="button"
-        data-tone="brass"
-        className="btn-pixel flex flex-col items-center gap-1 py-3"
-        disabled={!save}
-        onClick={onContinue}
-      >
-        <span className="text-[11px]">CONTINUAR</span>
-        <span className="font-term text-[16px] normal-case leading-none text-ink/80">
+    <div className="title-choices">
+      <button type="button" className={`text-action title-choice ${save ? 'title-choice-gold' : ''}`} disabled={!save} onClick={onContinue}>
+        CONTINUAR
+        <span className="title-choice-note">
           {save ? `Nó ${save.node + 1}/${TOTAL_NODES} · ${next?.name} · ${save.hearts}♥ · $${save.coins}` : 'Nenhuma run salva'}
         </span>
       </button>
-      {confirm ? (
-        <div className="options-danger grid gap-2 px-3 py-2.5">
-          <p className="font-term text-[17px] leading-tight text-bone-200">Começar do zero apaga a run salva. Certeza?</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="btn-pixel btn-mini" onClick={() => setConfirm(false)}>
-              VOLTAR
-            </button>
-            <button type="button" data-tone="blood" className="btn-pixel btn-mini" onClick={onNewGame}>
-              NOVO JOGO
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" data-tone="blood" className="btn-pixel py-3 text-[11px]" onClick={save ? () => setConfirm(true) : onNewGame}>
-          NOVO JOGO
-        </button>
-      )}
+      <button
+        type="button"
+        className="text-action title-choice"
+        onClick={
+          save
+            ? () => {
+                onTap?.();
+                setConfirm(true);
+              }
+            : onNewGame
+        }
+      >
+        NOVO JOGO
+      </button>
+      <button type="button" className="text-action title-choice title-choice-quiet" onClick={onBack}>
+        VOLTAR
+      </button>
     </div>
   );
 }
@@ -58,8 +79,12 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5.4</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.5.5</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
+      </p>
+      <p>
+        <span className="block font-pixel text-[8px] text-bone-400">CRIADOR</span>
+        Gabriel Modenezzi
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">NA MESA</span>
@@ -79,8 +104,11 @@ function Credits() {
 }
 
 /**
- * Tela inicial: lâmpada, logo e o menu. O primeiro toque também destrava o
- * áudio no iOS. 3 toques no logo liberam o painel DEV.
+ * Tela inicial (Patch 0.5.5): limpa e de cinema. Lâmpada balançando, o logo BUXARIA em
+ * SVG, o crédito do criador em letra de máquina e, no centro, só a palavra JOGAR.
+ * Tocar em JOGAR troca a palavra, no mesmo lugar, por CONTINUAR / NOVO JOGO / VOLTAR.
+ * Coleções (livro) e Opções (engrenagem) viram ícones nos cantos de cima.
+ * O primeiro toque também destrava o áudio no iOS. 3 toques no logo liberam o painel DEV.
  */
 export default function TitleScreen({
   save,
@@ -95,6 +123,7 @@ export default function TitleScreen({
   devUnlocked = false,
 }) {
   const [modal, setModal] = useState(null);
+  const [choosing, setChoosing] = useState(false);
   const showInstallHint = isIOS() && !isStandalone();
   const open = (id) => {
     onTap?.();
@@ -103,6 +132,14 @@ export default function TitleScreen({
   const close = () => {
     onTap?.();
     setModal(null);
+  };
+  const startChoosing = () => {
+    onTap?.();
+    setChoosing(true);
+  };
+  const back = () => {
+    onTap?.();
+    setChoosing(false);
   };
 
   return (
@@ -118,42 +155,48 @@ export default function TitleScreen({
       <LampRig part="light" lamp={120} cord={40} beamWidth={380} className="z-[4]" />
       <div aria-hidden="true" className="room-flicker pointer-events-none absolute inset-0 z-[2]" />
       <LampRig part="body" lamp={120} cord={40} beamWidth={380} className="z-[3]" />
-      {/* espaço da lâmpada no topo (ela fica por cima, fora do fluxo) */}
-      <div aria-hidden="true" className="h-[160px] shrink-0" />
 
-      <div className="relative mt-[9vh] flex flex-col items-center">
-        {/* logo com relevo 3D duplo: face de osso, extrusão de sangue e sombra funda */}
-        <h1 className="title-logo font-pixel text-[40px] leading-none" onClick={onSecretTap} data-text="BUXARIA">
-          BUXARIA
-        </h1>
-        <p className="mt-4 font-pixel text-[8px] tracking-widest text-bone-400">
-          PATCH 0.5.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
-        </p>
+      {/* ícones nos cantos: Coleções (livro) e Opções (engrenagem de latão) */}
+      <div className="title-corners" aria-label="Atalhos">
+        <button type="button" className="icon-btn title-icon" onClick={() => open('book')} aria-label="Coleções: Livro de Boteco">
+          <BookIcon className="h-10 w-10" />
+        </button>
+        <button type="button" className="icon-btn title-icon" onClick={() => open('options')} aria-label="Opções">
+          <GearIcon className="h-10 w-10" />
+        </button>
       </div>
 
-      <nav className="relative mt-auto grid w-full max-w-[280px] gap-2.5" aria-label="Menu principal">
-        <button type="button" data-tone="brass" className="btn-pixel title-btn" onClick={() => open('play')}>
-          JOGAR
+      {/* espaço da lâmpada no topo (ela fica por cima, fora do fluxo) */}
+      <div aria-hidden="true" className="h-[150px] shrink-0" />
+
+      <div className="relative z-[5] mt-[6vh] flex w-full flex-col items-center">
+        <h1 className="w-full">
+          <BuxariaLogo className="title-logo-svg mx-auto" onClick={onSecretTap} />
+        </h1>
+        <button type="button" className="text-action title-credit" onClick={() => open('credits')}>
+          Criador: Gabriel Modenezzi
         </button>
-        <button type="button" className="btn-pixel title-btn" onClick={() => open('options')}>
-          OPÇÕES
-        </button>
-        <button type="button" className="btn-pixel title-btn" onClick={() => open('book')}>
-          COLEÇÕES
-        </button>
-        <button type="button" className="btn-pixel title-btn" onClick={() => open('credits')}>
-          CRÉDITOS
-        </button>
-        {showInstallHint && (
-          <p className="mt-1 font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>
-        )}
+      </div>
+
+      {/* JOGAR, e no mesmo lugar as escolhas: só tipografia, sem caixas */}
+      <nav className="title-menu relative z-[5] flex-1 content-center" aria-label="Menu principal">
+        <div className={`title-panel ${choosing ? 'title-panel-off' : ''}`} inert={choosing}>
+          <button type="button" className="text-action title-play" onClick={startChoosing}>
+            JOGAR
+          </button>
+        </div>
+        <div className={`title-panel ${choosing ? '' : 'title-panel-off'}`} inert={!choosing}>
+          {choosing && <PlayChoices save={save} onNewGame={onNewGame} onContinue={onContinue} onBack={back} onTap={onTap} />}
+        </div>
       </nav>
 
-      {modal === 'play' && (
-        <MenuModal id="play-title" title="JOGAR" onClose={close}>
-          <PlayMenu save={save} onNewGame={onNewGame} onContinue={onContinue} />
-        </MenuModal>
-      )}
+      <footer className="relative z-[5] flex flex-col items-center gap-1">
+        {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
+        <p className="title-version">
+          PATCH 0.5.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+        </p>
+      </footer>
+
       {modal === 'options' && (
         <MenuModal id="options-title" title="OPÇÕES" onClose={close}>
           <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} />

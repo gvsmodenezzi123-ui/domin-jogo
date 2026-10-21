@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.5.4
+# Buxaria — Patch 0.5.5
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -58,6 +58,49 @@ O PWA precisa de HTTPS. Duas opções:
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.5.5: menu limpo, balões inteiros, botões de placa e a Loja como cena
+
+### Tela inicial (`TitleScreen.jsx`, `BuxariaLogo.jsx`)
+- **Logo BUXARIA em SVG vetorial:** letras lapidadas (cantos em 45°) numa grade 7×10, extrusão 3D
+  cor de sangue seco, contorno preto, face de osso, chanfro duplo (filete de osso + faixa de metal),
+  rachaduras e o feixe especular cruzando a cada ~6 s. Embaixo: **"Criador: Gabriel Modenezzi"**
+  (tocar abre os créditos). 3 toques no logo continuam liberando o painel DEV.
+- **Ícones nos cantos** (pixel art 40×40, `art/SceneArt.jsx`): livro de couro com a pedra [2|1]
+  na capa → COLEÇÕES; engrenagem de latão → OPÇÕES. Saíram os botões de texto do centro.
+- **JOGAR é só a palavra:** marfim/âmbar, sombra funda; ao tocar cresce 5% e acende em dourado.
+  No mesmo lugar surgem **CONTINUAR** (dourado com run salva, apagado sem), **NOVO JOGO** e
+  **VOLTAR**, também só em texto. Com run salva, o NOVO JOGO confirma ali mesmo.
+
+### Balão de fala (`RivalSpeech.jsx`)
+- A frase nunca mais é cortada: o balão se ajusta e quebra linha. O tamanho final é reservado
+  desde o início, então ele não pula enquanto o texto é digitado com a voz do rival.
+- Veludo escuro (zinc-900/95), borda de 1,5 px cor de osso/âmbar, vinheta por dentro e cauda em
+  degraus de pixel apontando para o retrato. Na mesa ele aparece logo abaixo do cabeçalho.
+
+### Botões e hotbar
+- **Todos os `.btn-pixel` viraram placas de metal entalhadas:** chanfro claro de 2 px em cima,
+  base escura de 4 px, letra em baixo-relevo e rebites; ao tocar afundam 2 px na hora com o
+  **clique mecânico** (`sound.playClick`, tocado pelo App em qualquer placa). Tons:
+  **JOGAR/ABRIR/SENTAR/PRÓXIMA RODADA** verde-oliva aceso, **PASSAR** ferrugem/vinho,
+  **ENTRAR NA LOJA** dourado fosco pulsando, o resto em ferro escovado ou latão.
+- **Talismãs soltos na mesa** (`Hotbar` com `bare`): sem moldura nem vagas vazias, cada um flutua
+  com a própria sombra no feltro (seus e os do rival). O toque longo continua abrindo o balão.
+
+### Loja Clandestina (`Shop.jsx`)
+- Cena de balcão: **toldo listrado** vinho/bege com barra denteada, **lâmpada** pendurada com o cone
+  de luz, prateleira de garrafas e o **Valtinho do Bar** (48×48: bigodão, palito no canto da boca,
+  regata e avental manchado), respirando e piscando, com balão e voz própria. Ele recebe
+  ("Só mercadoria quente...", "Vai levar ou vai ficar só olhando?", "O Tio Zé mandou te cobrar o
+  dobro...") e reage a compra, venda, reembaralhar, falta de dinheiro e bolsa cheia.
+- **Balcão de madeira** com marcas de copo: os 3 talismãs no **veludo vermelho** (sprite 48 e sombra)
+  com **etiqueta de papel pardo** (raridade, nome, preço na moeda dourada); as 2 **pedras de grife**
+  inclinadas no **expositor** escuro, com o material animado e **fita crepe** ("Substitui [X|Y] comum"
+  e o preço). Tocar compra; segurar mostra o efeito.
+- **Bolsa de Talismãs:** 4 nichos entalhados na frente do balcão; tocar abre o recibo de venda a 50%.
+- **REEMBARALHAR** é um copo de dados de couro virado (balança, faz o barulho de dados chacoalhando
+  e mostra o preço: $3, $5, $8, $12). **VOLTAR AO MAPA** é uma placa de madeira com pregos, que mostra
+  o próximo rival.
 
 ## Patch 0.5.4: passe com custo, áudio novo e iPhone sem lag
 

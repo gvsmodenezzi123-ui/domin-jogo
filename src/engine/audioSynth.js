@@ -80,6 +80,7 @@ const VOICE_PROFILES = {
   fausto: { baseFreq: 125, mod: 15, type: 'sine', speed: 85 }, // frio, monótono
   alemao: { baseFreq: 85, mod: 25, type: 'square', speed: 95 }, // ferro velho
   comendador: { baseFreq: 95, mod: 35, type: 'triangle', speed: 110 }, // grave, sem pressa
+  valtinho: { baseFreq: 118, mod: 42, type: 'triangle', speed: 72 }, // atendente da Loja Clandestina, com o palito na boca
 };
 
 /** ids do jogo → perfis acima. */
@@ -307,9 +308,19 @@ export class SoundEngine {
     return this.voices.filter((v) => v.end > now);
   }
 
+  /**
+   * Vozes que ocupam vaga agora. Uma voz cortada só sai da conta no fade final de 15 ms;
+   * a nota do baixo/piano que vai ser cortada lá na frente (quando a próxima entrar) continua
+   * contando até lá, porque ainda está soando.
+   */
+  soundingVoices() {
+    const now = this.ctx.currentTime;
+    return this.liveVoices().filter((v) => !(v.released && v.end <= now + 0.03));
+  }
+
   /** Quantas fontes (osciladores e ruído) estão soando agora: é isso que pesa no áudio do iOS. */
   liveCost() {
-    return this.liveVoices().reduce((sum, v) => sum + v.cost, 0);
+    return this.soundingVoices().reduce((sum, v) => sum + v.cost, 0);
   }
 
   /**
@@ -330,11 +341,13 @@ export class SoundEngine {
     const { sources, nodes = [] } = build(env);
     // cada fonte conta como uma voz: abre espaço cortando as menos importantes e mais velhas
     const cost = Math.min(sources.length, MAX_VOICES);
-    let live = this.liveVoices();
-    while (live.length && live.reduce((sum, v) => sum + v.cost, 0) + cost > MAX_VOICES) {
-      const victim = live.reduce((a, b) => (b.priority < a.priority || (b.priority === a.priority && b.born < a.born) ? b : a));
+    for (;;) {
+      const live = this.soundingVoices();
+      if (live.reduce((sum, v) => sum + v.cost, 0) + cost <= MAX_VOICES) break;
+      const candidates = live.filter((v) => !v.released);
+      if (!candidates.length) break;
+      const victim = candidates.reduce((a, b) => (b.priority < a.priority || (b.priority === a.priority && b.born < a.born) ? b : a));
       this.release(victim);
-      live = this.liveVoices();
     }
     const voice = { env, gate, sources, nodes, end, priority, mono, cost, born: at, done: false, released: false };
     let pending = sources.length;
@@ -368,7 +381,6 @@ export class SoundEngine {
       }
     }
     voice.end = stopAt;
-    this.voices = this.voices.filter((v) => v !== voice);
   }
 
   /** Fim da nota: .stop(), .disconnect() de todos os nós e referências zeradas. */
@@ -864,8 +876,28 @@ export class SoundEngine {
     this.playRubySub();
   }
 
+  /**
+   * Clique mecânico de gatilho (Patch 0.5.5): o estalo metálico da placa afundando e o
+   * "toc" da trava. Toques repetidos em menos de 60 ms viram um só (o App toca o clique em
+   * todo botão e alguns botões também chamam playClick no próprio handler).
+   */
   playClick() {
-    this.tone({ type: 'square', freq: 1450, peak: 0.07, dur: 0.022, attack: 0.001 });
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - (this.lastClickAt ?? -1e9) < 60) return;
+    this.lastClickAt = now;
+    this.noise({ freq: 3400, filter: 'highpass', q: 0.8, peak: 0.22, dur: 0.012 });
+    this.tone({ type: 'square', freq: 1900, freqEnd: 900, peak: 0.05, dur: 0.008, attack: 0.001 });
+    this.tone({ type: 'triangle', freq: 210, freqEnd: 120, peak: 0.22, dur: 0.035, attack: 0.001, delay: 0.012 });
+  }
+
+  /** REEMBARALHAR: dados chacoalhando dentro do copo de couro e o copo batendo no balcão. */
+  playDiceShake() {
+    this.duck();
+    [0, 0.07, 0.13, 0.21, 0.26, 0.34, 0.4].forEach((delay, i) => {
+      this.noise({ freq: 2200 + (i % 3) * 600, q: 3, peak: 0.28, dur: 0.02, delay });
+    });
+    this.tone({ type: 'triangle', freq: 150, freqEnd: 70, peak: 0.6, dur: 0.09, delay: 0.5 });
+    this.noise({ freq: 900, q: 1.2, peak: 0.25, dur: 0.05, delay: 0.5 });
   }
 
   /** Selecionou uma bucha: estalo + brilho curto. */

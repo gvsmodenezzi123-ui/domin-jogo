@@ -456,6 +456,19 @@ export default function App() {
     bookRef.current = discover(bookRef.current, seenNow(state));
   }, [state]);
 
+  // Patch 0.5.5: todo botão de placa (e os textos e ícones tocáveis do menu e da loja)
+  // dá o clique mecânico de gatilho ao afundar.
+  useEffect(() => {
+    const click = (event) => {
+      const target = event.target instanceof Element ? event.target.closest('.btn-pixel, .text-action, .icon-btn, .scene-tap') : null;
+      if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+      sound.init();
+      sound.playClick();
+    };
+    window.addEventListener('pointerdown', click, { passive: true });
+    return () => window.removeEventListener('pointerdown', click);
+  }, []);
+
   // iOS suspende o áudio quando o app vai para o fundo.
   useEffect(() => {
     const resume = () => {

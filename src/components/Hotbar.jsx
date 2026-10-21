@@ -13,6 +13,8 @@ import RelicIcon from './RelicIcon.jsx';
  * ready:   ids prontos para usar (Relógio): brilham
  * press:   gera os handlers do toque longo (balão explicativo)
  * onTap:   toque rápido num talismã (na loja: vender)
+ * bare:    na mesa (Patch 0.5.5): sem moldura nem caixas; os talismãs flutuam soltos
+ *          sobre o feltro, só o desenho e a sombra de cada um. Vaga vazia não aparece.
  */
 function Hotbar({
   relics,
@@ -25,6 +27,7 @@ function Hotbar({
   onTap,
   label = 'Talismãs',
   owner = 'player',
+  bare = false,
   className = '',
 }) {
   const pixel = size >= 38 ? 3 : size >= 28 ? 2 : 1.5;
@@ -38,24 +41,31 @@ function Hotbar({
       {Array.from({ length: RELIC_SLOTS }, (_, i) => {
         const relic = getRelic(relics[i]);
         if (!relic) {
-          return <span key={`empty-${i}`} aria-hidden="true" className="relic-slot relic-slot-empty" style={{ width: size, height: size }} />;
+          return (
+            <span
+              key={`empty-${i}`}
+              aria-hidden="true"
+              className={bare ? 'relic-bare-empty' : 'relic-slot relic-slot-empty'}
+              style={{ width: size, height: size }}
+            />
+          );
         }
         const tier = getRarity(relic.rarity);
         return (
           <button
             key={relic.id}
             type="button"
-            className={`relic-slot ${tier.id === 'mitico' ? 'relic-slot-mythic' : ''} ${spent.includes(relic.id) ? 'relic-slot-spent' : ''} ${
-              ready.includes(relic.id) ? 'relic-slot-ready' : ''
-            } ${owner === 'tioZe' ? 'relic-slot-rival' : ''}`}
-            style={{ width: size, height: size, '--rarity': tier.color }}
+            className={`${bare ? 'relic-bare' : 'relic-slot'} ${tier.id === 'mitico' ? 'relic-slot-mythic' : ''} ${
+              spent.includes(relic.id) ? 'relic-slot-spent' : ''
+            } ${ready.includes(relic.id) ? 'relic-slot-ready' : ''} ${owner === 'tioZe' ? 'relic-slot-rival' : ''}`}
+            style={{ width: size, height: size, '--rarity': tier.color, '--float-delay': `${-i * 0.7}s` }}
             data-relic-slot={`${owner}:${relic.id}`}
             aria-label={`${relic.name} (${tier.label.toLowerCase()}): ${relic.description}`}
             onClick={onTap ? () => onTap(relic.id) : undefined}
             {...(press ? press({ kind: 'relic', id: relic.id, owner }) : {})}
           >
             <span key={flashes[relic.id] ?? 0} className={`block ${flashes[relic.id] ? 'animate-relic-proc' : ''}`}>
-              <RelicIcon relic={relic} size={pixel * 12} />
+              <RelicIcon relic={relic} size={bare ? size : pixel * 12} />
             </span>
           </button>
         );

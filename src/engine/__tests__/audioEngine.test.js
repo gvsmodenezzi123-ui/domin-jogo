@@ -209,12 +209,23 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     }
   });
 
+  it('nota do baixo que vai ser cortada lá na frente continua ocupando vaga até sair', () => {
+    const engine = engineWithFakeAudio();
+    const at = engine.ctx.currentTime + 0.1;
+    engine.bassNote(45, at, 1);
+    engine.bassNote(47, at + 0.1, 1); // corta a anterior só em at + 0.1
+    // a primeira ainda soa entre agora e at + 0.1: conta 2
+    expect(engine.liveCost()).toBe(2);
+    for (let i = 0; i < 6; i += 1) engine.tone({ freq: 500 + i, dur: 1 });
+    expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+  });
+
   it('a polifonia corta a voz mais velha da música antes de cortar um efeito', () => {
     const engine = engineWithFakeAudio();
     const at = engine.ctx.currentTime + 0.01;
     for (let i = 0; i < 4; i += 1) engine.drum({ at, freq: 2000, filter: 'bandpass', q: 1, peak: 0.1, dur: 2 });
     for (let i = 0; i < 4; i += 1) engine.tone({ freq: 440, dur: 2 });
-    const live = engine.liveVoices();
+    const live = engine.soundingVoices();
     expect(live).toHaveLength(MAX_VOICES);
     expect(live.filter((v) => v.priority === 0)).toHaveLength(2);
   });
@@ -275,6 +286,9 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     engine.playTileSlam(false, 'rubi');
     expect(engine.voices.length).toBeGreaterThan(0);
     engine.toggleMute();
+    // tudo cortado na hora (só o fade de 15 ms) e desmontado quando para
+    expect(engine.soundingVoices()).toHaveLength(0);
+    engine.ctx.advance(0.1);
     expect(engine.voices).toHaveLength(0);
     expect(engine.isPlayingMusic).toBe(false);
     engine.toggleMute(); // desmutar volta a trilha
