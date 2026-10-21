@@ -1,8 +1,9 @@
 /**
- * Campanha: 3 regiões, 6 rivais cada (18 no total). Desde o Patch 0.6.1 o caminho
+ * Campanha: 3 regiões, 6 personagens cada (18 no total). Desde o Patch 0.6.1 o caminho
  * não é mais uma fila fixa: cada run sorteia uma teia de nós por região (ver
- * engine/campaignMap.js). Em `nodes`, a ordem é: o rival de abertura (andar 1), os
- * 4 comuns (espalhados pelos andares 2–5) e o chefe (andar 6).
+ * engine/campaignMap.js). Em `nodes`, os 5 primeiros são os candidatos da região e o
+ * último é o chefe. Desde o 0.6.2 cada run escala 15: o chefe e 4 dos 5 candidatos
+ * de cada região (o de menos corações abre a região, os outros 3 vão para os caminhos).
  *
  * Também mora aqui o que muda conforme a região: a chance de cada raridade na
  * Loja Clandestina, o clima da mesa (`atmosphere`) e a faixa de música

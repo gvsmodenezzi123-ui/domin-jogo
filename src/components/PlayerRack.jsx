@@ -4,7 +4,7 @@ import DominoTile from './DominoTile.jsx';
 import { computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
-import { CoinGlyph, EyeGlyph } from './UiGlyphs.jsx';
+import { CoinGlyph, EyeGlyph, MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -115,8 +115,11 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
   );
 });
 
-/** Sua hotbar de talismãs, o DESFAZER do Relógio e o atalho do DEV. */
-const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, canUndo, onUndo, devUnlocked, onOpenDev, press }) {
+/**
+ * Sua hotbar de talismãs, o DESFAZER do Relógio, o atalho do DEV e (desde o 0.6.2) o som e
+ * o menu da partida, que saíram de cima da mão do rival.
+ */
+const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, canUndo, onUndo, devUnlocked, onOpenDev, muted, onToggleMute, onOpenMenu, press }) {
   return (
     <div className="flex h-[34px] items-center gap-2 px-3 pt-1">
       <Hotbar
@@ -138,6 +141,22 @@ const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, can
         {devUnlocked && (
           <button type="button" className="dev-chip" onClick={onOpenDev} aria-label="Abrir painel de testes">
             DEV
+          </button>
+        )}
+        {onToggleMute && (
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="icon-btn icon-btn-sm hud-icon"
+            aria-label={muted ? 'Ligar som e música' : 'Desligar som e música'}
+            aria-pressed={muted}
+          >
+            <SpeakerGlyph muted={muted} size={16} />
+          </button>
+        )}
+        {onOpenMenu && (
+          <button type="button" onClick={onOpenMenu} className="icon-btn icon-btn-sm hud-icon" aria-label="Menu">
+            <MenuGlyph size={16} />
           </button>
         )}
       </div>
@@ -355,6 +374,9 @@ function PlayerRack({
   onUndo,
   devUnlocked = false,
   onOpenDev,
+  muted = false,
+  onToggleMute,
+  onOpenMenu,
   press,
   knownIds,
   rivalName = 'o rival',
@@ -375,6 +397,9 @@ function PlayerRack({
         onUndo={onUndo}
         devUnlocked={devUnlocked}
         onOpenDev={onOpenDev}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        onOpenMenu={onOpenMenu}
         press={press}
       />
 

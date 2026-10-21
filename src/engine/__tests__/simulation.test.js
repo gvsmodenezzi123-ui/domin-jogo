@@ -139,6 +139,6 @@ describe('simulação de duelos completos', () => {
     }
     expect(wins.player + wins.tioZe).toBe(300);
     // os quatro desfechos aparecem em 300 duelos
-    expect([...kinds].sort()).toEqual(['bucha', 'cruzada', 'normal', 'tranca']);
+    expect([...kinds].sort()).toEqual(['bucha', 'cruzada', 'duasPontas', 'normal', 'tranca']);
   }, 60000);
 });

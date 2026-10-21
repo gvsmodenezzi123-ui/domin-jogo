@@ -109,6 +109,7 @@ const FX_DELAY = {
   discard: 0,
   undo: 0,
   proc: 90,
+  callout: 60,
   bonus5: 140,
   coins: 180,
   roundEnd: 260,
@@ -175,6 +176,12 @@ function runEventFx(ev, shell, table, offset = 0) {
       break;
     case 'proc':
       at(() => sound.playChime(ev.tone));
+      break;
+    case 'callout':
+      at(() => {
+        sound.playChime(ev.by === 'player' ? 'player' : 'enemy');
+        haptic([30, 30, 60]);
+      });
       break;
     case 'undo':
       at(() => sound.playRewind());
@@ -457,6 +464,14 @@ export default function App() {
           const from = procOrigin(ev, tileId, tableRef.current);
           return from && { from, text: ev.text, tone: ev.tone };
         }, offset + FX_DELAY.proc);
+      }
+      // "Nas duas pontas!": balão rápido no alto do feltro, logo que a pedra bate
+      if (ev.type === 'callout') {
+        pushFloat(() => {
+          const felt = tableRef.current?.getBoundingClientRect();
+          if (!felt) return null;
+          return { from: { x: felt.left + felt.width / 2, y: felt.top + felt.height * 0.3 }, text: ev.text, tone: ev.by === 'player' ? 'player' : 'enemy', kind: 'callout' };
+        }, offset + FX_DELAY.callout);
       }
     }
   }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
@@ -773,8 +788,12 @@ export default function App() {
       clearFloats();
       clearTableAnim();
     }
-    // tranca forçada e vitória abrem o resultado: fecha o painel para ver
-    if (action.op === 'forceTranca' || action.op === 'winMatch' || action.op === 'setRival') setDevOpen(false);
+    if (action.op === 'openStop') {
+      clearFloats();
+      clearTableAnim();
+    }
+    // tranca forçada, vitória e os atalhos de cena abrem outra tela: fecha o painel para ver
+    if (['forceTranca', 'winMatch', 'setRival', 'openStop'].includes(action.op)) setDevOpen(false);
   };
 
   const veil = <ScreenVeil stage={veilStage} />;
@@ -914,9 +933,6 @@ export default function App() {
         speech={speech}
         handRef={rivalHandRef}
         roundKey={`${state.run.match}:${state.round}`}
-        muted={muted}
-        onToggleMute={toggleMute}
-        onOpenMenu={openMenu}
         press={press}
       />
 
@@ -967,6 +983,9 @@ export default function App() {
         onUndo={handleUndo}
         devUnlocked={devUnlocked}
         onOpenDev={openDev}
+        muted={muted}
+        onToggleMute={toggleMute}
+        onOpenMenu={openMenu}
         press={press}
         knownIds={knownIds}
         rivalName={rival.name}

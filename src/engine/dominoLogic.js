@@ -23,6 +23,7 @@ export const MULTIPLE_OF_FIVE_BONUS = 3;
 export const DAMAGE = Object.freeze({
   normal: 1,
   bucha: 2,
+  duasPontas: 2,
   cruzada: 3,
   tranca: 1,
 });
@@ -324,6 +325,8 @@ export function getTrancaReason({ board, hands, boneyard }, rules = {}) {
  * Tipo da batida feita com `tile`, dadas as pontas ANTES da jogada.
  *  - cruzada: a pedra casa com as duas pontas ao mesmo tempo (ex.: 3|5 em pontas 3 e 5,
  *    ou bucha 4|4 em pontas 4 e 4);
+ *  - duasPontas (Patch 0.6.2, "Nas duas pontas!"): a pedra serve nas duas pontas, mas não
+ *    fecha as duas (ex.: 4|2 em pontas 4 e 4: dava para bater de qualquer lado);
  *  - bucha: a última pedra é uma bucha (dupla);
  *  - normal: qualquer outra.
  */
@@ -332,6 +335,7 @@ export function classifyBatida(tile, endsBefore) {
     const tileValues = [tile.a, tile.b].sort((x, y) => x - y);
     const endValues = [endsBefore.left, endsBefore.right].sort((x, y) => x - y);
     if (tileValues[0] === endValues[0] && tileValues[1] === endValues[1]) return 'cruzada';
+    if (canPlayOn(tile, endsBefore.left) && canPlayOn(tile, endsBefore.right)) return 'duasPontas';
   }
   if (isDouble(tile)) return 'bucha';
   return 'normal';

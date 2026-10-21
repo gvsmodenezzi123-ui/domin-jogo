@@ -3,7 +3,7 @@ import { REGIONS } from '../../data/campaign.js';
 import { RELICS } from '../../data/relics.js';
 import { ENHANCEMENTS } from '../../data/enhancedTiles.js';
 import { RIVALS } from '../../data/rivals.js';
-import { availableNodes, campaignOf, currentNode, generateCampaign } from '../campaignMap.js';
+import { availableNodes, campaignOf, currentNode, generateCampaign, runCast } from '../campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -63,14 +63,15 @@ function table(rivalId, { player, tioZe, board = placeTile(createEmptyBoard(), t
   };
 }
 
-describe('mapa da campanha em teia (Patch 0.6.1)', () => {
-  it('NOVO JOGO para no mapa antes do 1º nó; o único caminho é a entrada da região 1 (Tio Zé)', () => {
+describe('mapa da campanha em teia (Patch 0.6.1/0.6.2)', () => {
+  it('NOVO JOGO para no mapa antes do 1º nó; o único caminho é a entrada da região 1 (o rival de abertura sorteado)', () => {
     const s = freshRun();
     expect(s.phase).toBe('map');
     expect(s.run).toMatchObject({ node: null, cleared: [], path: [], match: 0 });
     const [entry] = availableNodes(s);
     expect(availableNodes(s)).toHaveLength(1);
-    expect(nodeOfId(s, entry)).toMatchObject({ region: 1, floor: 1, type: 'combat', rivalId: 'tioZe' });
+    expect(nodeOfId(s, entry)).toMatchObject({ region: 1, floor: 1, type: 'combat', rivalId: runCast(s.seed, 1).intro });
+    expect(REGIONS[0].nodes.slice(0, 5)).toContain(nodeOfId(s, entry).rivalId);
     expect(act(s, 'PLAY', { actor: 'player', tileId: '0-0', side: 'root' })).toBe(s);
   });
 
@@ -79,7 +80,7 @@ describe('mapa da campanha em teia (Patch 0.6.1)', () => {
     const [entry] = availableNodes(s);
     s = act(s, 'CHOOSE_NODE', { nodeId: entry, deck: deck() });
     expect(s.phase).toBe('playing');
-    expect(s.rivalId).toBe('tioZe');
+    expect(s.rivalId).toBe(runCast(s.seed, 1).intro);
     s = dev(s, 'winMatch');
     expect(s.phase).toBe('matchWon');
     expect(s.run.cleared).toEqual([entry]);
@@ -88,7 +89,7 @@ describe('mapa da campanha em teia (Patch 0.6.1)', () => {
     expect(s.shop).toBeNull();
     const next = availableNodes(s);
     expect(next).toEqual([...nodeOfId(s, entry).next]);
-    expect(next.length).toBeGreaterThanOrEqual(2);
+    expect(next.length).toBeGreaterThanOrEqual(1);
     for (const id of next) expect(nodeOfId(s, id).floor).toBe(2);
   });
 

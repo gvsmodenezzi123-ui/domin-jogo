@@ -11,6 +11,7 @@ import RivalAvatar from './RivalAvatar.jsx';
 const KIND_TITLE = {
   normal: 'BATIDA!',
   bucha: 'BATIDA DE BUCHA!',
+  duasPontas: 'NAS DUAS PONTAS!',
   cruzada: 'CRUZADA!',
   tranca: 'TRANCA!',
   nocaute: 'NOCAUTE!',
@@ -275,7 +276,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             </p>
 
             <p className="mt-3 font-term text-sm text-bone-400">
-              Dano: batida {DAMAGE.normal} · bucha {DAMAGE.bucha} · cruzada {DAMAGE.cruzada} · tranca {DAMAGE.tranca}
+              Dano: batida {DAMAGE.normal} · bucha {DAMAGE.bucha} · duas pontas {DAMAGE.duasPontas} · cruzada {DAMAGE.cruzada} · tranca {DAMAGE.tranca}
             </p>
 
             <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onNext}>

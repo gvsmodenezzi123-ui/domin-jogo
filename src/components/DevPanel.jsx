@@ -156,6 +156,23 @@ export default function DevPanel({ state, onAction, onClose }) {
           </button>
         </section>
 
+        <section className="dev-section mt-3 pt-3" aria-labelledby="dev-stops">
+          <h3 id="dev-stops" className="dev-label">
+            ENTRAR DIRETO (REGIÃO ATUAL)
+          </h3>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <button type="button" data-tone="shop" className="btn-pixel btn-mini" onClick={() => dev('openStop', { kind: 'shop' })}>
+              LOJA DO VALTINHO
+            </button>
+            <button type="button" data-tone="blood" className="btn-pixel btn-mini" onClick={() => dev('openStop', { kind: 'black' })}>
+              MERCADO NEGRO
+            </button>
+            <button type="button" data-tone="play" className="btn-pixel btn-mini" onClick={() => dev('openStop', { kind: 'coins' })}>
+              SEU TIÃO
+            </button>
+          </div>
+        </section>
+
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-res">
           <h3 id="dev-res" className="dev-label">
             RECURSOS E MESA

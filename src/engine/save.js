@@ -8,6 +8,8 @@
  *
  * Versão 2 (Patch 0.6.1): a teia da campanha sai da semente; o save guarda a semente,
  * o nó atual, os concluídos e o caminho. Saves da versão 1 (trilha fixa) não valem mais.
+ * Versão 3 (Patch 0.6.2): a teia mudou (15 rivais por run, nós únicos por região), então
+ * a mesma semente gera outro mapa: saves da versão 2 também não valem mais.
  */
 
 import { RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
@@ -15,7 +17,7 @@ import { generateCampaign } from './campaignMap.js';
 import { ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { FULL_SET, MAX_HEARTS } from './dominoLogic.js';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const RESUMES = ['map', 'shop', 'blackMarket'];
 
 export function snapshotRun(state, resume, savedAt = 0) {

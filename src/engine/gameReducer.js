@@ -25,7 +25,7 @@ import { RELICS, RELIC_SLOTS, getRelic, markUsed } from '../data/relics.js';
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
 import { FIRST_RIVAL, RIVALS, getRival } from '../data/rivals.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
-import { availableNodes, campaignOf, coinReward, currentNode } from './campaignMap.js';
+import { availableNodes, campaignOf, coinReward, currentNode, regionIdOf } from './campaignMap.js';
 import {
   DAMAGE,
   MAX_HEARTS,
@@ -487,6 +487,8 @@ function playTile(state, { actor, tileId, side }) {
       boosted.steps.push({ id: null, before: boosted.damage, after: boosted.damage * 2, label: 'REI DA BUCHA' });
       boosted.damage *= 2;
     }
+    // Patch 0.6.2: batida com pedra que servia nas duas pontas ganha o balão "Nas duas pontas!"
+    if (kind === 'duasPontas') next = emit(next, { type: 'callout', id: 'duasPontas', text: 'NAS DUAS PONTAS!', by: actor });
     for (const step of boosted.steps) {
       next = proc(next, {
         source: step.id ? 'relic' : 'rival',
@@ -792,10 +794,16 @@ function chooseNode(state, { nodeId, deck }) {
   const options = availableNodes(state);
   const id = nodeId ?? (options.length === 1 ? options[0] : null);
   if (!id || !options.includes(id)) return state;
-  const node = campaignOf(state).byId.get(id);
+  return enterNode(state, campaignOf(state).byId.get(id), deck);
+}
+
+/** Entra no nó (sem conferir se ele está aberto: o mapa confere; o painel DEV pula direto). */
+function enterNode(state, node, deck) {
+  const id = node.id;
   if ((node.type === 'combat' || node.type === 'boss') && !deck) return state;
-  const path = state.run.path.at(-1) === id ? state.run.path : [...state.run.path, id];
-  let next = { ...state, run: { ...state.run, node: id, path } };
+  const path = state.run.path.at(-1) === id ? state.run.path : [...state.run.path.filter((p) => p !== id), id];
+  const cleared = state.run.cleared.filter((c) => c !== id);
+  let next = { ...state, pending: null, run: { ...state.run, node: id, path, cleared } };
   next = emit(next, { type: 'nodeEnter', node: id, kind: node.type });
   switch (node.type) {
     case 'combat':
@@ -953,6 +961,17 @@ function devAction(state, action) {
     case 'winMatch': {
       const next = directDamage(state, 'tioZe', state.hearts.tioZe, 'dev');
       return checkKnockout(next) ?? next;
+    }
+    case 'openStop': {
+      // atalho do painel DEV: entra na loja, no Mercado Negro ou no Seu Tião da região atual
+      if (!['shop', 'black', 'coins'].includes(action.kind)) return state;
+      const campaign = campaignOf(state);
+      const region = regionIdOf(state);
+      const stops = [...campaign.byId.values()].filter((n) => n.type === action.kind);
+      const node = stops.find((n) => n.region === region) ?? stops[0];
+      if (!node) return state;
+      const fresh = { ...state, shop: null, market: null, coinEvent: null, roundResult: null };
+      return emit(enterNode(fresh, node, null), { type: 'dev', op, kind: action.kind });
     }
     case 'setRival': {
       if (!RIVALS[action.rivalId] || !action.deck) return state;

@@ -118,12 +118,16 @@ describe('batida e dano', () => {
     expect(classifyBatida(t(6, 6), { left: 6, right: 1 })).toBe('bucha');
     expect(classifyBatida(t(3, 6), { left: 6, right: 3 })).toBe('cruzada');
     expect(classifyBatida(t(4, 4), { left: 4, right: 4 })).toBe('cruzada');
-    // pontas iguais com pedra não-dupla não é cruzada
-    expect(classifyBatida(t(4, 2), { left: 4, right: 4 })).toBe('normal');
+    // pontas iguais com pedra não-dupla não é cruzada: é "nas duas pontas" (Patch 0.6.2)
+    expect(classifyBatida(t(4, 2), { left: 4, right: 4 })).toBe('duasPontas');
+    expect(classifyBatida(t(2, 4), { left: 4, right: 4 })).toBe('duasPontas');
+    // pedra que só serve numa ponta continua normal (ou bucha)
+    expect(classifyBatida(t(4, 2), { left: 4, right: 5 })).toBe('normal');
+    expect(classifyBatida(t(5, 5), { left: 4, right: 5 })).toBe('bucha');
   });
 
   it('valores de dano', () => {
-    expect(DAMAGE).toEqual({ normal: 1, bucha: 2, cruzada: 3, tranca: 1 });
+    expect(DAMAGE).toEqual({ normal: 1, bucha: 2, duasPontas: 2, cruzada: 3, tranca: 1 });
   });
 
   it('tranca: menor soma vence; empate não dá dano', () => {

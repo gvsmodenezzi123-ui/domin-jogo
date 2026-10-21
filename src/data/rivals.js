@@ -894,9 +894,9 @@ export const getRival = (id) => RIVALS[id] ?? RIVALS.tioZe;
 // ---------------------------------------------------------------------------
 
 export const AI_TIERS = Object.freeze({
-  intuitivo: Object.freeze({ id: 'intuitivo', label: 'INTUITIVO', maxEnhanced: 0, maxRelics: 1 }),
+  intuitivo: Object.freeze({ id: 'intuitivo', label: 'INTUITIVA', maxEnhanced: 0, maxRelics: 1 }),
   calculista: Object.freeze({ id: 'calculista', label: 'CALCULISTA', maxEnhanced: 2, maxRelics: 2 }),
-  agressivo: Object.freeze({ id: 'agressivo', label: 'AGRESSIVO', maxEnhanced: 3, maxRelics: 2 }),
+  agressivo: Object.freeze({ id: 'agressivo', label: 'AGRESSIVA', maxEnhanced: 3, maxRelics: 2 }),
 });
 
 /** Nível de jogo do rival: chefes e a Região 3 são agressivos, a Região 2 calcula, a 1 joga no instinto. */

@@ -6,7 +6,6 @@ import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
-import { MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
 
 /**
  * O outro lado da mesa, com o layout TRAVADO (nada aqui muda de tamanho
@@ -37,9 +36,6 @@ function RivalBench({
   speech,
   handRef,
   roundKey,
-  muted,
-  onToggleMute,
-  onOpenMenu,
   press,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
@@ -84,23 +80,9 @@ function RivalBench({
           revealedIds={revealedIds}
           roundKey={roundKey}
           containerRef={handRef}
-          className="absolute right-2 top-2 flex h-16 w-[200px] items-center justify-end"
+          className="absolute right-2 top-4 flex h-16 w-[200px] items-center justify-end"
         />
 
-        <div className="absolute bottom-1 right-2 flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onToggleMute}
-            className="icon-btn icon-btn-sm"
-            aria-label={muted ? 'Ligar som e música' : 'Desligar som e música'}
-            aria-pressed={muted}
-          >
-            <SpeakerGlyph muted={muted} size={18} />
-          </button>
-          <button type="button" onClick={onOpenMenu} className="icon-btn icon-btn-sm" aria-label="Menu">
-            <MenuGlyph size={18} />
-          </button>
-        </div>
       </div>
 
       {/* fala: logo abaixo do cabeçalho, sobre o feltro, com a cauda subindo até o retrato

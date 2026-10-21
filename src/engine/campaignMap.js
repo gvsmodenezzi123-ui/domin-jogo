@@ -1,29 +1,34 @@
 /**
- * Mapa da campanha em teia (Patch 0.6.1), no estilo Slay the Spire / FTL.
+ * Mapa da campanha em teia (Patch 0.6.1, refeito no 0.6.2), no estilo Slay the Spire / FTL.
  *
- * Cada run sorteia, a partir da semente dela, uma teia para cada uma das 3 regiões:
- *   andar 1      entrada única: o rival de abertura da região (Tio Zé, Marcão, Carlinhos)
- *   andares 2–5  2 ou 3 caminhos (esquerda, centro, direita) que se cruzam entre vizinhos,
- *                misturando COMBATE (um dos 4 rivais comuns da região), LOJA DO VALTINHO,
- *                MERCADO NEGRO e o NPC DE MOEDAS (Seu Tião)
+ * Elenco da run (0.6.2): dos 18 personagens, cada run escala 15. Por região, o chefe é
+ * fixo e 4 dos outros 5 são sorteados pela semente (um fica de fora, e muda de run para
+ * run). Entre os 4, o de menos corações abre a região; os outros 3 vão para os caminhos.
+ *
+ * Cada região sobe 6 andares:
+ *   andar 1      entrada única: o rival de abertura sorteado
+ *   andares 2–5  6 nós espalhados em 1 a 3 faixas por andar (esquerda, centro, direita),
+ *                ligados só entre vizinhos: os 3 rivais comuns, a LOJA DO VALTINHO, o
+ *                MERCADO NEGRO e o NPC DE MOEDAS (Seu Tião), cada um UMA vez por região
  *   andar 6      todos os caminhos convergem para a mesa do chefe da região
  *
  * Garantias (conferidas a cada sorteio; se uma falhar, sorteia de novo com a mesma semente):
- *   - os 4 rivais comuns de cada região estão em algum nó (os 18 aparecem no mapa);
- *     os que ficam fora do caminho que você escolher não são enfrentados nesta run;
- *   - todo caminho tem 2 ou 3 combates entre os andares 2 e 5 e nunca o mesmo rival duas vezes;
- *   - toda região tem ao menos 1 loja, 1 mercado negro e 1 NPC de moedas, e nenhum caminho
- *     passa por dois nós especiais iguais seguidos;
- *   - pelo menos duas bifurcações põem lado a lado uma mesa e um desvio sem luta.
+ *   - nenhum rival, loja, mercado ou Seu Tião aparece duas vezes na mesma região;
+ *   - todo caminho tem de 1 a 3 mesas entre os andares 2 e 5, e algum caminho tem 2 ou mais;
+ *   - pelo menos uma bifurcação põe lado a lado uma mesa e um desvio sem luta.
  * Tudo puro e determinístico: a mesma semente sempre gera o mesmo mapa (o save guarda só
  * a semente e o caminho percorrido).
  */
 
 import { REGIONS } from '../data/campaign.js';
+import { RIVALS } from '../data/rivals.js';
 import { createSeededRng } from './dominoLogic.js';
 
 export const FLOORS = 6;
 export const LANES = 3;
+/** Rivais por região numa run (entrada + 3 comuns + chefe) e na run inteira. */
+export const RIVALS_PER_REGION = 5;
+export const CAMPAIGN_RIVALS = RIVALS_PER_REGION * REGIONS.length;
 /** Tipos de nó. */
 export const NODE_TYPES = Object.freeze({ combat: 'combat', boss: 'boss', shop: 'shop', black: 'black', coins: 'coins' });
 /** Rótulos para a tela. */
@@ -39,7 +44,20 @@ export const COIN_EVENT_MIN = 1;
 export const COIN_EVENT_MAX = 12;
 
 const SPECIALS = ['shop', 'black', 'coins'];
-const MAX_TRIES = 400;
+const MAX_TRIES = 200;
+/** Quantos nós cada andar do meio tem (2, 2, 1, 1 em alguma ordem, ou 3, 1, 1, 1): sempre 6. */
+const FLOOR_PATTERNS = [
+  [2, 2, 1, 1],
+  [2, 1, 2, 1],
+  [2, 1, 1, 2],
+  [1, 2, 2, 1],
+  [1, 2, 1, 2],
+  [1, 1, 2, 2],
+  [3, 1, 1, 1],
+  [1, 3, 1, 1],
+  [1, 1, 3, 1],
+  [1, 1, 1, 3],
+];
 
 export const nodeId = (region, floor, lane) => `r${region}-f${floor}-l${lane}`;
 
@@ -62,16 +80,34 @@ const shuffled = (items, rng) => {
   return out;
 };
 
-/** Rivais da região: o de abertura, os 4 comuns e o chefe (a ordem de `REGIONS[].nodes`). */
-export function regionCast(regionId) {
+/**
+ * Elenco desta run na região: o chefe fixo e 4 dos outros 5 (sorteados pela semente).
+ * O de menos corações entre os 4 abre a região; os outros 3 são os comuns dos caminhos.
+ * `benched` é quem ficou de fora nesta run.
+ */
+export function runCast(seed, regionId) {
   const list = REGIONS[regionId - 1].nodes;
-  return { intro: list[0], commons: list.slice(1, -1), boss: list[list.length - 1] };
+  const boss = list[list.length - 1];
+  const pool = list.slice(0, -1);
+  const rng = createSeededRng(mixSeed(seed ?? 0, `elenco-${regionId}`));
+  const picked = shuffled(pool, rng).slice(0, RIVALS_PER_REGION - 1);
+  const least = Math.min(...picked.map((id) => RIVALS[id].hearts));
+  const intro = picked.find((id) => RIVALS[id].hearts === least);
+  return {
+    intro,
+    commons: picked.filter((id) => id !== intro),
+    boss,
+    benched: pool.filter((id) => !picked.includes(id)),
+  };
 }
 
-/** Faixas ocupadas em cada andar do meio (2 ou 3, sempre com vizinhos ligáveis). */
-function pickLanes(rng) {
-  if (rng() < 0.62) return [0, 1, 2];
-  return [[0, 1], [1, 2], [0, 2]][Math.floor(rng() * 3)];
+/** Faixas ocupadas por um andar com `count` nós (vizinhos sempre ligáveis). */
+function lanesFor(count, rng) {
+  if (count >= 3) return [0, 1, 2];
+  if (count === 1) return [1];
+  const roll = rng();
+  if (roll < 0.6) return [0, 2];
+  return roll < 0.8 ? [0, 1] : [1, 2];
 }
 
 /** Liga um andar ao próximo: só para a mesma faixa ou a vizinha; ninguém fica sem saída nem sem entrada. */
@@ -111,11 +147,27 @@ function middlePaths(floors) {
   return paths;
 }
 
+/** Todas as ordens distintas de uma lista com repetidos (6 itens → no máximo 120). */
+function arrangements(items) {
+  if (items.length <= 1) return [items.slice()];
+  const out = [];
+  const seen = new Set();
+  items.forEach((item, i) => {
+    if (seen.has(item)) return;
+    seen.add(item);
+    const rest = [...items.slice(0, i), ...items.slice(i + 1)];
+    for (const tail of arrangements(rest)) out.push([item, ...tail]);
+  });
+  return out;
+}
+
+const ARRANGEMENTS = arrangements(['combat', 'combat', 'combat', ...SPECIALS]);
+
 /** Sorteia uma teia candidata para a região; devolve null se ela não passar nas garantias. */
-function tryRegion(regionId, rng) {
-  const cast = regionCast(regionId);
+function tryRegion(regionId, cast, rng) {
+  const pattern = FLOOR_PATTERNS[Math.floor(rng() * FLOOR_PATTERNS.length)];
   const lanesByFloor = { 1: [1], 6: [1] };
-  for (let f = 2; f <= 5; f += 1) lanesByFloor[f] = pickLanes(rng);
+  for (let f = 2; f <= 5; f += 1) lanesByFloor[f] = lanesFor(pattern[f - 2], rng);
 
   const floors = { byId: new Map() };
   for (let f = 1; f <= FLOORS; f += 1) {
@@ -131,122 +183,34 @@ function tryRegion(regionId, rng) {
   Object.assign(floors[1][0], { type: 'combat', rivalId: cast.intro });
   Object.assign(floors[6][0], { type: 'boss', rivalId: cast.boss, boss: true });
 
-  // andares do meio: começa sorteado e é consertado caminho a caminho
+  // andares do meio: os 6 itens da região (3 mesas, loja, mercado, Seu Tião), uma vez cada
   const middle = [2, 3, 4, 5].flatMap((f) => floors[f]);
-  for (const node of middle) node.type = rng() < 0.55 ? 'combat' : SPECIALS[Math.floor(rng() * SPECIALS.length)];
   const paths = middlePaths(floors);
-  const pick = (list) => list[Math.floor(rng() * list.length)];
-  /** Um especial que não repete o vizinho em nenhum caminho que passa pelo nó. */
-  const specialFor = (node) => {
-    const banned = new Set();
-    for (const path of paths) {
-      const i = path.indexOf(node);
-      if (i < 0) continue;
-      if (path[i - 1] && path[i - 1].type !== 'combat') banned.add(path[i - 1].type);
-      if (path[i + 1] && path[i + 1].type !== 'combat') banned.add(path[i + 1].type);
-    }
-    const ok = SPECIALS.filter((t) => !banned.has(t));
-    return ok.length ? pick(ok) : null;
-  };
-
-  for (let pass = 0; pass < 40; pass += 1) {
-    let changed = false;
-    for (const path of paths) {
-      const fights = path.filter((n) => n.type === 'combat');
-      if (fights.length < 2) {
-        pick(path.filter((n) => n.type !== 'combat')).type = 'combat';
-        changed = true;
-      } else if (fights.length > 3) {
-        const node = pick(fights);
-        const type = specialFor(node);
-        if (type) {
-          node.type = type;
-          changed = true;
-        }
-      }
-    }
-    // cada especial pelo menos uma vez: troca um especial repetido (ou um combate que sobra)
-    for (const special of SPECIALS) {
-      if (middle.some((n) => n.type === special)) continue;
-      const counts = SPECIALS.map((t) => [t, middle.filter((n) => n.type === t).length]);
-      const extra = counts.filter(([, c]) => c > 1).map(([t]) => t);
-      const candidates = middle.filter((n) => extra.includes(n.type));
-      if (candidates.length) pick(candidates).type = special;
-      else pick(middle.filter((n) => n.type === 'combat')).type = special;
-      changed = true;
-    }
-    // nada de dois especiais iguais seguidos num caminho
-    for (const path of paths) {
-      for (let i = 1; i < path.length; i += 1) {
-        if (path[i].type !== 'combat' && path[i].type === path[i - 1].type) {
-          const type = specialFor(path[i]);
-          path[i].type = type ?? 'combat';
-          changed = true;
-        }
-      }
-    }
-    if (!changed) break;
-  }
-
-  const combats = middle.filter((n) => n.type === 'combat');
-  if (combats.length < cast.commons.length) return null;
-  for (const special of SPECIALS) if (!middle.some((n) => n.type === special)) return null;
-
-  // rivais: dois combates que dividem um caminho nunca têm o mesmo rival, e os 4 comuns aparecem
-  const conflicts = new Map(combats.map((n) => [n, new Set()]));
-  for (const path of paths) {
-    const fights = path.filter((n) => n.type === 'combat');
-    for (const a of fights) for (const b of fights) if (a !== b) conflicts.get(a).add(b);
-  }
-  const order = shuffled(combats, rng).sort((a, b) => a.floor - b.floor);
+  const forks = [floors[1][0], ...middle].filter((n) => n.floor <= 4 && n.next.length >= 2);
+  const valid = ARRANGEMENTS.filter((types) => {
+    const typeOf = new Map(middle.map((n, i) => [n, types[i]]));
+    const fights = paths.map((path) => path.filter((n) => typeOf.get(n) === 'combat').length);
+    if (Math.min(...fights) < 1 || Math.max(...fights) < 2) return false;
+    // escolha tática: numa bifurcação, uma mesa ao lado de um desvio sem luta
+    return forks.some((n) => {
+      const kinds = n.next.map((id) => typeOf.get(floors.byId.get(id)) ?? 'boss');
+      return kinds.includes('combat') && kinds.some((k) => k !== 'combat' && k !== 'boss');
+    });
+  });
+  if (!valid.length) return null;
+  const types = valid[Math.floor(rng() * valid.length)];
+  middle.forEach((n, i) => {
+    n.type = types[i];
+  });
   const commons = shuffled(cast.commons, rng);
-  const assign = (i) => {
-    if (i === order.length) return commons.every((id) => order.some((n) => n.rivalId === id));
-    const node = order[i];
-    // preferência: quem ainda não apareceu (todos os comuns entram no mapa), depois quem
-    // aparece menos no mesmo andar e no mapa (esquerda, centro e direita com rivais diferentes)
-    const count = (id, test) => order.filter((n) => n.rivalId === id && test(n)).length;
-    const options = commons
-      .map((id, k) => ({ id, k, total: count(id, () => true), floor: count(id, (n) => n.floor === node.floor) }))
-      .sort((a, b) => (a.total > 0) - (b.total > 0) || a.floor - b.floor || a.total - b.total || a.k - b.k)
-      .map((o) => o.id);
-    for (const id of options) {
-      if ([...conflicts.get(node)].some((other) => other.rivalId === id)) continue;
-      node.rivalId = id;
-      if (assign(i + 1)) return true;
-      node.rivalId = null;
-    }
-    return false;
-  };
-  if (!assign(0)) return null;
-
-  // um andar com 2+ combates mostra rivais diferentes (escolher o caminho muda quem você enfrenta)
-  for (let f = 2; f <= 5; f += 1) {
-    const fights = floors[f].filter((n) => n.type === 'combat');
-    if (fights.length >= 2 && new Set(fights.map((n) => n.rivalId)).size === 1) return null;
-  }
-
-  for (const path of paths) {
-    const fights = path.filter((n) => n.type === 'combat');
-    if (fights.length < 2 || fights.length > 3) return null;
-    if (new Set(fights.map((n) => n.rivalId)).size !== fights.length) return null;
-    for (let i = 1; i < path.length; i += 1) {
-      if (path[i].type !== 'combat' && path[i].type === path[i - 1].type) return null;
-    }
-  }
+  middle.filter((n) => n.type === 'combat').forEach((n, i) => {
+    n.rivalId = commons[i];
+  });
 
   const all = Array.from({ length: FLOORS }, (_, i) => floors[i + 1]).flat();
-
-  // escolha tática de verdade: pelo menos duas bifurcações oferecem mesa OU desvio sem luta
-  const tactical = all.filter((n) => {
-    if (n.floor > 4 || n.next.length < 2) return false;
-    const types = n.next.map((id) => floors.byId.get(id).type);
-    return types.includes('combat') && types.some((t) => t !== 'combat');
-  });
-  if (tactical.length < 2) return null;
-
   return {
     id: regionId,
+    cast,
     entry: floors[1][0].id,
     boss: floors[6][0].id,
     floors: Array.from({ length: FLOORS }, (_, i) => floors[i + 1].map((n) => n.id)),
@@ -254,29 +218,28 @@ function tryRegion(regionId, rng) {
   };
 }
 
-/** Teia de reserva (se nenhum sorteio passar): três caminhos limpos e fixos. */
-function fallbackRegion(regionId) {
-  const cast = regionCast(regionId);
-  const [a, b, c, d] = cast.commons;
+/** Teia de reserva (se nenhum sorteio passar): dois caminhos limpos e fixos. */
+function fallbackRegion(regionId, cast) {
+  const [a, b, c] = cast.commons;
   const layout = {
-    2: [['combat', a], ['shop'], ['combat', b]],
-    3: [['coins'], ['combat', c], ['black']],
-    4: [['combat', d], ['black'], ['combat', a]],
-    5: [['shop'], ['combat', b], ['coins']],
+    2: [['combat', a], ['shop']],
+    3: [['black'], ['combat', b]],
+    4: [['coins']],
+    5: [['combat', c]],
   };
+  const lanes = { 2: [0, 2], 3: [0, 2], 4: [1], 5: [1] };
   const nodes = [{ id: nodeId(regionId, 1, 1), region: regionId, floor: 1, lane: 1, type: 'combat', rivalId: cast.intro }];
   for (let f = 2; f <= 5; f += 1) {
-    layout[f].forEach(([type, rivalId], lane) => nodes.push({ id: nodeId(regionId, f, lane), region: regionId, floor: f, lane, type, rivalId: rivalId ?? null }));
+    layout[f].forEach(([type, rivalId], i) => nodes.push({ id: nodeId(regionId, f, lanes[f][i]), region: regionId, floor: f, lane: lanes[f][i], type, rivalId: rivalId ?? null }));
   }
   nodes.push({ id: nodeId(regionId, 6, 1), region: regionId, floor: 6, lane: 1, type: 'boss', rivalId: cast.boss });
   for (const node of nodes) {
-    if (node.floor === 1) node.next = [0, 1, 2].map((l) => nodeId(regionId, 2, l));
-    else if (node.floor === 5) node.next = [nodeId(regionId, 6, 1)];
-    else if (node.floor < 5) node.next = [node.lane].map((l) => nodeId(regionId, node.floor + 1, l));
-    else node.next = [];
+    const up = nodes.filter((n) => n.floor === node.floor + 1);
+    node.next = (node.floor === 2 ? up.filter((n) => n.lane === node.lane) : up).map((n) => n.id);
   }
   return {
     id: regionId,
+    cast,
     fallback: true,
     entry: nodeId(regionId, 1, 1),
     boss: nodeId(regionId, 6, 1),
@@ -292,15 +255,18 @@ export function generateCampaign(seed = 0) {
   const key = (Number.isFinite(seed) ? seed : 0) >>> 0;
   if (cache.has(key)) return cache.get(key);
   const regions = REGIONS.map((region) => {
+    const cast = runCast(key, region.id);
     const rng = createSeededRng(mixSeed(key, `regiao-${region.id}`));
     for (let i = 0; i < MAX_TRIES; i += 1) {
-      const built = tryRegion(region.id, rng);
+      const built = tryRegion(region.id, cast, rng);
       if (built) return built;
     }
-    return fallbackRegion(region.id);
+    return fallbackRegion(region.id, cast);
   });
   const byId = new Map(regions.flatMap((r) => r.nodes.map((n) => [n.id, n])));
-  const campaign = Object.freeze({ seed: key, regions, byId });
+  // os 15 da run, na ordem das regiões (entrada, comuns, chefe)
+  const cast = regions.flatMap((r) => [r.cast.intro, ...r.cast.commons, r.cast.boss]);
+  const campaign = Object.freeze({ seed: key, regions, byId, cast });
   if (cache.size > 32) cache.clear();
   cache.set(key, campaign);
   return campaign;

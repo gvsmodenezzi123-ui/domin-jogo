@@ -4650,7 +4650,7 @@
 }
 
 .web-edge {
-  stroke: rgba(236, 240, 246, 0.3);
+  stroke: rgba(236, 240, 246, 0.2);
   stroke-width: 2.5;
   stroke-dasharray: 5 7;
 }
@@ -4786,8 +4786,10 @@
   filter: grayscale(0.6) brightness(0.7);
 }
 
+/* ainda fora de alcance: um pouco apagado, para os caminhos abertos saltarem aos olhos */
 .web-ahead {
-  opacity: 0.92;
+  opacity: 0.6;
+  filter: saturate(0.55) brightness(0.82);
 }
 
 .web-gone {
@@ -5443,4 +5445,52 @@
 
 .reduce-motion .tiao-coin-x {
   display: none;
+}
+
+/* ---------- Patch 0.6.2: som e menu da partida na fileira dos seus talismãs ---------- */
+.icon-btn.hud-icon {
+  min-width: 34px;
+  min-height: 30px;
+  background: rgba(29, 17, 8, 0.72);
+}
+
+/* ---------- Patch 0.6.2: balão "Nas duas pontas!" ----------
+   balão de quadrinho estourando no alto do feltro (o seu é creme; o do rival, vermelho) */
+.float-text.float-callout {
+  z-index: 2;
+  padding: 10px 14px 11px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #1a1006;
+  background: #fff4cf;
+  border: 3px solid #0b0705;
+  border-radius: 14px;
+  box-shadow:
+    0 4px 0 #000,
+    0 0 0 3px rgba(255, 214, 90, 0.55),
+    0 10px 22px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.float-text.float-callout::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  width: 16px;
+  height: 11px;
+  translate: -50% 0;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 30% 100%);
+  filter: drop-shadow(0 3px 0 #0b0705);
+}
+
+.float-text.float-callout[data-tone='enemy'] {
+  color: #fff4ec;
+  background: #b3201c;
+  text-shadow: 0 2px 0 #000;
+  box-shadow:
+    0 4px 0 #000,
+    0 0 0 3px rgba(255, 90, 80, 0.45),
+    0 10px 22px rgba(0, 0, 0, 0.55);
 }

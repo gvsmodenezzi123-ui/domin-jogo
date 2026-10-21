@@ -4,7 +4,7 @@ import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../../data/relics.js';
 import { REGIONS } from '../../data/campaign.js';
 import { AI_TIERS, BOSS_IDS, PLAY_STYLES, RIVALS, RIVAL_IDS, tierOf } from '../../data/rivals.js';
 import { ENHANCEMENTS } from '../../data/enhancedTiles.js';
-import { availableNodes, campaignOf, generateCampaign } from '../campaignMap.js';
+import { availableNodes, campaignOf, generateCampaign, runCast } from '../campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -23,19 +23,22 @@ import { relicBuyBlock, rerollCost, sellPriceOf } from '../shop.js';
 const t = (a, b) => makeTile(a, b);
 const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra });
 
+/**
+ * Run nova já sentada na 1ª mesa (a entrada da região 1, o rival de abertura sorteado).
+ * Com `rivalId`, é o atalho START_DUEL direto na mesa desse rival.
+ */
 function newRun(seed = seedWithShop(42), extra = {}) {
-  return gameReducer(createInitialState(), {
-    type: 'START_DUEL',
-    deck: shuffle(FULL_SET, createSeededRng(seed)),
-    seed,
-    ...extra,
-  });
+  const deck = shuffle(FULL_SET, createSeededRng(seed));
+  if (extra.rivalId) return gameReducer(createInitialState(), { type: 'START_DUEL', deck, seed, ...extra });
+  const map = gameReducer(createInitialState(), { type: 'NEW_RUN', seed, ...extra });
+  return gameReducer(map, { type: 'CHOOSE_NODE', nodeId: availableNodes(map)[0], deck });
 }
 
-/** 1ª semente cuja teia tem uma Loja do Valtinho logo no 2º andar da Região 1. */
+/** 1ª semente cuja teia tem a Loja do Valtinho logo depois da entrada da Região 1. */
 function seedWithShop(from = 1) {
   let seed = from;
-  while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'shop')) seed += 1;
+  const shopNext = (c) => c.byId.get(c.regions[0].entry).next.some((id) => c.byId.get(id).type === 'shop');
+  while (!shopNext(generateCampaign(seed))) seed += 1;
   return seed;
 }
 
@@ -79,14 +82,16 @@ function deckWith(mine, theirs = []) {
 }
 
 describe('início da run', () => {
-  it('começa limpa: baralho 100% comum, sem talismãs, contra o Tio Zé', () => {
+  it('começa limpa: baralho 100% comum, sem talismãs, contra o rival de abertura sorteado', () => {
     const s = newRun();
+    const intro = runCast(s.seed, 1).intro;
     expect(s.relics.player).toEqual([]);
     expect(s.decks.player).toEqual({});
     expect([...s.hands.player, ...s.hands.tioZe].some((x) => x.enhancement)).toBe(false);
-    expect(s.rivalId).toBe('tioZe');
+    expect(s.rivalId).toBe(intro);
+    expect(RIVALS[intro].region).toBe(1);
     expect(s.run.match).toBe(1);
-    expect(s.hearts).toEqual({ player: MAX_HEARTS, tioZe: RIVALS.tioZe.hearts });
+    expect(s.hearts).toEqual({ player: MAX_HEARTS, tioZe: RIVALS[intro].hearts });
   });
 });
 
@@ -94,8 +99,9 @@ describe('partida → mapa → loja (caminho opcional) → próximo rival', () =
   it('vencer a partida paga o prêmio; a loja é um caminho do mapa, com 3 talismãs e 2 peças de grife', () => {
     const s = newRun();
     const won = dev(s, 'winMatch');
-    expect(won.coins.player).toBe(s.coins.player + MATCH_PRIZE);
-    expect(won.roundResult.prize).toBe(MATCH_PRIZE);
+    const prize = MATCH_PRIZE + RIVALS[s.rivalId].prizeBonus;
+    expect(won.coins.player).toBe(s.coins.player + prize);
+    expect(won.roundResult.prize).toBe(prize);
     expect(gameReducer(won, { type: 'OPEN_SHOP' })).toBe(won);
     const shop = toShop(s);
     expect(shop.phase).toBe('shop');

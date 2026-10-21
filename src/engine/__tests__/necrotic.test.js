@@ -4,15 +4,18 @@ import { NECROTIC_IDS, RELICS, RELIC_SLOTS } from '../../data/relics.js';
 import { RIVALS } from '../../data/rivals.js';
 import { MARKET_OFFERS, buildMarket, marketBuyBlock } from '../blackMarket.js';
 import {
+  CAMPAIGN_RIVALS,
   COIN_EVENT_MAX,
   COIN_EVENT_MIN,
   FLOORS,
   LANES,
+  RIVALS_PER_REGION,
   availableNodes,
   campaignOf,
   coinReward,
   generateCampaign,
   regionPaths,
+  runCast,
 } from '../campaignMap.js';
 import { DAMAGE, FULL_SET, classifyBatida, createEmptyBoard, getOpenEnds, makeTile, placeTile } from '../dominoLogic.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
@@ -40,7 +43,7 @@ function table({ player, tioZe = [t(1, 1), t(2, 2)], boneyard = [], relics = [],
   };
 }
 
-describe('teia procedural: as 3 regiões com os 18 rivais', () => {
+describe('teia procedural: 15 rivais por run e nada repetido por região (Patch 0.6.2)', () => {
   const seeds = Array.from({ length: 120 }, (_, i) => i * 7919 + 3);
 
   it('é determinística pela semente e muda de semente para semente', () => {
@@ -49,30 +52,67 @@ describe('teia procedural: as 3 regiões com os 18 rivais', () => {
     expect(layouts.size).toBe(seeds.length);
   });
 
-  it('andar 1 = um rival de entrada; andar 6 = só o chefe; andares 2–5 com 2 ou 3 caminhos', () => {
+  it('elenco: 15 por run (chefe fixo + 4 dos outros 5 de cada região); quem fica de fora muda entre runs', () => {
+    const benchedSeen = new Set();
+    for (const seed of seeds) {
+      const campaign = generateCampaign(seed);
+      expect(campaign.cast).toHaveLength(CAMPAIGN_RIVALS);
+      expect(CAMPAIGN_RIVALS).toBe(15);
+      expect(new Set(campaign.cast).size).toBe(15);
+      for (const region of campaign.regions) {
+        const all = REGIONS[region.id - 1].nodes;
+        const cast = runCast(seed, region.id);
+        expect(region.cast).toEqual(cast);
+        expect(cast.boss).toBe(all[5]);
+        expect([cast.intro, ...cast.commons]).toHaveLength(RIVALS_PER_REGION - 1);
+        expect(cast.benched).toHaveLength(1);
+        expect(new Set([cast.intro, ...cast.commons, ...cast.benched])).toEqual(new Set(all.slice(0, 5)));
+        // o de menos corações abre a região
+        for (const id of cast.commons) expect(RIVALS[id].hearts).toBeGreaterThanOrEqual(RIVALS[cast.intro].hearts);
+        for (const id of cast.benched) benchedSeen.add(id);
+        // quem ficou de fora não aparece no mapa
+        expect(region.nodes.some((n) => n.rivalId === cast.benched[0])).toBe(false);
+      }
+    }
+    // em runs diferentes, cada um dos 15 que não são chefe já ficou de fora alguma vez
+    expect(benchedSeen.size).toBe(15);
+  });
+
+  it('cada rival, a loja, o Mercado Negro e o Seu Tião aparecem UMA vez por região', () => {
+    for (const seed of seeds) {
+      const campaign = generateCampaign(seed);
+      for (const region of campaign.regions) {
+        expect(region.fallback, `semente ${seed}`).toBeFalsy();
+        const fights = region.nodes.filter((n) => n.rivalId).map((n) => n.rivalId);
+        expect(new Set(fights).size).toBe(fights.length);
+        expect(fights).toHaveLength(RIVALS_PER_REGION);
+        for (const kind of ['shop', 'black', 'coins']) expect(region.nodes.filter((n) => n.type === kind)).toHaveLength(1);
+        for (const id of fights) expect(RIVALS[id].region).toBe(region.id);
+      }
+    }
+  });
+
+  it('andar 1 = entrada única; andar 6 = só o chefe; andares 2–5 com 6 nós em 1 a 3 faixas', () => {
     for (const seed of seeds) {
       const campaign = generateCampaign(seed);
       expect(campaign.regions).toHaveLength(3);
       for (const region of campaign.regions) {
-        const cast = REGIONS[region.id - 1].nodes;
-        expect(region.fallback, `semente ${seed}`).toBeFalsy();
         expect(region.floors).toHaveLength(FLOORS);
         expect(region.floors[0]).toEqual([region.entry]);
         expect(region.floors[FLOORS - 1]).toEqual([region.boss]);
-        const entry = campaign.byId.get(region.entry);
-        expect(entry).toMatchObject({ type: 'combat', rivalId: cast[0], floor: 1 });
-        expect(campaign.byId.get(region.boss)).toMatchObject({ type: 'boss', boss: true, rivalId: cast[5], floor: FLOORS, next: [] });
+        expect(campaign.byId.get(region.entry)).toMatchObject({ type: 'combat', rivalId: region.cast.intro, floor: 1 });
+        expect(campaign.byId.get(region.boss)).toMatchObject({ type: 'boss', boss: true, rivalId: region.cast.boss, floor: FLOORS, next: [] });
+        expect(region.floors.slice(1, 5).flat()).toHaveLength(6);
         for (let f = 2; f <= 5; f += 1) {
-          const lanes = region.floors[f - 1].length;
-          expect(lanes).toBeGreaterThanOrEqual(2);
-          expect(lanes).toBeLessThanOrEqual(LANES);
+          expect(region.floors[f - 1].length).toBeGreaterThanOrEqual(1);
+          expect(region.floors[f - 1].length).toBeLessThanOrEqual(LANES);
         }
         // ligações só sobem um andar e só para a mesma faixa ou a vizinha
         for (const node of region.nodes) {
           for (const id of node.next) {
             const to = campaign.byId.get(id);
             expect(to.floor).toBe(node.floor + 1);
-            if (node.floor > 1 && to.floor < FLOORS) expect(Math.abs(to.lane - node.lane)).toBeLessThanOrEqual(1);
+            expect(Math.abs(to.lane - node.lane)).toBeLessThanOrEqual(1);
           }
           if (node.floor < FLOORS) expect(node.next.length, node.id).toBeGreaterThan(0);
         }
@@ -80,58 +120,37 @@ describe('teia procedural: as 3 regiões com os 18 rivais', () => {
     }
   });
 
-  it('os 18 rivais estão na teia: cada região usa todos os seus 4 comuns, e cada um só na região dele', () => {
-    for (const seed of seeds) {
-      const campaign = generateCampaign(seed);
-      const all = new Set();
-      for (const region of campaign.regions) {
-        const cast = REGIONS[region.id - 1].nodes;
-        const fights = region.nodes.filter((n) => n.type === 'combat' || n.type === 'boss');
-        for (const n of fights) {
-          expect(cast).toContain(n.rivalId);
-          expect(RIVALS[n.rivalId].region).toBe(region.id);
-          all.add(n.rivalId);
-        }
-        for (const id of cast) expect(fights.some((n) => n.rivalId === id), `semente ${seed}: ${id}`).toBe(true);
-      }
-      expect(all.size).toBe(18);
-    }
-  });
-
-  it('todo caminho: 2 ou 3 mesas no meio, rival nunca repete, e termina no chefe', () => {
+  it('todo caminho: 1 a 3 mesas no meio (algum com 2+), rival nunca repete, e termina no chefe', () => {
     for (const seed of seeds) {
       const campaign = generateCampaign(seed);
       for (const region of campaign.regions) {
         const paths = regionPaths(campaign, region.id);
-        expect(paths.length).toBeGreaterThanOrEqual(2);
+        let most = 0;
         for (const nodes of paths) {
           expect(nodes[0].id).toBe(region.entry);
           expect(nodes.at(-1).id).toBe(region.boss);
-          const middle = nodes.slice(1, -1);
-          const combats = middle.filter((n) => n.type === 'combat');
-          expect(combats.length).toBeGreaterThanOrEqual(2);
-          expect(combats.length).toBeLessThanOrEqual(3);
+          const combats = nodes.slice(1, -1).filter((n) => n.type === 'combat').length;
+          expect(combats).toBeGreaterThanOrEqual(1);
+          expect(combats).toBeLessThanOrEqual(3);
+          most = Math.max(most, combats);
           const rivals = nodes.filter((n) => n.rivalId).map((n) => n.rivalId);
           expect(new Set(rivals).size, `semente ${seed}: ${nodes.map((n) => n.id).join(' → ')}`).toBe(rivals.length);
         }
-        // a loja, o mercado e o Seu Tião aparecem como desvio em toda região
-        const kinds = new Set(region.nodes.map((n) => n.type));
-        for (const kind of ['shop', 'black', 'coins']) expect(kinds.has(kind), `semente ${seed}, região ${region.id}`).toBe(true);
+        expect(most, `semente ${seed}, região ${region.id}`).toBeGreaterThanOrEqual(2);
       }
     }
   });
 
-  it('sempre há escolha de verdade: algum andar oferece um desvio sem luta ao lado de uma mesa', () => {
-    for (const seed of seeds.slice(0, 40)) {
+  it('sempre há escolha de verdade: alguma bifurcação põe uma mesa ao lado de um desvio sem luta', () => {
+    for (const seed of seeds.slice(0, 60)) {
       const campaign = generateCampaign(seed);
       for (const region of campaign.regions) {
-        const forks = region.nodes.filter((n) => n.next.length >= 2);
-        expect(forks.length).toBeGreaterThan(0);
-        const mixed = forks.filter((n) => {
+        const mixed = region.nodes.filter((n) => {
+          if (n.next.length < 2) return false;
           const types = n.next.map((id) => campaign.byId.get(id).type);
-          return types.includes('combat') && types.some((x) => x !== 'combat');
+          return types.includes('combat') && types.some((x) => x !== 'combat' && x !== 'boss');
         });
-        expect(mixed.length, `semente ${seed}`).toBeGreaterThanOrEqual(2);
+        expect(mixed.length, `semente ${seed}`).toBeGreaterThanOrEqual(1);
       }
     }
   });
@@ -165,6 +184,29 @@ describe('Seu Tião das Moedas', () => {
     const back = act(s, 'LEAVE_EVENT');
     expect(availableNodes(back)).not.toContain(id);
     expect(act(back, 'CHOOSE_NODE', { nodeId: id })).toBe(back);
+  });
+});
+
+describe('atalhos do painel DEV (Patch 0.6.2)', () => {
+  it('entra direto na loja, no Mercado Negro e no Seu Tião da região atual, até no meio da mesa', () => {
+    let s = act(createInitialState(), 'NEW_RUN', { seed: 11 });
+    s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s)[0], deck: FULL_SET.slice() });
+    expect(s.phase).toBe('playing');
+    for (const [kind, phase, leave] of [
+      ['shop', 'shop', 'LEAVE_SHOP'],
+      ['black', 'blackMarket', 'LEAVE_MARKET'],
+      ['coins', 'coinEvent', 'LEAVE_EVENT'],
+    ]) {
+      const inside = act(s, 'DEV', { op: 'openStop', kind });
+      expect(inside.phase).toBe(phase);
+      const node = campaignOf(inside).byId.get(inside.run.node);
+      expect(node).toMatchObject({ type: kind, region: 1 });
+      const back = act(inside, leave);
+      expect(back.phase).toBe('map');
+      expect(back.run.cleared).toContain(node.id);
+      expect(availableNodes(back)).toEqual([...node.next]);
+    }
+    expect(act(s, 'DEV', { op: 'openStop', kind: 'cassino' })).toBe(s);
   });
 });
 
@@ -345,5 +387,37 @@ describe('talismãs Necróticos', () => {
     expect(directDamage(hit, 'player', 1, 'dedal').hearts.player).toBe(0);
     // sem o talismã, zera
     expect(directDamage({ ...s, relics: { player: [], tioZe: [] } }, 'player', 1, 'dedal').hearts.player).toBe(0);
+  });
+});
+
+describe('batida "Nas duas pontas!" (Patch 0.6.2)', () => {
+  const fourFour = () => placeTile(createEmptyBoard(), t(4, 4), 'root'); // pontas 4 e 4
+
+  it('bater com pedra que servia nas duas pontas arranca 2 corações e solta o balão', () => {
+    const s = table({ player: [t(2, 4)], tioZe: [t(1, 1), t(6, 6)], board: fourFour(), boneyard: [t(0, 0)], hearts: { tioZe: 5 } });
+    const won = gameReducer(s, { type: 'PLAY', actor: 'player', tileId: '2-4', side: 'left' });
+    expect(won.roundResult).toMatchObject({ kind: 'duasPontas', winner: 'player', damage: 2, baseDamage: 2 });
+    expect(won.hearts.tioZe).toBe(3);
+    expect(lastOf(won, 'callout')).toMatchObject({ id: 'duasPontas', text: 'NAS DUAS PONTAS!', by: 'player' });
+  });
+
+  it('vale para o rival também; pedra que só serve num lado continua batida normal', () => {
+    const s = table({ player: [t(1, 1), t(6, 6)], tioZe: [t(4, 0)], board: fourFour(), boneyard: [t(0, 0)], turn: 'tioZe', hearts: { player: 5 } });
+    const hit = gameReducer(s, { type: 'PLAY', actor: 'tioZe', tileId: '0-4', side: 'right' });
+    expect(hit.roundResult).toMatchObject({ kind: 'duasPontas', winner: 'tioZe', damage: 2 });
+    expect(lastOf(hit, 'callout')).toMatchObject({ by: 'tioZe' });
+
+    const plain = table({ player: [t(3, 6)], tioZe: [t(1, 1)], boneyard: [t(0, 0)] }); // pontas 3 e 4
+    const normal = gameReducer(plain, { type: 'PLAY', actor: 'player', tileId: '3-6', side: 'left' });
+    expect(normal.roundResult.kind).toBe('normal');
+    expect(lastOf(normal, 'callout')).toBeUndefined();
+  });
+
+  it('a Cruzada continua valendo mais (3♥) e o Pacto do Coveiro soma em cima', () => {
+    const board = placeTile(placeTile(createEmptyBoard(), t(3, 6), 'root'), t(6, 4), 'right'); // pontas 3 e 4
+    const cruz = table({ player: [t(3, 4)], tioZe: [t(1, 1)], board, boneyard: [t(0, 0)] });
+    expect(gameReducer(cruz, { type: 'PLAY', actor: 'player', tileId: '3-4', side: 'left' }).roundResult).toMatchObject({ kind: 'cruzada', damage: 3 });
+    const pacto = table({ player: [t(2, 4)], tioZe: [t(1, 1)], board: fourFour(), boneyard: [t(0, 0)], relics: ['pactoCoveiro'], hearts: { tioZe: 6 } });
+    expect(gameReducer(pacto, { type: 'PLAY', actor: 'player', tileId: '2-4', side: 'left' }).roundResult.damage).toBe(4);
   });
 });

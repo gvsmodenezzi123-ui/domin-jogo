@@ -44,6 +44,7 @@ O PWA precisa de HTTPS. Duas opções:
   | --- | --- |
   | Batida normal | 1 ♥ |
   | Batida de bucha (última pedra é dupla) | 2 ♥ |
+  | Nas duas pontas (a pedra servia nos dois lados, ex.: 4\|2 em pontas 4 e 4) | 2 ♥ |
   | Cruzada (última pedra casa com as duas pontas) | 3 ♥ |
   | Tranca (menor soma de pontos na mão vence; empate não dá dano) | 1 ♥ |
 
@@ -58,6 +59,27 @@ O PWA precisa de HTTPS. Duas opções:
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.6.2: 15 rivais por run, mapa limpo e "Nas duas pontas!"
+
+- **Elenco sorteado** (`engine/campaignMap.js` → `runCast`):
+  - cada run escala 15 dos 18: em cada região o chefe é fixo e 4 dos outros 5 são sorteados;
+  - quem fica de fora muda de run para run;
+  - entre os 4, o de menos corações abre a região.
+- **Nada repetido por região:** cada rival, a Loja do Valtinho, o Mercado Negro e o Seu Tião
+  aparecem uma vez só. Os andares 2 a 5 têm 6 nós (3 mesas + os 3 desvios) em 1 a 3 faixas.
+  Todo caminho tem de 1 a 3 mesas no meio, e sempre há uma bifurcação entre mesa e desvio.
+  O save foi para a versão 3: saves da 0.6.1 não continuam.
+- **Mapa:** nós que você ainda não alcança ficam levemente apagados; os caminhos abertos pulsam.
+- **Painel DEV:** a seção ENTRAR DIRETO abre a loja, o Mercado Negro ou o Seu Tião da região
+  atual, até no meio de uma mesa.
+- **Mesa:** o som e o menu saíram de cima da mão do rival. Agora ficam na fileira dos seus
+  talismãs, à direita.
+- **Nova batida "Nas duas pontas!"** (`classifyBatida` → `duasPontas`):
+  - bater com uma pedra que servia nos dois lados, sem ser Cruzada
+    (ex.: 4|2 com as pontas 4 e 4), arranca 2 corações;
+  - um balão rápido estoura no alto do feltro, creme quando é sua e vermelho quando é do rival;
+  - a Cruzada (3|5 em pontas 3 e 5) continua valendo 3.
 
 ## Patch 0.6.1: campanha em teia, Mercado Negro e Seu Tião
 
