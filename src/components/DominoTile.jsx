@@ -74,6 +74,8 @@ function Half({ value, horizontal, unit }) {
  * onBoard:     na mesa a bucha fica sempre atravessada: os eixos se invertem
  * power:       bucha selecionada na mão — moldura amarela pulsando
  * shimmer:     reflexo de luz passando pela pedra de tempos em tempos (`shimmerDelay` defasa)
+ * luz:         a lâmpada da mesa ilumina a pedra (brilho, sombra e escuro seguem a luz),
+ *              pelas variáveis --lx/--ly/--lit que components/tileLighting.js põe na vaga
  * enhancement: 'ouro' | 'rubi' | 'cristal' | 'chumbo' | 'fantasma' — troca o material
  *              da pedra por um "shader" em CSS (.tile-enh-<id> em index.css)
  * unit:        lado de cada metade, em px
@@ -141,6 +143,7 @@ function DominoTile({
   const surface = enh
     ? { '--d': `${depth}px` }
     : {
+        '--d': `${depth}px`,
         background: [
           `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(112,78,28,${stain.alpha}), transparent 42%)`,
           `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,252,236,.22), transparent 48%)`,
@@ -152,7 +155,8 @@ function DominoTile({
           'inset 0 0 0 1px rgba(58,40,16,.28)',
           `0 ${depth}px 0 #6f5a33`,
           `0 ${depth + 1}px 0 #2a1f10`,
-          `0 ${depth + 2}px ${depth + 4}px rgba(0,0,0,.55)`,
+          // sombra no pano: cai para o lado oposto da lâmpada (components/tileLighting.js)
+          'var(--cast)',
         ].join(','),
       };
 
@@ -163,7 +167,7 @@ function DominoTile({
       disabled={onClick ? disabled : undefined}
       aria-label={label ?? `Pedra ${values[0]} e ${values[1]}${enh ? ` (${enh.name})` : ''}`}
       aria-pressed={onClick ? selected : undefined}
-      className={`relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
+      className={`domino-face relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
       } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
         enh && dimmed ? 'tile-enh-still' : ''
@@ -198,6 +202,8 @@ function DominoTile({
           style={{ position: 'absolute', inset: 0, borderRadius: radius, '--shimmer-delay': `${shimmerDelay}s` }}
         />
       )}
+      {/* luz da lâmpada na pedra: brilho do lado virado para ela, escuro longe dela */}
+      <span aria-hidden="true" className="tile-lamp-light" />
       {selected && (
         <span
           aria-hidden="true"

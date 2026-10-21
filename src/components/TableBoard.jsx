@@ -1,8 +1,9 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
+import { startTileLighting } from './tileLighting.js';
 
 /** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
 const BOARD_PADDING = 8;
@@ -65,6 +66,13 @@ export default function TableBoard({
   incoming = null,
 }) {
   const [areaRef, size] = useElementSize();
+  // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
+  const feltRef = useRef(null);
+  useEffect(() => startTileLighting(feltRef.current), []);
+  const setFelt = (el) => {
+    feltRef.current = el;
+    if (frameRef) frameRef.current = el;
+  };
   // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
   // altura no meio (dica em duas linhas, barra do Safari), só a câmera ajusta;
   // nenhuma pedra muda de lugar.
@@ -90,7 +98,7 @@ export default function TableBoard({
 
   return (
     <section
-      ref={frameRef}
+      ref={setFelt}
       className={`felt-table felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${decor.includes('mahogany') ? 'felt-mahogany' : ''}`}
       style={feltVars}
       aria-label="Mesa"

@@ -60,6 +60,9 @@ O PWA precisa de HTTPS. Duas opções:
   Na mesa e no menu.
 - **A lâmpada falha:** pisca duplo, zumbe e dá um apagão de ~¼ s; a mesa (ou o salão do menu) escurece junto.
   Cada pedra batida dá um tranco na lâmpada (`components/lampKick.js`).
+- **A luz bate nas pedras** (`components/tileLighting.js`): o brilho fica no lado virado para a lâmpada,
+  a sombra cai para o lado oposto e as duas andam quando ela balança; longe da mancha de luz a pedra fica
+  mais escura, e no apagão as da mesa e as da sua mão escurecem juntas.
 - **Pedra deslizando até a ponta** (`components/tileFlight.js`): levanta da mão, desliza em curva girando
   para a orientação da mesa, com rastro e sombra no pano, e cai com SLAM + tremida. A do rival sai da mão
   dele no topo virando de costas para a face e fica 800 ms em destaque.

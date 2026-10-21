@@ -329,6 +329,7 @@
 
   /* Ouro: metal polido, pips escuros, reflexo que corre pela pedra */
   .tile-enh-ouro {
+    --cast-a: 0.55;
     background:
       linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 24%),
       linear-gradient(150deg, #fff1b8 0%, #f0cc78 18%, #c8962e 46%, #f6d98a 62%, #9c6a1c 100%);
@@ -338,7 +339,7 @@
       inset 0 0 0 1px rgba(80, 50, 10, 0.45),
       0 var(--d) 0 #7a5214,
       0 calc(var(--d) + 1px) 0 #2a1a06,
-      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.55),
+      var(--cast),
       0 0 9px rgba(255, 210, 110, 0.35);
   }
 
@@ -356,6 +357,7 @@
 
   /* Rubi (Sanguinária): carmesim brilhante, pulsando, com sombra vermelha */
   .tile-enh-rubi {
+    --cast-a: 0.55;
     background:
       radial-gradient(circle at 32% 24%, rgba(255, 205, 210, 0.7), transparent 30%),
       linear-gradient(150deg, #ff5a6a 0%, #d0142f 42%, #7a0718 78%, #4a030e 100%);
@@ -365,7 +367,7 @@
       inset 0 0 0 1px rgba(60, 0, 12, 0.5),
       0 var(--d) 0 #5a0412,
       0 calc(var(--d) + 1px) 0 #1f0106,
-      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.55);
+      var(--cast);
   }
 
   /* pips em brasa incandescente */
@@ -419,6 +421,7 @@
 
   /* Cristal (Camaleão): ciano translúcido com brilho neon */
   .tile-enh-cristal {
+    --cast-a: 0.45;
     background:
       linear-gradient(125deg, rgba(255, 255, 255, 0.6) 0%, transparent 28%, rgba(255, 255, 255, 0.2) 50%, transparent 66%),
       linear-gradient(160deg, rgba(160, 252, 255, 0.62) 0%, rgba(60, 205, 235, 0.42) 50%, rgba(20, 120, 170, 0.55) 100%);
@@ -427,7 +430,7 @@
       inset 0 0 7px rgba(190, 255, 255, 0.75),
       0 var(--d) 0 rgba(20, 95, 125, 0.85),
       0 calc(var(--d) + 1px) 0 rgba(4, 30, 40, 0.9),
-      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.45);
+      var(--cast);
   }
 
   .tile-enh-cristal .domino-pip {
@@ -471,6 +474,7 @@
   /* Chumbo: ferro fosco escuro, rachado */
   /* metal escuro fosco: nenhum brilho, só a rachadura em relevo */
   .tile-enh-chumbo {
+    --cast-a: 0.6;
     background:
       var(--crack-texture),
       var(--felt-noise),
@@ -485,7 +489,7 @@
       inset 0 0 0 1px rgba(0, 0, 0, 0.35),
       0 var(--d) 0 #1a1d20,
       0 calc(var(--d) + 1px) 0 #090a0b,
-      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.6);
+      var(--cast);
   }
 
   .tile-enh-chumbo .domino-pip {
@@ -510,6 +514,7 @@
 
   /* Fantasma: roxo translúcido, pulsação espectral leve */
   .tile-enh-fantasma {
+    --cast-a: 0.35;
     background:
       radial-gradient(ellipse at 50% 28%, rgba(235, 220, 255, 0.55), transparent 60%),
       linear-gradient(160deg, rgba(195, 155, 255, 0.6) 0%, rgba(125, 75, 215, 0.48) 55%, rgba(60, 22, 125, 0.58) 100%);
@@ -517,7 +522,7 @@
       inset 0 0 0 1px rgba(225, 205, 255, 0.65),
       inset 0 0 8px rgba(235, 215, 255, 0.5),
       0 var(--d) 0 rgba(45, 12, 90, 0.7),
-      0 calc(var(--d) + 2px) calc(var(--d) + 4px) rgba(0, 0, 0, 0.35);
+      var(--cast);
   }
 
   .tile-enh-fantasma .domino-pip {
@@ -2956,6 +2961,35 @@
 .smoke-puff {
   animation: smokeDrift 2.1s ease-out infinite;
   will-change: transform, opacity;
+}
+
+/* --- LUZ DA LÂMPADA NAS PEDRAS (components/tileLighting.js) ---
+   --lx/--ly: direção da luz até a pedra (-1..1; a luz vem do lado oposto)
+   --lit:     quanta luz chega nela (longe da mancha ou com a lâmpada falhando = escuro)
+   Sem a lâmpada (loja, livro) valem os padrões: luz de cima, sem escuro. */
+.domino-face {
+  --cast: calc(var(--lx, 0) * 12px) calc(var(--d, 2px) + 2px + var(--ly, 0) * 7px) calc(var(--d, 2px) + 4px)
+    rgba(0, 0, 0, calc(var(--cast-a, 0.55) * (0.55 + 0.6 * var(--lit, 0.75))));
+}
+
+.tile-lamp-light {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      70% 50% at calc(50% - var(--lx, 0) * 75%) calc(4% - var(--ly, 0) * 30%),
+      rgba(255, 252, 238, calc(0.85 * var(--lit, 0.6))) 0%,
+      rgba(255, 240, 200, calc(0.35 * var(--lit, 0.6))) 45%,
+      transparent 100%
+    ),
+    radial-gradient(
+      130% 95% at calc(50% + var(--lx, 0) * 70%) calc(100% + var(--ly, 0) * 25%),
+      rgba(20, 12, 4, calc(0.3 * (1 - var(--lit, 1)))) 0%,
+      transparent 70%
+    ),
+    linear-gradient(rgba(12, 8, 3, calc(0.42 * (1 - var(--lit, 1)))), rgba(12, 8, 3, calc(0.42 * (1 - var(--lit, 1)))));
 }
 
 /* ANIMAÇÕES: REDUZIDAS (Opções) */
