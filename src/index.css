@@ -3052,3 +3052,341 @@
 .reduce-motion .room-flicker {
   animation: none !important;
 }
+
+/* ---------- Patch 0.5.4: passe forçado ---------- */
+
+/* faixa "SEM JOGADAS DISPONÍVEIS! TURNO PASSADO!" no centro do feltro: entra batendo, treme e sai
+   (só transform/opacity) */
+
+.no-moves-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(92vw, 360px);
+  padding: 12px 10px 11px;
+  font-family: var(--font-pixel);
+  text-align: center;
+  color: #fff6e0;
+  background:
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.22) 0 8px, transparent 8px 16px),
+    linear-gradient(180deg, #c22a1d 0%, #7d140d 100%);
+  border: 3px solid #0b0705;
+  box-shadow:
+    inset 0 0 0 2px #ffd36b,
+    0 5px 0 #000,
+    0 0 0 9999px rgba(5, 3, 2, 0.45);
+  text-shadow:
+    2px 0 0 #0b0705,
+    -2px 0 0 #0b0705,
+    0 2px 0 #0b0705,
+    0 -2px 0 #0b0705;
+  animation: no-moves 1500ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  will-change: transform, opacity;
+}
+
+.no-moves-line-top {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.no-moves-line-bottom {
+  font-size: 15px;
+  line-height: 1.3;
+  color: #ffd36b;
+}
+
+@keyframes no-moves {
+  0% {
+    opacity: 0;
+    transform: scale(2.2) rotate(-4deg);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(0.94) rotate(1deg);
+  }
+  20% {
+    transform: scale(1.04) rotate(-1deg) translateX(-4px);
+  }
+  26% {
+    transform: scale(1) rotate(0deg) translateX(4px);
+  }
+  32%,
+  82% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(14px);
+  }
+}
+
+.reduce-motion .no-moves-banner {
+  animation-duration: 1500ms;
+  animation-timing-function: steps(1, end);
+}
+
+/* PASSAR A VEZ: preço e motivo do bloqueio numa linha pequena embaixo */
+.pass-note {
+  font-size: 7px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+/* ---------- Patch 0.5.4: desempenho no Safari do iPhone ----------
+   Regra: o que anima sem parar mexe SÓ em transform e opacity (vai para a GPU, sem repintar).
+   Filtros, sombras, fundos e blend modes ficam estáticos. */
+
+/* o feltro é uma ilha: o que acontece dentro dele não repinta nem relayouta o resto da tela */
+.felt-table {
+  contain: layout paint;
+  isolation: isolate;
+}
+
+/* lâmpada: o balanço é transform, a falha é opacity; o brilho do bulbo fica parado (sem filter animado) */
+.swinging-lamp,
+.dynamic-light-cone {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.lamp-kick {
+  will-change: transform, opacity;
+}
+
+.dynamic-light-cone,
+.lamp-bulb-glow {
+  /* blend mode em camada que se mexe obriga o Safari a recompor o fundo a cada quadro */
+  mix-blend-mode: normal;
+}
+
+.lamp-flicker-sprite {
+  filter: drop-shadow(0 6px 14px rgba(255, 217, 138, 0.6));
+  animation: lampSpriteDim 7s linear infinite;
+  will-change: opacity;
+}
+
+.lamp-flicker-glow,
+.room-flicker {
+  will-change: opacity;
+}
+
+/* mesmos instantes da falha da lâmpada (realTavernFlicker), em opacidade no lugar de brightness */
+@keyframes lampSpriteDim {
+  0%,
+  11.9%,
+  13.2%,
+  14.8%,
+  46.5%,
+  70.8%,
+  76.8%,
+  88%,
+  89.2%,
+  100% {
+    opacity: 1;
+  }
+  12.4% {
+    opacity: 0.55;
+  }
+  14% {
+    opacity: 0.7;
+  }
+  45% {
+    opacity: 0.95;
+  }
+  71.4% {
+    opacity: 0.42;
+  }
+  74.6% {
+    opacity: 0.44;
+  }
+  75.2% {
+    opacity: 0.9;
+  }
+  75.9% {
+    opacity: 0.52;
+  }
+  88.5% {
+    opacity: 0.65;
+  }
+}
+
+/* leque e mão do rival flutuando: transform em vez da propriedade `translate` */
+.hand-float,
+.rival-float {
+  animation-name: floatY;
+  will-change: transform;
+}
+
+@keyframes floatY {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+/* pontas abertas: o brilho fica parado e só a opacidade pulsa */
+.animate-end-pulse {
+  box-shadow: 0 0 6px 1px rgba(240, 204, 120, 0.55);
+  animation: endGlow 1.6s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes endGlow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* vaga pontilhada da mesa: fundo fixo, pulso na opacidade */
+.slot-ghost {
+  background: rgba(240, 204, 120, 0.24);
+  animation: slotGhost 1.1s ease-in-out infinite;
+}
+
+@keyframes slotGhost {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* pedras em repouso (mão sem seleção, miolo da mesa): gradiente estático, nada anima.
+   Só a selecionada e as duas pontas abertas rodam reflexo e material (DominoTile `still`). */
+.tile-enh-rest,
+.tile-enh-rest *,
+.tile-enh-rest *::before,
+.tile-enh-rest *::after {
+  animation: none !important;
+}
+
+.tile-enh-rest.tile-enh-rubi .tile-enh-glow,
+.tile-enh-rest.tile-enh-fantasma .tile-enh-glow {
+  opacity: 0.55;
+}
+
+/* material das pedras de grife quando anima: sem filter/background animados */
+.tile-enh-rubi {
+  animation: rubyBeat 1.6s ease-in-out infinite;
+}
+
+@keyframes rubyBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+.tile-enh-rubi .domino-pip {
+  animation-name: emberPipGlow;
+}
+
+@keyframes emberPipGlow {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.tile-enh-rubi .tile-enh-layer::before,
+.tile-enh-rubi .tile-enh-layer::after {
+  animation-name: emberRiseY;
+  will-change: transform;
+}
+
+@keyframes emberRiseY {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.tile-enh-fantasma .tile-enh-layer::after {
+  animation-name: ghostDriftXY;
+  will-change: transform;
+}
+
+@keyframes ghostDriftXY {
+  from {
+    transform: translate(-8%, 6%);
+  }
+  to {
+    transform: translate(8%, -6%);
+  }
+}
+
+/* cristal holográfico: o arco-íris é uma faixa 3x mais larga que desliza (transform), não um fundo animado */
+.tile-enh-cristal .tile-enh-layer {
+  background: none;
+  animation: none;
+}
+
+.tile-enh-cristal .tile-enh-layer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 300%;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 110, 200, 0.42),
+    rgba(120, 220, 255, 0.42),
+    rgba(150, 255, 170, 0.38),
+    rgba(255, 230, 120, 0.42),
+    rgba(190, 140, 255, 0.42),
+    rgba(255, 110, 200, 0.42)
+  );
+  animation: holoSlide 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.tile-enh-cristal .tile-enh-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(35deg, transparent 46%, rgba(255, 255, 255, 0.4) 48%, transparent 52%);
+}
+
+@keyframes holoSlide {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-66.667%);
+  }
+}
+
+/* reflexo (.shimmer-active do ouro, .tile-shimmer-effect da selecionada e das pontas): camada própria na GPU */
+.shimmer-active::after,
+.tile-shimmer-effect::after {
+  will-change: transform;
+}
+
+.reduce-motion .lamp-flicker-sprite,
+.reduce-motion .animate-end-pulse,
+.reduce-motion .slot-ghost,
+.reduce-motion .tile-enh-cristal .tile-enh-layer::before,
+.reduce-motion .tile-enh-rubi .tile-enh-layer::before,
+.reduce-motion .tile-enh-rubi .tile-enh-layer::after {
+  animation: none !important;
+}

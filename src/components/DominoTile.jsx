@@ -74,6 +74,9 @@ function Half({ value, horizontal, unit }) {
  * onBoard:     na mesa a bucha fica sempre atravessada: os eixos se invertem
  * power:       bucha selecionada na mão — moldura amarela pulsando
  * shimmer:     reflexo de luz passando pela pedra de tempos em tempos (`shimmerDelay` defasa)
+ * still:       pedra em repouso (na mão sem seleção, no miolo da mesa): o material fica em
+ *              gradiente estático, sem animação contínua nenhuma (economia de GPU no iPhone).
+ *              Só a selecionada e as duas pontas abertas animam.
  * luz:         a lâmpada da mesa ilumina a pedra (brilho, sombra e escuro seguem a luz),
  *              pelas variáveis --lx/--ly/--lit que components/tileLighting.js põe na vaga
  * enhancement: 'ouro' | 'rubi' | 'cristal' | 'chumbo' | 'fantasma' — troca o material
@@ -94,6 +97,7 @@ function DominoTile({
   enhancement = null,
   shimmer = false,
   shimmerDelay = 0,
+  still = false,
   depth = 2,
   onClick,
   disabled = false,
@@ -171,7 +175,7 @@ function DominoTile({
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
       } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
         enh && dimmed ? 'tile-enh-still' : ''
-      } ${className}`}
+      } ${enh && still ? 'tile-enh-rest' : ''} ${className}`}
       style={{ ...shared, ...surface }}
     >
       <Half value={values[0]} horizontal={horizontal} unit={unit} />
@@ -189,8 +193,8 @@ function DominoTile({
         <>
           <span aria-hidden="true" className="tile-enh-layer" />
           <span aria-hidden="true" className="tile-enh-glow" />
-          {/* Ouro: o feixe especular cruza a pedra sem parar */}
-          {enh.id === 'ouro' && (
+          {/* Ouro: o feixe especular cruza a pedra (só na selecionada e nas pontas abertas) */}
+          {enh.id === 'ouro' && !still && (
             <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0, borderRadius: radius }} />
           )}
         </>

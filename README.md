@@ -1,4 +1,4 @@
-# Buxaria — Patch 0.5.1
+# Buxaria — Patch 0.5.4
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
@@ -49,9 +49,61 @@ O PWA precisa de HTTPS. Duas opções:
 
 - **Múltiplo de 5:** se a soma das duas pontas abertas fechar em múltiplo de 5, quem jogou ganha **+$3**.
 - **Compra por turno:** 1ª grátis · 2ª custa $3 · 3ª custa 1 coração (nunca mata: precisa ter 2+). Máximo 3.
-- **Passar a vez** é sempre permitido com a mesa aberta. Dois passes seguidos (um de cada) = **tranca na hora**.
+- **Passar a vez** (Patch 0.5.4):
+  - nada encaixa e o dorme tem pedra: o botão fica apagado; a **1ª compra (grátis) é obrigatória**;
+  - tem jogada e ainda não comprou: **PASSAR A VEZ ($3)** (sem saldo: **SALDO INSUFICIENTE ($3)**);
+  - já comprou no turno (ou o dorme secou sem jogada): passa **de graça**;
+  - comprou e não dá para comprar de novo (3 compras, dorme seco ou sem como pagar) e nada encaixa:
+    **passe automático** com o aviso "SEM JOGADAS DISPONÍVEIS! TURNO PASSADO!".
+- Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Patch 0.5.4: passe com custo, áudio novo e iPhone sem lag
+
+### Regra do PASSAR A VEZ (`engine/dominoLogic.js` → `getPassAvailability`, `engine/powers.js`, `engine/gameReducer.js`)
+- O passe deixou de ser de graça a qualquer hora. A regra fica no motor, então vale para o botão, para o
+  painel DEV e para as simulações:
+  - sem jogada e com dorme: **comprar antes** (a 1ª é grátis); o botão fica apagado;
+  - com jogada e sem compra no turno: **$3** pelo passe estratégico; sem saldo, **SALDO INSUFICIENTE ($3)**;
+  - depois de comprar ao menos 1: passa de graça.
+- **Passe automático:** comprou, nada encaixa e não dá para comprar de novo → o reducer trava a mesa
+  (`pending: forcedPass`, evento `noMoves`), a faixa vermelha **SEM JOGADAS DISPONÍVEIS! TURNO PASSADO!**
+  aparece no centro do feltro (`components/NoMovesBanner.jsx`), o sintetizador toca o "uó-uó-uóóó"
+  descendente e, 1,6 s depois, a vez vai sozinha para o rival. Se o Relógio Quebrado estiver pronto, o
+  passe não é automático (desfazer ainda é uma saída).
+- Testes em `engine/__tests__/passRule.test.js`.
+
+### Direção de áudio (`engine/audioSynth.js`)
+- **Saída quente:** tudo passa por um passa-baixa em **2800 Hz** com leve ressonância (vinil).
+- **Ducking:** pedra batendo, dano de coração e cada sílaba do rival abaixam a música **30%** por 200 ms
+  (rampa exponencial) e ela volta suave.
+- **Trilha adaptativa a 128 BPM** (sequenciador com antecedência, sem atraso de timer):
+  bossa-funk com **contrabaixo acústico** (decay natural, mono como um instrumento de verdade) e
+  **piano elétrico** em senoides com tremolo. Boteco em ii-V-I, Clube da Sinuca no funk, Submundo/chefes
+  em menor. **Camada de tensão:** com 1 ou 2 corações de alguém, entram hi-hats em semicolcheias, o filtro
+  abre para **4500 Hz** e o andamento acelera 8%.
+- **Vitória da partida:** a trilha sai, **fanfarra maior** limpa (metais + prato) e só então entra a
+  trilha suave da **Loja Clandestina** (`lojaLounge`, 96 BPM). Rodada vencida: "tã-dã" maior curto.
+- **Pedra na mesa:** clique de osso/marfim (800 Hz, 15 ms) + baque oco da madeira (120 Hz, 80 ms), pitch ±5%.
+  **Grife:** ouro tilinta cristalino, rubi solta um sub-grave quente, cristal toca um sino com eco.
+- **iOS:** no máximo **6 vozes** soando (cada oscilador ou ruído conta; música cede antes dos efeitos,
+  com fade de 15 ms) e toda nota termina com `stop()` + `disconnect()` de todos os nós.
+- Testes em `engine/__tests__/audioEngine.test.js` (Web Audio simulado).
+
+### Desempenho no Safari do iPhone
+- **Luz nas pedras** (`components/tileLighting.js`): antes media todas as pedras e reescrevia variáveis
+  CSS ~40 vezes por segundo (layout + repintura da mão e da mesa inteiras). Agora: ~15 atualizações por
+  segundo, posições medidas a cada 300 ms e valores em degraus, então a maioria dos quadros não escreve nada.
+- **Lâmpada e facho** animam só `transform`/`opacity` (a falha do sprite saiu de `filter` para opacidade,
+  o tranco da lâmpada usa `transform`, sem `mix-blend-mode` nas camadas que se mexem).
+- **Feltro isolado:** `contain: layout paint` em `.felt-table`.
+- **Reflexo e material** (`.shimmer-active`, ouro, rubi, cristal, fantasma) só animam na pedra selecionada e
+  nas duas pontas abertas; as em repouso ficam em gradiente estático (`DominoTile` `still`). Flutuação do
+  leque, pulso das pontas, brasas do rubi e arco-íris do cristal passaram para `transform`/`opacity`.
+- **React.memo** na mesa, no leque (e em cada pedra dele), nos botões, no cabeçalho do rival, na hotbar e
+  nas moedas; `useStableHandler`/`useStableValue` (`components/useStable.js`) mantêm as props estáveis.
+  Medido no Chromium com a mesa parada: ~65% menos trabalho na thread principal que o 0.5.1.
 
 ## Patch 0.5.1: luz viva e pedras deslizando
 

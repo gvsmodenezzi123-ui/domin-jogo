@@ -17,12 +17,13 @@ import TitleScreen from './components/TitleScreen.jsx';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
+import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
 import { BOSS_MUSIC, REGIONS, regionOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { getRival } from './data/rivals.js';
-import { sound } from './engine/audioSynth.js';
+import { SHOP_MUSIC, sound } from './engine/audioSynth.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -39,6 +40,7 @@ import {
   canUndo,
   endMarksFor,
   knownPlayerTiles,
+  passAvailabilityFor,
   requiredOpeningFor,
   revealedTioZeTiles,
   rulesFor,
@@ -90,6 +92,8 @@ const AI_SPOTLIGHT_MS = 800;
 const PLAYER_LANDED_MS = 280;
 /** Tremida da mesa quando a pedra assenta (ms). */
 const SLAM_SHAKE_MS = 150;
+/** Banner "SEM JOGADAS DISPONÍVEIS!" na tela antes do passe forçado ir para o rival (ms). */
+const NO_MOVES_MS = 1600;
 
 /** Atraso (ms) de cada som dentro de um mesmo lote de eventos, para não embolar. */
 const FX_DELAY = {
@@ -97,6 +101,7 @@ const FX_DELAY = {
   drawTile: 0,
   drawPeek: 0,
   pass: 0,
+  noMoves: 240,
   discard: 0,
   undo: 0,
   proc: 90,
@@ -135,6 +140,15 @@ function runEventFx(ev, shell, table, offset = 0) {
       at(() => sound.playDraw());
       break;
     case 'pass':
+      // o passe forçado já tocou o som de "sem jogadas" quando a mesa travou
+      if (!ev.forced) at(() => sound.playPass());
+      break;
+    case 'noMoves':
+      at(() => {
+        sound.playNoMoves();
+        haptic([40, 60, 40]);
+      });
+      break;
     case 'discard':
       at(() => sound.playPass());
       break;
@@ -183,10 +197,14 @@ function runEventFx(ev, shell, table, offset = 0) {
   }
 }
 
-/** Faixa da tela atual: menu e Boteco no jazz, Clube da Sinuca no funk, Submundo e chefes na tensão. */
+/**
+ * Faixa da tela atual: menu e Boteco na bossa, Clube da Sinuca no funk, Submundo e chefes no tenso.
+ * A Loja Clandestina tem a trilha suave dela (entra depois da fanfarra da vitória).
+ */
 function musicFor(state) {
   if (state.phase === 'title') return REGIONS[0].music;
-  if (state.phase === 'map' || state.phase === 'shop') return regionOf(state.run.node).music;
+  if (state.phase === 'shop') return SHOP_MUSIC;
+  if (state.phase === 'map') return regionOf(state.run.node).music;
   const rival = getRival(state.rivalId);
   return rival.boss ? BOSS_MUSIC : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
 }
@@ -301,6 +319,11 @@ export default function App() {
     if (sound.ctx) sound.playTrack(musicTrack);
   }, [musicTrack]);
 
+  // Camada de tensão da trilha: alguém na mesa com 1 ou 2 corações.
+  const tense =
+    (state.phase === 'playing' || state.phase === 'roundOver') && Math.min(state.hearts.player, state.hearts.tioZe) <= 2;
+  useEffect(() => sound.setTension(tense), [tense]);
+
   const clearTableAnim = useCallback(() => {
     animTimers.current.forEach((id) => clearTimeout(id));
     animTimers.current = [];
@@ -317,6 +340,14 @@ export default function App() {
     if (menuOpen || devOpen || tableAnim || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch, getRival(state.rivalId).reflexMs);
   }, [state, menuOpen, devOpen, tableAnim]);
+
+  // Turno sem saída (3 compras sem encaixe): o banner fica na mesa e o passe vai sozinho para o rival.
+  const forcedPassArmed = state.phase === 'playing' && state.pending?.type === 'forcedPass';
+  useEffect(() => {
+    if (!forcedPassArmed || menuOpen || devOpen) return undefined;
+    const timer = setTimeout(() => dispatch({ type: 'PASS', actor: 'player' }), NO_MOVES_MS);
+    return () => clearTimeout(timer);
+  }, [forcedPassArmed, menuOpen, devOpen]);
 
   /**
    * Pedra jogada em cena: uma cópia é levantada da mão (sua: do leque; do rival:
@@ -451,7 +482,9 @@ export default function App() {
   // enquanto a jogada do rival está em cena, a sua vez ainda não começou
   const isPlayerTurn = playing && state.turn === 'player' && !pending && !tableAnim;
   const hand = state.hands.player;
-  const playerRules = rulesFor(state, 'player');
+  // Patch 0.5.4: valores recalculados a cada render ficam com a mesma identidade enquanto não mudam,
+  // para os componentes com React.memo (mesa, leque, botões, cabeçalho) não redesenharem à toa
+  const playerRules = useStableValue(rulesFor(state, 'player'));
   const requiredTileId = requiredOpeningFor(state, 'player');
 
   const playableIds = useMemo(() => {
@@ -462,27 +495,37 @@ export default function App() {
 
   const selectedTile =
     isPlayerTurn || discardMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
-  const selectedSides = selectedTile && !discardMode ? getValidSides(selectedTile, state.board, playerRules) : [];
+  const selectedSides = useStableValue(selectedTile && !discardMode ? getValidSides(selectedTile, state.board, playerRules) : []);
 
-  const draw = getDrawAvailability({
-    drawsThisTurn: state.drawsThisTurn,
-    boneyardCount: state.boneyard.length,
-    coins: state.coins.player,
-    hearts: state.hearts.player,
-  });
+  const draw = useStableValue(
+    getDrawAvailability({
+      drawsThisTurn: state.drawsThisTurn,
+      boneyardCount: state.boneyard.length,
+      coins: state.coins.player,
+      hearts: state.hearts.player,
+    }),
+  );
   const boardOpen = Boolean(state.board.root);
   const canDraw = isPlayerTurn && boardOpen && draw.allowed;
-  const canPass = isPlayerTurn && boardOpen;
+  // Patch 0.5.4: sem jogada a 1ª compra é obrigatória; podendo jogar, o passe custa $3
+  const passRule = useStableValue(isPlayerTurn && boardOpen ? passAvailabilityFor(state, 'player') : null);
+  const canPass = Boolean(passRule?.allowed);
+  const forcedPass = playing && state.pending?.type === 'forcedPass';
   const undoReady = canUndo(state) && !tableAnim;
 
-  const speech = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
-  const relicFlashes = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
+  const speechNow = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
+  const speech = useStableValue(speechNow);
+  const flashesNow = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
+  const relicFlashes = useStableValue(flashesNow);
   const mood = deriveTioZeMood(state);
   const tioZeHurtKey = deriveHurtKey(state.events, 'tioZe');
   const playerHurtKey = deriveHurtKey(state.events, 'player');
-  const revealed = revealedTioZeTiles(state);
-  const endMarks = endMarksFor(state);
-  const knownIds = useMemo(() => (playing ? new Set(knownPlayerTiles(state).map((t) => t.id)) : null), [playing, state]);
+  const revealedNow = revealedTioZeTiles(state);
+  const revealed = useStableValue(revealedNow, revealedNow.map((t) => t.id).join(','));
+  const endMarks = useStableValue(endMarksFor(state));
+  const spentRelics = useStableValue(spentRelicsOf(state, 'player'));
+  const knownKey = playing ? knownPlayerTiles(state).map((t) => t.id).join(',') : null;
+  const knownIds = useMemo(() => (knownKey === null ? null : new Set(knownKey ? knownKey.split(',') : [])), [knownKey]);
 
   const hint = buildPlayerHint({
     state,
@@ -490,6 +533,7 @@ export default function App() {
     selectedTile,
     playableCount: playableIds.size,
     drawAllowed: canDraw,
+    passRule,
     rules: playerRules,
     rivalName: rival.name,
   });
@@ -504,7 +548,7 @@ export default function App() {
   }, []);
 
   // Tocar na pedra só seleciona (ou desseleciona). Jogar é no JOGAR ou na vaga da mesa.
-  const handleSelectTile = (tile) => {
+  const handleSelectTile = useStableHandler((tile) => {
     if (discardMode) {
       sound.playClick();
       setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
@@ -522,45 +566,45 @@ export default function App() {
       sound.playPowerSelect();
       haptic(15);
     }
-  };
+  });
 
-  const handlePlaySide = (side) => {
+  const handlePlaySide = useStableHandler((side) => {
     if (selectedTile && !discardMode) play(selectedTile.id, side);
-  };
+  });
 
-  const handleDraw = () => {
+  const handleDraw = useStableHandler(() => {
     if (!canDraw) return;
     dispatch({ type: 'DRAW', actor: 'player' });
-  };
+  });
 
   const handlePickDraw = (tileId) => {
     sound.playClick();
     dispatch({ type: 'DRAW_PICK', tileId });
   };
 
-  const handlePass = () => {
+  const handlePass = useStableHandler(() => {
     if (!canPass) return;
     setSelectedId(null);
     dispatch({ type: 'PASS', actor: 'player' });
-  };
+  });
 
-  const handleDiscard = () => {
+  const handleDiscard = useStableHandler(() => {
     if (!discardMode || !selectedTile) return;
     dispatch({ type: 'DISCARD', tileId: selectedTile.id });
     setSelectedId(null);
-  };
+  });
 
-  const handleSkipDiscard = () => {
+  const handleSkipDiscard = useStableHandler(() => {
     sound.playClick();
     setSelectedId(null);
     dispatch({ type: 'SKIP_DISCARD' });
-  };
+  });
 
-  const handleUndo = () => {
+  const handleUndo = useStableHandler(() => {
     if (!undoReady) return;
     setSelectedId(null);
     dispatch({ type: 'UNDO' });
-  };
+  });
 
   // dentro de um toque: destrava o áudio (iOS) e liga a trilha da tela atual
   const wakeAudio = () => {
@@ -633,20 +677,22 @@ export default function App() {
     setCollection(bookRef.current);
   };
 
-  const openMenu = () => {
+  const openMenu = useStableHandler(() => {
     sound.playClick();
     setMenuOpen(true);
-  };
+  });
+
+  const openDev = useCallback(() => setDevOpen(true), []);
 
   const closeMenu = () => {
     sound.playClick();
     setMenuOpen(false);
   };
 
-  const toggleMute = () => {
+  const toggleMute = useStableHandler(() => {
     sound.init();
     setMuted(sound.toggleMute());
-  };
+  });
 
   const changeSettings = (next) => {
     setSettings(next);
@@ -801,6 +847,7 @@ export default function App() {
         decor={rival.decor}
         atmosphere={atmosphere}
         incoming={tableAnim}
+        noMoves={forcedPass && !menuOpen && !devOpen}
       />
 
       <PlayerRack
@@ -816,11 +863,12 @@ export default function App() {
         canDraw={canDraw}
         onDraw={handleDraw}
         canPass={canPass}
+        passRule={passRule}
         onPass={handlePass}
         hearts={state.hearts.player}
         maxHearts={MAX_HEARTS}
         coins={state.coins.player}
-        ends={ends}
+        endsSum={ends ? ends.left + ends.right : null}
         hint={hint}
         discardMode={discardMode}
         onDiscard={handleDiscard}
@@ -828,11 +876,11 @@ export default function App() {
         onSecretTap={gameSecretTap}
         relics={state.relics.player}
         relicFlashes={relicFlashes.player}
-        spentRelics={spentRelicsOf(state, 'player')}
+        spentRelics={spentRelics}
         canUndo={undoReady}
         onUndo={handleUndo}
         devUnlocked={devUnlocked}
-        onOpenDev={() => setDevOpen(true)}
+        onOpenDev={openDev}
         press={press}
         knownIds={knownIds}
         rivalName={rival.name}
@@ -843,6 +891,7 @@ export default function App() {
       <FloatingTexts items={floatItems} onDone={floatDone} />
 
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
+
 
       {roundFinished && !tableAnim && (
         <RoundOverlay

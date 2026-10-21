@@ -11,13 +11,14 @@ export function kickLamp(strength = 1) {
   const dir = Math.random() < 0.5 ? -1 : 1;
   for (const el of document.querySelectorAll('.lamp-kick')) {
     el.animate?.(
+      // transform (não a propriedade `rotate`): vai direto para a GPU também no Safari antigo
       [
-        { rotate: '0deg' },
-        { rotate: `${dir * a}deg`, offset: 0.14 },
-        { rotate: `${-dir * a * 0.62}deg`, offset: 0.38 },
-        { rotate: `${dir * a * 0.34}deg`, offset: 0.62 },
-        { rotate: `${-dir * a * 0.12}deg`, offset: 0.84 },
-        { rotate: '0deg' },
+        { transform: 'rotate(0deg)' },
+        { transform: `rotate(${dir * a}deg)`, offset: 0.14 },
+        { transform: `rotate(${-dir * a * 0.62}deg)`, offset: 0.38 },
+        { transform: `rotate(${dir * a * 0.34}deg)`, offset: 0.62 },
+        { transform: `rotate(${-dir * a * 0.12}deg)`, offset: 0.84 },
+        { transform: 'rotate(0deg)' },
       ],
       { duration: 1100, easing: 'ease-in-out' },
     );

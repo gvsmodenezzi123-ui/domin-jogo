@@ -10,6 +10,7 @@ import {
   shuffle,
 } from '../dominoLogic.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
+import { passAvailabilityFor } from '../powers.js';
 
 // mundos [colunas, linhas]: mínimo, telas médias e altas
 const GRIDS = [
@@ -84,8 +85,10 @@ function simulatedPlayerAction(state, rng) {
       coins: state.coins.player,
       hearts: state.hearts.player,
     });
-    if (draw.allowed) options.push({ type: 'DRAW', actor: 'player' });
-    options.push({ type: 'PASS', actor: 'player' });
+    if (draw.allowed && !state.pending) options.push({ type: 'DRAW', actor: 'player' });
+    // passar segue a regra do Patch 0.5.4 (compra obrigatória antes, ou $3 podendo jogar)
+    if (state.pending?.type === 'forcedPass' || passAvailabilityFor(state, 'player').allowed) options.push({ type: 'PASS', actor: 'player' });
+    if (state.pending) return { type: 'PASS', actor: 'player' };
     return options[Math.floor(rng() * options.length)];
   }
   return decideTioZeAction(view);

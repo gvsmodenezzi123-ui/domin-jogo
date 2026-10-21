@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
+import NoMovesBanner from './NoMovesBanner.jsx';
 import { startTileLighting } from './tileLighting.js';
 
 /** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
@@ -50,8 +51,12 @@ function tileBox(r, orientation, unit) {
  * (engine/boardLayout.js), com posição fixa desde que são jogadas, e uma
  * câmera automática enquadra a jogada: bem perto no começo da rodada,
  * afastando conforme a trilha cresce.
+ *
+ * Patch 0.5.4 (Safari iOS): React.memo (moedas, dica e falas não redesenham a mesa),
+ * `contain: layout paint` no feltro (.felt-table) e só as duas pontas abertas animam
+ * reflexo/material; o miolo da mesa fica em gradiente estático.
  */
-export default function TableBoard({
+function TableBoard({
   board,
   roundKey,
   playableSides = [],
@@ -64,15 +69,19 @@ export default function TableBoard({
   decor = [],
   atmosphere = 'boteco',
   incoming = null,
+  noMoves = false,
 }) {
   const [areaRef, size] = useElementSize();
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
   const feltRef = useRef(null);
   useEffect(() => startTileLighting(feltRef.current), []);
-  const setFelt = (el) => {
-    feltRef.current = el;
-    if (frameRef) frameRef.current = el;
-  };
+  const setFelt = useCallback(
+    (el) => {
+      feltRef.current = el;
+      if (frameRef) frameRef.current = el;
+    },
+    [frameRef],
+  );
   // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
   // altura no meio (dica em duas linhas, barra do Safari), só a câmera ajusta;
   // nenhuma pedra muda de lugar.
@@ -143,6 +152,7 @@ export default function TableBoard({
                       enhancement={enhancementOf.get(tile.id)}
                       openEnd={tile.isOpenEnd}
                       shimmer={tile.isOpenEnd}
+                      still={!tile.isOpenEnd}
                       depth={tile.isDouble ? 5 : 4}
                     />
                     {tile.isDouble && (!arriving || landed) && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
@@ -207,6 +217,10 @@ export default function TableBoard({
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
+
+      {noMoves && <NoMovesBanner />}
     </section>
   );
 }
+
+export default memo(TableBoard);

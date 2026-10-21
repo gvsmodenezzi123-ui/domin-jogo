@@ -68,6 +68,8 @@ describe('controle de ritmo', () => {
     s = gameReducer(s, { type: 'PLAY', actor: 'player', tileId: '6-6', side: 'root' });
     s = gameReducer(s, { type: 'PASS', actor: 'tioZe' });
     expect(s.phase).toBe('playing');
+    // nada encaixa no 6: compra a grátis e só então passa (Patch 0.5.4)
+    s = gameReducer(s, { type: 'DRAW', actor: 'player' });
     s = gameReducer(s, { type: 'PASS', actor: 'player' });
     expect(s.phase).toBe('roundOver');
     expect(s.roundResult).toMatchObject({ kind: 'tranca', reason: 'passes' });
@@ -82,6 +84,7 @@ describe('controle de ritmo', () => {
     s = gameReducer(s, { type: 'PLAY', actor: 'player', tileId: '6-6', side: 'root' });
     s = gameReducer(s, { type: 'PLAY', actor: 'tioZe', tileId: '5-6', side: 'right' });
     expect(s.consecutivePasses).toBe(0);
+    s = gameReducer(s, { type: 'DRAW', actor: 'player' });
     s = gameReducer(s, { type: 'PASS', actor: 'player' });
     expect(s.consecutivePasses).toBe(1);
     expect(s.phase).toBe('playing');
@@ -113,7 +116,8 @@ describe('Tio Zé', () => {
     expect(s.board.root.id).toBe('6-6');
     // jogada inválida (raiz com a mesa já aberta) é ignorada
     expect(gameReducer(s, { type: 'PLAY', actor: 'player', tileId: '0-0', side: 'root' })).toBe(s);
-    // jogador passa; com pontas 6 e 6, o Tio Zé tem a 6-0 e joga em vez de passar
+    // jogador compra (obrigatório sem jogada) e passa; com pontas 6 e 6, o Tio Zé tem a 6-0 e joga em vez de passar
+    s = gameReducer(s, { type: 'DRAW', actor: 'player' });
     s = gameReducer(s, { type: 'PASS', actor: 'player' });
     const decision = decideTioZeAction(buildTioZeView(s));
     expect(decision).toMatchObject({ type: 'PLAY', tileId: '0-6' });

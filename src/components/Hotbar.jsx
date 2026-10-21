@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { getRarity } from '../data/rarities.js';
 import { RELIC_SLOTS, getRelic } from '../data/relics.js';
 import RelicIcon from './RelicIcon.jsx';
@@ -13,7 +14,7 @@ import RelicIcon from './RelicIcon.jsx';
  * press:   gera os handlers do toque longo (balão explicativo)
  * onTap:   toque rápido num talismã (na loja: vender)
  */
-export default function Hotbar({
+function Hotbar({
   relics,
   size = 30,
   cols = RELIC_SLOTS,
@@ -62,3 +63,6 @@ export default function Hotbar({
     </div>
   );
 }
+
+// Patch 0.5.4: só redesenha quando as props mudam (não a cada moeda/dica/fala da mesa)
+export default memo(Hotbar);

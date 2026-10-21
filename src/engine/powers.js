@@ -11,7 +11,17 @@
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, getRelic, isUsed } from '../data/relics.js';
 import { getRival } from '../data/rivals.js';
-import { BASE_RULES, boardTilesInOrder, endTileId, makeTile, pipSum } from './dominoLogic.js';
+import {
+  BASE_RULES,
+  boardTilesInOrder,
+  endTileId,
+  getDrawAvailability,
+  getPassAvailability,
+  getPlayableMoves,
+  isTurnExhausted,
+  makeTile,
+  pipSum,
+} from './dominoLogic.js';
 
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
@@ -178,6 +188,45 @@ export function canUndo(state) {
     !isUsed(state, 'player', 'relogio') &&
     Boolean(state.fx.undo)
   );
+}
+
+/** `seat` tem alguma pedra que encaixa agora (com os talismãs e as pontas travadas dele)? */
+export function hasPlayFor(state, seat) {
+  return getPlayableMoves(state.hands[seat], state.board, requiredOpeningFor(state, seat), rulesFor(state, seat)).length > 0;
+}
+
+/** A próxima compra de `seat` neste turno (escada grátis → $3 → 1 coração). */
+export function drawAvailabilityFor(state, seat) {
+  return getDrawAvailability({
+    drawsThisTurn: state.drawsThisTurn,
+    boneyardCount: state.boneyard.length,
+    coins: state.coins[seat],
+    hearts: state.hearts[seat],
+  });
+}
+
+/** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`). */
+export function passAvailabilityFor(state, seat = 'player') {
+  return getPassAvailability({
+    hasPlay: hasPlayFor(state, seat),
+    drawsThisTurn: state.drawsThisTurn,
+    boneyardCount: state.boneyard.length,
+    coins: state.coins[seat],
+  });
+}
+
+/**
+ * A sua vez acabou sem saída: comprou, nada encaixa e não dá para comprar de novo.
+ * O Relógio Quebrado pronto ainda é uma saída (desfazer a jogada do rival).
+ */
+export function playerTurnExhausted(state) {
+  if (state.phase !== 'playing' || state.turn !== 'player' || state.pending || !state.board.root) return false;
+  if (canUndo(state)) return false;
+  return isTurnExhausted({
+    hasPlay: hasPlayFor(state, 'player'),
+    drawsThisTurn: state.drawsThisTurn,
+    drawAllowed: drawAvailabilityFor(state, 'player').allowed,
+  });
 }
 
 /** Pedras da mão do rival que você enxerga (Olho de Vidro, Espelho Retrovisor). */

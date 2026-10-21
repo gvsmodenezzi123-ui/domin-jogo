@@ -55,7 +55,9 @@ import {
   drawOptionsFor,
   enhancedTilesInPlay,
   hasRelic,
+  passAvailabilityFor,
   plainTiles,
+  playerTurnExhausted,
   relicExtraTurn,
   requiredOpeningFor,
   rulesFor,
@@ -540,7 +542,7 @@ function drawTile(state, { actor }) {
   next = afterMiss(next, actor, { kind: 'draw', tileId: tile.id });
   const knockout = checkKnockout(next);
   if (knockout) return knockout;
-  return checkTranca(next) ?? next;
+  return checkTranca(next) ?? armForcedPass(next);
 }
 
 function pickDrawn(state, { tileId }) {
@@ -556,19 +558,39 @@ function pickDrawn(state, { tileId }) {
     boneyard: [...state.boneyard, ...plainTiles(back)], // as outras voltam para o fundo do dorme
   };
   next = emit(next, { type: 'drawTile', by: 'player', tileId: chosen.id, cost: pending.cost, picked: true });
-  return checkTranca(next) ?? next;
+  return checkTranca(next) ?? armForcedPass(next);
 }
 
+/**
+ * Sua vez sem saída (comprou, nada encaixa, não dá para comprar de novo): a mesa
+ * trava as ações e avisa "SEM JOGADAS DISPONÍVEIS"; a tela mostra o banner, toca
+ * o som de passe e só então manda o PASS forçado (`pending.type === 'forcedPass'`).
+ */
+function armForcedPass(state) {
+  if (!playerTurnExhausted(state)) return state;
+  return emit({ ...state, pending: { type: 'forcedPass' } }, { type: 'noMoves', by: 'player', draws: state.drawsThisTurn });
+}
+
+/**
+ * Passa a vez. Para o jogador vale a regra do Patch 0.5.4 (`getPassAvailability`):
+ * sem jogada, a 1ª compra é obrigatória; com jogada e sem compra, o passe custa $3;
+ * depois de comprar, é de graça. O passe forçado (turno sem saída) não custa nada.
+ */
 function passTurn(state, { actor, intent }) {
-  if (!canAct(state, actor) || !state.board.root) return state;
+  const forced = actor === 'player' && state.phase === 'playing' && state.turn === 'player' && state.pending?.type === 'forcedPass';
+  if (!forced && (!canAct(state, actor) || !state.board.root)) return state;
+  const rule = actor === 'player' && !forced ? passAvailabilityFor(state, 'player') : { allowed: true, cost: 0 };
+  if (!rule.allowed) return state;
   const consecutivePasses = state.consecutivePasses + 1;
   let next = {
     ...state,
+    pending: forced ? null : state.pending,
     consecutivePasses,
     drawsThisTurn: 0,
     memory: actor === 'player' ? rememberPlayerMissing(state) : state.memory,
   };
-  next = emit(next, { type: 'pass', by: actor, intent: intent ?? null });
+  if (rule.cost > 0) next = loseCoins(next, actor, rule.cost, 'pass');
+  next = emit(next, { type: 'pass', by: actor, intent: intent ?? null, cost: rule.cost, forced });
   next = afterMiss(next, actor, { kind: 'pass' });
   // Cida da Marmita: você passou, ela come e recupera 1 coração
   if (actor === 'player' && rivalMechanics(next).healOnPlayerPass && next.hearts.tioZe < next.maxHearts.tioZe) {

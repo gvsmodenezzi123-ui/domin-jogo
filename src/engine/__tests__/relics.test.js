@@ -359,8 +359,12 @@ describe('talismãs (seus)', () => {
   });
 
   it('Relógio Quebrado: a chance acaba quando a sua vez termina', () => {
-    let s = scenario({ player: [t(0, 0), t(6, 6)], tioZe: [t(4, 5), t(1, 1)], boneyard: [t(2, 2)], relics: ['relogio'], turn: 'tioZe' });
+    let s = scenario({ player: [t(0, 0), t(6, 6)], tioZe: [t(4, 5), t(1, 1)], boneyard: [t(2, 2), t(1, 2)], relics: ['relogio'], turn: 'tioZe' });
     s = play(s, '4-5', 'right', 'tioZe');
+    // nada encaixa: a 1ª compra é obrigatória antes de passar (Patch 0.5.4)
+    expect(gameReducer(s, { type: 'PASS', actor: 'player' })).toBe(s);
+    s = gameReducer(s, { type: 'DRAW', actor: 'player' });
+    expect(s.fx.undo).not.toBeNull();
     s = gameReducer(s, { type: 'PASS', actor: 'player' });
     expect(s.fx.undo).toBeNull();
   });
@@ -433,6 +437,7 @@ describe('talismãs e pedras dos rivais', () => {
     expect(s.fx.frozen.player).toEqual(['right']);
     expect(endMarksFor(s)).toEqual({ right: 'blocked' });
     expect(play(s, '5-6', 'right')).toBe(s);
+    s = gameReducer(s, { type: 'DRAW', actor: 'player' }); // nada encaixa: compra antes de passar
     s = gameReducer(s, { type: 'PASS', actor: 'player' });
     expect(s.fx.frozen.player).toEqual([]);
   });

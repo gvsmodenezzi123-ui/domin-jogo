@@ -38,7 +38,7 @@ import {
   placeTile,
 } from '../engine/dominoLogic.js';
 import { DEFAULT_STYLE, getRival } from '../data/rivals.js';
-import { knownPlayerTiles, requiredOpeningFor, rulesFor } from '../engine/powers.js';
+import { knownPlayerTiles, passAvailabilityFor, requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
 /** Delay reflexivo entre cada ação do Tio Zé. */
 export const TIO_ZE_REFLEX_MS = 700;
@@ -65,6 +65,8 @@ export function buildTioZeView(state, seat = 'tioZe') {
     style: seat === 'tioZe' ? getRival(state.rivalId).style : DEFAULT_STYLE,
     // pedras suas que ele enxerga (Paulinho Pente Fino, Madama Sofia)
     knownTiles: seat === 'tioZe' ? knownPlayerTiles(state) : [],
+    // a cadeira do jogador segue a regra do passe do Patch 0.5.4 (simulações jogam por ela)
+    passRule: seat === 'player' ? passAvailabilityFor(state, 'player') : null,
   };
 }
 
@@ -169,7 +171,9 @@ export function decideTioZeAction(view) {
   const best = chooseBestMove(view);
   if (best) return { type: 'PLAY', actor, tileId: best.tile.id, side: best.side };
 
-  if (view.consecutivePasses >= 1 && trancaFavors(view, view.hand)) {
+  // passe de propósito só quando ele sai de graça (a cadeira do jogador paga $3 ou precisa comprar antes)
+  const freePass = !view.passRule || (view.passRule.allowed && view.passRule.cost === 0);
+  if (view.consecutivePasses >= 1 && freePass && trancaFavors(view, view.hand)) {
     return { type: 'PASS', actor, intent: 'tranca' };
   }
 

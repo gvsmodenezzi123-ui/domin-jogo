@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import Hotbar from './Hotbar.jsx';
@@ -18,7 +18,7 @@ import { MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
  *   - mão do rival presa à direita, cada pedra na sua vaga (RivalHand.jsx);
  *   - som e menu no canto de baixo à direita.
  */
-export default function RivalBench({
+function RivalBench({
   rival,
   hearts,
   maxHearts,
@@ -107,3 +107,6 @@ export default function RivalBench({
     </header>
   );
 }
+
+// Patch 0.5.4: só redesenha quando as props mudam (não a cada moeda/dica/fala da mesa)
+export default memo(RivalBench);

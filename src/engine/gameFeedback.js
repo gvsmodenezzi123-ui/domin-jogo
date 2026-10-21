@@ -96,12 +96,22 @@ const SPECIAL_HINT = {
 };
 
 /** Texto de ajuda logo acima dos botões. */
-export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCount, drawAllowed, rules = BASE_RULES, rivalName = 'o rival' }) {
+export function buildPlayerHint({
+  state,
+  isPlayerTurn,
+  selectedTile,
+  playableCount,
+  drawAllowed,
+  passRule = null,
+  rules = BASE_RULES,
+  rivalName = 'o rival',
+}) {
   if (state.phase !== 'playing') return '';
   if (state.pending?.type === 'discard') {
     return selectedTile ? 'Toque em DESCARTAR para mandar ela pro fundo do dorme.' : 'Giz de Sinuca: escolha uma pedra para descartar (ou pule).';
   }
   if (state.pending?.type === 'drawChoice') return 'Barbante: escolha uma das duas pedras.';
+  if (state.pending?.type === 'forcedPass') return `Nada encaixa e acabaram as compras. A vez é de ${rivalName}.`;
   if (!isPlayerTurn) return `Vez de ${rivalName}...`;
   if (!state.board.root) {
     const required = requiredOpeningFor(state, 'player');
@@ -125,6 +135,7 @@ export function buildPlayerHint({ state, isPlayerTurn, selectedTile, playableCou
     return 'Toque no JOGAR ou na vaga pontilhada da mesa.';
   }
   if (playableCount > 0) return `Sua vez. ${playableCount} pedra${playableCount > 1 ? 's' : ''} encaixa${playableCount > 1 ? 'm' : ''}.`;
-  if (drawAllowed) return 'Nada encaixa. Compre no dorme ou passe.';
+  if (passRule?.reason === 'mustDraw') return 'Nada encaixa. Compre no dorme: a 1ª é grátis.';
+  if (drawAllowed) return 'Nada encaixa. Compre de novo ou passe a vez.';
   return 'Nada encaixa e não dá pra comprar. Passe a vez.';
 }

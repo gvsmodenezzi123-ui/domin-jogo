@@ -395,3 +395,32 @@ export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, heart
   if (cost.type === 'heart' && hearts <= cost.amount) return { allowed: false, reason: 'hearts', cost };
   return { allowed: true, reason: null, cost };
 }
+
+/** Taxa do passe voluntário: passar podendo jogar, sem ter comprado no turno. */
+export const PASS_FEE = 3;
+
+/**
+ * Regra do botão PASSAR A VEZ no turno do jogador (Patch 0.5.4):
+ * - Já comprou ao menos 1 pedra no turno: passa de graça.
+ * - Nada encaixa e o dorme tem pedra: não passa; a 1ª compra (grátis) é obrigatória.
+ * - Nada encaixa e o dorme secou: passa de graça (não há o que fazer).
+ * - Tem jogada e não comprou: passe estratégico por $3 (sem saldo, bloqueado).
+ *
+ * Retorna `{ allowed, cost, reason }`, com `reason` em null | 'mustDraw' | 'coins'.
+ */
+export function getPassAvailability({ hasPlay, drawsThisTurn, boneyardCount, coins }) {
+  if (drawsThisTurn > 0) return { allowed: true, cost: 0, reason: null };
+  if (!hasPlay) {
+    return boneyardCount > 0 ? { allowed: false, cost: 0, reason: 'mustDraw' } : { allowed: true, cost: 0, reason: null };
+  }
+  if (coins < PASS_FEE) return { allowed: false, cost: PASS_FEE, reason: 'coins' };
+  return { allowed: true, cost: PASS_FEE, reason: null };
+}
+
+/**
+ * Turno sem saída: já comprou, nada encaixa e não dá para comprar de novo
+ * (3 compras feitas, dorme seco ou sem como pagar a próxima). O passe é automático.
+ */
+export function isTurnExhausted({ hasPlay, drawsThisTurn, drawAllowed }) {
+  return !hasPlay && drawsThisTurn > 0 && !drawAllowed;
+}
