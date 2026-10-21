@@ -2055,3 +2055,675 @@ export function NeideAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking
     </PixelSvg>
   );
 }
+
+// ---------------------------------------------------------------------------
+// 5. SEU ARLINDO — CHEFE, "O Rei da Bucha" (joga desde 1962)
+// ---------------------------------------------------------------------------
+
+/** Sobrancelhas brancas e olhos do Arlindo por humor. */
+function ArlindoEyes({ mood }) {
+  if (mood === 'thinking') {
+    return (
+      <>
+      {/* Sobrancelhas brancas grossas */}
+      <rect x="23" y="13" width="3" height="2" fill="#e8e2d4" />
+      <rect x="22" y="14" width="1" height="1" fill="#e8e2d4" />
+      <rect x="26" y="14" width="3" height="1" fill="#e8e2d4" />
+      <rect x="14" y="15" width="3" height="2" fill="#e8e2d4" />
+      <rect x="11" y="16" width="3" height="1" fill="#e8e2d4" />
+      <rect x="17" y="16" width="1" height="1" fill="#e8e2d4" />
+      <rect x="21" y="15" width="7" height="1" fill="#958e7e" />
+      <rect x="12" y="17" width="7" height="1" fill="#958e7e" />
+      <rect x="26" y="13" width="2" height="1" fill="#fdfbf5" />
+      <rect x="12" y="15" width="2" height="1" fill="#fdfbf5" />
+      {/* Olhos de velho malandro */}
+      <rect x="13" y="18" width="1" height="2" fill="#efe6cf" />
+      <rect x="24" y="18" width="1" height="2" fill="#efe6cf" />
+      <rect x="14" y="19" width="2" height="1" fill="#efe6cf" />
+      <rect x="25" y="19" width="2" height="1" fill="#efe6cf" />
+      <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
+      <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="14" y="18" width="2" height="1" fill="#120c08" />
+      <rect x="25" y="18" width="2" height="1" fill="#120c08" />
+      <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
+      </>
+    );
+  }
+  if (mood === 'smug') {
+    return (
+      <>
+      {/* Sobrancelhas brancas grossas */}
+      <rect x="14" y="14" width="3" height="2" fill="#e8e2d4" />
+      <rect x="23" y="14" width="3" height="2" fill="#e8e2d4" />
+      <rect x="11" y="15" width="3" height="1" fill="#e8e2d4" />
+      <rect x="17" y="15" width="1" height="1" fill="#e8e2d4" />
+      <rect x="22" y="15" width="1" height="1" fill="#e8e2d4" />
+      <rect x="26" y="15" width="3" height="1" fill="#e8e2d4" />
+      <rect x="12" y="16" width="7" height="1" fill="#958e7e" />
+      <rect x="21" y="16" width="7" height="1" fill="#958e7e" />
+      <rect x="12" y="14" width="2" height="1" fill="#fdfbf5" />
+      <rect x="26" y="14" width="2" height="1" fill="#fdfbf5" />
+      {/* Olhos de velho malandro */}
+      <rect x="13" y="18" width="3" height="1" fill="#a46e48" />
+      <rect x="24" y="18" width="3" height="1" fill="#a46e48" />
+      <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
+      <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="14" y="19" width="2" height="1" fill="#120c08" />
+      <rect x="24" y="19" width="2" height="1" fill="#120c08" />
+      <rect x="13" y="19" width="1" height="1" fill="#efe6cf" />
+      <rect x="26" y="19" width="1" height="1" fill="#efe6cf" />
+      <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
+      </>
+    );
+  }
+  if (mood === 'hurt') {
+    return (
+      <>
+      {/* Sobrancelhas brancas grossas */}
+      <rect x="18" y="14" width="1" height="2" fill="#e8e2d4" />
+      <rect x="21" y="14" width="1" height="2" fill="#e8e2d4" />
+      <rect x="14" y="15" width="4" height="1" fill="#e8e2d4" />
+      <rect x="22" y="15" width="4" height="1" fill="#e8e2d4" />
+      <rect x="11" y="16" width="4" height="1" fill="#e8e2d4" />
+      <rect x="25" y="16" width="4" height="1" fill="#e8e2d4" />
+      <rect x="15" y="16" width="2" height="1" fill="#958e7e" />
+      <rect x="23" y="16" width="2" height="1" fill="#958e7e" />
+      <rect x="11" y="17" width="3" height="1" fill="#958e7e" />
+      <rect x="26" y="17" width="3" height="1" fill="#958e7e" />
+      <rect x="16" y="14" width="2" height="1" fill="#fdfbf5" />
+      <rect x="22" y="14" width="2" height="1" fill="#fdfbf5" />
+      <rect x="13" y="15" width="1" height="1" fill="#fdfbf5" />
+      <rect x="26" y="15" width="1" height="1" fill="#fdfbf5" />
+      {/* Olhos de velho malandro */}
+      <rect x="13" y="18" width="1" height="1" fill="#120c08" />
+      <rect x="15" y="18" width="1" height="1" fill="#120c08" />
+      <rect x="24" y="18" width="1" height="1" fill="#120c08" />
+      <rect x="26" y="18" width="1" height="1" fill="#120c08" />
+      <rect x="14" y="19" width="1" height="1" fill="#120c08" />
+      <rect x="25" y="19" width="1" height="1" fill="#120c08" />
+      <rect x="13" y="20" width="1" height="1" fill="#120c08" />
+      <rect x="15" y="20" width="1" height="1" fill="#120c08" />
+      <rect x="24" y="20" width="1" height="1" fill="#120c08" />
+      <rect x="26" y="20" width="1" height="1" fill="#120c08" />
+      </>
+    );
+  }
+  return (
+    <>
+      {/* Sobrancelhas brancas grossas */}
+      <rect x="14" y="14" width="3" height="2" fill="#e8e2d4" />
+      <rect x="23" y="14" width="3" height="2" fill="#e8e2d4" />
+      <rect x="11" y="15" width="3" height="1" fill="#e8e2d4" />
+      <rect x="17" y="15" width="1" height="1" fill="#e8e2d4" />
+      <rect x="22" y="15" width="1" height="1" fill="#e8e2d4" />
+      <rect x="26" y="15" width="3" height="1" fill="#e8e2d4" />
+      <rect x="12" y="16" width="7" height="1" fill="#958e7e" />
+      <rect x="21" y="16" width="7" height="1" fill="#958e7e" />
+      <rect x="12" y="14" width="2" height="1" fill="#fdfbf5" />
+      <rect x="26" y="14" width="2" height="1" fill="#fdfbf5" />
+      {/* Olhos de velho malandro */}
+      <rect x="12" y="19" width="1" height="1" fill="#a46e48" />
+      <rect x="13" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="24" y="20" width="3" height="1" fill="#a46e48" />
+      <rect x="15" y="18" width="1" height="2" fill="#120c08" />
+      <rect x="25" y="18" width="1" height="2" fill="#120c08" />
+      <rect x="14" y="19" width="1" height="1" fill="#120c08" />
+      <rect x="24" y="19" width="1" height="1" fill="#120c08" />
+      <rect x="13" y="18" width="1" height="2" fill="#efe6cf" />
+      <rect x="26" y="18" width="1" height="2" fill="#efe6cf" />
+      <rect x="14" y="18" width="1" height="1" fill="#ffffff" />
+      <rect x="24" y="18" width="1" height="1" fill="#ffffff" />
+      <rect x="27" y="19" width="1" height="1" fill="#6e4429" />
+    </>
+  );
+}
+
+/** Boca do Arlindo debaixo do bigodão; falando, abre. */
+function ArlindoMouth({ mood, speaking }) {
+  if (speaking) {
+    return (
+      <>
+      {/* Boca debaixo do bigodão */}
+      <rect x="16" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="23" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="17" y="30" width="1" height="1" fill="#2a0d08" />
+      <rect x="22" y="30" width="1" height="1" fill="#2a0d08" />
+      <rect x="17" y="29" width="6" height="1" fill="#efe6cf" />
+      <rect x="17" y="31" width="6" height="1" fill="#b06650" />
+      <rect x="18" y="30" width="4" height="1" fill="#b8473c" />
+      </>
+    );
+  }
+  if (mood === 'thinking') {
+    return (
+      <>
+      {/* Boca debaixo do bigodão */}
+      <rect x="18" y="29" width="3" height="1" fill="#b06650" />
+      <rect x="17" y="29" width="1" height="1" fill="#a46e48" />
+      </>
+    );
+  }
+  if (mood === 'smug') {
+    return (
+      <>
+      {/* Boca debaixo do bigodão */}
+      <rect x="19" y="29" width="5" height="1" fill="#efe6cf" />
+      <rect x="18" y="30" width="5" height="1" fill="#b06650" />
+      <rect x="24" y="28" width="1" height="1" fill="#2a0d08" />
+      <rect x="18" y="29" width="1" height="1" fill="#2a0d08" />
+      </>
+    );
+  }
+  if (mood === 'hurt') {
+    return (
+      <>
+      {/* Boca debaixo do bigodão */}
+      <rect x="15" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="18" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="21" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="24" y="29" width="1" height="2" fill="#2a0d08" />
+      <rect x="16" y="30" width="2" height="1" fill="#2a0d08" />
+      <rect x="19" y="30" width="2" height="1" fill="#2a0d08" />
+      <rect x="22" y="30" width="2" height="1" fill="#2a0d08" />
+      <rect x="16" y="29" width="2" height="1" fill="#efe6cf" />
+      <rect x="19" y="29" width="2" height="1" fill="#efe6cf" />
+      <rect x="22" y="29" width="2" height="1" fill="#efe6cf" />
+      </>
+    );
+  }
+  return (
+    <>
+      {/* Boca debaixo do bigodão */}
+      <rect x="17" y="29" width="1" height="1" fill="#b06650" />
+      <rect x="21" y="29" width="2" height="1" fill="#b06650" />
+      <rect x="18" y="29" width="3" height="1" fill="#e8b386" />
+    </>
+  );
+}
+
+/** Coroa do Arlindo: torta no lugar, cai de lado quando ele é ferido. */
+function ArlindoExtras({ mood }) {
+  if (mood === 'hurt') {
+    return (
+      <>
+      {/* Coroa de rei gasta (meio torta) */}
+      <rect x="32" y="3" width="1" height="1" fill="#0b0806" />
+      <rect x="29" y="4" width="3" height="1" fill="#0b0806" />
+      <rect x="33" y="4" width="1" height="3" fill="#0b0806" />
+      <rect x="25" y="5" width="4" height="1" fill="#0b0806" />
+      <rect x="23" y="6" width="2" height="1" fill="#0b0806" />
+      <rect x="34" y="6" width="1" height="1" fill="#0b0806" />
+      <rect x="22" y="7" width="1" height="2" fill="#0b0806" />
+      <rect x="35" y="7" width="1" height="2" fill="#0b0806" />
+      <rect x="23" y="9" width="1" height="1" fill="#0b0806" />
+      <rect x="34" y="9" width="1" height="1" fill="#0b0806" />
+      <rect x="24" y="10" width="10" height="1" fill="#0b0806" />
+      <rect x="29" y="5" width="3" height="1" fill="#f0c95a" />
+      <rect x="26" y="6" width="4" height="1" fill="#f0c95a" />
+      <rect x="24" y="7" width="2" height="2" fill="#f0c95a" />
+      <rect x="27" y="7" width="1" height="2" fill="#f0c95a" />
+      <rect x="23" y="8" width="1" height="1" fill="#f0c95a" />
+      <rect x="26" y="8" width="1" height="1" fill="#f0c95a" />
+      <rect x="32" y="5" width="1" height="1" fill="#c99a2e" />
+      <rect x="30" y="6" width="2" height="2" fill="#c99a2e" />
+      <rect x="32" y="7" width="1" height="2" fill="#c99a2e" />
+      <rect x="30" y="8" width="1" height="1" fill="#c99a2e" />
+      <rect x="34" y="8" width="1" height="1" fill="#c99a2e" />
+      <rect x="24" y="9" width="4" height="1" fill="#c99a2e" />
+      <rect x="32" y="6" width="1" height="1" fill="#8c661a" />
+      <rect x="33" y="7" width="1" height="3" fill="#8c661a" />
+      <rect x="28" y="9" width="5" height="1" fill="#8c661a" />
+      <rect x="32" y="4" width="1" height="1" fill="#fff2b8" />
+      <rect x="25" y="6" width="1" height="1" fill="#fff2b8" />
+      <rect x="23" y="7" width="1" height="1" fill="#fff2b8" />
+      <rect x="34" y="7" width="1" height="1" fill="#fff2b8" />
+      <rect x="29" y="7" width="1" height="2" fill="#c8261d" />
+      <rect x="28" y="8" width="1" height="1" fill="#c8261d" />
+      <rect x="26" y="7" width="1" height="1" fill="#241806" />
+      <rect x="28" y="7" width="1" height="1" fill="#ff7a6a" />
+      <rect x="31" y="8" width="1" height="1" fill="#3a78c8" />
+      {/* Suor */}
+      <rect x="12" y="11" width="1" height="2" fill="#f4fcff" />
+      <rect x="13" y="12" width="1" height="1" fill="#a9d9ec" />
+      <rect x="12" y="13" width="1" height="1" fill="#a9d9ec" />
+      <rect x="13" y="13" width="1" height="1" fill="#5b95b0" />
+      </>
+    );
+  }
+  return (
+    <>
+      {/* Coroa de rei gasta (meio torta) */}
+      <rect x="19" y="0" width="2" height="1" fill="#0b0806" />
+      <rect x="14" y="1" width="1" height="1" fill="#0b0806" />
+      <rect x="18" y="1" width="1" height="3" fill="#0b0806" />
+      <rect x="21" y="1" width="1" height="3" fill="#0b0806" />
+      <rect x="13" y="2" width="1" height="5" fill="#0b0806" />
+      <rect x="15" y="2" width="1" height="1" fill="#0b0806" />
+      <rect x="24" y="2" width="1" height="1" fill="#0b0806" />
+      <rect x="16" y="3" width="1" height="1" fill="#0b0806" />
+      <rect x="23" y="3" width="1" height="2" fill="#0b0806" />
+      <rect x="25" y="3" width="1" height="1" fill="#0b0806" />
+      <rect x="26" y="4" width="1" height="4" fill="#0b0806" />
+      <rect x="14" y="7" width="1" height="1" fill="#0b0806" />
+      <rect x="19" y="8" width="7" height="1" fill="#0b0806" />
+      <rect x="20" y="2" width="1" height="3" fill="#c99a2e" />
+      <rect x="15" y="3" width="1" height="2" fill="#c99a2e" />
+      <rect x="21" y="4" width="2" height="3" fill="#c99a2e" />
+      <rect x="25" y="4" width="1" height="1" fill="#c99a2e" />
+      <rect x="23" y="5" width="2" height="1" fill="#c99a2e" />
+      <rect x="24" y="6" width="1" height="1" fill="#c99a2e" />
+      <rect x="15" y="7" width="5" height="1" fill="#c99a2e" />
+      <rect x="23" y="7" width="1" height="1" fill="#c99a2e" />
+      <rect x="20" y="1" width="1" height="1" fill="#f0c95a" />
+      <rect x="19" y="2" width="1" height="3" fill="#f0c95a" />
+      <rect x="14" y="3" width="1" height="2" fill="#f0c95a" />
+      <rect x="16" y="4" width="3" height="1" fill="#f0c95a" />
+      <rect x="24" y="4" width="1" height="1" fill="#f0c95a" />
+      <rect x="15" y="5" width="2" height="2" fill="#f0c95a" />
+      <rect x="18" y="5" width="1" height="2" fill="#f0c95a" />
+      <rect x="14" y="6" width="1" height="1" fill="#f0c95a" />
+      <rect x="17" y="6" width="1" height="1" fill="#f0c95a" />
+      <rect x="25" y="5" width="1" height="3" fill="#8c661a" />
+      <rect x="20" y="7" width="3" height="1" fill="#8c661a" />
+      <rect x="24" y="7" width="1" height="1" fill="#8c661a" />
+      <rect x="19" y="1" width="1" height="1" fill="#fff2b8" />
+      <rect x="14" y="2" width="1" height="1" fill="#fff2b8" />
+      <rect x="24" y="3" width="1" height="1" fill="#fff2b8" />
+      <rect x="14" y="5" width="1" height="1" fill="#fff2b8" />
+      <rect x="20" y="5" width="1" height="2" fill="#c8261d" />
+      <rect x="19" y="6" width="1" height="1" fill="#c8261d" />
+      <rect x="17" y="5" width="1" height="1" fill="#241806" />
+      <rect x="19" y="5" width="1" height="1" fill="#ff7a6a" />
+      <rect x="23" y="6" width="1" height="1" fill="#3a78c8" />
+    </>
+  );
+}
+
+/** Seu Arlindo (chefe): careca com tufos brancos, bigodão, coroa gasta, suspensórios, gravata borboleta e a bucha 6|6 na mão. */
+export function ArlindoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking = false }) {
+  const speaking = isSpeaking && mood !== 'hurt';
+  return (
+    <PixelSvg className={className} viewBox="0 0 40 40">
+      {/* Fundo de sombra da silhueta (chefe) */}
+      <rect x="6" y="4" width="28" height="1" fill="#090a0f" />
+      <rect x="6" y="5" width="9" height="1" fill="#090a0f" />
+      <rect x="25" y="5" width="9" height="1" fill="#090a0f" />
+      <rect x="6" y="6" width="7" height="1" fill="#090a0f" />
+      <rect x="27" y="6" width="7" height="1" fill="#090a0f" />
+      <rect x="6" y="7" width="6" height="1" fill="#090a0f" />
+      <rect x="28" y="7" width="6" height="1" fill="#090a0f" />
+      <rect x="6" y="8" width="5" height="1" fill="#090a0f" />
+      <rect x="29" y="8" width="5" height="1" fill="#090a0f" />
+      <rect x="6" y="9" width="1" height="1" fill="#090a0f" />
+      <rect x="10" y="9" width="1" height="1" fill="#090a0f" />
+      <rect x="29" y="9" width="1" height="1" fill="#090a0f" />
+      <rect x="33" y="9" width="1" height="1" fill="#090a0f" />
+      <rect x="33" y="23" width="1" height="11" fill="#090a0f" />
+      <rect x="32" y="24" width="1" height="9" fill="#090a0f" />
+      <rect x="8" y="26" width="1" height="7" fill="#090a0f" />
+      <rect x="31" y="26" width="1" height="7" fill="#090a0f" />
+      <rect x="9" y="27" width="1" height="6" fill="#090a0f" />
+      <rect x="30" y="27" width="1" height="6" fill="#090a0f" />
+      <rect x="10" y="28" width="1" height="4" fill="#090a0f" />
+      <rect x="29" y="28" width="1" height="4" fill="#090a0f" />
+      <rect x="11" y="30" width="1" height="2" fill="#090a0f" />
+      <rect x="28" y="30" width="1" height="2" fill="#090a0f" />
+      <rect x="12" y="31" width="2" height="1" fill="#090a0f" />
+      <rect x="26" y="31" width="2" height="1" fill="#090a0f" />
+      <rect x="5" y="3" width="30" height="1" fill="#3a2c10" />
+      <rect x="5" y="4" width="1" height="6" fill="#3a2c10" />
+      <rect x="34" y="4" width="1" height="6" fill="#3a2c10" />
+      <rect x="34" y="23" width="1" height="11" fill="#3a2c10" />
+      {/* Tufos de cabelo branco */}
+      <rect x="30" y="10" width="2" height="5" fill="#c7c0ae" />
+      <rect x="29" y="11" width="1" height="7" fill="#c7c0ae" />
+      <rect x="32" y="11" width="2" height="3" fill="#c7c0ae" />
+      <rect x="9" y="13" width="1" height="6" fill="#c7c0ae" />
+      <rect x="34" y="13" width="1" height="2" fill="#c7c0ae" />
+      <rect x="8" y="14" width="1" height="1" fill="#c7c0ae" />
+      <rect x="10" y="14" width="1" height="4" fill="#c7c0ae" />
+      <rect x="32" y="14" width="1" height="9" fill="#c7c0ae" />
+      <rect x="30" y="15" width="1" height="4" fill="#c7c0ae" />
+      <rect x="33" y="15" width="1" height="3" fill="#c7c0ae" />
+      <rect x="8" y="16" width="1" height="4" fill="#c7c0ae" />
+      <rect x="31" y="16" width="1" height="4" fill="#c7c0ae" />
+      <rect x="34" y="18" width="1" height="2" fill="#c7c0ae" />
+      <rect x="7" y="19" width="1" height="1" fill="#c7c0ae" />
+      <rect x="33" y="19" width="1" height="3" fill="#c7c0ae" />
+      <rect x="8" y="21" width="1" height="1" fill="#c7c0ae" />
+      <rect x="34" y="21" width="1" height="1" fill="#c7c0ae" />
+      <rect x="8" y="10" width="2" height="3" fill="#e8e2d4" />
+      <rect x="32" y="10" width="1" height="1" fill="#e8e2d4" />
+      <rect x="6" y="11" width="2" height="3" fill="#e8e2d4" />
+      <rect x="10" y="11" width="1" height="3" fill="#e8e2d4" />
+      <rect x="34" y="11" width="1" height="2" fill="#e8e2d4" />
+      <rect x="35" y="12" width="1" height="2" fill="#e8e2d4" />
+      <rect x="5" y="13" width="1" height="2" fill="#e8e2d4" />
+      <rect x="8" y="13" width="1" height="1" fill="#e8e2d4" />
+      <rect x="7" y="14" width="1" height="5" fill="#e8e2d4" />
+      <rect x="6" y="15" width="1" height="3" fill="#e8e2d4" />
+      <rect x="34" y="16" width="1" height="2" fill="#e8e2d4" />
+      <rect x="35" y="17" width="1" height="2" fill="#e8e2d4" />
+      <rect x="5" y="18" width="1" height="2" fill="#e8e2d4" />
+      <rect x="6" y="19" width="1" height="2" fill="#e8e2d4" />
+      <rect x="7" y="20" width="1" height="1" fill="#e8e2d4" />
+      <rect x="5" y="21" width="1" height="1" fill="#e8e2d4" />
+      <rect x="7" y="9" width="3" height="1" fill="#0b0806" />
+      <rect x="30" y="9" width="3" height="1" fill="#0b0806" />
+      <rect x="5" y="10" width="2" height="1" fill="#0b0806" />
+      <rect x="10" y="10" width="1" height="1" fill="#0b0806" />
+      <rect x="29" y="10" width="1" height="1" fill="#0b0806" />
+      <rect x="33" y="10" width="2" height="1" fill="#0b0806" />
+      <rect x="4" y="11" width="1" height="1" fill="#0b0806" />
+      <rect x="35" y="11" width="1" height="1" fill="#0b0806" />
+      <rect x="3" y="12" width="1" height="2" fill="#0b0806" />
+      <rect x="36" y="12" width="1" height="2" fill="#0b0806" />
+      <rect x="4" y="14" width="1" height="1" fill="#0b0806" />
+      <rect x="35" y="14" width="1" height="1" fill="#0b0806" />
+      <rect x="5" y="15" width="1" height="1" fill="#0b0806" />
+      <rect x="34" y="15" width="1" height="1" fill="#0b0806" />
+      <rect x="4" y="16" width="1" height="1" fill="#0b0806" />
+      <rect x="35" y="16" width="1" height="1" fill="#0b0806" />
+      <rect x="3" y="17" width="1" height="2" fill="#0b0806" />
+      <rect x="36" y="17" width="1" height="2" fill="#0b0806" />
+      <rect x="4" y="19" width="1" height="1" fill="#0b0806" />
+      <rect x="35" y="19" width="1" height="1" fill="#0b0806" />
+      <rect x="5" y="20" width="1" height="1" fill="#0b0806" />
+      <rect x="34" y="20" width="1" height="1" fill="#0b0806" />
+      <rect x="4" y="21" width="1" height="1" fill="#0b0806" />
+      <rect x="35" y="21" width="1" height="1" fill="#0b0806" />
+      <rect x="5" y="22" width="1" height="1" fill="#0b0806" />
+      <rect x="33" y="22" width="2" height="1" fill="#0b0806" />
+      <rect x="32" y="23" width="1" height="1" fill="#0b0806" />
+      <rect x="6" y="14" width="1" height="1" fill="#958e7e" />
+      <rect x="8" y="15" width="1" height="1" fill="#958e7e" />
+      <rect x="6" y="18" width="1" height="1" fill="#958e7e" />
+      <rect x="10" y="18" width="1" height="6" fill="#958e7e" />
+      <rect x="29" y="18" width="1" height="4" fill="#958e7e" />
+      <rect x="9" y="19" width="1" height="4" fill="#958e7e" />
+      <rect x="30" y="19" width="1" height="2" fill="#958e7e" />
+      <rect x="8" y="20" width="1" height="1" fill="#958e7e" />
+      <rect x="7" y="10" width="1" height="1" fill="#fdfbf5" />
+      <rect x="5" y="11" width="1" height="2" fill="#fdfbf5" />
+      <rect x="4" y="12" width="1" height="2" fill="#fdfbf5" />
+      <rect x="5" y="16" width="1" height="2" fill="#fdfbf5" />
+      <rect x="4" y="17" width="1" height="2" fill="#fdfbf5" />
+      <rect x="33" y="14" width="1" height="1" fill="#5e594d" />
+      <rect x="31" y="15" width="1" height="1" fill="#5e594d" />
+      <rect x="33" y="18" width="1" height="1" fill="#5e594d" />
+      <rect x="31" y="20" width="1" height="1" fill="#5e594d" />
+      {/* Careca e rosto (sombreamento triplo) */}
+      <rect x="15" y="5" width="10" height="1" fill="#d39a70" />
+      <rect x="18" y="6" width="6" height="2" fill="#d39a70" />
+      <rect x="24" y="7" width="1" height="3" fill="#d39a70" />
+      <rect x="11" y="8" width="1" height="1" fill="#d39a70" />
+      <rect x="17" y="8" width="5" height="2" fill="#d39a70" />
+      <rect x="23" y="8" width="1" height="4" fill="#d39a70" />
+      <rect x="16" y="9" width="1" height="2" fill="#d39a70" />
+      <rect x="22" y="9" width="1" height="3" fill="#d39a70" />
+      <rect x="17" y="10" width="4" height="1" fill="#d39a70" />
+      <rect x="19" y="11" width="3" height="1" fill="#d39a70" />
+      <rect x="24" y="11" width="1" height="1" fill="#d39a70" />
+      <rect x="19" y="12" width="2" height="2" fill="#d39a70" />
+      <rect x="21" y="13" width="4" height="1" fill="#d39a70" />
+      <rect x="24" y="14" width="1" height="10" fill="#d39a70" />
+      <rect x="16" y="15" width="8" height="3" fill="#d39a70" />
+      <rect x="16" y="18" width="3" height="2" fill="#d39a70" />
+      <rect x="21" y="18" width="3" height="2" fill="#d39a70" />
+      <rect x="16" y="20" width="1" height="4" fill="#d39a70" />
+      <rect x="23" y="20" width="1" height="4" fill="#d39a70" />
+      <rect x="12" y="29" width="1" height="1" fill="#d39a70" />
+      <rect x="15" y="29" width="1" height="1" fill="#d39a70" />
+      <rect x="19" y="29" width="1" height="1" fill="#d39a70" />
+      <rect x="22" y="29" width="1" height="1" fill="#d39a70" />
+      <rect x="14" y="30" width="1" height="1" fill="#d39a70" />
+      <rect x="24" y="6" width="3" height="1" fill="#a46e48" />
+      <rect x="25" y="7" width="3" height="1" fill="#a46e48" />
+      <rect x="25" y="8" width="2" height="13" fill="#a46e48" />
+      <rect x="11" y="9" width="1" height="16" fill="#a46e48" />
+      <rect x="15" y="12" width="4" height="1" fill="#a46e48" />
+      <rect x="21" y="12" width="4" height="1" fill="#a46e48" />
+      <rect x="16" y="14" width="8" height="1" fill="#a46e48" />
+      <rect x="25" y="23" width="2" height="1" fill="#a46e48" />
+      <rect x="11" y="28" width="1" height="2" fill="#a46e48" />
+      <rect x="26" y="29" width="1" height="1" fill="#a46e48" />
+      <rect x="12" y="30" width="2" height="1" fill="#a46e48" />
+      <rect x="14" y="31" width="12" height="1" fill="#a46e48" />
+      <rect x="13" y="6" width="5" height="1" fill="#e8b386" />
+      <rect x="12" y="7" width="2" height="2" fill="#e8b386" />
+      <rect x="17" y="7" width="1" height="1" fill="#e8b386" />
+      <rect x="12" y="9" width="1" height="12" fill="#e8b386" />
+      <rect x="15" y="9" width="1" height="3" fill="#e8b386" />
+      <rect x="16" y="11" width="3" height="1" fill="#e8b386" />
+      <rect x="13" y="12" width="2" height="9" fill="#e8b386" />
+      <rect x="15" y="13" width="4" height="1" fill="#e8b386" />
+      <rect x="15" y="14" width="1" height="10" fill="#e8b386" />
+      <rect x="12" y="23" width="3" height="1" fill="#e8b386" />
+      <rect x="27" y="8" width="2" height="15" fill="#6e4429" />
+      <rect x="27" y="23" width="1" height="2" fill="#6e4429" />
+      <rect x="27" y="29" width="2" height="1" fill="#6e4429" />
+      <rect x="25" y="30" width="3" height="1" fill="#6e4429" />
+      <rect x="16" y="7" width="1" height="2" fill="#f6d0a8" />
+      <rect x="14" y="8" width="2" height="1" fill="#f6d0a8" />
+      <rect x="13" y="9" width="2" height="3" fill="#f6d0a8" />
+      <rect x="22" y="8" width="1" height="1" fill="#b98058" />
+      <rect x="21" y="10" width="1" height="1" fill="#b98058" />
+      <rect x="24" y="10" width="1" height="1" fill="#b98058" />
+      <rect x="14" y="7" width="2" height="1" fill="#fff0dc" />
+      {/* Bochechas rosadas */}
+      <rect x="12" y="21" width="3" height="2" fill="#dc7f68" />
+      <rect x="25" y="21" width="2" height="2" fill="#dc7f68" />
+      {/* Narigão */}
+      <rect x="17" y="20" width="1" height="1" fill="#cc6a58" />
+      <rect x="20" y="20" width="2" height="2" fill="#cc6a58" />
+      <rect x="18" y="21" width="2" height="2" fill="#cc6a58" />
+      <rect x="17" y="22" width="1" height="1" fill="#cc6a58" />
+      <rect x="20" y="22" width="1" height="1" fill="#cc6a58" />
+      <rect x="20" y="18" width="1" height="2" fill="#e8b386" />
+      <rect x="19" y="19" width="1" height="1" fill="#e8b386" />
+      <rect x="17" y="21" width="1" height="1" fill="#e8b386" />
+      <rect x="22" y="20" width="1" height="3" fill="#a46e48" />
+      <rect x="21" y="22" width="1" height="1" fill="#a46e48" />
+      <rect x="19" y="18" width="1" height="1" fill="#f6d0a8" />
+      <rect x="18" y="20" width="2" height="1" fill="#f6d0a8" />
+      {/* Bigodão branco */}
+      <rect x="7" y="22" width="1" height="1" fill="#e8e2d4" />
+      <rect x="19" y="23" width="4" height="3" fill="#e8e2d4" />
+      <rect x="8" y="24" width="1" height="1" fill="#e8e2d4" />
+      <rect x="14" y="24" width="5" height="2" fill="#e8e2d4" />
+      <rect x="23" y="24" width="2" height="4" fill="#e8e2d4" />
+      <rect x="9" y="25" width="2" height="1" fill="#e8e2d4" />
+      <rect x="13" y="25" width="1" height="2" fill="#e8e2d4" />
+      <rect x="25" y="25" width="1" height="2" fill="#e8e2d4" />
+      <rect x="10" y="26" width="3" height="1" fill="#e8e2d4" />
+      <rect x="14" y="26" width="2" height="2" fill="#e8e2d4" />
+      <rect x="17" y="26" width="4" height="1" fill="#e8e2d4" />
+      <rect x="22" y="26" width="1" height="1" fill="#e8e2d4" />
+      <rect x="11" y="27" width="2" height="1" fill="#e8e2d4" />
+      <rect x="16" y="27" width="1" height="1" fill="#e8e2d4" />
+      <rect x="18" y="27" width="4" height="1" fill="#e8e2d4" />
+      <rect x="26" y="27" width="1" height="1" fill="#e8e2d4" />
+      <rect x="14" y="28" width="1" height="1" fill="#e8e2d4" />
+      <rect x="17" y="28" width="2" height="1" fill="#e8e2d4" />
+      <rect x="20" y="28" width="1" height="1" fill="#e8e2d4" />
+      <rect x="22" y="28" width="1" height="1" fill="#e8e2d4" />
+      <rect x="24" y="28" width="1" height="1" fill="#e8e2d4" />
+      <rect x="6" y="21" width="2" height="1" fill="#0b0806" />
+      <rect x="30" y="21" width="2" height="1" fill="#0b0806" />
+      <rect x="6" y="22" width="1" height="1" fill="#0b0806" />
+      <rect x="8" y="22" width="1" height="1" fill="#0b0806" />
+      <rect x="29" y="22" width="1" height="1" fill="#0b0806" />
+      <rect x="31" y="22" width="1" height="4" fill="#0b0806" />
+      <rect x="9" y="23" width="1" height="1" fill="#0b0806" />
+      <rect x="28" y="23" width="1" height="2" fill="#0b0806" />
+      <rect x="10" y="24" width="1" height="1" fill="#0b0806" />
+      <rect x="8" y="25" width="1" height="1" fill="#0b0806" />
+      <rect x="9" y="26" width="1" height="1" fill="#0b0806" />
+      <rect x="30" y="26" width="1" height="1" fill="#0b0806" />
+      <rect x="10" y="27" width="1" height="1" fill="#0b0806" />
+      <rect x="29" y="27" width="1" height="1" fill="#0b0806" />
+      <rect x="12" y="28" width="1" height="1" fill="#0b0806" />
+      <rect x="15" y="28" width="1" height="1" fill="#0b0806" />
+      <rect x="19" y="28" width="1" height="1" fill="#0b0806" />
+      <rect x="23" y="28" width="1" height="2" fill="#0b0806" />
+      <rect x="27" y="28" width="2" height="1" fill="#0b0806" />
+      <rect x="13" y="29" width="2" height="1" fill="#0b0806" />
+      <rect x="16" y="29" width="3" height="1" fill="#0b0806" />
+      <rect x="20" y="29" width="2" height="1" fill="#0b0806" />
+      <rect x="24" y="29" width="2" height="1" fill="#0b0806" />
+      <rect x="30" y="22" width="1" height="1" fill="#c7c0ae" />
+      <rect x="8" y="23" width="1" height="1" fill="#c7c0ae" />
+      <rect x="29" y="23" width="1" height="3" fill="#c7c0ae" />
+      <rect x="9" y="24" width="1" height="1" fill="#c7c0ae" />
+      <rect x="25" y="24" width="2" height="1" fill="#c7c0ae" />
+      <rect x="26" y="25" width="3" height="2" fill="#c7c0ae" />
+      <rect x="16" y="26" width="1" height="1" fill="#c7c0ae" />
+      <rect x="21" y="26" width="1" height="1" fill="#c7c0ae" />
+      <rect x="13" y="27" width="1" height="2" fill="#c7c0ae" />
+      <rect x="17" y="27" width="1" height="1" fill="#c7c0ae" />
+      <rect x="22" y="27" width="1" height="1" fill="#c7c0ae" />
+      <rect x="25" y="27" width="1" height="2" fill="#c7c0ae" />
+      <rect x="27" y="27" width="1" height="1" fill="#c7c0ae" />
+      <rect x="16" y="28" width="1" height="1" fill="#c7c0ae" />
+      <rect x="21" y="28" width="1" height="1" fill="#c7c0ae" />
+      <rect x="17" y="23" width="2" height="1" fill="#fdfbf5" />
+      <rect x="12" y="24" width="2" height="1" fill="#fdfbf5" />
+      <rect x="11" y="25" width="2" height="1" fill="#fdfbf5" />
+      <rect x="30" y="23" width="1" height="3" fill="#958e7e" />
+      <rect x="29" y="26" width="1" height="1" fill="#958e7e" />
+      <rect x="28" y="27" width="1" height="1" fill="#958e7e" />
+      <rect x="26" y="28" width="1" height="1" fill="#958e7e" />
+      {/* Queixo */}
+      <rect x="17" y="30" width="6" height="1" fill="#d39a70" />
+      <rect x="15" y="30" width="2" height="1" fill="#a46e48" />
+      <rect x="23" y="30" width="2" height="1" fill="#a46e48" />
+      {/* Camisa clara */}
+      <rect x="10" y="32" width="2" height="1" fill="#dfd4ba" />
+      <rect x="17" y="32" width="4" height="1" fill="#dfd4ba" />
+      <rect x="23" y="32" width="1" height="1" fill="#dfd4ba" />
+      <rect x="28" y="32" width="2" height="1" fill="#dfd4ba" />
+      <rect x="19" y="33" width="1" height="1" fill="#dfd4ba" />
+      <rect x="32" y="33" width="1" height="1" fill="#dfd4ba" />
+      <rect x="13" y="34" width="1" height="6" fill="#dfd4ba" />
+      <rect x="26" y="34" width="1" height="6" fill="#dfd4ba" />
+      <rect x="14" y="35" width="1" height="5" fill="#dfd4ba" />
+      <rect x="25" y="35" width="1" height="5" fill="#dfd4ba" />
+      <rect x="17" y="36" width="4" height="1" fill="#dfd4ba" />
+      <rect x="23" y="36" width="2" height="4" fill="#dfd4ba" />
+      <rect x="9" y="37" width="1" height="3" fill="#dfd4ba" />
+      <rect x="15" y="37" width="4" height="3" fill="#dfd4ba" />
+      <rect x="20" y="37" width="3" height="3" fill="#dfd4ba" />
+      <rect x="19" y="38" width="1" height="1" fill="#dfd4ba" />
+      <rect x="30" y="33" width="2" height="7" fill="#b4a78b" />
+      <rect x="32" y="34" width="2" height="6" fill="#b4a78b" />
+      <rect x="19" y="37" width="1" height="1" fill="#b4a78b" />
+      <rect x="19" y="39" width="1" height="1" fill="#b4a78b" />
+      <rect x="34" y="34" width="1" height="6" fill="#7a6e56" />
+      <rect x="9" y="33" width="1" height="1" fill="#f6eedb" />
+      {/* Colarinho */}
+      <rect x="12" y="32" width="3" height="1" fill="#f6eedb" />
+      <rect x="24" y="32" width="4" height="1" fill="#f6eedb" />
+      <rect x="13" y="33" width="2" height="1" fill="#f6eedb" />
+      <rect x="25" y="33" width="2" height="1" fill="#f6eedb" />
+      <rect x="14" y="34" width="1" height="1" fill="#f6eedb" />
+      <rect x="25" y="34" width="1" height="1" fill="#f6eedb" />
+      {/* Suspensórios com presilha de ouro */}
+      <rect x="10" y="33" width="1" height="4" fill="#8c5c36" />
+      <rect x="27" y="33" width="1" height="4" fill="#8c5c36" />
+      <rect x="10" y="39" width="1" height="1" fill="#8c5c36" />
+      <rect x="27" y="39" width="1" height="1" fill="#8c5c36" />
+      <rect x="11" y="33" width="1" height="4" fill="#6a4126" />
+      <rect x="28" y="33" width="1" height="4" fill="#6a4126" />
+      <rect x="11" y="39" width="1" height="1" fill="#6a4126" />
+      <rect x="28" y="39" width="1" height="1" fill="#6a4126" />
+      <rect x="12" y="33" width="1" height="4" fill="#432815" />
+      <rect x="29" y="33" width="1" height="4" fill="#432815" />
+      <rect x="12" y="39" width="1" height="1" fill="#432815" />
+      <rect x="29" y="39" width="1" height="1" fill="#432815" />
+      <rect x="11" y="37" width="2" height="1" fill="#c99a2e" />
+      <rect x="28" y="37" width="2" height="1" fill="#c99a2e" />
+      <rect x="10" y="38" width="1" height="1" fill="#c99a2e" />
+      <rect x="27" y="38" width="1" height="1" fill="#c99a2e" />
+      <rect x="11" y="38" width="2" height="1" fill="#8c661a" />
+      <rect x="28" y="38" width="2" height="1" fill="#8c661a" />
+      <rect x="10" y="37" width="1" height="1" fill="#fff2b8" />
+      <rect x="27" y="37" width="1" height="1" fill="#f0c95a" />
+      {/* Gravata borboleta */}
+      <rect x="21" y="32" width="2" height="4" fill="#a8231a" />
+      <rect x="16" y="33" width="3" height="3" fill="#a8231a" />
+      <rect x="20" y="33" width="1" height="1" fill="#a8231a" />
+      <rect x="23" y="33" width="2" height="1" fill="#a8231a" />
+      <rect x="15" y="34" width="1" height="3" fill="#a8231a" />
+      <rect x="23" y="34" width="1" height="1" fill="#a8231a" />
+      <rect x="24" y="34" width="1" height="2" fill="#5e120c" />
+      <rect x="19" y="35" width="2" height="1" fill="#5e120c" />
+      <rect x="23" y="35" width="1" height="1" fill="#5e120c" />
+      <rect x="16" y="36" width="1" height="1" fill="#5e120c" />
+      <rect x="21" y="36" width="2" height="1" fill="#5e120c" />
+      <rect x="15" y="32" width="2" height="1" fill="#e0503f" />
+      <rect x="15" y="33" width="1" height="1" fill="#e0503f" />
+      <rect x="19" y="34" width="2" height="1" fill="#e0503f" />
+      {/* Bucha 6|6 de marfim */}
+      <rect x="0" y="23" width="8" height="1" fill="#1c1410" />
+      <rect x="0" y="24" width="1" height="12" fill="#1c1410" />
+      <rect x="7" y="24" width="1" height="9" fill="#1c1410" />
+      <rect x="1" y="30" width="2" height="1" fill="#1c1410" />
+      <rect x="4" y="30" width="2" height="1" fill="#1c1410" />
+      <rect x="3" y="25" width="1" height="5" fill="#efe5c8" />
+      <rect x="2" y="26" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="26" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="28" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="28" width="1" height="1" fill="#efe5c8" />
+      <rect x="3" y="31" width="1" height="5" fill="#efe5c8" />
+      <rect x="2" y="32" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="32" width="1" height="1" fill="#efe5c8" />
+      <rect x="2" y="34" width="1" height="1" fill="#efe5c8" />
+      <rect x="4" y="34" width="1" height="1" fill="#efe5c8" />
+      <rect x="1" y="24" width="5" height="1" fill="#fffaee" />
+      <rect x="1" y="25" width="1" height="5" fill="#fffaee" />
+      <rect x="1" y="31" width="1" height="5" fill="#fffaee" />
+      <rect x="2" y="25" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="25" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="27" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="27" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="29" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="29" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="31" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="31" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="33" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="33" width="1" height="1" fill="#1c1917" />
+      <rect x="2" y="35" width="1" height="1" fill="#1c1917" />
+      <rect x="4" y="35" width="1" height="1" fill="#1c1917" />
+      <rect x="5" y="25" width="1" height="5" fill="#cdbf98" />
+      <rect x="5" y="31" width="1" height="5" fill="#cdbf98" />
+      <rect x="6" y="24" width="1" height="9" fill="#8f8160" />
+      <rect x="3" y="30" width="1" height="1" fill="#f0c95a" />
+      {/* Mão segurando a pedra (anel de ouro) */}
+      <rect x="6" y="33" width="3" height="1" fill="#0b0806" />
+      <rect x="9" y="34" width="1" height="3" fill="#0b0806" />
+      <rect x="0" y="36" width="9" height="1" fill="#0b0806" />
+      <rect x="0" y="37" width="1" height="3" fill="#a46e48" />
+      <rect x="3" y="38" width="1" height="2" fill="#a46e48" />
+      <rect x="6" y="38" width="1" height="2" fill="#a46e48" />
+      <rect x="1" y="39" width="2" height="1" fill="#a46e48" />
+      <rect x="4" y="39" width="2" height="1" fill="#a46e48" />
+      <rect x="7" y="39" width="1" height="1" fill="#a46e48" />
+      <rect x="7" y="34" width="2" height="2" fill="#d39a70" />
+      <rect x="6" y="35" width="1" height="1" fill="#d39a70" />
+      <rect x="6" y="37" width="2" height="1" fill="#d39a70" />
+      <rect x="1" y="38" width="2" height="1" fill="#d39a70" />
+      <rect x="7" y="38" width="1" height="1" fill="#d39a70" />
+      <rect x="6" y="34" width="1" height="1" fill="#e8b386" />
+      <rect x="1" y="37" width="3" height="1" fill="#e8b386" />
+      <rect x="8" y="37" width="1" height="3" fill="#6e4429" />
+      <rect x="4" y="38" width="2" height="1" fill="#8c661a" />
+      <rect x="5" y="37" width="1" height="1" fill="#f0c95a" />
+      <rect x="4" y="37" width="1" height="1" fill="#fff2b8" />
+      <ArlindoEyes mood={mood} />
+      <ArlindoMouth mood={mood} speaking={speaking} />
+      <ArlindoExtras mood={mood} />
+    </PixelSvg>
+  );
+}
