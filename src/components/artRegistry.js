@@ -50,5 +50,8 @@ export const RELIC_ART = pick({
 /** Ponta acesa do cigarro do Tio Zé, na grade de 40: a fumaça sobe daqui (não sai quando ele está ferido). */
 const TIO_ZE_EMBER = Object.freeze({ x: 35.5, y: 26.5, grid: 40, moods: ['idle', 'thinking', 'smug'] });
 
+/** Ponta do charuto do Comendador (no "ferido" o charuto cai). */
+const COMENDADOR_EMBER = Object.freeze({ x: 35, y: 19.5, grid: 40, moods: ['idle', 'thinking', 'smug'] });
+
 /** Brasa de cada retrato que fuma (de onde a fumaça sobe). */
-export const ART_EMBER = Object.freeze({ tioZe: TIO_ZE_EMBER });
+export const ART_EMBER = Object.freeze({ tioZe: TIO_ZE_EMBER, comendador: COMENDADOR_EMBER });

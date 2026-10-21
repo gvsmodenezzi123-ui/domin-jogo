@@ -263,7 +263,6 @@ const BIGODE = makeArt({
     p: '#8f7a30', // camisa (luz)
     Q: '#463810', // camisa (sombra)
     K: '#1e1808', // estampa de oncinha
-    c: '#c9b26a', // estampa (miolo claro)
   },
   // base: tudo que não muda com o humor
   base: [
@@ -302,11 +301,11 @@ const BIGODE = makeArt({
     '..khhhsssdkpdhhhhhhssssddddDPkQ###k.....',
     '..kddyYdddkpypyOddddddddOoPOkQPPQQQk....',
     '..khsoOssdkpOppoOsssssbOyPPyQPPPPQQQk...',
-    '..kddddddDkPpyppyosssbyoPPOQcKPPKKQQQk..',
-    '..khssssdDkKKOppQOyoyoOQPkyPPPPKccKQQk..',
-    '..kdddddDDkccKypQdkyYkDQkOKPPPPPPPQQQk..',
-    '...kQQQQQkPPPPPOydykyODOyccKPKKPPPKKQk..',
-    '...kQPPPQkPPPKKPPOoOOUyPPPPPKccKPKccKk..',
+    '..kddddddDkPpyppyosssbyoPPOQQKPPKKQQQk..',
+    '..khssssdDkKKOppQOyoyoOQPkyPPPPKQQKQQk..',
+    '..kdddddDDkQQKypQdkyYkDQkOKPPPPPPPQQQk..',
+    '...kQQQQQkPPPPPOydykyODOyQQKPKKPPPKKQk..',
+    '...kQPPPQkPPPKKPPOoOOUyPPPPPKQQKPKQQKk..',
   ],
   moods: {
     // olhinhos apertados pela bochecha, sorriso de dono da banca
@@ -429,14 +428,14 @@ const SOFIA = makeArt({
   },
   // base: tudo que não muda com o humor
   base: [
-    '...............kkkkkkkkkk...............',
-    '............kkkTTTTTTTuuUkkk............',
-    '..........kkTTTTTvvvvvvvvuuUkk..........',
-    '.........kuVVvvvvvvvvvvvvvvuuUk.........',
-    '......###uTVvvvvvvvvvvvvvvvvuVU###......',
-    '......##uuVTvvvvvvvvvvvvvvvvVuuU##......',
-    '......##uVuvTvvvvvvvvvvvvvvVvuuU##......',
-    '......##uVVuuTvvvvvvvvvvvvVvuuuU##......',
+    '.............kkkuTTTuTuUkkk.............',
+    '...........kkuTTTTvvvuvvuuUkk...........',
+    '.........kkuTTTvvvvvvvuvvvuuUkk.........',
+    '........kuVVvvvvvvvvvvuvvvvvuuUk........',
+    '......##uVTvvvvvvvvvvvvuvvvvvVuU##......',
+    '......#uVuvTvvvvvvvvvvvvvvvvVvuuU#......',
+    '......#uVVuvTvvvvvvvvvvvvvvVvuuuU#......',
+    '......#uVVvuuTvvvvvvvvvvvvVvuvuuU#......',
     '......##uVVvvuTTvvyYyvvvvVvuvuuU##......',
     '......##uuVVvvuvTyJJjovvVuuvvuUU##......',
     '......##uVuuVvvuuyJ*jovVuvvvvUuU##......',
@@ -554,4 +553,480 @@ const SOFIA = makeArt({
 
 export function SofiaAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking = false }) {
   return <Portrait art={SOFIA} className={className} mood={mood} isSpeaking={isSpeaking} />;
+}
+
+// 4. DOUTOR FAUSTO — "O Alquimista"
+// Frio e calculista: cabelo preto engomado e repartido, pele pálida, rosto fino, óculos
+// redondos com reflexo de cristal ciano, terno ônix e broche de cristal. Humores sutis.
+const FAUSTO = makeArt({
+  pal: {
+    '0': '#d8ccb2', // branco do olho
+    '#': '#090a0f', // fundo da silhueta
+    k: '#0b0806', // contorno / pupila
+    M: '#220b0b', // boca aberta
+    t: '#e9e1cc', // dentes
+    '!': '#c8261d', // sangue
+    H: '#111115', // cabelo engomado
+    I: '#2a2a34', // cabelo (luz)
+    i: '#6c7488', // brilho frio do cabelo
+    h: '#f4e9dc', // pele pálida (luz)
+    s: '#dccab6', // pele pálida (base)
+    d: '#a89684', // pele (sombra)
+    D: '#706254', // pele (oclusão)
+    b: '#16161c', // sobrancelha fina
+    f: '#b4bac2', // aro dos óculos (luz)
+    F: '#5a5e66', // aro dos óculos (sombra)
+    c: '#36d6e4', // reflexo de cristal ciano
+    C: '#c6fbff', // reflexo ciano (brilho)
+    X: '#13707c', // cristal (sombra)
+    P: '#24242a', // terno ônix (base)
+    p: '#40404c', // terno (luz)
+    Q: '#121216', // terno (sombra)
+    l: '#56566a', // lapela acetinada
+    w: '#e6e1d4', // colarinho branco
+    W: '#a6a196', // colarinho (sombra)
+    R: '#6a1418', // gravata vinho
+    r: '#3e0a0e', // gravata (sombra)
+  },
+  // base: tudo que não muda com o humor
+  base: [
+    '........................................',
+    '........................................',
+    '........................................',
+    '...............kkkkkkkkkk...............',
+    '......#########HIHHHHHHHH#########......',
+    '......#######HIkiiiiiiiHHHH#######......',
+    '......######IIIkHIIIIIIIIIHH######......',
+    '......#####HIHHkHHHHHHHHHHHHH#####......',
+    '......#####HIHHHHHHHHiiiiiiHH#####......',
+    '......#####HIHHHHHHiiHHHHHHHH#####......',
+    '......#####HIHHHHHHHHHHHHHHHH#####......',
+    '......#####HHHhhssHHHHssHHHHH#####......',
+    '......#####HHhhssssHHssssdHHH#####......',
+    '......#####HHhhssssssssssddHH#####......',
+    '......#####HdbbbbssssssbbbbDH#####......',
+    '......#####HdffffbssssbffffDH#####......',
+    '......#####FfCcDDFfffffCcDDFF#####......',
+    '......#####dfckk0Fshssfckk0FD#####......',
+    '......#####df0kk0Fshssf0kk0FD#####......',
+    '......#####ddFFFFsshsdsFFFFDD#####......',
+    '......######dhhsssshsdsssddD######......',
+    '......######dhhsssshsdsssddD######......',
+    '......#######dhhssshsdssddD#######......',
+    '......#######ddhssshsdssDdD#######......',
+    '......#######ddhssshsdssDdD#######......',
+    '......########ddhsDddDsDdD########......',
+    '......########dhhssssssddD########......',
+    '......#########dhhssssddD#########......',
+    '......#########dhDDDDDDdD#########......',
+    '......##########ddhssddD##########......',
+    '......###########dhhddd###########......',
+    '......#########WwwdddDwWW#########......',
+    '......######ppWwwwwRRwwwWWQQ######......',
+    '......##ppPPPPpllwRRRrwlQQPPPQQQ##......',
+    '......#ppPPPPpllWwwRrwWWlQCPPPQQQ#......',
+    '.....kppPPPPPpllPWwRrWWPlcCcPPPQQQk.....',
+    '.....kppPPPPpllPPPWRrWPPPXcXPPPQQQk.....',
+    '.....kppPPPplPlPPPWRrWPPPlXQQPPQQQk.....',
+    '.....kppPPPpllPPPPPRrPPPPPlQQPPQQQk.....',
+    '.....kppPPplPlPPPPPRrPPPPPlPQQPQQQk.....',
+  ],
+  moods: {
+    // neutro, boca reta
+    idle: null,
+    // olhos para cima e de lado, sobrancelha direita sobe um pixel
+    thinking: { x: 14, y: 13, rows: [
+      '........bbbbb',
+      '...b.....ssdd',
+      '...s....s....',
+      '.............',
+      '0.k.......0.k',
+      '00........00.',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+      '.......sd....',
+    ] },
+    // pálpebras a meio pau, canto da boca sobe
+    smug: { x: 13, y: 14, rows: [
+      'hhss......s...',
+      '..............',
+      '..ss........dd',
+      '.DDD.......DDD',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '.........D....',
+      '.........d....',
+    ] },
+    // olhos fechados de dor, lente trincada, dentes cerrados e fio de sangue
+    hurt: { x: 13, y: 13, rows: [
+      '..bbb....bbb..',
+      '..ss......ss..',
+      '....s....s....',
+      'hhss.......sdC',
+      'khsk......kC.k',
+      'k..k......k..k',
+      '............k.',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '..............',
+      '....ttkttt....',
+      '....MMMMMM....',
+      '........!.....',
+      '........!.....',
+      '........!.....',
+    ] },
+  },
+  // falando: boca pequena e escura
+  speak: { x: 16, y: 26, rows: [
+    'hssssssd',
+    'hhMMMMdd',
+    'hhMMMMdd',
+    'dddddddD',
+  ] },
+});
+
+export function FaustoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking = false }) {
+  return <Portrait art={FAUSTO} className={className} mood={mood} isSpeaking={isSpeaking} />;
+}
+
+// 5. ALEMÃO DO FERRO VELHO — "O Sucateiro"
+// Sucateiro enorme: cabeçorra quadrada, loiro raspado e barbona, óculos de solda na
+// testa, rosto vermelho, macacão de lona enferrujada com rebites e a chave inglesa no ombro.
+const ALEMAO = makeArt({
+  pal: {
+    '0': '#d8ccb2', // branco do olho
+    '#': '#090a0f', // fundo da silhueta
+    k: '#0b0806', // contorno / pupila
+    '*': '#ffffff', // brilho
+    M: '#220b0b', // boca aberta
+    t: '#e9e1cc', // dentes
+    '!': '#c8261d', // sangue
+    '~': '#7cc4f0', // gota de suor
+    '^': '#e4f6ff', // brilho do suor
+    Y: '#f6e08a', // loiro (luz)
+    y: '#d8b450', // loiro (base)
+    o: '#a07e2a', // loiro (sombra)
+    O: '#664e18', // loiro (oclusão)
+    h: '#f4b894', // pele avermelhada (luz)
+    s: '#de906c', // pele (base)
+    d: '#ac5c44', // pele (sombra)
+    D: '#763626', // pele (oclusão)
+    R: '#d4564a', // bochecha e nariz vermelhos
+    G: '#3a2414', // tira de couro dos óculos
+    f: '#8a8e96', // aro de ferro (luz)
+    F: '#43474e', // aro de ferro (sombra)
+    L: '#121c22', // lente escura de solda
+    l: '#5aa8d0', // reflexo da lente
+    P: '#7a4426', // macacão de lona (base)
+    p: '#a2623a', // macacão (luz)
+    Q: '#56301a', // macacão (sombra)
+    q: '#361a0c', // macacão (oclusão)
+    I: '#9a9ea6', // rebite
+    i: '#eef0f2', // rebite (brilho)
+    e: '#a4aab2', // chave inglesa (luz)
+    E: '#5e626a', // chave inglesa (sombra)
+    x: '#a8542a', // ferrugem
+  },
+  // base: tudo que não muda com o humor
+  base: [
+    '........................................',
+    '........................................',
+    '........................................',
+    '........................................',
+    '......############################......',
+    '......#####oYYYYYYYYYyyyyyooO#####......',
+    '......####oYYyyyyyyyyyyyyyyooO####......',
+    '......###oYYoyyyoyyyoyyyoyyyooO###......',
+    '......###oYYffffyyyyyyyyffffooO###......',
+    '......###oYfLLLLFyoyyyofLLLLFoO###......',
+    '......##GGGfLlLLFFFFFFFfLlLLFGGG##......',
+    '......##GGGfLLLLFGGGGGGfLLLLFGGG##..kk..',
+    '......###dhhFFFFssssssssFFFFdDD#eekkeek.',
+    '......###dhhsssssssssssssssddDDeEekkeEek',
+    '......###dhhssssddddddddsssddDDeEekkeEek',
+    '......###dhyyyssssssssssssyyyDDexekkxEek',
+    '......#DddhoooyyyyssssyyyyoooDDDDEeeEEek',
+    '......#DddhhssoooossssoooosddDDDDExEEek.',
+    '......#Dddhhs0*k0shssds0*k0ddDDDDeEEek..',
+    '......##Ddhhs0kk0shssds0kk0ddDDD##eEek..',
+    '......###dhhsddddhssssdddddddDD###eEkk..',
+    '......###dhRRRssshRRRRdsssRRRDD###kEeEk.',
+    '......###dhRRRsssDRRRRDsssRRRDD###kEeEk.',
+    '......###yyysssYYYYYyyyyyssdooo###EeEk..',
+    '......###yyyysyyyyyyoooooysoooo###xeEk..',
+    '......###oYyyyyyyyyyyyyyyyyyooO###EeEk..',
+    '......###oYyyyyyyDDDDDDyyyyyooO##xeEk...',
+    '......###oYyoyyyDyyyyyyDyyoyooO##EeEk...',
+    '......####oYyyyyyyyyyyyyyyyooO###EeEk...',
+    '......####oYyyyyyyyyyyyyyyyooO##EeEk....',
+    '.....k###ppoYyyyoyyyyyoyyyooOQQ#xeEk....',
+    '...kkQppppppoYyyyyyyyyyyyooOQQQQQQqkk...',
+    '..kQppPPpppppoYyyyyoyyyyooOQQQQQPPQQqk..',
+    '.kQppPPPPPPqQQQoYyyyyyooOQQQqPPPPPPQQqk.',
+    'kQppPPPPPPPqiIPPPoYyooOPPPPiIPPPPPPPQQqk',
+    'kQppPiIPPPPqIqPPPPPPPPPPPPPIqPPPPPiIQQqk',
+    'kQppPIqPPPPqpPPPPqqqqqqPPPPQqPPPPPIqQQqk',
+    'kQppPPPPPPPqpPPPPiIQQQiIPPPQqPPPPPPPQQqk',
+    'kQppPPPPPPPqpPPPPIqQQQIqPPPQqPPPPPPPQQqk',
+    'kQppPPPPPPPqpPPPPPPPPPPPPPPQqPPPPPPPQQqk',
+  ],
+  moods: {
+    // cara fechada, sobrancelhas franzidas
+    idle: null,
+    // olha para cima, uma sobrancelha sobe, boca de lado
+    thinking: { x: 13, y: 13, rows: [
+      '.........yyyyyyy',
+      '.........ooooooo',
+      '.yyyy........sdd',
+      '.oooo....sssssdd',
+      '.ssss....ssss...',
+      'kk0.......kk0...',
+      '.00........00...',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '....yy..........',
+      '...y......y.....',
+    ] },
+    // pálpebras caídas, sorrisão banguela
+    smug: { x: 13, y: 14, rows: [
+      '............yyyy',
+      '.yyyy....yyyoooo',
+      '.oooo....ooossdd',
+      '.ssss....ssss...',
+      'DDDD......DDDD..',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '...MtttMttM.....',
+      '...yMMMMMMy.....',
+    ] },
+    // olhos em X, os óculos de solda escorregam, suor e sangue
+    hurt: { x: 11, y: 8, rows: [
+      '.yyyy................',
+      'Yyyoyy...............',
+      'GffffG...............',
+      '.....................',
+      'fLlLLF.............~.',
+      'fLLLLF............^~~',
+      '.FFyyyy....yyyy....~.',
+      '...oooo....oooo......',
+      '...ssss....ssss......',
+      '..kssks....skssk.....',
+      '..sk.s......sk.s.....',
+      '..kssk......kssk.....',
+      '.....................',
+      '.....................',
+      '.....................',
+      '.....................',
+      '.....................',
+      '.....................',
+      '.....MttktttM........',
+      '.....MMMMMMMM........',
+      '.....MMMMMMMM........',
+      '............!........',
+      '............!........',
+      '............!........',
+    ] },
+  },
+  // falando: boca aberta no meio da barba
+  speak: { x: 15, y: 25, rows: [
+    'yyyyyyyyyy',
+    'yyttttttyy',
+    'yyMMMMMMyy',
+    'yyMMMMMMyy',
+  ] },
+});
+
+export function AlemaoAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking = false }) {
+  return <Portrait art={ALEMAO} className={className} mood={mood} isSpeaking={isSpeaking} />;
+}
+
+// 6. COMENDADOR MOREIRA — "O Dono do Boteco" (CHEFE FINAL)
+// Velho rico e cruel na poltrona de mogno: cabelo e sobrancelhas brancas, monóculo de ouro
+// com corrente, charuto aceso, robe de veludo vermelho com lapela preta, a comenda no peito
+// e o anel de rubi no copo de conhaque. Brasa do charuto: pixels x 34–35, y 20–22; a fumaça
+// sai de (35, 19.5) na grade 40 em idle/thinking/smug (e falando). No hurt o charuto cai.
+const COMENDADOR = makeArt({
+  pal: {
+    '0': '#d8ccb2', // branco do olho
+    k: '#0b0806', // contorno / pupila
+    '*': '#ffffff', // brilho
+    M: '#220b0b', // boca aberta
+    t: '#e9e1cc', // dentes
+    '!': '#c8261d', // sangue
+    '~': '#7cc4f0', // gota de suor
+    '^': '#e4f6ff', // brilho do suor
+    A: '#6a2a1a', // poltrona de mogno (luz)
+    a: '#44160e', // poltrona (base)
+    Z: '#1e0806', // poltrona (estofado escuro)
+    z: '#2e0e0a', // capitonê
+    W: '#f6f1e6', // cabelo branco (luz)
+    w: '#d2c9b8', // cabelo branco (base)
+    v: '#958c7c', // cabelo branco (sombra)
+    h: '#eebc98', // pele (luz)
+    s: '#d49e78', // pele (base)
+    d: '#a26846', // pele (sombra)
+    D: '#683c24', // pele (oclusão)
+    Y: '#fff2b4', // ouro (brilho)
+    y: '#ffcf4a', // ouro (luz)
+    o: '#b8861e', // ouro (base)
+    O: '#6e4c10', // ouro (sombra)
+    n: '#e8d8c4', // lente do monóculo
+    V: '#b8262c', // veludo vermelho (luz)
+    r: '#8f1016', // veludo vermelho (base)
+    R: '#5c0a0e', // veludo (sombra)
+    q: '#340508', // veludo (oclusão)
+    P: '#141016', // lapela de cetim preto
+    p: '#3e3446', // lapela (brilho)
+    u: '#ece6da', // camisa branca
+    U: '#aaa294', // camisa (sombra)
+    e: '#d41e2c', // rubi / esmalte vermelho
+    c: '#7a4422', // charuto (base)
+    C: '#a4652f', // charuto (luz)
+    x: '#3e2010', // charuto (sombra)
+    g: '#8e8a84', // cinza do charuto
+    E: '#ea580c', // brasa
+    F: '#fef08a', // brasa incandescente
+    b: '#c27a24', // conhaque
+    B: '#e8a040', // conhaque (luz)
+    l: '#9ab0b8', // vidro do copo
+  },
+  // base: tudo que não muda com o humor
+  base: [
+    '........................................',
+    '........aAaaaaaaaaaaaaaaaaaaaaaZ........',
+    '.....aAaayaayaayaayaayaayaayaayaaaZ.....',
+    '....aAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaZ....',
+    '...AAaZZZZZZZZvWWwwwwwwwvvZZZZZZZZaaZ...',
+    '...AAaZZZZZZvWWWWWWWWwwwwwvvZZZZZZaaZ...',
+    '...AaaZZzZZvWvvvvvwwvvvvvvvvvZZZzZaaZ...',
+    '...AaaZzozvWWwwwwwwwwwwwwwwwvvZzozaaZ...',
+    '...AoaZZzZvWWwvvvvvvvvvwwwwwvvZZzZaoZ...',
+    '...AaaZZZZvWWwwwwsssssswwwwwvvZZZZaaZ...',
+    '...AaaZZZZwwwdhhsssssssddDDvvvZZZZaaZ...',
+    '...AaaZZZZwwdhdddddssdddddDDvvZZZZaaZ...',
+    '...AoaZZZZwwhhsssssssssssddDvvZZZZaoZ...',
+    '...AaaZZZZwwWWWddddddddddWWWvvZZZZaaZ...',
+    '...AaaZZZZwdwwwWWWssssWWWwwwDvZZZZaaZ...',
+    '...AaaZZZDddhhsswwshdswYyyyDDDDZZZaaZ...',
+    '...AoaZZzDddhDDDDsshdsy0*knoDDDZzZaoZ...',
+    '...AaaZzoDddh0*k0sshsdy0kknoDDDzozaaZ...',
+    '...AaaZZzDddh0kk0sshsdo0kk0OdDDZzZaaZ...',
+    '...AaaZZZZDddddddshssdossddODDZZZZaaZ...',
+    '...AoaZZZZZdhhsssshsssdoOOODDZZZZgEFZ...',
+    '...AaaZZZZZdhhsssshsssdssddDyZZZCgFEZ...',
+    '...AaaZZZZZdhDssdshsssdDsdDDDzCCcgEaZ...',
+    '...AaaZZZZZdhhssdsDssDDDsddDCCccxxaaZ...',
+    '...AoaZZZZZdhhsWWWWWwwwwwdyCccxxZZaoZ...',
+    '...AaaZZZZZdhhvwwwwwwwvvCyycxxZZZZaaZ...',
+    '...AaaZZzZZZdhhdDDDDDDDCcyexZZZZzZaaZ...',
+    '...AaaZzozZZdhhDsddddddcxeDDZyZzozaaZ...',
+    '...AoaZZzZZZZddhsssssssxddDZZZZZzZaoZ...',
+    '...AaaZZZZZZZZddhsssssdddDZZZZyZZZaaZ...',
+    '...AaallllllZZZdhhsssddDDZZZZZZZZZaaZ...',
+    '...AalBBBBBBlpPPdhhsddDDPPpRqZyZZZaaZ...',
+    '...AolbBbbbblPPPPpPPPPuUPPPprRRRqZaoZ...',
+    '...AaRlbbbblPPPrPPuuPPuUrPPPpyrRRRqaZ...',
+    '...ARVVllllpPPPrruueyuUrrPPPprrrRRRqZ...',
+    '...ARVkhhsskpPPPruuyuuUrPPPprrrrRRRqZ...',
+    '...ARkhsyesdkPPPruyYyuUrPPPprrrrRRRqZ...',
+    '...ARkdddoddkpPPPyoeoOrPPPprrrrrRRRqZ...',
+    '...ARkhssssdkpPPProOOUrPPPprrrrrRRRqZ...',
+    '...ARVkddddkrrpPPPuOuUPPPprrrrrrRRRqZ...',
+  ],
+  moods: {
+    // olhar frio por cima do monóculo, charuto aceso
+    idle: null,
+    // sobrancelha esquerda lá em cima, olhos de lado
+    thinking: { x: 11, y: 13, rows: [
+      '....WWW.......ddD',
+      'W...www....sssddD',
+      '.....ss....W....W',
+      '..kk00......DDD..',
+      '...00.......k.0..',
+      '..hsss.......00..',
+    ] },
+    // pálpebras caídas e o canto da boca sobe com desdém
+    smug: { x: 11, y: 13, rows: [
+      'W...............',
+      '................',
+      '................',
+      '............DDD.',
+      '..dddd..........',
+      '............ssdd',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '...........s....',
+      '......hhhhhs....',
+    ] },
+    // o monóculo salta e fica pendurado, o charuto cai, olho espremido e suor
+    hurt: { x: 11, y: 10, rows: [
+      '.~.......................',
+      '^~~......................',
+      '.~.......................',
+      '.hhsWWW....WWWddD........',
+      '.hh.www....www.dD........',
+      '.WW..ss....sssdWW........',
+      '..kkss.....s.000D........',
+      '..hs.k.....s...0D........',
+      '..k.ss.....s.00.D........',
+      '...........s....d........',
+      '............ssdd......Zao',
+      '.................D...ZZaa',
+      '...................ZZZZa.',
+      '.................DZZZZZ..',
+      '...............dDDZZZ....',
+      '....vvvvvvv..vvdDDZ......',
+      '.....MMMMMMMMDdDD........',
+      '....sMMMMMMMMdd...Z......',
+      '...........!d....yyo.....',
+      '...........!....yn.no....',
+      '..........!.....o...O....',
+      '.................oOO.....',
+      '..................y......',
+      '..................ry.....',
+    ] },
+  },
+  // falando: boca aberta sob o bigode, o charuto continua no canto
+  speak: { x: 15, y: 24, rows: [
+    'WWWWWwwwww',
+    'wwwwwwwvvC',
+    'dsMMMMMMCc',
+    'ssMttttMcx',
+  ] },
+});
+
+export function ComendadorAvatar({ className = 'w-12 h-12', mood = 'idle', isSpeaking = false }) {
+  return <Portrait art={COMENDADOR} className={className} mood={mood} isSpeaking={isSpeaking} />;
 }
