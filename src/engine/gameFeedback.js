@@ -7,7 +7,7 @@ import { pickRivalLine } from '../data/rivals.js';
 import { BASE_RULES, getOpenEnds, getPlacement, getValidSides } from './dominoLogic.js';
 import { requiredOpeningFor } from './powers.js';
 
-const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'olhoMorte', 'dev']);
+const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'olhoMorte', 'trucoMarcado', 'caliceGalo', 'dadoOsso', 'dev']);
 
 function findLast(events, predicate) {
   for (let i = events.length - 1; i >= 0; i -= 1) {
@@ -93,6 +93,7 @@ const SPECIAL_HINT = {
   wild: 'Ponta de cristal: aceita qualquer número agora.',
   fuzzy: 'Borracha: encaixa com 1 de diferença (1x por rodada).',
   steel: 'Bucha de Aço: o [0|0] encaixa em qualquer ponta.',
+  six: 'Dado de Osso: toda pedra sua encaixa em ponta 6.',
 };
 
 /** Texto de ajuda logo acima dos botões. */
@@ -111,6 +112,9 @@ export function buildPlayerHint({
     return selectedTile ? 'Toque em DESCARTAR para mandar ela pro fundo do dorme.' : 'Giz de Sinuca: escolha uma pedra para descartar (ou pule).';
   }
   if (state.pending?.type === 'drawChoice') return 'Barbante: escolha uma das duas pedras.';
+  if (state.pending?.type === 'canivete') {
+    return selectedTile ? 'Toque em VIRAR BUCHA: ela vira a bucha do número maior.' : 'Canivete: escolha a pedra que vira bucha (ou cancele).';
+  }
   if (state.pending?.type === 'forcedPass') return `Nada encaixa e acabaram as compras. A vez é de ${rivalName}.`;
   if (!isPlayerTurn) return `Vez de ${rivalName}...`;
   if (!state.board.root) {

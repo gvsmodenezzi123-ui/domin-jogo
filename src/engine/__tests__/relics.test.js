@@ -369,14 +369,17 @@ describe('talismãs (seus)', () => {
     expect(s.fx.undo).toBeNull();
   });
 
-  it('todas as 20 relíquias (15 da loja + 5 Necróticas) têm raridade, preço e ícone 12x12 com paleta', () => {
-    expect(RELIC_IDS).toHaveLength(20);
+  it('todas as 40 relíquias (20 de antes + 20 do Patch 0.7.0) têm raridade, preço e arte', () => {
+    expect(RELIC_IDS).toHaveLength(40);
     for (const id of RELIC_IDS) {
       const relic = RELICS[id];
       expect(relic.id).toBe(id);
       expect(RARITY_ORDER).toContain(relic.rarity);
       expect(relic.price).toBeGreaterThan(0);
       expect(relic.name && relic.short && relic.description).toBeTruthy();
+      expect(relic.art, id).toBeTruthy();
+      // as antigas ainda levam o ícone 12x12 de reserva; as novas só a arte 40x40
+      if (!relic.icon) continue;
       expect(relic.icon).toHaveLength(12);
       for (const row of relic.icon) {
         expect(row).toHaveLength(12);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
+import { getRelic } from '../data/relics.js';
 import { currentNode } from '../engine/campaignMap.js';
 import { DAMAGE, handSum } from '../engine/dominoLogic.js';
 import CoinCount from './CoinCount.jsx';
@@ -15,6 +16,7 @@ const KIND_TITLE = {
   cruzada: 'CRUZADA!',
   tranca: 'TRANCA!',
   nocaute: 'NOCAUTE!',
+  testamento: 'TESTAMENTO RASGADO!',
 };
 
 const KNOCKOUT_CAUSE = {
@@ -22,6 +24,9 @@ const KNOCKOUT_CAUSE = {
   dedal: 'O Dedal de Chumbo cobrou a conta.',
   anel: 'O Anel do Bicheiro cobrou em sangue.',
   olhoMorte: 'O Olho da Morte fechou a conta.',
+  trucoMarcado: 'O Baralho de Truco Marcado cobrou a última.',
+  caliceGalo: 'O Cálice de Sangue de Galo cobrou a compra.',
+  dadoOsso: 'O Dado de Osso cobrou o passe.',
   dev: 'Painel DEV.',
 };
 
@@ -59,6 +64,12 @@ function MiniHand({ tiles, label, points }) {
 function subtitleFor(result, rival) {
   const playerWon = result.winner === 'player';
   if (result.shielded) return `${rival.name} é imune à primeira tranca. Nada de dano.`;
+  if (result.kind === 'testamento') {
+    const lost = (result.burned ?? []).map((id) => getRelic(id)?.name).filter(Boolean).join(' e ');
+    return result.owner === 'player'
+      ? `O golpe fatal não pegou: a rodada volta do zero. Queimou: ${lost}.`
+      : `${rival.name} rasgou o testamento: a rodada volta do zero.`;
+  }
   if (result.kind === 'nocaute') return KNOCKOUT_CAUSE[result.reason] ?? (playerWon ? `${rival.name} caiu antes da batida.` : 'Você caiu.');
   if (!result.winner) return 'Empate na contagem. Ninguém sangra.';
   if (result.kind === 'tranca') return playerWon ? 'Menor soma é sua.' : `Menor soma é de ${rival.name}.`;

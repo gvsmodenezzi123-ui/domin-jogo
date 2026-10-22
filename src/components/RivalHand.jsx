@@ -47,7 +47,7 @@ function reconcile(prev, tiles, roundKey) {
  * pedra que sai anima (a cópia dela voa até a mesa); as outras não andam.
  * Pedras reveladas (Olho de Vidro, Espelho) aparecem de frente.
  */
-export default function RivalHand({ tiles, revealedIds, roundKey, containerRef, className = '' }) {
+export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, className = '' }) {
   const [book, setBook] = useState(() => reconcile(null, tiles, roundKey));
   const next = reconcile(book, tiles, roundKey);
   if (next !== book) setBook(next);
@@ -84,7 +84,13 @@ export default function RivalHand({ tiles, revealedIds, roundKey, containerRef, 
         style={{ right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }}
       >
         {revealed ? (
-          <DominoTile values={[tile.a, tile.b]} unit={UNIT} depth={2} enhancement={tile.enhancement} className="rival-revealed" />
+          <DominoTile
+            values={[tile.a, tile.b]}
+            unit={UNIT}
+            depth={2}
+            enhancement={tile.enhancement}
+            className={`rival-revealed ${tile.id === foreseenId ? 'rival-foreseen' : ''}`}
+          />
         ) : (
           <DominoTile faceDown unit={UNIT} depth={2} />
         )}

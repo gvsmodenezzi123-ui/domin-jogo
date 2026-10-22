@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
-import DominoTile from './DominoTile.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
@@ -12,11 +11,12 @@ import RivalSpeech from './RivalSpeech.jsx';
  * quando o rival fala, pensa ou joga):
  *   - caixa fixa de 96px de altura (h-24), sem estouro;
  *   - bloco fixo de 160px à esquerda (w-40): retrato 40x40, status
- *     ("PENSANDO..."), nome, corações, moedas, dorme e os talismãs dele;
+ *     ("PENSANDO..."), nome, corações, moedas e os talismãs dele (o dorme mora no
+ *     canto da mesa desde o 0.7.0);
  *   - balão da fala (Patch 0.5.5) fora da caixa travada: cresce para baixo, sobre o
  *     feltro, com a frase inteira e a cauda apontando para o retrato;
  *   - mão do rival presa à direita, cada pedra na sua vaga (RivalHand.jsx);
- *   - som e menu no canto de baixo à direita.
+ *   - o som e o menu moram na sua hotbar desde o 0.6.2.
  */
 function RivalBench({
   rival,
@@ -25,7 +25,7 @@ function RivalBench({
   coins,
   hand,
   revealed,
-  boneyardCount,
+  foreseenId = null,
   relics,
   flashes,
   isTurn,
@@ -61,15 +61,9 @@ function RivalBench({
           <div className="flex w-[90px] min-w-0 flex-col gap-1">
             <h2 className="truncate font-pixel text-[8px] leading-none text-bone-50 text-shadow-pixel">{rival.name.toUpperCase()}</h2>
             <HeartsBar current={hearts} max={maxHearts} size={11} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
+            {/* o dorme saiu daqui no 0.7.0: agora fica grande no canto da mesa (TableBoard) */}
             <div className="flex items-center gap-2">
               <CoinCount value={coins} target="tioZe" className="text-[8px]" size={12} />
-              <span className="flex items-center gap-1" aria-label={`Dorme com ${boneyardCount} pedras`}>
-                <span className="relative block h-[16px] w-[13px]">
-                  {boneyardCount > 1 && <DominoTile faceDown unit={7} depth={1} className="absolute! left-[5px] top-0" />}
-                  {boneyardCount > 0 && <DominoTile faceDown unit={7} depth={1} className="absolute! left-0 top-[2px]" />}
-                </span>
-                <span className="font-pixel text-[7px] leading-none text-bone-300">{boneyardCount}</span>
-              </span>
             </div>
             <Hotbar relics={relics} size={20} cols={4} flashes={flashes} press={press} owner="tioZe" bare label={`Talismãs de ${rival.name}`} />
           </div>
@@ -79,6 +73,7 @@ function RivalBench({
         <RivalHand
           tiles={hand}
           revealedIds={revealedIds}
+          foreseenId={foreseenId}
           roundKey={roundKey}
           containerRef={handRef}
           className="absolute right-2 top-4 flex h-16 w-[200px] items-center justify-end"

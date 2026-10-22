@@ -30,3 +30,28 @@ export {
   TiaoMoedasSprite,
   TrancaCadavericaIcon,
 } from './art/NecroticArt.jsx';
+
+// Patch 0.7.0: os 20 talismãs novos e o troféu de conquista
+export {
+  AbridorLataIcon,
+  BalancaAcougueIcon,
+  CaliceGaloIcon,
+  CaniveteIcon,
+  CinzeiroBitucasIcon,
+  DadoOssoIcon,
+  DedoCadaverIcon,
+  EspelhoBanheiroIcon,
+  FitaCrepeIcon,
+  FosforoIcon,
+  MoedaFuradaIcon,
+  NotaTresIcon,
+  OculosFundoIcon,
+  PalitoDenteIcon,
+  PanoChaoIcon,
+  RadioPilhaIcon,
+  RelogioParedeIcon,
+  TampaGarrafaIcon,
+  TestamentoIcon,
+  TrophyIcon,
+  TrucoMarcadoIcon,
+} from './art/RelicArt070.jsx';

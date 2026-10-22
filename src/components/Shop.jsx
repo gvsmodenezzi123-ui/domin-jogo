@@ -5,7 +5,7 @@ import { RELIC_SLOTS, getRelic } from '../data/relics.js';
 import { sound } from '../engine/audioSynth.js';
 import { availableNodes, regionOfState } from '../engine/campaignMap.js';
 import { haptic } from '../engine/progress.js';
-import { relicBuyBlock, sellPriceOf, tileBuyBlock } from '../engine/shop.js';
+import { relicBuyBlock, sellPriceFor, tileBuyBlock } from '../engine/shop.js';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
@@ -289,7 +289,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
                     className="scene-tap shop-niche relic-slot"
                     style={{ '--rarity': getRarity(relic.rarity).color }}
                     onClick={() => setSellId(relic.id)}
-                    aria-label={`${relic.name}: vender por ${sellPriceOf(relic.id)} moedas`}
+                    aria-label={`${relic.name}: vender por ${sellPriceFor(state, relic.id)} moedas`}
                     {...press({ kind: 'relic', id: relic.id, owner: 'player' })}
                   >
                     <RelicIcon relic={relic} size={34} />
@@ -358,7 +358,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
             <p className="shop-receipt-note">{getRarity(selling.rarity).label} · revenda a 50%</p>
             <div className="mt-3 grid gap-2">
               <button type="button" data-tone="blood" className="btn-pixel" onClick={confirmSell}>
-                VENDER POR ${sellPriceOf(selling.id)}
+                VENDER POR ${sellPriceFor(state, selling.id)}
               </button>
               <button type="button" className="btn-pixel" onClick={() => setSellId(null)}>
                 FICAR COM ELE

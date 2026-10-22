@@ -60,6 +60,91 @@ O PWA precisa de HTTPS. Duas opções:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.7.0: conquistas, 20 talismãs novos e o dorme no canto da mesa
+
+### Conquistas (`engine/achievements.js`)
+
+Dez metas. Cada uma libera um talismã para o sorteio da Loja do Valtinho e do Mercado Negro.
+Até a meta sair, esse talismã não aparece em lugar nenhum.
+
+| Conquista | Meta | Libera |
+| --- | --- | --- |
+| Freguês do Zé | Derrote o Tio Zé 2 vezes (somando as runs) | Moeda Furada |
+| Boca de Balcão | Compre ao menos 1 item na Loja em 3 nós diferentes na mesma run | Tampa de Garrafa Amassada |
+| No Limite do Sangue | Compre a 3ª pedra do dorme (pagando coração) e jogue ela antes da vez do rival | Fósforo Riscado |
+| Malandragem de Truco | Feche 3 múltiplos de 5 numa única partida | Baralho de Truco Marcado |
+| Cirurgia de Tranca | Vença uma tranca com só 1 pedra na mão | Abridor de Lata Cego |
+| Colecionador de Esquina | Equipe 6 talismãs comuns básicos diferentes ao longo das runs | Nota de 3 Reais |
+| Milagre de Boteco | Bata a rodada com uma bucha tendo só 1 coração | Fita Crepe do Gambiarra |
+| Rei da Sinuca Branca | Vença a campanha na Maleta Branca 2 vezes | Balança de Açougue Descalibrada |
+| Mesa Limpa | Derrote o Seu Arlindo ou o Beto Cigano sem tomar dano na partida | Cálice de Sangue de Galo |
+| Mão Fechada | Vença uma partida inteira sem comprar do dorme | Dado de Osso Humano |
+
+- O App passa os eventos novos do reducer para `trackAchievements(events, state)`.
+  `checkAchievement(id, context)` confere cada meta na hora em que ela pode acontecer.
+- Ao sair uma conquista, o jogo grava `achievement_<id>` e `relic_unlocked_<relicId>` no
+  localStorage, dispara `buxaria-achievement` na `window` e o talismã já entra no sorteio
+  (`UNLOCK_RELICS`).
+- Os contadores também ficam no aparelho: vitórias sobre o Tio Zé, campanhas na Branca,
+  comuns equipados e lojas da run. "Apagar tudo" não mexe nas conquistas.
+- Para a Mesa Limpa, pagar a 3ª compra com coração não conta como dano. Para a Mão Fechada,
+  compra forçada (como a da Falsa Partida do Comendador) não conta como compra.
+- Quem já tinha zerado a Branca antes do 0.7.0 começa com 1 campanha contada.
+- O painel DEV tem LIBERAR A PRÓXIMA e ZERAR CONQUISTAS.
+
+### Aviso de conquista (`AchievementToast.jsx`)
+
+- Um cartão desce no alto da tela, em qualquer tela (menu, mapa, lojas, no meio da
+  partida), por cima até do corte de cena.
+- O cartão tem moldura dourada, um troféu 40x40 piscando com brilho e
+  "CONQUISTA DESBLOQUEADA!", mais o nome da conquista e "Talismã liberado: …".
+- Ele chega com uma fanfarra metálica (`sound.playAchievement()`), fica 3,8 s e sobe de
+  volta. Vários avisos entram em fila.
+
+### Os 20 talismãs novos (`data/relics.js`, arte em `art/RelicArt070.jsx`)
+
+| Talismã | Raridade | Efeito |
+| --- | --- | --- |
+| Palito de Dente Usado | Comum | 1ª pedra de soma ímpar da rodada: +$2 |
+| Moeda Furada 🔒 | Comum | Passe estratégico custa $1 |
+| Pano de Chão Úmido | Comum | Bucha numa ponta: o rival não usa essa ponta na vez dele |
+| Tampa de Garrafa Amassada 🔒 | Comum | Rodada sem bucha na mão: +$4 |
+| Rádio de Pilha Chiando | Comum | Pontas com soma par: 15% de o rival comprar por engano |
+| Fósforo Riscado 🔒 | Comum | 1ª compra da rodada mostra a próxima pedra do dorme |
+| Óculos Fundo de Garrafa | Raro | Na vez do rival, a pedra que ele vai jogar aparece virada antes de sair |
+| Canivete Suíço Enferrujado | Raro | 1x por partida: 1 pedra da mão vira a bucha do número maior (botão CANIVETE) |
+| Baralho de Truco Marcado 🔒 | Raro | Múltiplo de 5 com uma ponta 4: −1♥ no rival |
+| Abridor de Lata Cego 🔒 | Raro | Batida com o rival ainda com 2+ pedras: +1 de dano |
+| Cinzeiro Cheio de Bitucas | Raro | Rival passou 2 vezes seguidas: 1 pedra dele fica à mostra |
+| Nota de 3 Reais 🔒 | Raro | 1º reembaralhar de cada visita à Loja é grátis |
+| Fita Crepe do Gambiarra 🔒 | Lendário | 1x por partida: joga de novo se a próxima pedra encaixa na ponta que abriu |
+| Espelho de Banheiro Trincado | Lendário | Pedra de grife do rival: a sua comum mais pesada copia o material |
+| Balança de Açougue Descalibrada 🔒 | Lendário | Na tranca, sua soma tem −10 |
+| Relógio de Parede do Bar | Lendário | Mesa com 4, 8, 12… pedras: ponta direita aceita qualquer número na sua vez |
+| Cálice de Sangue de Galo 🔒 | Necrótico | Batida de bucha dá 5 de dano; cada compra custa 1♥ (nunca o último) |
+| Dedo de Cadáver Amarrado | Necrótico | Rival compra até achar pedra que encaixa; seus talismãs vendem por $0 |
+| Testamento Rasgado | Necrótico | Golpe fatal recomeça a rodada do zero; depois queima ele e mais 1 talismã seu |
+| Dado de Osso Humano 🔒 | Necrótico | Toda pedra sua encaixa em ponta 6; passar a vez custa 1♥ (nunca o último) |
+
+🔒 = sai só depois da conquista.
+
+### Livro de Boteco (`CollectionBook.jsx`)
+
+- Os talismãs de conquista ainda trancados aparecem como silhueta escura com um "?" de
+  pixel e o nome BLOQUEADO.
+- No lugar do efeito, uma caixa pontilhada âmbar diz "[?] COMO DESBLOQUEAR: …". Nas metas
+  que somam, ela mostra o progresso (Tio Zé 1/2, comuns 3/6, campanhas 1/2).
+- Liberados, eles aparecem inteiros: sprite 40x40, nome, raridade, efeito e o selo
+  DESBLOQUEADO com o nome da conquista.
+- O topo da aba mostra CONQUISTAS N/10.
+
+### Dorme no canto da mesa (`TableBoard.jsx`)
+
+- A pilha de pedras viradas e quantas ainda restam saíram do cabeçalho do rival. Agora ficam
+  grandes, no canto de cima à direita do feltro.
+- Com 3 ou menos o número fica âmbar; vazio, vermelho com VAZIO. Cada compra dá um pulinho
+  no número.
+
 ## Patch 0.6.3: maletas de dominó (Modo Normal e Modo Difícil)
 
 ### Mesa das maletas (`CaseSelect.jsx`, `art/CaseArt.jsx`, `TitleScreen.jsx`)

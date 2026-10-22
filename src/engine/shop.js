@@ -16,7 +16,7 @@ import { rerollCost } from '../data/campaign.js';
 import { mixSeed, regionOfState } from './campaignMap.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { RARITIES } from '../data/rarities.js';
-import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
+import { RELICS, RELIC_IDS, RELIC_SLOTS, isRelicAvailable } from '../data/relics.js';
 import { FULL_SET, createSeededRng } from './dominoLogic.js';
 
 export const SHOP_RELIC_OFFERS = 3;
@@ -83,7 +83,8 @@ export function buildShop(state, rerolls = 0) {
   const rng = shopRng(state, rerolls);
   const chances = regionOfState(state).rarity;
   const owned = new Set(state.relics.player);
-  const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico');
+  // talismãs trancados por conquista só entram depois de liberados (Patch 0.7.0)
+  const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicAvailable(id, state.unlocks));
   const relics = pickByRarity(relicPool, (id) => RELICS[id].rarity, chances, SHOP_RELIC_OFFERS, rng).map((id) => ({
     id,
     price: RELICS[id].price,
@@ -98,7 +99,9 @@ export function buildShop(state, rerolls = 0) {
     return { tileId, enhancement, price: ENHANCEMENTS[enhancement].price, sold: false };
   });
 
-  return { relics, tiles, rerolls, rerollCost: rerollCost(rerolls) };
+  // Nota de 3 Reais: o 1º reembaralhar da visita é de graça
+  const freeFirst = rerolls === 0 && state.relics.player.some((id) => RELICS[id]?.firstRerollFree);
+  return { relics, tiles, rerolls, rerollCost: freeFirst ? 0 : rerollCost(rerolls) };
 }
 
 /** Por que não dá para comprar esse talismã agora (ou null se dá). */
@@ -116,7 +119,10 @@ export function tileBuyBlock(state, offer) {
   return null;
 }
 
-/** Quanto um talismã equipado vale na revenda. */
+/** Quanto um talismã equipado vale na revenda (metade do preço-base da raridade). */
 export const sellPriceOf = (relicId) => RARITIES[RELICS[relicId]?.rarity]?.sellPrice ?? 0;
+
+/** A revenda agora, com os seus talismãs (Dedo de Cadáver: tudo a $0). */
+export const sellPriceFor = (state, relicId) => (state.relics.player.some((id) => RELICS[id]?.sellZero) ? 0 : sellPriceOf(relicId));
 
 export { rerollCost };

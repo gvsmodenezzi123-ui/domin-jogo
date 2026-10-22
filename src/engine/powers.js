@@ -19,6 +19,7 @@ import {
   getPassAvailability,
   getPlayableMoves,
   isTurnExhausted,
+  PASS_FEE,
   makeTile,
   pipSum,
 } from './dominoLogic.js';
@@ -68,12 +69,16 @@ export function wildSidesFor(state, seat = 'player') {
  */
 export function rulesFor(state, seat, { frozen = true } = {}) {
   let rules = BASE_RULES;
+  let wildSides = wildSidesFor(state, seat);
   for (const relic of relicsOf(state, seat)) {
     const extra = relic.rules?.(state, seat);
-    if (extra) rules = { ...rules, ...extra };
+    if (!extra) continue;
+    // pontas curinga de talismãs (Relógio de Parede) somam com as do Cristal
+    if (extra.wildSides) wildSides = [...new Set([...wildSides, ...extra.wildSides])];
+    rules = { ...rules, ...extra };
   }
-  const wildSides = wildSidesFor(state, seat);
   if (wildSides.length) rules = { ...rules, wildSides };
+  else if (rules.wildSides) rules = { ...rules, wildSides: undefined };
   const frozenSides = frozen ? (state.fx?.frozen?.[seat] ?? []) : [];
   if (frozenSides.length) rules = { ...rules, frozenSides };
   return rules;
@@ -151,8 +156,8 @@ export function drawOptionsFor(state, seat) {
 }
 
 /** Dano da batida de `seat` depois dos talismãs (somas antes, multiplicações depois). */
-export function applyBatidaDamage(state, seat, base) {
-  const ctx = { owner: seat, foe: other(seat) };
+export function applyBatidaDamage(state, seat, base, tile = null) {
+  const ctx = { owner: seat, foe: other(seat), tile };
   const relics = relicsOf(state, seat)
     .filter((r) => r.batidaDamage)
     .sort((p, q) => (p.order ?? 0) - (q.order ?? 0));
@@ -216,6 +221,11 @@ export function drawAvailabilityFor(state, seat) {
   });
 }
 
+/** Quanto custa o passe estratégico de `seat` ($3; Moeda Furada: $1). */
+export function passFeeFor(state, seat = 'player') {
+  return relicsOf(state, seat).reduce((fee, relic) => Math.min(fee, relic.passFee ?? PASS_FEE), PASS_FEE);
+}
+
 /** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`). */
 export function passAvailabilityFor(state, seat = 'player') {
   return getPassAvailability({
@@ -223,7 +233,30 @@ export function passAvailabilityFor(state, seat = 'player') {
     drawsThisTurn: state.drawsThisTurn,
     boneyardCount: state.boneyard.length,
     coins: state.coins[seat],
+    fee: passFeeFor(state, seat),
   });
+}
+
+/** Ajuste na soma da tranca por lado (Balança de Açougue: −10). */
+export function trancaSumOffsets(state) {
+  const offset = {};
+  for (const seat of ['player', 'tioZe']) {
+    const total = relicsOf(state, seat).reduce((sum, relic) => sum + (relic.trancaSumOffset ?? 0), 0);
+    if (total) offset[seat] = total;
+  }
+  return offset;
+}
+
+/** O Canivete Suíço pode ser aberto agora (sua vez, 1x por partida)? */
+export function canUseCanivete(state) {
+  return (
+    state.phase === 'playing' &&
+    state.turn === 'player' &&
+    !state.pending &&
+    hasRelic(state, 'player', 'canivete') &&
+    !state.matchFx?.caniveteUsed &&
+    state.hands.player.length > 0
+  );
 }
 
 /**
@@ -258,6 +291,11 @@ export function revealedTioZeTiles(state) {
       if (drawn) shown.set(drawn.id, drawn);
     }
   }
+  // Cinzeiro Cheio de Bitucas: pedras que ficaram à mostra depois de ele passar seguido
+  for (const id of state.fx.revealed ?? []) {
+    const tile = hand.find((t) => t.id === id);
+    if (tile) shown.set(tile.id, tile);
+  }
   return [...shown.values()];
 }
 
@@ -272,7 +310,8 @@ export function endMarksFor(state) {
   if (!state.board.root) return marks;
   for (const side of state.fx.frozen.tioZe) marks[side] = 'frozen';
   for (const side of state.fx.frozen.player) marks[side] = 'blocked';
-  for (const side of wildSidesFor(state, 'player')) marks[side] = marks[side] === 'blocked' ? 'blocked' : 'wild';
+  // curinga do Cristal e do Relógio de Parede do Bar
+  for (const side of rulesFor(state, 'player', { frozen: false }).wildSides ?? []) marks[side] = marks[side] === 'blocked' ? 'blocked' : 'wild';
   return marks;
 }
 

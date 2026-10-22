@@ -1,7 +1,7 @@
 {
   "name": "buxaria",
   "private": true,
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "Buxaria — Duelo 1x1 tático de Dominó Roguelike em Dark Pixel Art (PWA).",
   "type": "module",
   "scripts": {

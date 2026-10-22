@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
+import AchievementToast from './components/AchievementToast.jsx';
 import BlackMarketModal from './components/BlackMarketModal.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
 import CoinEventModal from './components/CoinEventModal.jsx';
@@ -29,6 +30,15 @@ import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { getRival, rivalOf } from './data/rivals.js';
 import { modeOf } from './data/difficulty.js';
+import {
+  ACHIEVEMENT_EVENT,
+  ACHIEVEMENT_IDS,
+  isAchievementUnlocked,
+  loadUnlockedRelics,
+  resetAchievements,
+  trackAchievements,
+  unlockAchievement,
+} from './engine/achievements.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
 import { mapRegionId, regionIdOf } from './engine/campaignMap.js';
 import {
@@ -40,9 +50,11 @@ import {
   shuffle,
 } from './engine/dominoLogic.js';
 import { bonusFloat, buildPlayerHint, deriveHurtKey, deriveTioZeMood, deriveTioZeSpeech } from './engine/gameFeedback.js';
+import { foreseenRivalTile } from './engine/foresight.js';
 import { createInitialState, gameReducer } from './engine/gameReducer.js';
 import {
   canUndo,
+  canUseCanivete,
   drawAvailabilityFor,
   endMarksFor,
   knownPlayerTiles,
@@ -66,7 +78,7 @@ import {
   writeRunSave,
 } from './engine/progress.js';
 import { snapshotRun } from './engine/save.js';
-import { sellPriceOf } from './engine/shop.js';
+import { sellPriceFor } from './engine/shop.js';
 
 const newDeck = () => shuffle(FULL_SET);
 /** Semente da run: sorteia a teia de caminhos, as vitrines e as gorjetas do Seu Tião. */
@@ -102,6 +114,8 @@ const PLAYER_LANDED_MS = 280;
 const SLAM_SHAKE_MS = 150;
 /** Banner "SEM JOGADAS DISPONÍVEIS!" na tela antes do passe forçado ir para o rival (ms). */
 const NO_MOVES_MS = 1600;
+/** Canivete Suíço: os botões do modo de escolha (no Giz são PULAR · DESCARTAR). */
+const CANIVETE_LABELS = { skip: 'CANCELAR', confirm: 'VIRAR BUCHA' };
 
 /** Atraso (ms) de cada som dentro de um mesmo lote de eventos, para não embolar. */
 const FX_DELAY = {
@@ -189,6 +203,12 @@ function runEventFx(ev, shell, table, offset = 0) {
       break;
     case 'undo':
       at(() => sound.playRewind());
+      break;
+    case 'canivete':
+      at(() => {
+        sound.playAnvil();
+        haptic([20, 30, 20]);
+      });
       break;
     case 'dev':
       at(() => sound.playClick());
@@ -285,7 +305,7 @@ function inspectInfo(payload, state, rival) {
   let extra = null;
   if (payload.owner === 'tioZe') extra = `DE ${rival.name.toUpperCase()}: O EFEITO É DELE, CONTRA VOCÊ`;
   else if (payload.owner === 'shop' || payload.owner === 'market') extra = `PREÇO: $${relic.price}`;
-  else if (state.phase === 'shop') extra = `VENDE POR $${sellPriceOf(relic.id)}`;
+  else if (state.phase === 'shop') extra = `VENDE POR $${sellPriceFor(state, relic.id)}`;
   return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
 }
 
@@ -342,6 +362,24 @@ export default function App() {
   const [titlePick, setTitlePick] = useState(false);
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
   const { stage: veilStage, go: cutTo } = useSceneTransition();
+  // Patch 0.7.0: fila dos avisos de conquista (um por vez, no alto da tela)
+  const [toasts, setToasts] = useState([]);
+  const toastDone = useCallback((key) => setToasts((queue) => queue.filter((t) => t.key !== key)), []);
+
+  // Conquista nova (engine/achievements.js dispara `buxaria-achievement`): mostra o aviso
+  // na hora, em qualquer tela, e o talismã dela já entra no sorteio da loja e do beco.
+  useEffect(() => {
+    let n = 0;
+    const onAchievement = (event) => {
+      const detail = event.detail;
+      if (!detail?.id) return;
+      n += 1;
+      setToasts((queue) => (queue.some((t) => t.id === detail.id) ? queue : [...queue, { ...detail, key: `${detail.id}:${n}` }]));
+      if (detail.relicId) dispatch({ type: 'UNLOCK_RELICS', ids: [detail.relicId] });
+    };
+    window.addEventListener(ACHIEVEMENT_EVENT, onAchievement);
+    return () => window.removeEventListener(ACHIEVEMENT_EVENT, onAchievement);
+  }, []);
 
   useEffect(() => sound.setVolumes(settings), [settings]);
   useEffect(() => applyReducedMotion(settings.reducedMotion), [settings.reducedMotion]);
@@ -482,7 +520,10 @@ export default function App() {
         }, offset + FX_DELAY.callout);
       }
     }
-  }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
+    // Patch 0.7.0: as conquistas conferem as metas nos eventos novos (ao vencer o Tio Zé,
+    // ao jogar a 3ª pedra paga com coração, ao vencer a tranca com 1 pedra...)
+    trackAchievements(fresh, state);
+  }, [state, pushFloat, stagePlay]);
 
   // Save: no mapa, na loja e no beco (ao vencer o nó e depois do Seu Tião, volta no mapa);
   // some quando a run acaba.
@@ -542,6 +583,9 @@ export default function App() {
   const playing = state.phase === 'playing';
   const pending = playing ? state.pending : null;
   const discardMode = pending?.type === 'discard';
+  // Canivete Suíço: escolher a pedra que vira bucha usa o mesmo leque do descarte do Giz
+  const caniveteMode = pending?.type === 'canivete';
+  const pickMode = discardMode || caniveteMode;
   // enquanto a jogada do rival está em cena, a sua vez ainda não começou
   const isPlayerTurn = playing && state.turn === 'player' && !pending && !tableAnim;
   const hand = state.hands.player;
@@ -552,13 +596,15 @@ export default function App() {
 
   const playableIds = useMemo(() => {
     if (discardMode) return new Set(hand.map((t) => t.id));
+    // bucha já é bucha: o Canivete só serve nas outras
+    if (caniveteMode) return new Set(hand.filter((t) => t.a !== t.b).map((t) => t.id));
     if (!isPlayerTurn) return new Set();
     return new Set(getPlayableMoves(hand, state.board, requiredTileId, playerRules).map((m) => m.tile.id));
-  }, [discardMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules]);
+  }, [discardMode, caniveteMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules]);
 
   const selectedTile =
-    isPlayerTurn || discardMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
-  const selectedSides = useStableValue(selectedTile && !discardMode ? getValidSides(selectedTile, state.board, playerRules) : []);
+    isPlayerTurn || pickMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
+  const selectedSides = useStableValue(selectedTile && !pickMode ? getValidSides(selectedTile, state.board, playerRules) : []);
 
   // a escada de compra do jogador (o Pacto do Coveiro deixa a 3ª compra mais cara)
   const draw = useStableValue(drawAvailabilityFor(state, 'player'));
@@ -569,6 +615,7 @@ export default function App() {
   const canPass = Boolean(passRule?.allowed);
   const forcedPass = playing && state.pending?.type === 'forcedPass';
   const undoReady = canUndo(state) && !tableAnim;
+  const caniveteReady = isPlayerTurn && canUseCanivete(state);
 
   const speechNow = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
   const speech = useStableValue(speechNow);
@@ -577,7 +624,11 @@ export default function App() {
   const mood = deriveTioZeMood(state);
   const tioZeHurtKey = deriveHurtKey(state.events, 'tioZe');
   const playerHurtKey = deriveHurtKey(state.events, 'player');
-  const revealedNow = revealedTioZeTiles(state);
+  // Óculos Fundo de Garrafa: na vez do rival, a pedra que ele vai jogar aparece virada antes de sair
+  const foreseen = useMemo(() => foreseenRivalTile(state), [state]);
+  const foreseenId = foreseen?.id ?? null;
+  const revealedBase = revealedTioZeTiles(state);
+  const revealedNow = foreseen && !revealedBase.some((t) => t.id === foreseen.id) ? [...revealedBase, foreseen] : revealedBase;
   const revealed = useStableValue(revealedNow, revealedNow.map((t) => t.id).join(','));
   const endMarks = useStableValue(endMarksFor(state));
   const spentRelics = useStableValue(spentRelicsOf(state, 'player'));
@@ -606,7 +657,8 @@ export default function App() {
 
   // Tocar na pedra só seleciona (ou desseleciona). Jogar é no JOGAR ou na vaga da mesa.
   const handleSelectTile = useStableHandler((tile) => {
-    if (discardMode) {
+    if (pickMode) {
+      if (!playableIds.has(tile.id)) return;
       sound.playClick();
       setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
       return;
@@ -657,6 +709,25 @@ export default function App() {
     dispatch({ type: 'SKIP_DISCARD' });
   });
 
+  const handleCanivete = useStableHandler(() => {
+    if (!caniveteReady) return;
+    sound.playPowerSelect();
+    setSelectedId(null);
+    dispatch({ type: 'USE_CANIVETE' });
+  });
+
+  const handleCanivetePick = useStableHandler(() => {
+    if (!caniveteMode || !selectedTile) return;
+    dispatch({ type: 'CANIVETE_PICK', tileId: selectedTile.id });
+    setSelectedId(null);
+  });
+
+  const handleCancelCanivete = useStableHandler(() => {
+    sound.playClick();
+    setSelectedId(null);
+    dispatch({ type: 'CANCEL_CANIVETE' });
+  });
+
   const handleUndo = useStableHandler(() => {
     if (!undoReady) return;
     setSelectedId(null);
@@ -686,7 +757,7 @@ export default function App() {
       clearRunSave();
       setSave(null);
       setTitlePick(false);
-      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id });
+      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id, unlocks: loadUnlockedRelics() });
     });
   };
 
@@ -712,7 +783,7 @@ export default function App() {
     sound.playClick();
     cutTo(() => {
       resetTable();
-      dispatch({ type: 'LOAD_RUN', save: saved });
+      dispatch({ type: 'LOAD_RUN', save: saved, unlocks: loadUnlockedRelics() });
     });
   };
 
@@ -818,6 +889,17 @@ export default function App() {
   };
 
   const devAction = (action) => {
+    // conquistas (Patch 0.7.0): a próxima trancada sai com o aviso; zerar tranca tudo de novo
+    if (action.op === 'achievementNext') {
+      const id = ACHIEVEMENT_IDS.find((a) => !isAchievementUnlocked(a));
+      if (id) unlockAchievement(id);
+      return;
+    }
+    if (action.op === 'achievementReset') {
+      resetAchievements();
+      dispatch({ type: 'UNLOCK_RELICS', ids: [], reset: true });
+      return;
+    }
     setSelectedId(null);
     // trocar de rival recomeça a partida: precisa de um baralho novo
     dispatch(action.op === 'setRival' ? { ...action, deck: newDeck() } : action);
@@ -833,7 +915,13 @@ export default function App() {
     if (['forceTranca', 'winMatch', 'setRival', 'openStop'].includes(action.op)) setDevOpen(false);
   };
 
-  const veil = <ScreenVeil stage={veilStage} />;
+  // o corte de cena e o aviso de conquista vão em todas as telas
+  const veil = (
+    <>
+      <ScreenVeil stage={veilStage} />
+      <AchievementToast toast={toasts[0] ?? null} onDone={toastDone} />
+    </>
+  );
   // Maleta Preta: as pedras comuns da partida viram ébano com pips brancos
   const tileSkin = state.phase !== 'title' ? modeOf(state.mode).skin : 'bone';
 
@@ -966,7 +1054,7 @@ export default function App() {
         coins={state.coins.tioZe}
         hand={state.hands.tioZe}
         revealed={revealed}
-        boneyardCount={state.boneyard.length}
+        foreseenId={foreseenId}
         relics={state.relics.tioZe}
         flashes={relicFlashes.tioZe}
         isTurn={playing && state.turn === 'tioZe'}
@@ -995,6 +1083,7 @@ export default function App() {
         atmosphere={atmosphere}
         incoming={tableAnim}
         noMoves={forcedPass && !menuOpen && !devOpen}
+        boneyardCount={state.boneyard.length}
       />
 
       <PlayerRack
@@ -1017,15 +1106,18 @@ export default function App() {
         coins={state.coins.player}
         endsSum={ends ? ends.left + ends.right : null}
         hint={hint}
-        discardMode={discardMode}
-        onDiscard={handleDiscard}
-        onSkipDiscard={handleSkipDiscard}
+        discardMode={pickMode}
+        pickLabels={caniveteMode ? CANIVETE_LABELS : undefined}
+        onDiscard={caniveteMode ? handleCanivetePick : handleDiscard}
+        onSkipDiscard={caniveteMode ? handleCancelCanivete : handleSkipDiscard}
         onSecretTap={gameSecretTap}
         relics={state.relics.player}
         relicFlashes={relicFlashes.player}
         spentRelics={spentRelics}
         canUndo={undoReady}
         onUndo={handleUndo}
+        canCanivete={caniveteReady}
+        onCanivete={handleCanivete}
         devUnlocked={devUnlocked}
         onOpenDev={openDev}
         muted={muted}

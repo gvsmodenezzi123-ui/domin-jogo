@@ -15,7 +15,7 @@ describe('sprites de alta densidade', () => {
     }
   });
 
-  it('os 15 talismãs e os 18 rivais têm arte 40x40 própria', () => {
+  it('os 40 talismãs e os 18 rivais têm arte 40x40 própria', () => {
     const relicArt = new Set();
     for (const relic of Object.values(RELICS)) {
       expect(RELIC_ART[relic.art], relic.id).toBeTruthy();

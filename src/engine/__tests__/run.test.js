@@ -465,7 +465,8 @@ describe('simulação de runs inteiras', () => {
           expect(new Set(ids).size).toBe(28);
           // a mão do rival só tem as pedras do baralho DELE
           for (const tile of s.hands.tioZe) expect(tile.enhancement).toBe(s.decks.tioZe[tile.id]);
-          for (const tile of s.hands.player) expect(tile.enhancement).toBe(s.decks.player[tile.id]);
+          // (o Espelho de Banheiro Trincado copia material do rival para uma pedra sua até o fim da rodada)
+          for (const tile of s.hands.player) if (!tile.copied && !tile.id.includes('#')) expect(tile.enhancement).toBe(s.decks.player[tile.id]);
         }
         expect(s.relics.player.length).toBeLessThanOrEqual(RELIC_SLOTS);
         expect(s.coins.player).toBeGreaterThanOrEqual(0);

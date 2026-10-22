@@ -194,7 +194,7 @@ function forcedOrientation(tile, endValue, otherEnd, accepts) {
 
 /**
  * Como a pedra entra na ponta `side`: { inner, outer, via } ou null.
- * `via` diz o motivo: 'root' | 'match' | 'steel' | 'wild' | 'fuzzy'.
+ * `via` diz o motivo: 'root' | 'match' | 'steel' | 'wild' | 'fuzzy' | 'six'.
  */
 export function getPlacement(tile, board, side, rules = BASE_RULES) {
   const ends = getOpenEnds(board);
@@ -212,6 +212,10 @@ export function getPlacement(tile, board, side, rules = BASE_RULES) {
   if (rules.fuzzy) {
     const near = forcedOrientation(tile, end, otherEnd, (v) => Math.abs(v - end) === 1);
     if (near) return { ...near, via: 'fuzzy' };
+  }
+  // Dado de Osso Humano: toda pedra do dono conta como tendo um 6 (encaixa em ponta 6)
+  if (rules.sixWild && end === 6) {
+    return { ...forcedOrientation(tile, end, otherEnd, () => true), via: 'six' };
   }
   return null;
 }
@@ -349,9 +353,11 @@ export function batidaDamage(kind) {
  * Resolve uma tranca: vence quem tem a MENOR soma de pontos na mão.
  * Empate = ninguém leva dano.
  */
-export function resolveTranca(hands, tileValue = {}) {
+export function resolveTranca(hands, tileValue = {}, offset = {}) {
   // `tileValue[seat]` troca o valor de cada pedra na contagem (ex.: Chave de Fenda: bucha vale 0)
-  const sumFor = (seat) => hands[seat].reduce((sum, t) => sum + (tileValue[seat] ? tileValue[seat](t) : pipSum(t)), 0);
+  // `offset[seat]` mexe na soma toda (Balança de Açougue: −10), nunca abaixo de zero
+  const sumFor = (seat) =>
+    Math.max(0, hands[seat].reduce((sum, t) => sum + (tileValue[seat] ? tileValue[seat](t) : pipSum(t)), 0) + (offset[seat] ?? 0));
   const sums = { player: sumFor('player'), tioZe: sumFor('tioZe') };
   if (sums.player === sums.tioZe) {
     return { kind: 'tranca', winner: null, loser: null, damage: 0, sums };
@@ -414,13 +420,14 @@ export const PASS_FEE = 3;
  *
  * Retorna `{ allowed, cost, reason }`, com `reason` em null | 'mustDraw' | 'coins'.
  */
-export function getPassAvailability({ hasPlay, drawsThisTurn, boneyardCount, coins }) {
+export function getPassAvailability({ hasPlay, drawsThisTurn, boneyardCount, coins, fee = PASS_FEE }) {
   if (drawsThisTurn > 0) return { allowed: true, cost: 0, reason: null };
   if (!hasPlay) {
     return boneyardCount > 0 ? { allowed: false, cost: 0, reason: 'mustDraw' } : { allowed: true, cost: 0, reason: null };
   }
-  if (coins < PASS_FEE) return { allowed: false, cost: PASS_FEE, reason: 'coins' };
-  return { allowed: true, cost: PASS_FEE, reason: null };
+  // `fee`: o passe estratégico custa $3 (Moeda Furada: $1)
+  if (coins < fee) return { allowed: false, cost: fee, reason: 'coins' };
+  return { allowed: true, cost: fee, reason: null };
 }
 
 /**

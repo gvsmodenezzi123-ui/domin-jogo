@@ -97,7 +97,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.6.3</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.7.0</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -223,7 +223,7 @@ export default function TitleScreen({
       <footer className="relative z-[5] flex flex-col items-center gap-1">
         {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
         <p className="title-version">
-          PATCH 0.6.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.7.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </footer>
 

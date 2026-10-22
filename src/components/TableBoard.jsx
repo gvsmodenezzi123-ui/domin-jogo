@@ -12,6 +12,35 @@ const BOARD_PADDING = 8;
 const TILE_INSET = 1.5;
 const B = BASE_UNIT_PX;
 
+/**
+ * Dorme no canto da mesa (Patch 0.7.0): a pilha de pedras viradas e quantas ainda
+ * restam, grande, no alto à direita do feltro (o balão do rival fala à esquerda e a
+ * lâmpada fica no meio). Com 3 ou menos o número fica âmbar; vazio, vermelho. Cada
+ * compra dá um pulinho no número.
+ */
+const BoneyardPile = memo(function BoneyardPile({ count }) {
+  const tone = count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
+  return (
+    <div
+      className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`}
+      role="status"
+      aria-label={count === 0 ? 'Dorme vazio' : `Dorme: ${count} ${count === 1 ? 'pedra restante' : 'pedras restantes'}`}
+    >
+      <span className="boneyard-stack" aria-hidden="true">
+        {count > 2 && <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-3" />}
+        {count > 1 && <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-2" />}
+        {count > 0 ? <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-1" /> : <span className="boneyard-hole" />}
+      </span>
+      <span className="boneyard-info" aria-hidden="true">
+        <span key={count} className="boneyard-count font-pixel text-shadow-pixel">
+          {count}
+        </span>
+        <span className="boneyard-label font-pixel">{count === 0 ? 'VAZIO' : 'DORME'}</span>
+      </span>
+    </div>
+  );
+});
+
 function useElementSize() {
   const ref = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -70,6 +99,7 @@ function TableBoard({
   atmosphere = 'boteco',
   incoming = null,
   noMoves = false,
+  boneyardCount = null,
 }) {
   const [areaRef, size] = useElementSize();
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
@@ -215,6 +245,8 @@ function TableBoard({
       {/* moldura chanfrada da mesa: aro escuro, quina iluminada em cima, sombra embaixo */}
       <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
+
+      {boneyardCount !== null && <BoneyardPile count={boneyardCount} />}
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
 

@@ -4,7 +4,7 @@
  * não sorteia outra. Puro.
  */
 
-import { NECROTIC_IDS, RELICS, RELIC_SLOTS } from '../data/relics.js';
+import { NECROTIC_IDS, RELICS, RELIC_SLOTS, isRelicAvailable } from '../data/relics.js';
 import { mixSeed } from './campaignMap.js';
 import { createSeededRng } from './dominoLogic.js';
 
@@ -14,7 +14,8 @@ export const MARKET_OFFERS = 3;
 /** Monta a vitrine: 3 Necróticos que você ainda não tem. */
 export function buildMarket(state) {
   const rng = createSeededRng(mixSeed(state.seed ?? 0, `mercado-${state.run.node ?? 'x'}`));
-  const pool = NECROTIC_IDS.filter((id) => !state.relics.player.includes(id));
+  // Necróticos trancados por conquista só entram depois de liberados (Patch 0.7.0)
+  const pool = NECROTIC_IDS.filter((id) => !state.relics.player.includes(id) && isRelicAvailable(id, state.unlocks));
   const picked = [];
   while (picked.length < MARKET_OFFERS && pool.length) {
     const [id] = pool.splice(Math.floor(rng() * pool.length), 1);

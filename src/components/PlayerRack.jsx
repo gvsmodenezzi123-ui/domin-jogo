@@ -58,11 +58,12 @@ function DrawCost({ draw }) {
 
 /**
  * Rótulo do PASSAR A VEZ (Patch 0.5.4): de graça depois de comprar; $3 podendo
- * jogar; SALDO INSUFICIENTE ($3) sem saldo; apagado quando a compra é obrigatória.
+ * jogar ($1 com a Moeda Furada); SALDO INSUFICIENTE sem saldo; apagado quando a
+ * compra é obrigatória.
  */
 function passButtonText(rule) {
   if (!rule) return 'PASSAR A VEZ';
-  if (rule.reason === 'coins') return 'SALDO INSUFICIENTE ($3)';
+  if (rule.reason === 'coins') return `SALDO INSUFICIENTE ($${rule.cost ?? 3})`;
   if (rule.reason === 'mustDraw') return 'PASSAR A VEZ: COMPRE ANTES';
   return rule.cost > 0 ? `PASSAR A VEZ ($${rule.cost})` : 'PASSAR A VEZ';
 }
@@ -72,7 +73,7 @@ function PassLabel({ rule }) {
     return (
       <>
         <span className="block text-[8px] leading-snug">SALDO INSUFICIENTE</span>
-        <span className="pass-note block text-brass-300">($3)</span>
+        <span className="pass-note block text-brass-300">(${rule.cost ?? 3})</span>
       </>
     );
   }
@@ -119,7 +120,22 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
  * Sua hotbar de talismãs, o DESFAZER do Relógio, o atalho do DEV e (desde o 0.6.2) o som e
  * o menu da partida, que saíram de cima da mão do rival.
  */
-const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, canUndo, onUndo, devUnlocked, onOpenDev, muted, onToggleMute, onOpenMenu, press }) {
+const RelicRow = memo(function RelicRow({
+  relics,
+  relicFlashes,
+  spentRelics,
+  canUndo,
+  onUndo,
+  canCanivete = false,
+  onCanivete,
+  devUnlocked,
+  onOpenDev,
+  muted,
+  onToggleMute,
+  onOpenMenu,
+  press,
+}) {
+  const ready = canUndo && canCanivete ? READY_BOTH : canUndo ? READY_RELOGIO : canCanivete ? READY_CANIVETE : NONE;
   return (
     <div className="flex h-[34px] items-center gap-2 px-3 pt-1">
       <Hotbar
@@ -127,7 +143,7 @@ const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, can
         size={30}
         flashes={relicFlashes}
         spent={spentRelics}
-        ready={canUndo ? READY_RELOGIO : NONE}
+        ready={ready}
         press={press}
         bare
         label="Seus talismãs"
@@ -136,6 +152,11 @@ const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, can
         {canUndo && (
           <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={onUndo}>
             DESFAZER
+          </button>
+        )}
+        {canCanivete && (
+          <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
+            CANIVETE
           </button>
         )}
         {devUnlocked && (
@@ -165,6 +186,8 @@ const RelicRow = memo(function RelicRow({ relics, relicFlashes, spentRelics, can
 });
 
 const READY_RELOGIO = ['relogio'];
+const READY_CANIVETE = ['canivete'];
+const READY_BOTH = ['relogio', 'canivete'];
 const NONE = [];
 
 /**
@@ -259,9 +282,15 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
   );
 });
 
-/** COMPRAR · JOGAR · PASSAR A VEZ (ou PULAR · DESCARTAR no modo descarte) e a escada de compras. */
+const DISCARD_LABELS = { skip: 'PULAR', confirm: 'DESCARTAR' };
+
+/**
+ * COMPRAR · JOGAR · PASSAR A VEZ e a escada de compras. No modo de escolha de pedra os
+ * botões viram PULAR · DESCARTAR (Giz) ou CANCELAR · VIRAR BUCHA (Canivete).
+ */
 const ActionBar = memo(function ActionBar({
   discardMode,
+  pickLabels = DISCARD_LABELS,
   hasSelection,
   onSkipDiscard,
   onDiscard,
@@ -281,10 +310,10 @@ const ActionBar = memo(function ActionBar({
       {discardMode ? (
         <div className="grid grid-cols-[1fr_1.4fr] gap-2 px-3 pt-1.5">
           <button type="button" className="btn-pixel" onClick={onSkipDiscard}>
-            PULAR
+            {pickLabels.skip}
           </button>
           <button type="button" data-tone="brass" className="btn-pixel" disabled={!hasSelection} onClick={onDiscard}>
-            DESCARTAR
+            {pickLabels.confirm}
           </button>
         </div>
       ) : (
@@ -364,6 +393,7 @@ function PlayerRack({
   endsSum = null,
   hint,
   discardMode = false,
+  pickLabels = DISCARD_LABELS,
   onDiscard,
   onSkipDiscard,
   onSecretTap,
@@ -372,6 +402,8 @@ function PlayerRack({
   spentRelics,
   canUndo = false,
   onUndo,
+  canCanivete = false,
+  onCanivete,
   devUnlocked = false,
   onOpenDev,
   muted = false,
@@ -395,6 +427,8 @@ function PlayerRack({
         spentRelics={spentRelics}
         canUndo={canUndo}
         onUndo={onUndo}
+        canCanivete={canCanivete}
+        onCanivete={onCanivete}
         devUnlocked={devUnlocked}
         onOpenDev={onOpenDev}
         muted={muted}
@@ -421,6 +455,7 @@ function PlayerRack({
 
       <ActionBar
         discardMode={discardMode}
+        pickLabels={pickLabels}
         hasSelection={Boolean(selectedId)}
         onSkipDiscard={onSkipDiscard}
         onDiscard={onDiscard}

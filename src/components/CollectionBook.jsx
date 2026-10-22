@@ -4,6 +4,7 @@ import { getRarity } from '../data/rarities.js';
 import { RELICS, RELIC_IDS } from '../data/relics.js';
 import { RIVALS, RIVAL_IDS } from '../data/rivals.js';
 import { REGIONS } from '../data/campaign.js';
+import { ACHIEVEMENT_BY_RELIC, ACHIEVEMENT_IDS, loadAchievementProgress, loadUnlockedAchievements } from '../engine/achievements.js';
 import DominoTile from './DominoTile.jsx';
 import RelicIcon from './RelicIcon.jsx';
 import { RetroCard } from './RetroCard.jsx';
@@ -24,14 +25,50 @@ function Rarity({ id }) {
   );
 }
 
-function Entry({ kind, id, known }) {
+/** Progresso das metas que somam (as outras são de uma jogada só). */
+function progressText(achievementId, progress) {
+  if (achievementId === 'fregues_ze') return `Tio Zé derrotado: ${Math.min(progress.tio_ze_defeats, 2)}/2`;
+  if (achievementId === 'colecionador') return `Comuns básicos equipados: ${Math.min(progress.used_common_relics.length, 6)}/6`;
+  if (achievementId === 'rei_sinuca') return `Campanhas no Normal: ${Math.min(progress.normal_mode_clears, 2)}/2`;
+  return null;
+}
+
+/**
+ * Talismã trancado por conquista (Patch 0.7.0): silhueta escura com um "?" de pixel,
+ * BLOQUEADO no nome e, no lugar do efeito, a meta numa caixa pontilhada âmbar.
+ */
+function LockedRelic({ relic, achievement, progress }) {
+  const extra = progressText(achievement.id, progress);
+  return (
+    <RetroCard as="li" rarity="neutral" className="book-entry book-entry-locked">
+      <span className="book-icon book-icon-lg">
+        <span className="book-lock-silhouette" aria-hidden="true">
+          <RelicIcon relic={relic} size={40} />
+        </span>
+        <span className="book-lock-mark font-pixel" aria-hidden="true">
+          ?
+        </span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-pixel text-[8px] leading-snug text-bone-400">BLOQUEADO</p>
+        <div className="book-unlock-goal mt-1">
+          <p className="font-pixel text-[7px] leading-snug text-amber-300">[?] COMO DESBLOQUEAR:</p>
+          <p className="mt-0.5 font-term text-[15px] leading-[1.05] text-amber-100">{achievement.goal}</p>
+          {extra && <p className="mt-0.5 font-pixel text-[7px] leading-snug text-amber-400/80">{extra}</p>}
+        </div>
+      </div>
+    </RetroCard>
+  );
+}
+
+function Entry({ kind, id, known, badge = null }) {
   let icon;
   let name;
   let rarity = null;
   let text;
   if (kind === 'relics') {
     const relic = RELICS[id];
-    icon = <RelicIcon relic={relic} size={30} />;
+    icon = <RelicIcon relic={relic} size={40} />;
     name = relic.name;
     rarity = relic.rarity;
     text = relic.description;
@@ -54,13 +91,18 @@ function Entry({ kind, id, known }) {
       className={`book-entry ${known ? '' : 'book-entry-unknown'}`}
       style={rarity && known ? { '--rarity': getRarity(rarity).color } : undefined}
     >
-      <span className="book-icon">
+      <span className={`book-icon ${kind === 'relics' ? 'book-icon-lg' : ''}`}>
         <span className={known ? '' : 'map-silhouette'}>{icon}</span>
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-pixel text-[8px] leading-snug text-bone-50">{known ? name.toUpperCase() : '???'}</p>
         {known && rarity && <Rarity id={rarity} />}
         <p className="mt-0.5 font-term text-[15px] leading-[1.05] text-bone-300">{known ? text : 'Ainda não apareceu na sua mesa.'}</p>
+        {badge && (
+          <p className="book-unlocked-badge mt-1 font-pixel" title={`Conquista: ${badge}`}>
+            DESBLOQUEADO <span className="text-bone-300">· {badge.toUpperCase()}</span>
+          </p>
+        )}
       </div>
     </RetroCard>
   );
@@ -69,12 +111,22 @@ function Entry({ kind, id, known }) {
 /**
  * COLEÇÕES — o Livro de Boteco: tudo que já passou pela sua mesa (na loja, na
  * hotbar do rival, no seu baralho). O que falta aparece como silhueta com "?".
+ * Patch 0.7.0: os 10 talismãs de conquista mostram a meta enquanto estão trancados
+ * e, liberados, aparecem inteiros com o selo DESBLOQUEADO.
  */
 export default function CollectionBook({ collection }) {
   const [tab, setTab] = useState('relics');
+  // lido uma vez ao abrir o livro (as conquistas moram no storage, fora do estado da run)
+  const [achievements] = useState(() => ({ done: new Set(loadUnlockedAchievements()), progress: loadAchievementProgress() }));
   const current = TABS.find((t) => t.id === tab);
   const seen = new Set(collection[tab]);
-  const found = current.ids.filter((id) => seen.has(id)).length;
+  const unlockedRelic = (id) => {
+    const achievement = ACHIEVEMENT_BY_RELIC[id];
+    return achievement ? achievements.done.has(achievement.id) : null;
+  };
+  // talismã de conquista liberado conta como visto (ele aparece inteiro no livro)
+  const isKnown = (id) => seen.has(id) || (tab === 'relics' && unlockedRelic(id) === true);
+  const found = current.ids.filter(isKnown).length;
   return (
     <div>
       {/* abas de fita marcadora, como num álbum encadernado */}
@@ -95,11 +147,19 @@ export default function CollectionBook({ collection }) {
       </div>
       <p className="mt-2 text-center font-pixel text-[8px] text-bone-400">
         {found}/{current.ids.length} DESCOBERTOS
+        {tab === 'relics' && (
+          <span className="text-amber-300">
+            {' '}
+            · CONQUISTAS {achievements.done.size}/{ACHIEVEMENT_IDS.length}
+          </span>
+        )}
       </p>
       <ul className="mt-2 grid gap-1.5" role="tabpanel">
-        {current.ids.map((id) => (
-          <Entry key={id} kind={tab} id={id} known={seen.has(id)} />
-        ))}
+        {current.ids.map((id) => {
+          const unlocked = tab === 'relics' ? unlockedRelic(id) : null;
+          if (unlocked === false) return <LockedRelic key={id} relic={RELICS[id]} achievement={ACHIEVEMENT_BY_RELIC[id]} progress={achievements.progress} />;
+          return <Entry key={id} kind={tab} id={id} known={isKnown(id)} badge={unlocked ? ACHIEVEMENT_BY_RELIC[id].title : null} />;
+        })}
       </ul>
     </div>
   );
