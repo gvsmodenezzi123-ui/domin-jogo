@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 /**
@@ -6,16 +6,16 @@ import { flushSync } from 'react-dom';
  * Tião) passar da altura da tela mesmo depois do aperto do CSS, ele encolhe por inteiro
  * (`transform: scale`, preso no topo) até caber, no mínimo até `minScale`. O tamanho de
  * layout não muda com o transform, então a medida não entra em ciclo.
- *   const fit = useFitScale();  <div ref={fit.outerRef}><div ref={fit.innerRef} style={fit.style}>…
+ * Devolve dois "ref de função" (o setter do estado guarda o elemento) e o estilo:
+ *   const [fitOuter, fitInner, fitStyle] = useFitScale();
+ *   <div ref={fitOuter}><div ref={fitInner} style={fitStyle}>…
  */
 export function useFitScale(minScale = 0.72) {
-  const outerRef = useRef(null);
-  const innerRef = useRef(null);
+  const [outer, setOuter] = useState(null);
+  const [inner, setInner] = useState(null);
   const [scale, setScale] = useState(1);
 
   useLayoutEffect(() => {
-    const outer = outerRef.current;
-    const inner = innerRef.current;
     if (!outer || !inner || typeof ResizeObserver === 'undefined') return undefined;
     const measure = () => {
       const style = getComputedStyle(outer);
@@ -28,7 +28,7 @@ export function useFitScale(minScale = 0.72) {
     ro.observe(outer);
     ro.observe(inner);
     return () => ro.disconnect();
-  }, [minScale]);
+  }, [outer, inner, minScale]);
 
-  return { outerRef, innerRef, scale, style: scale < 1 ? { transform: `scale(${scale})`, transformOrigin: 'top center' } : undefined };
+  return [setOuter, setInner, scale < 1 ? { transform: `scale(${scale})`, transformOrigin: 'top center' } : undefined];
 }

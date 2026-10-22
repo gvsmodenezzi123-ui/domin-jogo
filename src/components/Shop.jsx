@@ -110,7 +110,7 @@ function Valtinho() {
  */
 export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press }) {
   // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
-  const fit = useFitScale();
+  const [fitOuter, fitInner, fitStyle] = useFitScale();
   const [sellId, setSellId] = useState(null);
   const [alert, setAlert] = useState(0);
   const [complaint, setComplaint] = useState(null);
@@ -174,8 +174,8 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
 
   return (
     <div className={`shop-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
-      <div ref={fit.outerRef} className="shop-scroll">
-        <div ref={fit.innerRef} className="scene-fit" style={fit.style}>
+      <div ref={fitOuter} className="shop-scroll">
+        <div ref={fitInner} className="scene-fit" style={fitStyle}>
         {/* toldo listrado com a barra denteada */}
         <header className="shop-awning">
           <div className="shop-awning-inner">

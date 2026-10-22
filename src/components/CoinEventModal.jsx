@@ -32,7 +32,7 @@ function lineFor(reward, seq) {
  */
 export default function CoinEventModal({ state, onLeave }) {
   // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
-  const fit = useFitScale();
+  const [fitOuter, fitInner, fitStyle] = useFitScale();
   const reward = state.coinEvent?.reward ?? 0;
   const after = state.coins.player;
   const before = after - reward;
@@ -67,8 +67,8 @@ export default function CoinEventModal({ state, onLeave }) {
 
   return (
     <div className={`tiao-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
-      <div ref={fit.outerRef} className="tiao-scroll">
-        <div ref={fit.innerRef} className="scene-fit" style={fit.style}>
+      <div ref={fitOuter} className="tiao-scroll">
+        <div ref={fitInner} className="scene-fit" style={fitStyle}>
         <header className="tiao-head">
           <h1 id="tiao-title" className="tiao-sign">
             SEU TIÃO DAS MOEDAS
