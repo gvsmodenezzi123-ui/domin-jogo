@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { SECRET_BOSS } from '../data/rivals.js';
+import { bossMusicOf } from '../data/campaign.js';
 import { sound } from '../engine/audioSynth.js';
 import { haptic } from '../engine/progress.js';
 import { HeartsBar } from './PixelHeart.jsx';
@@ -19,6 +21,8 @@ const STROBE_AT = 2400;
 const EYES_AT = 4300;
 const REVEAL_AT = 5700;
 const ORDER = ['flicker', 'dark', 'strobe', 'eyes', 'reveal'];
+/** A trilha dele (Patch 0.9.0) entra junto com a revelação. */
+const DONO_TRACK = bossMusicOf(SECRET_BOSS);
 
 /** Runas e brasas que sobem pelo escuro: [posição %, runa (ou -1 = brasa), duração s, atraso s]. */
 const DRIFT = [
@@ -57,7 +61,10 @@ export default function SecretBoss({ rival, onSit }) {
           sound.playThunder();
           haptic([80, 60, 160]);
         }),
-        setTimeout(() => go('reveal'), 400),
+        setTimeout(() => {
+          go('reveal');
+          sound.playTrack(DONO_TRACK);
+        }, 400),
       ];
       return () => timers.forEach(clearTimeout);
     }
@@ -81,7 +88,10 @@ export default function SecretBoss({ rival, onSit }) {
         sound.playDonoEyes();
         haptic([220]);
       }),
-      setTimeout(() => go('reveal'), REVEAL_AT),
+      at(REVEAL_AT, () => {
+        go('reveal');
+        sound.playTrack(DONO_TRACK);
+      }),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -91,6 +101,7 @@ export default function SecretBoss({ rival, onSit }) {
     if (!intro) return;
     skipped.current = true;
     sound.hushMusic(0);
+    sound.playTrack(DONO_TRACK);
     setStage('reveal');
   };
 

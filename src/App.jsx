@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncE
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
 import AchievementToast from './components/AchievementToast.jsx';
 import BlackMarketModal from './components/BlackMarketModal.jsx';
-import BlackTilesModal from './components/BlackTilesModal.jsx';
+import BossIntro from './components/BossIntro.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
 import CoinEventModal from './components/CoinEventModal.jsx';
 import DevPanel from './components/DevPanel.jsx';
@@ -14,6 +14,7 @@ import PlayerRack from './components/PlayerRack.jsx';
 import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import SecretBoss from './components/SecretBoss.jsx';
+import TilesUnlockModal from './components/TilesUnlockModal.jsx';
 import ScreenVeil from './components/ScreenTransition.jsx';
 import { useSceneTransition } from './components/useSceneTransition.js';
 import Shop from './components/Shop.jsx';
@@ -27,7 +28,7 @@ import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
 import { TileSkinContext } from './components/tileSkin.js';
-import { BOSS_MUSIC, REGIONS } from './data/campaign.js';
+import { BOSS_INTRO_IDS, REGIONS, bossMusicOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { SECRET_BOSS, getRival, rivalFor, rivalOf } from './data/rivals.js';
@@ -58,10 +59,12 @@ import { relicSlotsFor } from './engine/loadout.js';
 import {
   addGoldCaps,
   isBlackTilesUnlocked,
+  isSilverTilesUnlocked,
   loadEquippedFrame,
   loadUpgrades,
   resetMeta,
   saveBlackTilesUnlocked,
+  saveSilverTilesUnlocked,
   subscribeMeta,
   unlockAllMeta,
 } from './engine/meta.js';
@@ -266,7 +269,7 @@ function musicFor(state) {
   if (state.phase === 'map') return REGIONS[mapRegionId(state) - 1].music;
   if (state.phase === 'coinEvent') return REGIONS[regionIdOf(state) - 1].music;
   const rival = getRival(state.rivalId);
-  return rival.boss ? BOSS_MUSIC : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
+  return rival.boss ? bossMusicOf(rival.id) : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
 }
 
 /** Último disparo de cada talismã na partida atual, por dono: o slot pisca quando muda. */
@@ -380,6 +383,11 @@ export default function App() {
   const blackUnlocked = useSyncExternalStore(subscribeMeta, isBlackTilesUnlocked, () => false);
   const frame = useSyncExternalStore(subscribeMeta, loadEquippedFrame, () => null);
   const [blackSeen, setBlackSeen] = useState(isBlackTilesUnlocked);
+  // Patch 0.9.0: o mesmo para as Peças Prateadas (Modo Inferno), ao zerar nas Peças Pretas
+  const silverUnlocked = useSyncExternalStore(subscribeMeta, isSilverTilesUnlocked, () => false);
+  const [silverSeen, setSilverSeen] = useState(isSilverTilesUnlocked);
+  // Patch 0.9.0: entrada do chefe já vista nesta partida (chave da partida)
+  const [introDone, setIntroDone] = useState(null);
   // a tela inicial abre direto no Balcão de Maletas? ({ challenge } ou false)
   const [titlePick, setTitlePick] = useState(false);
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
@@ -426,13 +434,21 @@ export default function App() {
   }, []);
   useEffect(() => clearTableAnim, [clearTableAnim]);
 
+  // Patch 0.9.0: entrada do chefe ao sentar na mesa dele, uma vez por partida (a chave é a
+  // partida da run); some sozinha ou com um toque
+  const bossIntroKey =
+    (state.phase === 'playing' || state.phase === 'roundOver') && BOSS_INTRO_IDS.includes(state.rivalId) ? `${state.seed ?? 0}:${state.run.match}` : null;
+  const showBossIntro = bossIntroKey !== null && introDone !== bossIntroKey;
+  const finishBossIntro = useCallback(() => setIntroDone(bossIntroKey), [bossIntroKey]);
+
   // Rival: cada mudança de estado na vez dele agenda a próxima ação (cada um tem seu tempo).
   // Ele espera com o menu ou o painel DEV abertos, enquanto você decide
-  // (escolha do Barbante, descarte do Giz) e enquanto a jogada anterior dele está em cena.
+  // (escolha do Barbante, descarte do Giz), enquanto a jogada anterior dele está em cena e
+  // durante a entrada do chefe.
   useEffect(() => {
-    if (menuOpen || devOpen || tableAnim || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
+    if (menuOpen || devOpen || tableAnim || showBossIntro || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch, rivalOf(state).reflexMs);
-  }, [state, menuOpen, devOpen, tableAnim]);
+  }, [state, menuOpen, devOpen, tableAnim, showBossIntro]);
 
   // Turno sem saída (3 compras sem encaixe): o banner fica na mesa e o passe vai sozinho para o rival.
   const forcedPassArmed = state.phase === 'playing' && state.pending?.type === 'forcedPass';
@@ -566,10 +582,15 @@ export default function App() {
   // Patch 0.8.0: derrotou o Comendador nas Peças Brancas com as Pretas ainda trancadas → tela
   // de recompensa antes do final (ou da revelação do Dono da Noite), e o desbloqueio vai
   // para o aparelho na hora (buxaria_black_tiles_unlocked = true)
-  const celebrate = (state.phase === 'runWon' || state.phase === 'secretReveal') && state.mode !== 'hard' && !blackSeen;
+  // Patch 0.9.0: zerar nas Peças Pretas com as Prateadas trancadas → a recompensa do Inferno
+  const runOver = state.phase === 'runWon' || state.phase === 'secretReveal';
+  const runMode = modeOf(state.mode).id;
+  const reward = !runOver ? null : runMode === 'normal' && !blackSeen ? 'black' : runMode === 'hard' && !silverSeen ? 'silver' : null;
+  const celebrate = reward !== null;
   useEffect(() => {
-    if (celebrate) saveBlackTilesUnlocked(true);
-  }, [celebrate]);
+    if (reward === 'black') saveBlackTilesUnlocked(true);
+    if (reward === 'silver') saveSilverTilesUnlocked(true);
+  }, [reward]);
 
   // Livro de Boteco: tudo que passa pela mesa fica registrado.
   useEffect(() => {
@@ -928,6 +949,12 @@ export default function App() {
     saveBlackTilesUnlocked(next);
     setBlackSeen(next);
   };
+  // ...e as Peças Prateadas (Modo Inferno)
+  const toggleSilver = () => {
+    const next = !silverUnlocked;
+    saveSilverTilesUnlocked(next);
+    setSilverSeen(next);
+  };
 
   const devAction = (action) => {
     // conquistas (Patch 0.7.0): a próxima trancada sai com o aviso; zerar tranca tudo de novo
@@ -991,6 +1018,7 @@ export default function App() {
           key={titlePick ? 'maletas' : 'menu'}
           save={save}
           blackUnlocked={blackUnlocked}
+          silverUnlocked={silverUnlocked}
           startPicking={titlePick}
           onNewGame={newGame}
           onContinue={continueRun}
@@ -1011,7 +1039,15 @@ export default function App() {
   // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
   const sceneChip = ['shop', 'blackMarket', 'coinEvent'].includes(state.phase);
   const devPanel = devOpen && (
-    <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} blackUnlocked={blackUnlocked} onToggleBlack={toggleBlack} />
+    <DevPanel
+      state={state}
+      onAction={devAction}
+      onClose={() => setDevOpen(false)}
+      blackUnlocked={blackUnlocked}
+      onToggleBlack={toggleBlack}
+      silverUnlocked={silverUnlocked}
+      onToggleSilver={toggleSilver}
+    />
   );
   // no mapa fica ao lado do menu; na loja, em cima do botão de voltar (o saldo mora no topo)
   const devChip = devUnlocked && (
@@ -1208,14 +1244,18 @@ export default function App() {
       )}
 
       {celebrate && !tableAnim && (
-        <BlackTilesModal
+        <TilesUnlockModal
+          kind={reward}
           continueLabel={state.phase === 'secretReveal' ? 'CONTINUAR' : 'VER O FINAL'}
           onContinue={() => {
             sound.playClick();
-            setBlackSeen(true);
+            if (reward === 'silver') setSilverSeen(true);
+            else setBlackSeen(true);
           }}
         />
       )}
+
+      {showBossIntro && <BossIntro key={bossIntroKey} rival={rival} onDone={finishBossIntro} />}
 
       {state.phase === 'secretReveal' && !tableAnim && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
 

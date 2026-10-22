@@ -147,9 +147,28 @@ function DominoTile({
   const dividerThickness = Math.max(1, Math.round(unit * 0.06));
   const enh = getEnhancement(enhancement);
   const onyx = !enh && skin === 'onyx';
-  // osso envelhecido (padrão), ébano (Peças Pretas) ou material da peça aprimorada, que vem do CSS
+  const silver = !enh && skin === 'silver';
+  // osso envelhecido (padrão), ébano (Peças Pretas), prata (Peças Prateadas, Patch 0.9.0) ou
+  // material da peça aprimorada, que vem do CSS
   const surface = enh
     ? { '--d': `${depth}px` }
+    : silver
+    ? {
+        '--d': `${depth}px`,
+        background: [
+          `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.55), transparent 44%)`,
+          'repeating-linear-gradient(100deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px)',
+          'linear-gradient(150deg, #f4f6f8 0%, #cfd4da 38%, #9aa1a8 72%, #7d848b 100%)',
+        ].join(','),
+        boxShadow: [
+          'inset 1px 1px 0 rgba(255,255,255,.95)',
+          'inset -1px -1px 0 rgba(40,44,50,.55)',
+          'inset 0 0 0 1px rgba(60,66,74,.35)',
+          `0 ${depth}px 0 #5d636a`,
+          `0 ${depth + 1}px 0 #24272b`,
+          'var(--cast)',
+        ].join(','),
+      }
     : onyx
     ? {
         '--d': `${depth}px`,
@@ -195,7 +214,7 @@ function DominoTile({
         dimmed ? 'brightness-[.6] sepia-[.35]' : ''
       } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
         enh && dimmed ? 'tile-enh-still' : ''
-      } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${className}`}
+      } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
       style={{ ...shared, ...surface }}
     >
       <Half value={values[0]} horizontal={horizontal} unit={unit} />

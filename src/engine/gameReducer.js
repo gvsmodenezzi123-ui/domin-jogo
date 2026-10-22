@@ -310,7 +310,9 @@ function endMatch(state, winner) {
     const caps =
       (boss ? CAPS_PER_BOSS : CAPS_PER_RIVAL) + (runWon ? CAPS_PER_CLEAR : 0) + (finalBoss && state.challenge ? CAPS_PER_CHALLENGE : 0);
     const max = playerMaxHearts(state);
-    const healed = boss ? max : Math.min(max, state.hearts.player + HEAL_AFTER_NODE);
+    // Peças Prateadas: cada mesa (chefe também) devolve só 1 coração
+    const perTable = modeOf(state.mode).healPerTable;
+    const healed = perTable ? Math.min(max, state.hearts.player + perTable) : boss ? max : Math.min(max, state.hearts.player + HEAL_AFTER_NODE);
     const heal = healed - state.hearts.player;
     const cleared = node && !state.run.cleared.includes(node.id) ? [...state.run.cleared, node.id] : state.run.cleared;
     let next = {
@@ -1154,7 +1156,7 @@ function loadRun(state, action) {
     seq: state.seq,
     events: state.events,
   };
-  const mode = save.mode === 'hard' ? 'hard' : 'normal';
+  const mode = modeOf(save.mode).id;
   const rival = rivalFor(currentNode(next)?.rivalId ?? FIRST_RIVAL, mode);
   next = { ...next, mode };
   const max = playerMaxHearts(next);

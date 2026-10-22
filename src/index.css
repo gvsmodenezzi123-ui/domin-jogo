@@ -5118,6 +5118,24 @@
   color: #c084fc;
 }
 
+/* ---------- Patch 0.9.0: Peças Prateadas (Modo Inferno) ----------
+   prata escovada, divisória de aço e pips vermelho-sangue com um brilho de brasa */
+.tile-silver .domino-pip {
+  background: radial-gradient(circle at 40% 35%, #ff6a5a 0%, #b3121b 50%, #4a0306 100%);
+  box-shadow:
+    0 0 2px rgba(255, 60, 40, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.tile-silver .domino-divider {
+  background: #4b5157;
+  box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.map-inferno-badge {
+  color: #ff8c7a;
+}
+
 /* ---------- Patch 0.6.3: mesa das maletas (NOVO JOGO) ----------
    salão escuro, lâmpada pendurada com o cone de luz caindo num feltro quase preto,
    e as duas maletas lado a lado */
@@ -5453,6 +5471,11 @@
 .unlock-reward.is-on {
   color: #d8b4fe;
   text-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
+}
+
+.unlock-reward.is-on.is-silver {
+  color: #e8edf2;
+  text-shadow: 0 0 10px rgba(255, 90, 70, 0.55);
 }
 
 .reduce-motion .case-shake,
@@ -6698,4 +6721,452 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.45'%3E%3Cpath d='M10 50 L30 10 L50 50 M18 34 L42 34'/%3E%3C/svg%3E") 12% 18% / 56px 56px no-repeat,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.45'%3E%3Cpath d='M30 8 L30 52 M14 20 L46 40 M46 20 L14 40'/%3E%3C/svg%3E") 86% 78% / 52px 52px no-repeat,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.4'%3E%3Cpath d='M12 12 L48 12 L12 48 L48 48'/%3E%3C/svg%3E") 84% 16% / 44px 44px no-repeat;
+}
+
+/* ---------- Patch 0.9.0: entrada dos chefes (BossIntro.jsx) ----------
+   Um cartão comum (retrato, nome, título e a fala de entrada) e o efeito de cada um:
+   navalha (Arlindo), ferro (Beto) e ouro (Comendador). Tudo some no fim (--bi-total). */
+.boss-intro {
+  color: var(--color-bone-50);
+  animation: bi-out 300ms ease-in calc(var(--bi-total, 2900ms) - 300ms) forwards;
+}
+
+@keyframes bi-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.bi-backdrop {
+  background: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(20, 10, 6, 0.86), rgba(0, 0, 0, 0.96) 75%);
+  animation: rc-fade 220ms ease-out both;
+}
+
+.bi-card {
+  position: relative;
+  padding: 16px 14px 18px;
+  background: linear-gradient(180deg, rgba(18, 10, 6, 0.94), rgba(6, 3, 2, 0.96));
+  border: 2px solid #0b0705;
+}
+
+.bi-kicker {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: #f2b84b;
+}
+
+.bi-portrait {
+  width: fit-content;
+  padding: 4px;
+  background: #0b0705;
+  border: 2px solid #f2b84b;
+}
+
+.bi-name {
+  font-size: 15px;
+  line-height: 1.3;
+  color: #f4ecd2;
+  text-shadow: 0 3px 0 #000;
+}
+
+.bi-title {
+  font-size: 19px;
+  line-height: 1;
+  color: #d9a946;
+}
+
+.bi-quote {
+  font-size: 18px;
+  line-height: 1.05;
+  color: var(--color-bone-200);
+  animation: rc-fade 400ms ease-out 900ms both;
+}
+
+.bi-skip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  color: rgba(244, 236, 210, 0.32);
+  pointer-events: none;
+}
+
+/* --- navalha: Seu Arlindo --- */
+.boss-intro-navalha .bi-card {
+  border-color: #3a0f22;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 79, 163, 0.35),
+    0 0 26px rgba(255, 40, 120, 0.35);
+}
+
+.boss-intro-navalha .bi-portrait {
+  border-color: #ff4fa3;
+  box-shadow: 0 0 14px rgba(255, 79, 163, 0.6);
+}
+
+.boss-intro-navalha .bi-kicker {
+  color: #ff8cc6;
+}
+
+/* o nome acende como letreiro: duas falhas e fica (2 piscadas em 0,6 s) */
+.boss-intro-navalha .bi-name {
+  color: #ffd6ec;
+  text-shadow:
+    0 0 4px #ff4fa3,
+    0 0 12px #ff1f7a,
+    0 3px 0 #000;
+  animation: bi-neon 700ms steps(1, end) 520ms both;
+}
+
+@keyframes bi-neon {
+  0% {
+    opacity: 0.15;
+  }
+  18% {
+    opacity: 1;
+  }
+  34% {
+    opacity: 0.2;
+  }
+  52%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* duas metades pretas cobrem o cartão e se abrem pelo corte da navalha */
+.bi-half {
+  background: #050203;
+}
+
+.bi-half-a {
+  clip-path: polygon(0 0, 100% 0, 100% 34%, 0 66%);
+  animation: bi-half-a 420ms cubic-bezier(0.5, 0, 0.2, 1) 330ms forwards;
+}
+
+.bi-half-b {
+  clip-path: polygon(0 66%, 100% 34%, 100% 100%, 0 100%);
+  animation: bi-half-b 420ms cubic-bezier(0.5, 0, 0.2, 1) 330ms forwards;
+}
+
+@keyframes bi-half-a {
+  to {
+    transform: translate(-14%, -62%);
+    opacity: 0;
+  }
+}
+
+@keyframes bi-half-b {
+  to {
+    transform: translate(14%, 62%);
+    opacity: 0;
+  }
+}
+
+/* o fio da navalha riscando a tela na diagonal */
+.bi-slash {
+  left: -10%;
+  top: 50%;
+  width: 120%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #fff 18%, #ffe0f0 60%, #ff4fa3 85%, transparent);
+  box-shadow:
+    0 0 10px #ff4fa3,
+    0 0 26px rgba(255, 40, 120, 0.8);
+  transform-origin: 0 50%;
+  transform: rotate(-17deg) scaleX(0);
+  opacity: 0;
+  animation: bi-slash 380ms ease-out 200ms both;
+}
+
+@keyframes bi-slash {
+  0% {
+    transform: rotate(-17deg) scaleX(0);
+    opacity: 1;
+  }
+  45% {
+    transform: rotate(-17deg) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-17deg) scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* --- ferro: Beto Cigano --- */
+.boss-intro-ferro {
+  animation:
+    bi-shake 360ms ease-out 470ms,
+    bi-out 300ms ease-in calc(var(--bi-total, 2900ms) - 300ms) forwards;
+}
+
+@keyframes bi-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-6px, 5px);
+  }
+  30% {
+    transform: translate(6px, -4px);
+  }
+  45% {
+    transform: translate(-4px, 3px);
+  }
+  60% {
+    transform: translate(3px, -2px);
+  }
+  80% {
+    transform: translate(-1px, 1px);
+  }
+}
+
+/* a chapa: ferro enferrujado com rebites nos cantos */
+.boss-intro-ferro .bi-card {
+  background:
+    radial-gradient(circle at 12px 12px, #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
+    radial-gradient(circle at calc(100% - 12px) 12px, #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
+    radial-gradient(circle at 12px calc(100% - 12px), #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
+    radial-gradient(ellipse 40% 30% at 20% 30%, rgba(160, 80, 30, 0.45), transparent 70%),
+    radial-gradient(ellipse 35% 25% at 80% 75%, rgba(150, 70, 25, 0.45), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #4d3a2c, #2e221a 60%, #1d150f);
+  border: 3px solid #120b06;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 200, 150, 0.18),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.5),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: bi-plate-drop 340ms cubic-bezier(0.55, 0, 1, 0.45) 130ms both;
+}
+
+@keyframes bi-plate-drop {
+  0% {
+    transform: translateY(-130vh) rotate(-4deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+}
+
+.boss-intro-ferro .bi-portrait {
+  border-color: #b8743a;
+}
+
+.boss-intro-ferro .bi-kicker,
+.boss-intro-ferro .bi-title {
+  color: #e2a46a;
+}
+
+/* o nome carimbado no ferro */
+.boss-intro-ferro .bi-name {
+  color: #d5c2ae;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.7),
+    1px 1px 0 rgba(255, 220, 190, 0.18);
+}
+
+/* poeira do impacto */
+.boss-intro-ferro .bi-stage::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -18px;
+  height: 36px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(170, 140, 110, 0.55), transparent 70%);
+  opacity: 0;
+  animation: bi-dust 900ms ease-out 470ms both;
+  pointer-events: none;
+}
+
+@keyframes bi-dust {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.4) translateY(-8px);
+  }
+}
+
+.bi-sparks {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+}
+
+.bi-sparks i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #ffd27a;
+  box-shadow: 0 0 5px #ff8a2a;
+  opacity: 0;
+  animation: bi-spark 600ms ease-out 470ms both;
+}
+
+.bi-sparks i:nth-child(odd) {
+  background: #fff3c4;
+  animation-duration: 760ms;
+}
+
+@keyframes bi-spark {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 60px));
+    opacity: 0;
+  }
+}
+
+/* --- ouro: Comendador Moreira --- */
+.boss-intro-ouro .bi-card {
+  border: 3px solid #6b4a12;
+  box-shadow:
+    inset 0 0 0 2px #e8b84a,
+    inset 0 0 0 4px #3a2508,
+    0 0 30px rgba(232, 184, 74, 0.35),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: rc-fade 400ms ease-out 250ms both;
+}
+
+.boss-intro-ouro .bi-portrait {
+  border: 3px double #e8b84a;
+  box-shadow: 0 0 16px rgba(232, 184, 74, 0.55);
+}
+
+.boss-intro-ouro .bi-kicker {
+  color: #ffe08a;
+}
+
+/* nome em ouro com o brilho passando */
+.boss-intro-ouro .bi-name {
+  background: linear-gradient(100deg, #b9861f 0%, #ffe9a8 40%, #fff8dc 50%, #ffe9a8 60%, #b9861f 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 3px 0 #000);
+  animation: bi-gold 1600ms ease-in-out 700ms both;
+}
+
+@keyframes bi-gold {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.bi-spot {
+  background: radial-gradient(ellipse 46% 60% at 50% 42%, rgba(255, 214, 140, 0.32), transparent 70%);
+  animation: rc-fade 700ms ease-out 400ms both;
+}
+
+/* cortinas de veludo vermelho com franja dourada */
+.bi-curtain {
+  width: 51%;
+  background:
+    linear-gradient(0deg, #e8b84a 0 8px, #6b4a12 8px 11px, transparent 11px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 6px, rgba(255, 255, 255, 0.05) 6px 16px, rgba(0, 0, 0, 0.2) 16px 26px),
+    linear-gradient(180deg, #8a1622, #5c0c15 70%, #3d0710);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.bi-curtain-l {
+  animation: bi-curtain-l 760ms cubic-bezier(0.6, 0, 0.3, 1) 220ms forwards;
+}
+
+.bi-curtain-r {
+  animation: bi-curtain-r 760ms cubic-bezier(0.6, 0, 0.3, 1) 220ms forwards;
+}
+
+@keyframes bi-curtain-l {
+  to {
+    transform: translateX(-100%) scaleX(0.6);
+    transform-origin: 0 50%;
+  }
+}
+
+@keyframes bi-curtain-r {
+  to {
+    transform: translateX(100%) scaleX(0.6);
+    transform-origin: 100% 50%;
+  }
+}
+
+/* moedas caindo e girando */
+.bi-coins i {
+  position: absolute;
+  top: -20px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff4c4 0 2px, #f2c14e 3px, #b9861f 6px);
+  box-shadow:
+    inset 0 0 0 1px #7a5512,
+    0 0 6px rgba(255, 210, 100, 0.6);
+  opacity: 0;
+  animation: bi-coin 1500ms cubic-bezier(0.4, 0, 0.9, 0.6) both;
+}
+
+@keyframes bi-coin {
+  0% {
+    transform: translateY(0) scaleX(1);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(28vh) scaleX(0.2);
+  }
+  50% {
+    transform: translateY(56vh) scaleX(1);
+  }
+  75% {
+    transform: translateY(84vh) scaleX(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(112vh) scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* "menos movimento": só o cartão, parado */
+.boss-intro.is-still .bi-half,
+.boss-intro.is-still .bi-slash,
+.boss-intro.is-still .bi-curtain,
+.boss-intro.is-still .bi-coins,
+.boss-intro.is-still .bi-sparks,
+.boss-intro.is-still .bi-stage::after {
+  display: none;
+}
+
+.boss-intro.is-still,
+.boss-intro.is-still * {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+}
+
+.boss-intro.is-still {
+  animation: bi-out 300ms ease-in 1500ms forwards !important;
 }

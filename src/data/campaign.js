@@ -7,7 +7,8 @@
  *
  * Também mora aqui o que muda conforme a região: a chance de cada raridade na
  * Loja Clandestina, o clima da mesa (`atmosphere`) e a faixa de música
- * (`music`, ver engine/audioSynth.js; os chefes tocam a `BOSS_MUSIC`).
+ * (`music`, ver engine/audioSynth.js). Desde o Patch 0.9.0 cada chefe tem a sua faixa
+ * (`BOSS_TRACKS`).
  */
 
 export const REGIONS = Object.freeze([
@@ -35,14 +36,31 @@ export const REGIONS = Object.freeze([
     name: 'SUBMUNDO DO JOGO DO BICHO',
     subtitle: 'Alta tensão, apostas pesadas',
     atmosphere: 'bicho',
-    music: 'bossFight',
+    music: 'submundoNoir',
     rarity: Object.freeze({ comum: 30, raro: 30, lendario: 25, mitico: 15 }),
     nodes: Object.freeze(['carlinhos', 'bigode', 'sofia', 'fausto', 'alemao', 'comendador']),
   }),
 ]);
 
-/** Faixa das mesas de chefe (em qualquer região). */
+/** Faixa de chefe para quem não tiver uma própria em BOSS_TRACKS. */
 export const BOSS_MUSIC = 'bossFight';
+
+/**
+ * Patch 0.9.0: cada chefe com a sua trilha. Seu Arlindo: samba-rock da navalha. Beto Cigano:
+ * industrial do ferro-velho. Comendador: a elétrica do 0.8.2. O Dono da Noite: ritual.
+ */
+export const BOSS_TRACKS = Object.freeze({
+  arlindo: 'bossArlindo',
+  beto: 'bossBeto',
+  comendador: 'bossFight',
+  donoDaNoite: 'bossNoite',
+});
+
+/** A faixa da mesa do chefe `id`. */
+export const bossMusicOf = (id) => BOSS_TRACKS[id] ?? BOSS_MUSIC;
+
+/** Chefes com entrada própria ao sentar na mesa (components/BossIntro.jsx; o Dono tem a dele). */
+export const BOSS_INTRO_IDS = Object.freeze(['arlindo', 'beto', 'comendador']);
 
 /** Chefe final: vencer ele encerra a run. */
 export const FINAL_BOSS = 'comendador';

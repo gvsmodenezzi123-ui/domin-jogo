@@ -6,6 +6,8 @@
  *                                   Brancas: libera as Peças Pretas (modo difícil).
  *                                   Quem tinha a Maleta Preta aberta (0.6.3,
  *                                   `buxaria_hard_mode_unlocked`) já vem liberado.
+ *   buxaria_silver_tiles_unlocked   'true' depois de derrotar o Comendador nas Peças
+ *                                   Pretas: libera as Peças Prateadas (Modo Inferno, 0.9.0).
  *   buxaria:upgrades                melhorias da Conta do Boteco compradas
  *   buxaria:maletas                 maletas liberadas no Balcão (a Clássica sempre)
  *   buxaria:maletas_seen            maletas que já mostraram as correntes caindo
@@ -21,6 +23,7 @@ import { announce, readJson, readRaw, writeJson, writeRaw } from './storage.js';
 
 export const GOLD_CAPS_KEY = 'buxaria_gold_caps';
 export const BLACK_TILES_KEY = 'buxaria_black_tiles_unlocked';
+export const SILVER_TILES_KEY = 'buxaria_silver_tiles_unlocked';
 /** Chave antiga das Peças Pretas (Patch 0.6.3): vale como Peças Pretas liberadas. */
 export const LEGACY_HARD_KEY = 'buxaria_hard_mode_unlocked';
 
@@ -93,6 +96,17 @@ export function saveBlackTilesUnlocked(on = true) {
   writeRaw(BLACK_TILES_KEY, on ? 'true' : null);
   // a chave antiga também abriria: trancar (DEV) apaga as duas
   if (!on) writeRaw(LEGACY_HARD_KEY, null);
+  changed();
+}
+
+// ---------------------------------------------------------------------------
+// Peças Prateadas (Modo Inferno, Patch 0.9.0)
+// ---------------------------------------------------------------------------
+
+export const isSilverTilesUnlocked = () => readRaw(SILVER_TILES_KEY) === 'true';
+
+export function saveSilverTilesUnlocked(on = true) {
+  writeRaw(SILVER_TILES_KEY, on ? 'true' : null);
   changed();
 }
 

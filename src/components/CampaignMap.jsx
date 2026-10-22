@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { REGIONS } from '../data/campaign.js';
+import { HEAL_AFTER_NODE, REGIONS } from '../data/campaign.js';
+import { modeBadge, modeOf } from '../data/difficulty.js';
 import { getRival, rivalFor } from '../data/rivals.js';
 import {
   COIN_EVENT_MAX,
@@ -286,7 +287,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           <div className="min-w-0">
             <p className="font-pixel text-[7px] text-bone-400">
               {state.maleta && state.maleta !== 'classica' && <span className="map-maleta-badge">{maletaOf(state.maleta).short} · </span>}
-              {state.mode === 'hard' && <span className="map-hard-badge">PEÇAS PRETAS · </span>}
+              {modeBadge(state.mode) && <span className={state.mode === 'inferno' ? 'map-inferno-badge' : 'map-hard-badge'}>{modeBadge(state.mode)}</span>}
               {state.challenge && <span className="map-challenge-badge">{challengeOf(state.challenge).name.toUpperCase()} · </span>}
               REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
               {open.length > 1 ? ` · ${open.length} CAMINHOS` : ''}
@@ -361,7 +362,11 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           closed={state.challenge === 'soNoOsso' && (selected.type === 'shop' || selected.type === 'black')}
           onEnter={onEnter}
         />
-        <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER MESA: +2♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS</p>
+        <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">
+          {modeOf(state.mode).healPerTable
+            ? `VENCER MESA: +${modeOf(state.mode).healPerTable}♥ (CHEFE TAMBÉM) · LOJA E BECO SÃO OPCIONAIS`
+            : `VENCER MESA: +${HEAL_AFTER_NODE}♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS`}
+        </p>
       </footer>
     </div>
   );

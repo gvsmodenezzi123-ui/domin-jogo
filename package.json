@@ -1,7 +1,7 @@
 {
   "name": "buxaria",
   "private": true,
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Buxaria — Duelo 1x1 tático de Dominó Roguelike em Dark Pixel Art (PWA).",
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "sim": "node scripts/simulate-runs.mjs"
   },
   "dependencies": {
     "@fontsource/press-start-2p": "^5.3.0",

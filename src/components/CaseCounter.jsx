@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BLACK_LOCKED_TEXT, MODES } from '../data/difficulty.js';
+import { BLACK_LOCKED_TEXT, MODES, SILVER_LOCKED_TEXT } from '../data/difficulty.js';
 import { MALETAS, MALETA_IDS } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { sound } from '../engine/audioSynth.js';
@@ -87,12 +87,17 @@ function CaseSlot({ id, unlocked, fresh, open, closing, disabled, shakeKey, onPi
   );
 }
 
-/** As duas dificuldades: Peças Brancas (normal) e Peças Pretas (difícil, com cadeado até zerar). */
-function DifficultyPick({ mode, blackUnlocked, onChange }) {
+/**
+ * As dificuldades: Peças Brancas (normal), Peças Pretas (difícil, com cadeado até zerar o
+ * normal) e Peças Prateadas (Modo Inferno, Patch 0.9.0, com cadeado até zerar o difícil).
+ */
+const SKIN_OF = { normal: 'bone', hard: 'onyx', inferno: 'silver' };
+
+function DifficultyPick({ mode, unlocked, onChange }) {
   return (
     <div className="diff-pick" role="radiogroup" aria-label="Dificuldade">
-      {['normal', 'hard'].map((id) => {
-        const locked = id === 'hard' && !blackUnlocked;
+      {['normal', 'hard', 'inferno'].map((id) => {
+        const locked = !unlocked[id];
         const on = mode === id;
         return (
           <button
@@ -101,13 +106,13 @@ function DifficultyPick({ mode, blackUnlocked, onChange }) {
             role="radio"
             aria-checked={on}
             aria-disabled={locked}
-            className={`scene-tap diff-option ${on ? 'is-on' : ''} ${locked ? 'is-locked' : ''}`}
+            className={`scene-tap diff-option diff-${id} ${on ? 'is-on' : ''} ${locked ? 'is-locked' : ''}`}
             onClick={() => onChange(id)}
           >
             <span className="diff-box" aria-hidden="true">
               {on ? '■' : ''}
             </span>
-            <TileSkinContext.Provider value={id === 'hard' ? 'onyx' : 'bone'}>
+            <TileSkinContext.Provider value={SKIN_OF[id]}>
               <DominoTile values={[5, 3]} unit={11} depth={2} className="diff-tile" />
             </TileSkinContext.Provider>
             <span className="diff-text">
@@ -127,10 +132,10 @@ function DifficultyPick({ mode, blackUnlocked, onChange }) {
  * cima, sob a lâmpada, com as 5 maletas de partida (data/maletas.js). Trancada: corrente e
  * cadeado; tocar mostra a meta. Liberada: fechada até você tocar (Patch 0.8.2); tocar abre
  * a maleta e mostra logo abaixo o que ela muda, a escolha das peças (Brancas = normal,
- * Pretas = difícil) e o INICIAR. Uma aberta por vez.
+ * Pretas = difícil, Prateadas = inferno) e o INICIAR. Uma aberta por vez.
  * Em desafio (`challenge`), o título mostra a regra; o Só no Osso só aceita a Clássica.
  */
-export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = {}, challenge = null, onStart, onBack }) {
+export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnlocked = false, progress = {}, challenge = null, onStart, onBack }) {
   const rule = challengeOf(challenge);
   const allowed = (id) => !rule?.maleta || rule.maleta === id;
   const [selected, setSelected] = useState(null); // a maleta aberta (nenhuma até o primeiro toque)
@@ -138,7 +143,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
   const [info, setInfo] = useState(null); // maleta trancada tocada (mostra a meta)
   const [shake, setShake] = useState({ id: null, n: 0 });
   const [mode, setMode] = useState('normal');
-  const [warnBlack, setWarnBlack] = useState(0);
+  const [warn, setWarn] = useState({ n: 0, text: '' });
+  const modesOpen = { normal: true, hard: blackUnlocked, inferno: silverUnlocked };
   // na primeira vez que uma maleta aparece liberada, as correntes caem
   const [fresh] = useState(() => unlocked.filter((id) => id !== 'classica' && !seen.includes(id)));
 
@@ -169,8 +175,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
   };
 
   const chooseMode = (id) => {
-    if (id === 'hard' && !blackUnlocked) {
-      setWarnBlack((n) => n + 1);
+    if (!modesOpen[id]) {
+      setWarn((w) => ({ n: w.n + 1, text: id === 'inferno' ? SILVER_LOCKED_TEXT : BLACK_LOCKED_TEXT }));
       sound.playChainRattle();
       haptic([30, 40, 30]);
       return;
@@ -234,10 +240,10 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
             <p className="counter-card-sub">{maleta.title}</p>
             <p className="counter-buff">+ {maleta.buff}</p>
             {maleta.debuff && <p className="counter-debuff">− {maleta.debuff}</p>}
-            <DifficultyPick mode={mode} blackUnlocked={blackUnlocked} onChange={chooseMode} />
-            {warnBlack > 0 && !blackUnlocked && (
-              <p key={warnBlack} className="case-warn animate-shop-alert" role="alert">
-                {BLACK_LOCKED_TEXT}
+            <DifficultyPick mode={mode} unlocked={modesOpen} onChange={chooseMode} />
+            {warn.n > 0 && (
+              <p key={warn.n} className="case-warn animate-shop-alert" role="alert">
+                {warn.text}
               </p>
             )}
             <button type="button" data-tone="play" className="btn-pixel counter-start" onClick={() => onStart({ maleta: selected, mode, challenge })}>

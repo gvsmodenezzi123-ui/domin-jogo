@@ -10,6 +10,7 @@ import {
   WARM_CUTOFF,
   stepDuration,
 } from '../audioSynth.js';
+import { BOSS_TRACKS, REGIONS } from '../../data/campaign.js';
 
 // ---------------------------------------------------------------------------
 // Web Audio de mentira: registra automações, conexões, start/stop e dispara onended
@@ -343,6 +344,39 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     const last = engine.musicBus.gain.events.filter((e) => e[0] === 'exp').at(-1);
     expect(last[1]).toBeCloseTo(engine.musicLevel(), 5);
     engine.stopMusic();
+  });
+
+  it('cada chefe tem a sua trilha (Patch 0.9.0), diferente das regiões, e todas cabem na polifonia', () => {
+    const tracks = Object.values(BOSS_TRACKS);
+    expect(new Set(tracks).size).toBe(tracks.length);
+    for (const region of REGIONS) expect(tracks).not.toContain(region.music);
+    const styles = tracks.map((name) => TRACKS[name].style);
+    expect(new Set(styles).size).toBe(tracks.length);
+    vi.useFakeTimers();
+    for (const name of tracks) {
+      const engine = engineWithFakeAudio();
+      engine.playTrack(name);
+      const before = engine.ctx.sources.length;
+      for (let i = 0; i < 160; i += 1) {
+        vi.advanceTimersByTime(25);
+        engine.ctx.advance(0.025);
+        expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+      }
+      // 4 s de música: muita nota agendada, sem nada estourar
+      expect(engine.ctx.sources.length - before).toBeGreaterThan(40);
+      engine.stopMusic();
+    }
+  });
+
+  it('a nota menos importante da trilha fica de fora em vez de cortar o pad ou o baixo', () => {
+    const engine = engineWithFakeAudio();
+    const at = engine.ctx.currentTime + 0.01;
+    // 6 vozes de efeito (mais importantes que a trilha) ocupando tudo
+    for (let i = 0; i < 6; i += 1) engine.tone({ freq: 300 + i, dur: 1 });
+    const before = engine.voices.length;
+    engine.drum({ at, freq: 9000, filter: 'highpass', q: 1, peak: 0.1, dur: 0.03 });
+    expect(engine.voices.length).toBe(before);
+    expect(engine.voices.every((v) => !v.released)).toBe(true);
   });
 
   it('vitória: a trilha sai, a fanfarra toca e a faixa da Loja só entra depois', () => {

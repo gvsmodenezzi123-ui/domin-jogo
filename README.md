@@ -86,6 +86,88 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.0: trilha e entrada de cada chefe, Modo Inferno e Conta do Boteco mais cara
+
+### Uma trilha por chefe (`engine/audioSynth.js`, `data/campaign.js` → `BOSS_TRACKS`)
+
+| Chefe | Faixa | Clima |
+| --- | --- | --- |
+| Seu Arlindo | `bossArlindo` "Samba da Navalha" | samba-rock malandro a 136 BPM: baixo de serra limpo e sincopado, órgão em stabs, cuíca, agogô, surdo, palma e ganzá |
+| Beto Cigano | `bossBeto` "Ferro-Velho" | industrial pesado a 104 BPM: serra esmagada em palhetada abafada, power chord grave, caixa no meio-tempo e batidas de ferro |
+| Comendador Moreira | `bossFight` | a elétrica do 0.8.2 (152 BPM, Mi frígio) |
+| O Dono da Noite | `bossNoite` "Noite Eterna" | ritual de sintetizador a 116 BPM: pad que respira, arpejo de vidro, bumbo de coração e um sino grave; entra junto com a revelação |
+
+- A Região 3 voltou a ter a faixa dela (`submundoNoir`, a sombria de antes do 0.8.2).
+- **Polifonia:** dentro da trilha, cada instrumento tem uma prioridade (chimbal cede a vaga
+  antes do sino, do arpejo, do bumbo, da harmonia e do baixo). Uma nota menos importante fica
+  de fora em vez de cortar o pad ou o baixo.
+
+### Entrada de cada chefe (`BossIntro.jsx`)
+
+Ao sentar na mesa do chefe, antes da primeira jogada (o rival espera):
+
+- **Seu Arlindo:** a navalha risca a tela na diagonal, as metades se abrem e o nome acende em
+  neon (som da lâmina e do neon).
+- **Beto Cigano:** uma chapa de ferro enferrujada despenca, bate no chão, a tela treme e saltam
+  faíscas e poeira (baque e bigorna).
+- **Comendador Moreira:** a cortina de veludo abre, o holofote dourado acende, chovem moedas e o
+  nome brilha em ouro (fanfarra de metais).
+- O Dono da Noite segue com a entrada dele (0.8.2). Tocar na tela pula; com "menos movimento",
+  só o cartão aparece, parado.
+
+### Modo Inferno: Peças Prateadas (`data/difficulty.js`, `data/rivals.js` → `INFERNO_LOADOUTS`)
+
+- **Como liberar:** derrotar o Comendador nas Peças Pretas. Aparece "VOCÊ DESBLOQUEOU: PEÇAS
+  PRATEADAS (MODO INFERNO)" e grava `buxaria_silver_tiles_unlocked = true`. No Balcão, é a 3ª
+  opção embaixo da maleta (com cadeado até lá).
+- **Pedras prateadas:** as suas pedras comuns viram prata escovada com pips vermelho-sangue.
+- **Rivais:** todos sentam com talismãs e pedras de grife desde a 1ª mesa (Região 1: 1 talismã e
+  2 pedras de grife, a Neide 2 talismãs; Região 2: 2 e 3; Região 3: 3 e 4) e jogam no nível
+  agressivo, sem gastar coração à toa para comprar.
+- **Chefes:** 5 talismãs e 10 pedras de grife cada (Beto com a taxa de $3 por compra; o
+  Comendador imune à 1ª tranca, com os 2 Necróticos).
+- **Você:** começa com 6 corações e $5, mas **cada mesa vencida devolve só 1 coração**, a do
+  chefe também (no normal são 2, e o chefe cura tudo).
+
+#### O teste das 500 runs (`npm run sim -- inferno 500`, `scripts/simulate-runs.mjs`)
+
+O robô do jogo (a mesma IA dos rivais) senta na sua cadeira e joga a campanha inteira:
+escolhe caminhos, compra talismãs e pedras de grife na loja e, antes de cada jogada,
+imagina 8 mãos possíveis do rival e joga a rodada até o fim para escolher a melhor. Ele
+lembra os números que o rival mostrou não ter e nunca paga coração para comprar. Joga como
+veterano: as 4 melhorias da Conta do Boteco e todos os talismãs de conquista. Ele não usa o
+Canivete, o Relógio nem o Mercado Negro, então um jogador atento vence mais.
+
+| Modo | Vitórias em 500 runs | Mesas vencidas por run | Arlindo / Beto / Comendador derrubados |
+| --- | --- | --- | --- |
+| Peças Brancas (normal) | 11 (2,2%) | 2,58 | 135 / 43 / 11 |
+| Peças Pretas (difícil) | 3 (0,6%) | 1,49 | 56 / 8 / 3 |
+| Peças Prateadas (inferno) | 1 (0,2%) | 1,58 | 45 / 12 / 1 |
+
+Uma mesa só, contra o chefe, com os seus corações cheios (200 mesas cada):
+
+| Chefe | Normal | Inferno |
+| --- | --- | --- |
+| Seu Arlindo | 54% | 28% |
+| Beto Cigano | 24% | 14% |
+| Comendador Moreira | 9% | 4% |
+| O Dono da Noite | 0% | 1% |
+
+Mais 1500 runs para confirmar (sementes 1001 a 2500): Peças Prateadas 3 vitórias (0,2%),
+Peças Pretas 4 (0,27%). Somando as 2000: o Inferno vence 4 vezes, o difícil 7.
+
+`npm run sim -- duelo inferno arlindo 200` mede uma mesa só (você com os corações cheios e sem
+talismãs).
+
+### Conta do Boteco mais cara
+
+| Melhoria | Antes | Agora |
+| --- | --- | --- |
+| Copo Americano | 5 | 10 |
+| Amizade com o Valtinho | 8 | 14 |
+| Fiado de Rua | 12 | 18 |
+| Bolso Fundo | 15 | 22 |
+
 ## Patch 0.8.2: maletas fechadas, trilha elétrica dos chefes e a entrada do Dono
 
 - **Maletas fechadas (`CaseCounter.jsx`):** no Balcão todas começam fechadas. Tocar numa
@@ -152,10 +234,10 @@ sob a lâmpada, com 5 maletas de partida em pixel art 48x48.
 
 | Melhoria | Custo | Efeito |
 | --- | --- | --- |
-| Copo Americano | 5 | +$2 no começo de toda run |
-| Amizade com o Valtinho | 8 | 1º reembaralhar de cada loja de graça |
-| Fiado de Rua | 12 | 1º passe voluntário da run de graça (o botão mostra FIADO) |
-| Bolso Fundo | 15 | +1 espaço de talismã |
+| Copo Americano | 10 | +$2 no começo de toda run |
+| Amizade com o Valtinho | 14 | 1º reembaralhar de cada loja de graça |
+| Fiado de Rua | 18 | 1º passe voluntário da run de graça (o botão mostra FIADO) |
+| Bolso Fundo | 22 | +1 espaço de talismã |
 
 TENTAR DE NOVO leva direto ao Balcão, com as melhorias valendo.
 

@@ -245,7 +245,7 @@ function onDuelEnd(ev, state) {
   // zerar = derrotar o Comendador (com o boss secreto, o final convencional fica para depois)
   if (ev.finalBoss) {
     const mode = ev.mode ?? state?.mode;
-    if (mode !== 'hard') {
+    if (mode !== 'hard' && mode !== 'inferno') {
       const clears = normalClears() + 1;
       writeJson(KEYS.clears, clears);
       if (checkAchievement('rei_sinuca', { normal_mode_clears: clears })) won.push('rei_sinuca');
@@ -253,7 +253,7 @@ function onDuelEnd(ev, state) {
     const maleta = state?.maleta ?? 'classica';
     if (maleta === 'classica') unlockChallenge('soNoOsso');
     if (maleta === 'bicheiro') unlockChallenge('mesaBebada');
-    if (mode === 'hard') unlockChallenge('tudoOuNada');
+    if (mode === 'hard' || mode === 'inferno') unlockChallenge('tudoOuNada');
     if (state?.challenge) completeChallenge(state.challenge);
   }
   if (!match) return won;

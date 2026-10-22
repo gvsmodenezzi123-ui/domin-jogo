@@ -36,7 +36,7 @@ function saveSummary(save) {
   else if (node?.rivalId && !save.cleared.includes(node.id)) what = getRival(node.rivalId).name;
   else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type];
   else if (node) what = `${getRival(node.rivalId).name} vencido`;
-  const kit = [save.maleta && save.maleta !== 'classica' ? maletaOf(save.maleta).short.toLowerCase() : null, save.mode === 'hard' ? 'Peças Pretas' : null, challengeOf(save.challenge)?.name]
+  const kit = [save.maleta && save.maleta !== 'classica' ? maletaOf(save.maleta).short.toLowerCase() : null, save.mode === 'hard' ? 'Peças Pretas' : save.mode === 'inferno' ? 'Peças Prateadas' : null, challengeOf(save.challenge)?.name]
     .filter(Boolean)
     .join(', ');
   return [kit || null, where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
@@ -111,7 +111,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.2</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.0</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -155,6 +155,7 @@ export default function TitleScreen({
   onTap,
   devUnlocked = false,
   blackUnlocked = false,
+  silverUnlocked = false,
   startPicking = false,
 }) {
   const [modal, setModal] = useState(null);
@@ -257,7 +258,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.8.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.9.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>
@@ -287,6 +288,7 @@ export default function TitleScreen({
           unlocked={loadUnlockedMaletas()}
           seen={loadSeenMaletas()}
           blackUnlocked={blackUnlocked}
+          silverUnlocked={silverUnlocked}
           progress={loadMetaProgress()}
           challenge={picking.challenge ?? null}
           onStart={onNewGame}

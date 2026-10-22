@@ -48,6 +48,13 @@ const DUCK_RELEASE = 0.35;
 const PRIORITY = { music: 0, voice: 1, sfx: 2 };
 
 /**
+ * Patch 0.9.0: dentro da música, quem cede a vaga primeiro quando a polifonia estoura (menor
+ * = mais descartável): chimbal antes do sino, do arpejo e do bumbo; a harmonia e o baixo por
+ * último. Tudo abaixo de PRIORITY.voice: efeito e fala sempre passam na frente da trilha.
+ */
+const MUSIC = { hat: 0, bell: 0.05, snare: 0.1, lead: 0.15, kick: 0.25, harmony: 0.3, toll: 0.32, bass: 0.35 };
+
+/**
  * Instantes (s) em que a luz apaga na entrada do Dono, iguais aos degraus do CSS
  * `secret-flicker` (1,5 s): 3 apagadas que voltam e a queimada final (`FLICKER_OUT`),
  * abaixo de 3 piscadas por segundo.
@@ -114,6 +121,12 @@ export const voiceProfile = (character) => VOICE_PROFILES[VOICE_ALIASES[characte
 // piano vira power chord distorcido, entra um arpejo de onda quadrada (`lead`: passo → intervalo),
 // caixa (`snare`), chimbal em semicolcheia (`hats`) e o bumbo fica mais pesado. `cutoff` abre o
 // passa-baixa da saída enquanto a faixa toca.
+// Patch 0.9.0: um estilo (e uma faixa) por chefe, ver KITS: 'samba' (Seu Arlindo: órgão, cuíca,
+// agogô em `bells` e ganzá), 'iron' (Beto Cigano: serra esmagada, power chord grave, batidas de
+// metal em `clank`), 'electric' (Comendador) e 'ritual' (Dono da Noite: pad longo, arpejo de
+// vidro nas notas do acorde — `lead` com [índice da nota, oitava] — e um sino a cada `toll`
+// compassos). `hats`: true/'16' (semicolcheias), '8' (colcheias), 'off' (contratempos) ou
+// 'shaker' (ganzá).
 export const TRACKS = {
   // Boteco da Esquina: bossa-funk em ii-V-I, contrabaixo andando e piano elétrico macio
   botecoJazz: {
@@ -151,8 +164,98 @@ export const TRACKS = {
     kick: [0, 7, 10],
     rim: [4, 12],
   },
-  // Chefes (Patch 0.8.2): elétrica e agressiva, 152 BPM em Mi frígio. Baixo de serra saturado em
-  // galope, power chords distorcidos em contratempo, arpejo de onda quadrada por cima, bumbo duplo,
+  // Submundo do Jogo do Bicho (Região 3): menor, bumbo marcado, piano escuro. Era a faixa dos
+  // chefes até o 0.8.1; desde o 0.9.0 é só das mesas comuns da região.
+  submundoNoir: {
+    bpm: BASE_BPM,
+    swing: 0,
+    level: 0.95,
+    chords: [
+      { root: 45, ep: [57, 60, 64] }, // Am
+      { root: 41, ep: [57, 60, 65] }, // F
+      { root: 38, ep: [57, 62, 65] }, // Dm
+      { root: 40, ep: [56, 62, 64] }, // E7
+    ],
+    bass: { 0: 0, 2: 0, 4: 0, 6: 12, 8: 0, 10: 0, 12: 0, 14: 12 },
+    comp: { 0: 0.5, 6: 0.22, 11: 0.3 },
+    kick: [0, 4, 8, 12],
+    rim: [4, 12],
+  },
+  // Seu Arlindo, o Rei da Bucha (chefe da Região 1, Patch 0.9.0): "Samba da Navalha". Samba-rock
+  // malandro a 136 BPM em Ré menor: baixo de serra limpo e sincopado, órgão em stabs, cuíca
+  // nos contratempos, agogô alto/baixo, surdo, palma no 2 e no 4 e ganzá correndo.
+  bossArlindo: {
+    bpm: 136,
+    swing: 0.08,
+    level: 1.05,
+    style: 'samba',
+    cutoff: 4400,
+    chords: [
+      { root: 38, ep: [53, 57, 60] }, // Dm7
+      { root: 43, ep: [53, 59, 62] }, // G7
+      { root: 38, ep: [53, 57, 60] }, // Dm7
+      { root: 45, ep: [55, 58, 61] }, // A7(b9)
+    ],
+    bass: { 0: 0, 3: 12, 4: 7, 6: 0, 8: 0, 10: 12, 11: 10, 14: 7 },
+    comp: { 2: 0.12, 5: 0.1, 9: 0.12, 12: 0.18 },
+    lead: { 7: 36, 15: 31 },
+    kick: [0, 8, 11],
+    snare: [4, 12],
+    bells: { 0: 'h', 2: 'l', 3: 'h', 6: 'l', 8: 'h', 10: 'h', 11: 'l', 14: 'l' },
+    hats: 'shaker',
+    rim: [],
+  },
+  // Beto Cigano, o Banqueiro (chefe da Região 2, Patch 0.9.0): "Ferro-Velho". Industrial lento
+  // e pesado a 104 BPM em Dó: serra esmagada em palhetada abafada, power chord grave, caixa só
+  // no 3 (meio-tempo), batidas de ferro e chimbal em colcheias.
+  bossBeto: {
+    bpm: 104,
+    swing: 0,
+    level: 0.82,
+    style: 'iron',
+    cutoff: 4000,
+    chords: [
+      { root: 36, ep: [48, 55] }, // C5
+      { root: 36, ep: [48, 55] }, // C5
+      { root: 37, ep: [49, 56] }, // Db5
+      { root: 34, ep: [46, 53] }, // Bb5
+    ],
+    bass: { 0: 0, 1: 0, 2: 0, 4: 0, 5: 0, 6: 12, 8: 0, 9: 0, 10: 0, 11: 0, 12: 1, 14: 0 },
+    comp: { 0: 0.5, 8: 0.36, 14: 0.12 },
+    kick: [0, 3, 6, 10],
+    snare: [8],
+    clank: [4, 12, 15],
+    hats: '8',
+    rim: [],
+  },
+  // O Dono da Noite (nó 19 secreto, Patch 0.9.0): "Noite Eterna". Ritual de sintetizador a
+  // 116 BPM: Dó menor, Láb, Fá# diminuto (o trítono) e Sol; pad que respira o compasso inteiro,
+  // arpejo de vidro nas notas do acorde, baixo pulsando, bumbo de coração (tum-tum), palma
+  // seca no 4 e um sino grave a cada 2 compassos.
+  bossNoite: {
+    bpm: 116,
+    swing: 0,
+    level: 1.1,
+    style: 'ritual',
+    cutoff: 3600,
+    chords: [
+      { root: 36, ep: [55, 60, 63] }, // Cm
+      { root: 32, ep: [56, 60, 63] }, // Ab
+      { root: 42, ep: [54, 57, 60] }, // F#°
+      { root: 43, ep: [55, 59, 62] }, // G
+    ],
+    bass: { 0: 0, 2: 0, 4: 0, 6: 12, 8: 0, 10: 0, 12: 0, 14: 12 },
+    comp: { 0: 1.9 },
+    lead: { 0: [0, 12], 2: [1, 12], 4: [2, 12], 6: [1, 24], 8: [0, 24], 10: [2, 12], 12: [1, 12], 14: [2, 24] },
+    kick: [0, 2, 8, 10],
+    snare: [12],
+    toll: 2,
+    hats: 'off',
+    rim: [],
+  },
+  // Comendador Moreira, o Dono do Boteco (chefe final; Patch 0.8.2, a faixa de todos os chefes
+  // até o 0.9.0): elétrica e agressiva, 152 BPM em Mi frígio. Baixo de serra saturado em galope,
+  // power chords distorcidos em contratempo, arpejo de onda quadrada por cima, bumbo duplo,
   // caixa no 2 e no 4 e chimbal correndo em semicolcheias.
   bossFight: {
     bpm: 152,
@@ -224,6 +327,65 @@ function driveCurve(amount = 28, size = 1024) {
   }
   return curve;
 }
+
+/**
+ * Instrumentos de cada estilo de faixa (Patch 0.9.0). `bass`/`comp`/`lead`: quem toca cada
+ * linha, com os ajustes do baixo de serra (`bassOpts`) e do power chord (`compOpts`);
+ * `kick`/`snare`: o tipo de bumbo e de caixa.
+ */
+const KITS = {
+  classic: { bass: 'acoustic', comp: 'ep', lead: 'square', kick: 'soft', snare: 'crack' },
+  electric: {
+    bass: 'saw',
+    bassOpts: { drive: 28, from: 2400, to: 320, q: 7, dur: 0.17, peak: 0.42 },
+    comp: 'power',
+    compOpts: { drive: 28, lp: 3200, peak: 0.13 },
+    lead: 'square',
+    kick: 'hard',
+    snare: 'crack',
+  },
+  samba: {
+    bass: 'saw',
+    bassOpts: { drive: 5, from: 1500, to: 420, q: 4, dur: 0.15, peak: 0.4 },
+    comp: 'organ',
+    lead: 'cuica',
+    kick: 'surdo',
+    snare: 'clap',
+  },
+  iron: {
+    bass: 'saw',
+    bassOpts: { drive: 60, from: 1100, to: 150, q: 9, dur: 0.2, peak: 0.44 },
+    comp: 'power',
+    compOpts: { drive: 60, lp: 2400, peak: 0.12 },
+    lead: 'square',
+    kick: 'iron',
+    snare: 'iron',
+  },
+  ritual: {
+    bass: 'saw',
+    bassOpts: { drive: 3, from: 700, to: 120, q: 2, dur: 0.24, peak: 0.42 },
+    comp: 'pad',
+    lead: 'glass',
+    kick: 'heart',
+    snare: 'clap',
+  },
+};
+
+/** Bumbos: [frequência inicial, final, tempo da queda, pico, duração]. */
+const KICKS = {
+  soft: [115, 48, 0.1, 0.5, 0.13],
+  hard: [170, 44, 0.07, 0.62, 0.12],
+  surdo: [96, 54, 0.14, 0.55, 0.22],
+  iron: [150, 36, 0.09, 0.7, 0.16],
+  heart: [82, 38, 0.1, 0.56, 0.15],
+};
+
+/** Caixas (ruído filtrado): [frequência, Q, pico, duração]. */
+const SNARES = {
+  crack: [1900, 0.8, 0.26, 0.11],
+  clap: [1200, 1.1, 0.22, 0.07],
+  iron: [1400, 0.6, 0.34, 0.24],
+};
 
 /** Duração da semicolcheia `step` (com swing nas do contratempo). */
 export function stepDuration(track, step, tempo = 1) {
@@ -472,6 +634,15 @@ export class SoundEngine {
       const candidates = live.filter((v) => !v.released || v.cutAt > from + 1e-6);
       if (!candidates.length) break;
       const victim = candidates.reduce((a, b) => (b.priority < a.priority || (b.priority === a.priority && b.born < a.born) ? b : a));
+      // nota da trilha não derruba outra mais importante (Patch 0.9.0): o chimbal fica de
+      // fora em vez de cortar o pad ou o baixo
+      if (priority < PRIORITY.voice && victim.priority > priority) {
+        for (const src of sources) src.disconnect();
+        for (const node of nodes) node.disconnect();
+        env.disconnect();
+        gate.disconnect();
+        return null;
+      }
       this.release(victim, from);
     }
     const voice = { env, gate, sources, nodes, end, priority, mono, cost, born: at, done: false, released: false, cutAt: null };
@@ -537,7 +708,7 @@ export class SoundEngine {
 
   /** Corta todas as vozes (mudo, troca de faixa). `onlyMusic`: deixa os efeitos terminarem. */
   releaseAll(onlyMusic = false) {
-    for (const v of [...this.voices]) if (!onlyMusic || v.priority === PRIORITY.music) this.release(v);
+    for (const v of [...this.voices]) if (!onlyMusic || v.priority < PRIORITY.voice) this.release(v);
   }
 
   /** Notas com atraso maior que um tique saem por timer: não ocupam vaga na polifonia antes de soar. */
@@ -851,30 +1022,41 @@ export class SoundEngine {
 
   scheduleStep(track, step, at, tempo) {
     const beat = step % 16;
-    const chord = track.chords[Math.floor(step / 16) % track.chords.length];
-    const electric = track.style === 'electric';
+    const bar = Math.floor(step / 16);
+    const chord = track.chords[bar % track.chords.length];
+    const kit = KITS[track.style] ?? KITS.classic;
     const bass = track.bass[beat];
     if (bass !== undefined) {
-      if (electric) this.sawBass(chord.root + bass, at, beat % 4 === 0 ? 1 : 0.78);
+      if (kit.bass === 'saw') this.sawBass(chord.root + bass, at, beat % 4 === 0 ? 1 : 0.78, kit.bassOpts);
       else this.bassNote(chord.root + bass, at, beat === 0 ? 1 : 0.8);
     }
     const comp = track.comp[beat];
     if (comp) {
-      if (electric) this.powerChord(chord.ep, at, comp / tempo, beat === 0 ? 1 : 0.82);
+      const vel = beat === 0 ? 1 : 0.8;
+      if (kit.comp === 'power') this.powerChord(chord.ep, at, comp / tempo, vel, kit.compOpts);
+      else if (kit.comp === 'organ') this.organChord(chord.ep, at, comp / tempo, vel);
+      else if (kit.comp === 'pad') this.padChord(chord.ep, at, comp / tempo, vel);
       else this.epChord(chord.ep, at, comp / tempo, beat === 0 ? 1 : 0.78);
     }
     const lead = track.lead?.[beat];
-    if (lead !== undefined) this.leadNote(chord.root + lead, at, beat % 8 === 0 ? 1 : 0.8);
-    if (track.kick.includes(beat)) this.kick(at, electric);
-    if (track.snare?.includes(beat)) this.snare(at);
+    if (lead !== undefined) {
+      // número: intervalo a partir da fundamental; [i, oitava]: a i-ésima nota do acorde
+      const note = Array.isArray(lead) ? chord.ep[lead[0] % chord.ep.length] + lead[1] : chord.root + lead;
+      const vel = beat % 8 === 0 ? 1 : 0.8;
+      if (kit.lead === 'cuica') this.cuica(note, at, vel);
+      else if (kit.lead === 'glass') this.glassNote(note, at, vel);
+      else this.leadNote(note, at, vel);
+    }
+    if (track.kick.includes(beat)) this.kick(at, kit.kick);
+    if (track.snare?.includes(beat)) this.snare(at, kit.snare);
     if (track.rim.includes(beat)) this.rim(at);
+    const bell = track.bells?.[beat];
+    if (bell) this.agogo(at, bell === 'h');
+    if (track.clank?.includes(beat)) this.clank(at);
+    if (track.toll && beat === 0 && bar % track.toll === 0) this.toll(chord.root + 24, at);
     if (track.brush?.includes(beat)) this.drum({ at, freq: 4200, filter: 'bandpass', q: 0.7, peak: 0.08, dur: 0.16, attack: 0.03 });
-    // chimbal da faixa elétrica: semicolcheias, acento no contratempo, aberto no fim do compasso
     if (track.hats) {
-      const open = beat === 14;
-      const accent = beat % 4 === 2;
-      const boost = this.tension ? 1.25 : 1;
-      this.drum({ at, freq: 9000, filter: 'highpass', q: 0.9, peak: (open ? 0.15 : accent ? 0.12 : 0.065) * boost, dur: open ? 0.14 : 0.024 });
+      this.hat(track.hats, beat, at);
       return;
     }
     // camada de tensão: hi-hats em semicolcheias, acento no contratempo e um aberto no fim do compasso
@@ -885,6 +1067,24 @@ export class SoundEngine {
     }
   }
 
+  /**
+   * Chimbal das faixas dos chefes: `mode` diz em que passos ele toca (ver TRACKS). Acento no
+   * contratempo, aberto no fim do compasso; na tensão (alguém com 1 ou 2 corações) ele sobe.
+   */
+  hat(mode, beat, at) {
+    const on = mode === '8' ? beat % 2 === 0 : mode === 'off' ? beat % 4 === 2 : true;
+    if (!on) return;
+    const boost = this.tension ? 1.25 : 1;
+    if (mode === 'shaker') {
+      // ganzá: ruído agudo mais macio, acento no 2º de cada grupo de 4
+      this.drum({ at, freq: 6200, filter: 'bandpass', q: 1.4, peak: (beat % 4 === 2 ? 0.1 : 0.05) * boost, dur: 0.03, attack: 0.008, priority: MUSIC.hat });
+      return;
+    }
+    const open = beat === 14;
+    const accent = beat % 4 === 2;
+    this.drum({ at, freq: 9000, filter: 'highpass', q: 0.9, peak: (open ? 0.15 : accent ? 0.12 : 0.065) * boost, dur: open ? 0.14 : 0.024, priority: MUSIC.hat });
+  }
+
   /** Contrabaixo acústico: corpo triangular + oitava, ataque de dedo e decay natural (mono). */
   bassNote(note, at, vel) {
     const freq = midi(note);
@@ -893,7 +1093,7 @@ export class SoundEngine {
       at,
       end: at + dur + 0.05,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.bass,
       mono: 'bass',
       build: (env) => {
         const g = env.gain;
@@ -928,7 +1128,7 @@ export class SoundEngine {
       at,
       end: at + tail + 0.03,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.harmony,
       mono: 'ep',
       build: (env) => {
         const g = env.gain;
@@ -953,22 +1153,23 @@ export class SoundEngine {
     });
   }
 
-  kick(at, hard = false) {
-    // `hard` (faixa elétrica): começa mais agudo (o "clique" do pedal duplo) e soca mais forte
+  /** Bumbo (ver KICKS): 'soft' do boteco, 'hard' do pedal duplo, 'surdo', 'iron' e 'heart'. */
+  kick(at, kind = 'soft') {
+    const [from, to, fall, peak, dur] = KICKS[kind] ?? KICKS.soft;
     this.spawn({
       at,
-      end: at + 0.16,
+      end: at + dur + 0.03,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.kick,
       build: (env) => {
         const g = env.gain;
         g.setValueAtTime(SILENT, at);
-        g.exponentialRampToValueAtTime(hard ? 0.62 : 0.5, at + 0.003);
-        g.exponentialRampToValueAtTime(SILENT, at + (hard ? 0.12 : 0.13));
+        g.exponentialRampToValueAtTime(peak, at + 0.003);
+        g.exponentialRampToValueAtTime(SILENT, at + dur);
         const osc = this.ctx.createOscillator();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(hard ? 170 : 115, at);
-        osc.frequency.exponentialRampToValueAtTime(hard ? 44 : 48, at + (hard ? 0.07 : 0.1));
+        osc.frequency.setValueAtTime(from, at);
+        osc.frequency.exponentialRampToValueAtTime(to, at + fall);
         osc.connect(env);
         return { sources: [osc] };
       },
@@ -976,41 +1177,46 @@ export class SoundEngine {
   }
 
   /** Saturação compartilhada (criada uma vez); sem WaveShaper (navegador antigo), passa direto. */
-  driveNode() {
+  driveNode(amount = 28) {
     if (typeof this.ctx.createWaveShaper !== 'function') return null;
-    this.driveShape = this.driveShape ?? driveCurve();
+    this.driveShapes = this.driveShapes ?? {};
+    this.driveShapes[amount] = this.driveShapes[amount] ?? driveCurve(amount);
     const shaper = this.ctx.createWaveShaper();
-    shaper.curve = this.driveShape;
+    shaper.curve = this.driveShapes[amount];
     shaper.oversample = 'none';
     return shaper;
   }
 
-  /** Baixo elétrico dos chefes: serra saturada, filtro ressonante abrindo e fechando a cada nota (mono). */
-  sawBass(note, at, vel) {
+  /**
+   * Baixo de serra dos chefes: filtro ressonante abrindo e fechando a cada nota e saturação
+   * (mono). `opts` (KITS): `drive` (quanto satura), `from`/`to` (varredura do filtro), `q`,
+   * `dur` e `peak`.
+   */
+  sawBass(note, at, vel, opts = KITS.electric.bassOpts) {
+    const { drive: amount = 28, from = 2400, to = 320, q = 7, dur = 0.17, peak = 0.42 } = opts;
     const freq = midi(note);
-    const dur = 0.17;
     this.spawn({
       at,
       end: at + dur + 0.04,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.bass,
       mono: 'bass',
       build: (env) => {
         const g = env.gain;
         g.setValueAtTime(SILENT, at);
-        g.exponentialRampToValueAtTime(0.42 * vel, at + 0.004);
-        g.exponentialRampToValueAtTime(0.2 * vel, at + 0.07);
+        g.exponentialRampToValueAtTime(peak * vel, at + 0.004);
+        g.exponentialRampToValueAtTime(peak * 0.48 * vel, at + 0.07);
         g.exponentialRampToValueAtTime(SILENT, at + dur);
         const osc = this.ctx.createOscillator();
         osc.type = 'sawtooth';
         osc.frequency.value = freq;
         const tone = this.ctx.createBiquadFilter();
         tone.type = 'lowpass';
-        tone.Q.value = 7;
-        tone.frequency.setValueAtTime(2400, at);
-        tone.frequency.exponentialRampToValueAtTime(320, at + 0.12);
+        tone.Q.value = q;
+        tone.frequency.setValueAtTime(from, at);
+        tone.frequency.exponentialRampToValueAtTime(to, at + dur * 0.7);
         osc.connect(tone);
-        const drive = this.driveNode();
+        const drive = this.driveNode(amount);
         if (drive) {
           tone.connect(drive);
           drive.connect(env);
@@ -1020,26 +1226,27 @@ export class SoundEngine {
     });
   }
 
-  /** Power chord distorcido (fundamental + quinta, 2 vozes), curto e seco, em contratempo (mono). */
-  powerChord(notes, at, dur, vel) {
+  /** Power chord distorcido (fundamental + quinta, 2 vozes), curto e seco (mono). `opts`: KITS. */
+  powerChord(notes, at, dur, vel, opts = KITS.electric.compOpts) {
+    const { drive: amount = 28, lp = 3200, peak = 0.13 } = opts;
     const tail = dur + 0.06;
     this.spawn({
       at,
       end: at + tail + 0.03,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.harmony,
       mono: 'ep',
       build: (env) => {
         const g = env.gain;
         g.setValueAtTime(SILENT, at);
-        g.exponentialRampToValueAtTime(0.13 * vel, at + 0.006);
-        g.exponentialRampToValueAtTime(0.07 * vel, at + dur * 0.6);
+        g.exponentialRampToValueAtTime(peak * vel, at + 0.006);
+        g.exponentialRampToValueAtTime(peak * 0.54 * vel, at + dur * 0.6);
         g.exponentialRampToValueAtTime(SILENT, at + tail);
         const tone = this.ctx.createBiquadFilter();
         tone.type = 'lowpass';
         tone.Q.value = 1.2;
-        tone.frequency.value = 3200;
-        const drive = this.driveNode();
+        tone.frequency.value = lp;
+        const drive = this.driveNode(amount);
         if (drive) {
           drive.connect(tone);
         }
@@ -1065,7 +1272,7 @@ export class SoundEngine {
       at,
       end: at + dur + 0.03,
       bus: this.musicBus,
-      priority: PRIORITY.music,
+      priority: MUSIC.lead,
       mono: 'lead',
       build: (env) => {
         const g = env.gain;
@@ -1088,18 +1295,171 @@ export class SoundEngine {
     });
   }
 
-  /** Caixa da faixa elétrica: estalo de ruído com corpo médio. */
-  snare(at) {
-    this.drum({ at, freq: 1900, filter: 'bandpass', q: 0.8, peak: 0.26, dur: 0.11, attack: 0.001 });
+  /** Caixa (ver SNARES): o estalo da elétrica, a palma do samba e do ritual, a pancada do ferro. */
+  snare(at, kind = 'crack') {
+    const [freq, q, peak, dur] = SNARES[kind] ?? SNARES.crack;
+    this.drum({ at, freq, filter: 'bandpass', q, peak, dur, attack: 0.001, priority: MUSIC.snare });
   }
 
   /** Aro da caixa (bossa): estalo de madeira curto. */
   rim(at) {
-    this.drum({ at, freq: 1900, filter: 'bandpass', q: 3, peak: 0.16, dur: 0.025 });
+    this.drum({ at, freq: 1900, filter: 'bandpass', q: 3, peak: 0.16, dur: 0.025, priority: MUSIC.bell });
   }
 
-  drum({ at, freq, filter, q, peak, dur, attack = 0.001 }) {
-    this.noiseAt({ at, freq, filter, q, peak, dur, attack, priority: PRIORITY.music, bus: this.musicBus });
+  drum({ at, freq, filter, q, peak, dur, attack = 0.001, priority = PRIORITY.music }) {
+    this.noiseAt({ at, freq, filter, q, peak, dur, attack, priority, bus: this.musicBus });
+  }
+
+  /** Uma voz curta de música com um oscilador, filtro opcional e envelope percussivo. */
+  musicTone({ at, type, freq, glide = null, peak, dur, attack = 0.004, filter = null, priority, mono = null }) {
+    this.spawn({
+      at,
+      end: at + attack + dur + 0.03,
+      bus: this.musicBus,
+      priority,
+      mono,
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(peak, at + attack);
+        g.exponentialRampToValueAtTime(SILENT, at + attack + dur);
+        const osc = this.ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.setValueAtTime(glide ? freq * glide[0][0] : freq, at);
+        for (const [ratio, t] of glide ?? []) osc.frequency.exponentialRampToValueAtTime(freq * ratio, at + t);
+        if (!filter) {
+          osc.connect(env);
+          return { sources: [osc] };
+        }
+        const f = this.ctx.createBiquadFilter();
+        f.type = filter.type;
+        f.frequency.value = filter.freq;
+        f.Q.value = filter.q ?? 1;
+        osc.connect(f);
+        f.connect(env);
+        return { sources: [osc], nodes: [f] };
+      },
+    });
+  }
+
+  /** Órgão do samba-rock: duas quadradas (a 1ª e a última nota do acorde) filtradas, em stab (mono). */
+  organChord(notes, at, dur, vel) {
+    const tail = dur + 0.05;
+    const pick = [notes[0], notes[notes.length - 1]];
+    this.spawn({
+      at,
+      end: at + tail + 0.03,
+      bus: this.musicBus,
+      priority: MUSIC.harmony,
+      mono: 'ep',
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.075 * vel, at + 0.008);
+        g.setValueAtTime(0.06 * vel, at + Math.max(0.02, dur));
+        g.exponentialRampToValueAtTime(SILENT, at + tail);
+        const tone = this.ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.frequency.value = 1900;
+        tone.Q.value = 1.4;
+        tone.connect(env);
+        const sources = pick.map((n, i) => {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.value = midi(n);
+          osc.detune.value = i ? 4 : -4;
+          osc.connect(tone);
+          return osc;
+        });
+        return { sources, nodes: [tone] };
+      },
+    });
+  }
+
+  /** Pad do ritual: duas serras desafinadas que respiram o compasso (filtro abre e fecha) (mono). */
+  padChord(notes, at, dur, vel) {
+    const tail = dur + 0.35;
+    const pick = [notes[0], notes[notes.length - 1]];
+    this.spawn({
+      at,
+      end: at + tail + 0.03,
+      bus: this.musicBus,
+      priority: MUSIC.harmony,
+      mono: 'ep',
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.07 * vel, at + 0.35);
+        g.setValueAtTime(0.07 * vel, at + dur * 0.7);
+        g.exponentialRampToValueAtTime(SILENT, at + tail);
+        const tone = this.ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.Q.value = 3;
+        tone.frequency.setValueAtTime(320, at);
+        tone.frequency.exponentialRampToValueAtTime(1500, at + dur * 0.55);
+        tone.frequency.exponentialRampToValueAtTime(420, at + tail);
+        tone.connect(env);
+        const sources = pick.map((n, i) => {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.value = midi(n);
+          osc.detune.value = i ? 11 : -11;
+          osc.connect(tone);
+          return osc;
+        });
+        return { sources, nodes: [tone] };
+      },
+    });
+  }
+
+  /** Cuíca: o "uí" do samba, uma senoide que sobe e cai rápido (mono). */
+  cuica(note, at, vel) {
+    this.musicTone({ at, type: 'triangle', freq: midi(note), glide: [[0.72, 0], [1.22, 0.06], [0.9, 0.17]], peak: 0.085 * vel, dur: 0.17, attack: 0.012, priority: MUSIC.lead, mono: 'lead' });
+  }
+
+  /** Arpejo de vidro do ritual: triangular limpa com cauda (mono). */
+  glassNote(note, at, vel) {
+    this.musicTone({ at, type: 'triangle', freq: midi(note), peak: 0.06 * vel, dur: 0.3, filter: { type: 'lowpass', freq: 3800, q: 0.7 }, priority: MUSIC.lead, mono: 'lead' });
+  }
+
+  /** Agogô: sino de metal alto ou baixo (quadrada num passa-banda estreito). */
+  agogo(at, high) {
+    this.musicTone({ at, type: 'square', freq: high ? 1046.5 : 784, peak: 0.055, dur: 0.09, attack: 0.002, filter: { type: 'bandpass', freq: high ? 2100 : 1600, q: 5 }, priority: MUSIC.bell });
+  }
+
+  /** Batida de ferro (Ferro-Velho): duas parciais inarmônicas num passa-banda, como chapa velha. */
+  clank(at) {
+    this.spawn({
+      at,
+      end: at + 0.3,
+      bus: this.musicBus,
+      priority: MUSIC.bell,
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.09, at + 0.002);
+        g.exponentialRampToValueAtTime(SILENT, at + 0.26);
+        const band = this.ctx.createBiquadFilter();
+        band.type = 'bandpass';
+        band.frequency.value = 1500;
+        band.Q.value = 1.6;
+        band.connect(env);
+        const sources = [392, 1082].map((freq) => {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq * 1.02, at);
+          osc.frequency.exponentialRampToValueAtTime(freq, at + 0.04);
+          osc.connect(band);
+          return osc;
+        });
+        return { sources, nodes: [band] };
+      },
+    });
+  }
+
+  /** Sino grave do ritual: uma triangular que cai devagar, com um leve desafinar no começo. */
+  toll(note, at) {
+    this.musicTone({ at, type: 'triangle', freq: midi(note), glide: [[1.01, 0], [1, 0.25]], peak: 0.12, dur: 1.3, attack: 0.004, filter: { type: 'lowpass', freq: 2200, q: 0.8 }, priority: MUSIC.toll });
   }
 
   stopMusic() {
@@ -1325,6 +1685,46 @@ export class SoundEngine {
     this.tone({ type: 'sawtooth', freq: 55, freqEnd: 49, peak: 0.16, dur: 1.5, attack: 0.35 });
     this.tone({ type: 'sine', freq: 1244.5, peak: 0.035, dur: 1.2, attack: 0.45, delay: 0.1 });
     this.tone({ type: 'sine', freq: 1318.5, peak: 0.03, dur: 1.1, attack: 0.5, delay: 0.16 });
+  }
+
+  /**
+   * Entrada do Seu Arlindo (Patch 0.9.0): a navalha cortando o ar ("fsshh" subindo), o fio
+   * cantando no metal e o zumbido do neon acendendo logo depois.
+   */
+  playRazorSlash() {
+    this.duck();
+    this.noise({ freq: 2400, filter: 'highpass', q: 0.7, peak: 0.3, dur: 0.16, attack: 0.05 });
+    this.noise({ freq: 6800, filter: 'bandpass', q: 2, peak: 0.22, dur: 0.06, delay: 0.17 });
+    this.tone({ type: 'triangle', freq: 2637, peak: 0.08, dur: 0.5, delay: 0.18, partials: [[1, 1], [1.5, 0.35]] });
+    this.tone({ type: 'sawtooth', freq: 120, freqEnd: 118, peak: 0.05, dur: 0.5, attack: 0.02, delay: 0.32 });
+    [0.34, 0.5].forEach((delay) => this.noise({ freq: 5200, filter: 'highpass', q: 0.8, peak: 0.16, dur: 0.03, delay }));
+  }
+
+  /**
+   * Entrada do Beto Cigano: a chapa de ferro despencando (assobio do ar) e batendo no chão:
+   * baque grave, a bigorna e as faíscas chiando.
+   */
+  playIronSlam() {
+    this.tone({ type: 'sine', freq: 900, freqEnd: 300, peak: 0.05, dur: 0.3, attack: 0.05 });
+    this.later(0.34, () => {
+      this.duck();
+      this.tone({ type: 'sine', freq: 70, freqEnd: 34, peak: 0.85, dur: 0.38 });
+      this.noise({ freq: 600, filter: 'lowpass', q: 0.8, peak: 0.5, dur: 0.22 });
+      this.playAnvil();
+      [0.05, 0.11, 0.16, 0.24].forEach((delay, i) => this.noise({ freq: 4200 + i * 500, filter: 'bandpass', q: 3, peak: 0.12, dur: 0.02, delay }));
+    });
+  }
+
+  /**
+   * Entrada do Comendador: a cortina de veludo abrindo (sopro de pano), a fanfarra grave de
+   * metais e as moedas tilintando ao cair.
+   */
+  playGrandEntrance() {
+    this.duck();
+    this.noise({ freq: 900, filter: 'lowpass', q: 0.6, peak: 0.18, dur: 0.6, attack: 0.15 });
+    this.brassChord([43, 50, 55, 59], { delay: 0.3, dur: 0.18, peak: 0.12 });
+    this.brassChord([48, 55, 60, 64], { delay: 0.52, dur: 0.9, peak: 0.14 });
+    [0.75, 0.86, 0.94, 1.08, 1.17, 1.3, 1.42].forEach((delay, i) => this.tone({ type: 'triangle', freq: [2093, 2637, 2349, 3136, 2794, 2637, 3520][i], peak: 0.05, dur: 0.18, delay }));
   }
 
   /**

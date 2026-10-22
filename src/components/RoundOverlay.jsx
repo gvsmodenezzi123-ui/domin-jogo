@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
+import { modeBadge, modeOf } from '../data/difficulty.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { getRelic } from '../data/relics.js';
@@ -189,7 +190,8 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             </div>
             <p className="chalk-dim mt-1 font-term text-base">Saldo: ${coins.player}</p>
             <div className="mt-2 flex items-center justify-center gap-2 font-pixel text-[9px] text-[#ff8c7a]">
-              <span>{rival.boss ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
+              {/* Peças Prateadas: o chefe também só devolve 1 coração */}
+              <span>{rival.boss && !modeOf(state.mode).healPerTable ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
               <HeartsBar current={hearts.player} max={state.maxHearts.player} pixel={2} label={`Seus corações: ${hearts.player}`} />
             </div>
             <button type="button" data-tone="play" className="btn-pixel mt-5 w-full" onClick={onContinue}>
@@ -220,11 +222,11 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
           <>
             <KnockedOut rival={rival} />
             <p className="font-pixel text-[8px] text-bone-400">
-              {state.mode === 'hard' ? 'PEÇAS PRETAS · ' : ''}
+              {modeBadge(state.mode)}
               {state.stats.matchesWon} MESAS · {REGIONS.length} REGIÕES
             </p>
             <h2 id="round-title" className="run-won-title mt-2 font-pixel text-[15px] leading-snug text-brass-300 text-shadow-pixel">
-              {secretWon ? 'A NOITE É SUA' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
+              {secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
             </h2>
             <p className="mt-2 font-term text-xl text-bone-200">
               {KIND_TITLE[result.kind]} {secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}

@@ -740,7 +740,8 @@ export const AI_TIERS = Object.freeze({
  * calculam e a 3 e os chefes atacam.
  */
 export function tierOf(rival, mode = 'normal') {
-  if (rival.boss || rival.region >= 3) return 'agressivo';
+  // Peças Prateadas (Modo Inferno, Patch 0.9.0): todo mundo ataca
+  if (mode === 'inferno' || rival.boss || rival.region >= 3) return 'agressivo';
   if (rival.region === 2 || mode === 'hard') return 'calculista';
   return 'intuitivo';
 }
@@ -748,6 +749,18 @@ export function tierOf(rival, mode = 'normal') {
 function tierStyle(rival, mode = 'normal') {
   const base = rival.style;
   const tier = tierOf(rival, mode);
+  if (mode === 'inferno') {
+    // Peças Prateadas: o ataque das Peças Pretas em todas as regiões, sem gastar coração à toa
+    return style({
+      ...base,
+      five: Math.max(base.five, 8),
+      fiveSetup: Math.max(base.fiveSetup, 3),
+      pressure: base.pressure * 1.8,
+      trancaBias: 0,
+      heartDrawMin: base.heartDrawMin,
+      aggression: Math.max(base.aggression, 1.5),
+    });
+  }
   if (mode === 'hard') {
     // Peças Pretas: contas precisas de tranca (sem achismo) e de múltiplo de 5; ataque mais forte
     if (tier === 'calculista') {
@@ -781,8 +794,10 @@ function tierStyle(rival, mode = 'normal') {
 export const PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id])])));
 /** Os mesmos pesos nas Peças Pretas. */
 export const HARD_PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id], 'hard')])));
+/** E nas Peças Prateadas (Modo Inferno). */
+export const INFERNO_PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id], 'inferno')])));
 export const playStyleOf = (id, mode = 'normal') => {
-  const table = mode === 'hard' ? HARD_PLAY_STYLES : PLAY_STYLES;
+  const table = mode === 'inferno' ? INFERNO_PLAY_STYLES : mode === 'hard' ? HARD_PLAY_STYLES : PLAY_STYLES;
   return table[id] ?? table.tioZe;
 };
 
@@ -839,8 +854,98 @@ export const HARD_RIVALS = Object.freeze(
   ),
 );
 
-/** O rival `id` no modo da run (normal ou 'hard'). */
-export const rivalFor = (id, mode = 'normal') => (mode === 'hard' ? HARD_RIVALS[id] : RIVALS[id]) ?? RIVALS.tioZe;
+// ---------------------------------------------------------------------------
+// Peças Prateadas (Modo Inferno, Patch 0.9.0): o arsenal inteiro desde a 1ª mesa
+//   Região 1  1 talismã e 2 pedras de grife cada (a Neide, 2 talismãs; no normal, só ela tem)
+//   Região 2  2 talismãs e 3 pedras de grife
+//   Região 3  3 talismãs e 4 pedras de grife
+//   Chefes    5 talismãs e 10 pedras de grife. Beto Cigano: taxa de $3 a cada compra.
+//             Comendador: imune à 1ª tranca e com os 2 Necróticos.
+// Todos jogam no nível agressivo e não gastam coração à toa para comprar. Os números foram
+// acertados com scripts/simulate-runs.mjs (500 runs por modo, ver README).
+// ---------------------------------------------------------------------------
+
+export const INFERNO_LOADOUTS = Object.freeze({
+  tioZe: { relics: ['cinzeiro'], deck: { '5-5': 'ouro', '2-3': 'rubi' } },
+  tonho: { relics: ['giz'], deck: { '0-1': 'fantasma', '3-4': 'ouro' } },
+  baiano: { relics: ['borracha'], deck: { '0-5': 'ouro', '1-6': 'rubi' } },
+  valdir: { relics: ['chaveDeFenda'], deck: { '3-5': 'chumbo', '2-2': 'ouro' } },
+  neide: { relics: ['dedal', 'caneca'], deck: { '4-4': 'chumbo', '0-3': 'cristal' } },
+  arlindo: {
+    hearts: 5,
+    relics: ['chaveDeFenda', 'caneca', 'cinzeiro', 'giz', 'borracha'],
+    deck: {
+      '6-6': 'chumbo', '4-4': 'ouro', '5-5': 'ouro',
+      '0-0': 'ouro', '1-1': 'ouro', '2-2': 'ouro', '3-3': 'ouro',
+      '1-6': 'cristal', '2-5': 'cristal', '3-4': 'cristal',
+    },
+  },
+  marcao: { relics: ['cinzeiro', 'chaveDeFenda'], deck: { '4-6': 'chumbo', '5-6': 'ouro', '0-2': 'fantasma' } },
+  serginho: { relics: ['giz', 'cinzeiro'], deck: { '2-2': 'ouro', '0-5': 'fantasma', '1-4': 'rubi' } },
+  cida: { relics: ['caneca', 'cinzeiro'], deck: { '1-4': 'ouro', '3-3': 'cristal', '0-6': 'rubi' } },
+  paulinho: { relics: ['borracha', 'cinzeiro'], deck: { '0-5': 'cristal', '6-6': 'chumbo', '2-4': 'ouro' } },
+  tiao: { relics: ['cinzeiro', 'giz'], deck: { '5-5': 'chumbo', '4-6': 'rubi', '0-0': 'ouro' } },
+  beto: {
+    hearts: 7,
+    relics: ['anel', 'caneca', 'cinzeiro', 'giz', 'chaveDeFenda'],
+    deck: {
+      '5-6': 'ouro', '3-3': 'ouro', '6-6': 'ouro', '4-6': 'ouro', '3-5': 'ouro', '1-4': 'ouro',
+      '2-6': 'cristal', '0-4': 'cristal', '0-5': 'rubi', '4-4': 'chumbo',
+    },
+    mechanics: { drawFee: 3 },
+  },
+  carlinhos: { relics: ['maoGrande', 'anel', 'cinzeiro'], deck: { '1-6': 'fantasma', '2-4': 'ouro', '0-3': 'rubi', '5-5': 'chumbo' } },
+  bigode: { relics: ['carteira', 'maoGrande', 'anel'], deck: { '5-6': 'ouro', '2-6': 'ouro', '0-0': 'rubi', '3-3': 'chumbo' } },
+  sofia: { relics: ['dedal', 'anel', 'cinzeiro'], deck: { '3-3': 'cristal', '1-1': 'fantasma', '2-5': 'rubi', '0-4': 'ouro' } },
+  fausto: { relics: ['maoGrande', 'carteira', 'caneca'], deck: { '3-6': 'cristal', '1-4': 'cristal', '0-6': 'rubi', '4-5': 'ouro' } },
+  alemao: { relics: ['buchaDeAco', 'anel', 'chaveDeFenda'], deck: { '6-6': 'chumbo', '4-5': 'chumbo', '5-5': 'fantasma', '2-4': 'rubi' } },
+  comendador: {
+    hearts: 7,
+    relics: ['trancaCadaverica', 'falsaPartida', 'dedal', 'cinzeiro', 'chaveDeFenda'],
+    deck: {
+      '6-6': 'fantasma', '5-5': 'rubi',
+      '4-6': 'ouro', '2-6': 'ouro', '3-5': 'ouro', '1-5': 'ouro', '0-6': 'ouro',
+      '3-6': 'cristal', '1-1': 'cristal', '2-4': 'cristal',
+    },
+  },
+  donoDaNoite: {
+    hearts: 9,
+    relics: ['anel', 'dedal', 'carteira', 'cinzeiro', 'chaveDeFenda'],
+    deck: {
+      '6-6': 'fantasma', '0-0': 'rubi', '5-5': 'rubi',
+      '3-3': 'cristal', '2-2': 'cristal', '1-6': 'cristal',
+      '5-6': 'ouro', '4-6': 'ouro', '2-6': 'ouro', '1-1': 'ouro',
+    },
+  },
+});
+
+/** Corações a mais dos rivais comuns no Modo Inferno (os chefes têm o número próprio acima). */
+export const INFERNO_EXTRA_HEARTS = 0;
+
+/** Os rivais como eles sentam à mesa nas Peças Prateadas. */
+export const INFERNO_RIVALS = Object.freeze(
+  Object.fromEntries(
+    RIVAL_IDS.map((id) => {
+      const over = INFERNO_LOADOUTS[id] ?? {};
+      const hard = HARD_RIVALS[id];
+      return [
+        id,
+        Object.freeze({
+          ...hard,
+          hearts: over.hearts ?? RIVALS[id].hearts + INFERNO_EXTRA_HEARTS,
+          relics: over.relics ?? hard.relics,
+          deck: over.deck ?? hard.deck,
+          mechanics: { ...hard.mechanics, ...over.mechanics },
+          inferno: true,
+        }),
+      ];
+    }),
+  ),
+);
+
+/** O rival `id` no modo da run (normal, 'hard' ou 'inferno'). */
+export const rivalFor = (id, mode = 'normal') =>
+  (mode === 'inferno' ? INFERNO_RIVALS[id] : mode === 'hard' ? HARD_RIVALS[id] : RIVALS[id]) ?? RIVALS.tioZe;
 
 /** O rival da mesa deste estado, no modo da run. */
 export const rivalOf = (state) => rivalFor(state.rivalId, state.mode);

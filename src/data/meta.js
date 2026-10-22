@@ -4,7 +4,8 @@
  *   Tampinhas Douradas  moeda permanente: +1 por rival comum vencido, +3 por chefe,
  *                       +5 por zerar a campanha, +10 por concluir um desafio
  *   A Conta do Boteco   4 melhorias permanentes, compradas com tampinhas na lousa do
- *                       fim de cada run (RunEndBoard.jsx)
+ *                       fim de cada run (RunEndBoard.jsx). Patch 0.9.0: preços subiram
+ *                       (10, 14, 18 e 22; eram 5, 8, 12 e 15)
  *   Desafios            regras extremas liberadas por metas (ChallengesModal.jsx)
  *
  * O estado gravado no aparelho fica em engine/meta.js.
@@ -19,28 +20,28 @@ export const UPGRADES = Object.freeze({
   copoAmericano: Object.freeze({
     id: 'copoAmericano',
     name: 'Copo Americano',
-    cost: 5,
+    cost: 10,
     description: 'Toda run começa com +$2 no bolso.',
     startCoins: 2,
   }),
   valtinho: Object.freeze({
     id: 'valtinho',
     name: 'Amizade com o Valtinho',
-    cost: 8,
+    cost: 14,
     description: 'O 1º reembaralhar de cada Loja do Valtinho é de graça.',
     firstRerollFree: true,
   }),
   fiado: Object.freeze({
     id: 'fiado',
     name: 'Fiado de Rua',
-    cost: 12,
+    cost: 18,
     description: 'O 1º passe voluntário da run sai de graça.',
     freePass: true,
   }),
   bolsoFundo: Object.freeze({
     id: 'bolsoFundo',
     name: 'Bolso Fundo',
-    cost: 15,
+    cost: 22,
     description: '1 espaço a mais de talismã na hotbar, em toda run.',
     extraSlots: 1,
   }),

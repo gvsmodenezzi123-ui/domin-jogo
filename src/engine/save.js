@@ -14,6 +14,7 @@
  * tampinhas da run. Saves da versão 3 continuam valendo (Maleta Clássica, sem desafio).
  */
 
+import { MODES, modeOf } from '../data/difficulty.js';
 import { MALETAS } from '../data/maletas.js';
 import { CHALLENGES } from '../data/meta.js';
 import { RELIC_IDS } from '../data/relics.js';
@@ -32,7 +33,7 @@ export function snapshotRun(state, resume, savedAt = 0) {
     v: SAVE_VERSION,
     savedAt,
     resume,
-    mode: state.mode === 'hard' ? 'hard' : 'normal',
+    mode: modeOf(state.mode).id,
     maleta: state.maleta ?? 'classica',
     challenge: state.challenge ?? null,
     fiadoUsed: Boolean(state.run.fiadoUsed),
@@ -90,7 +91,7 @@ export function isValidSave(save) {
   if (!save || typeof save !== 'object' || !READABLE.includes(save.v)) return false;
   if (!RESUMES.includes(save.resume)) return false;
   // Patch 0.6.3: maleta da run (saves sem o campo são das Peças Brancas)
-  if (save.mode != null && save.mode !== 'normal' && save.mode !== 'hard') return false;
+  if (save.mode != null && !MODES[save.mode]) return false;
   // Patch 0.8.0: maleta e desafio (saves sem os campos: Clássica, sem desafio)
   if (save.maleta != null && !MALETAS[save.maleta]) return false;
   if (save.challenge != null && !CHALLENGES[save.challenge]) return false;
@@ -100,7 +101,8 @@ export function isValidSave(save) {
   if (save.node !== null && !known(save.node)) return false;
   if (!Array.isArray(save.cleared) || !save.cleared.every(known)) return false;
   if (!Array.isArray(save.path) || !save.path.every(known)) return false;
-  if (!isInt(save.hearts) || save.hearts < 1 || save.hearts > MAX_HEARTS) return false;
+  // Peças Prateadas começam com 6 corações (Patch 0.9.0)
+  if (!isInt(save.hearts) || save.hearts < 1 || save.hearts > Math.max(MAX_HEARTS, modeOf(save.mode).maxHearts)) return false;
   if (!isInt(save.coins) || save.coins < 0) return false;
   if (!Array.isArray(save.relics) || save.relics.length > MAX_RELIC_SLOTS) return false;
   if (!save.relics.every((id) => RELIC_IDS.includes(id))) return false;

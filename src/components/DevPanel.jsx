@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELICS, RELIC_IDS } from '../data/relics.js';
+import { modeOf } from '../data/difficulty.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { relicSlotsFor } from '../engine/loadout.js';
@@ -32,7 +33,7 @@ function PipPicker({ label, value, onChange }) {
  * inicial, que libera o botão DEV ao lado da sua hotbar). O rival espera
  * enquanto o painel está aberto.
  */
-export default function DevPanel({ state, onAction, onClose, blackUnlocked = false, onToggleBlack }) {
+export default function DevPanel({ state, onAction, onClose, blackUnlocked = false, onToggleBlack, silverUnlocked = false, onToggleSilver }) {
   const [a, setA] = useState(6);
   const [b, setB] = useState(6);
   const [enhancement, setEnhancement] = useState('nenhuma');
@@ -182,12 +183,15 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-mode">
           <h3 id="dev-mode" className="dev-label">
-            ESTA RUN: {maletaOf(state.maleta).short} · {state.mode === 'hard' ? 'PEÇAS PRETAS' : 'PEÇAS BRANCAS'}
+            ESTA RUN: {maletaOf(state.maleta).short} · {modeOf(state.mode).name}
             {state.challenge ? ` · ${challengeOf(state.challenge).name.toUpperCase()}` : ''}
           </h3>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button type="button" data-tone={blackUnlocked ? 'blood' : 'brass'} className="btn-pixel btn-mini" onClick={onToggleBlack}>
               {blackUnlocked ? 'TRANCAR PEÇAS PRETAS' : 'LIBERAR PEÇAS PRETAS'}
+            </button>
+            <button type="button" data-tone={silverUnlocked ? 'blood' : 'brass'} className="btn-pixel btn-mini" onClick={onToggleSilver}>
+              {silverUnlocked ? 'TRANCAR PEÇAS PRATEADAS' : 'LIBERAR PEÇAS PRATEADAS'}
             </button>
             <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={() => onAction({ op: 'capsAdd' })}>
               +10 TAMPINHAS
