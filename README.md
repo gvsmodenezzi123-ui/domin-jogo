@@ -86,6 +86,29 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.8.2: maletas fechadas, trilha elétrica dos chefes e a entrada do Dono
+
+- **Maletas fechadas (`CaseCounter.jsx`):** no Balcão todas começam fechadas. Tocar numa
+  liberada estala os fechos, a tampa sobe com o brilho de dentro e umas faíscas, e só então
+  aparecem o que ela muda, as Peças Brancas/Pretas e o INICIAR. Abrir outra fecha a anterior
+  (baque da tampa). Enquanto nenhuma está aberta, as liberadas dão uma balançadinha chamando o
+  toque. Maleta recém-liberada: as correntes caem e ela fica fechada, com um pulinho.
+- **Trilha dos chefes (`bossFight`, `engine/audioSynth.js`):** nova, elétrica e agressiva:
+  152 BPM em Mi frígio, baixo de serra saturado (WaveShaper) em galope com filtro varrendo,
+  power chords distorcidos em contratempo, arpejo de onda quadrada, bumbo duplo, caixa no 2 e
+  no 4 e chimbal em semicolcheias. O passa-baixa da saída abre enquanto ela toca.
+- **Polifonia:** a conta das 6 vozes agora é feita no trecho em que a nota nova vai soar, e a
+  voz cortada sai no instante em que a nova entra. Antes, as notas agendadas à frente cortavam
+  na hora as que estavam tocando e abriam buracos de silêncio nas faixas (o baixo e o piano do
+  jazz e do funk também soam inteiros agora).
+- **Entrada do Dono da Noite (`SecretBoss.jsx`, `art/RuneArt.jsx`):** em fases. A luz da mesa
+  falha com o zumbido da fiação (3 apagadas e a queimada, abaixo de 3 piscadas por segundo),
+  breu com o coração batendo, trovão com o estrobo vermelho enquanto um círculo de runas se
+  desenha e cada runa acende com um "tim" frio, dois olhos dourados abrem no meio do círculo e
+  piscam, e só então o cartão do Dono, com o círculo girando apagado atrás e runas subindo como
+  brasa. A trilha cala durante a entrada e volta com ele. Tocar na tela pula a entrada; com
+  "menos movimento", vai direto para a revelação.
+
 ## Patch 0.8.1: ajustes de texto
 
 - O botão do Balcão de Maletas virou só INICIAR.

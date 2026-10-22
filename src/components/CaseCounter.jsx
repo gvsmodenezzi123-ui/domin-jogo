@@ -17,28 +17,61 @@ function progressOf(id, progress) {
   return null;
 }
 
+/** Faíscas que sobem da maleta quando ela abre (posição e atraso de cada uma). */
+const SPARKS = [
+  [22, 0],
+  [38, 60],
+  [52, 20],
+  [64, 90],
+  [78, 40],
+  [46, 130],
+];
+
 /**
- * Uma maleta no balcão. Trancada: fechada, com corrente e cadeado. Liberada: aberta, o
- * forro de veludo à mostra; na primeira vez que aparece liberada, o cadeado abre e as
- * correntes caem (`fresh`).
+ * Uma maleta no balcão (Patch 0.8.2: todas começam fechadas). Trancada: corrente e cadeado.
+ * Liberada: fechada também, até você tocar; aí os fechos estalam, a tampa sobe mostrando o
+ * forro de veludo, sai um brilho e umas faíscas. Abrir outra fecha a anterior (`closing`).
+ * Na primeira vez que aparece liberada, o cadeado abre e as correntes caem (`fresh`).
  */
-function CaseSlot({ id, unlocked, fresh, selected, disabled, shakeKey, onPick }) {
+function CaseSlot({ id, unlocked, fresh, open, closing, disabled, shakeKey, onPick }) {
   const stage = useUnlockSequence(fresh, unlocked ? 'open' : 'locked');
   const maleta = MALETAS[id];
-  const open = stage === 'open';
+  const free = stage === 'open'; // sem corrente: dá para abrir
+  const shown = free && open;
+  const motion = shown ? 'case-opening' : closing ? 'case-closing' : fresh && free ? 'case-freed' : '';
   return (
     <button
       type="button"
-      className={`scene-tap counter-case ${selected ? 'is-selected' : ''} ${unlocked ? '' : 'is-locked'} ${disabled ? 'is-disabled' : ''}`}
+      className={`scene-tap counter-case ${shown ? 'is-selected is-open' : ''} ${unlocked ? '' : 'is-locked'} ${disabled ? 'is-disabled' : ''}`}
       onClick={() => onPick(id)}
-      aria-pressed={selected}
-      aria-label={unlocked ? `${maleta.name}: ${maleta.buff}` : `${maleta.name}: trancada. ${maleta.goal}`}
+      aria-pressed={shown}
+      aria-label={unlocked ? `${maleta.name}: ${shown ? maleta.buff : 'fechada, toque para abrir'}` : `${maleta.name}: trancada. ${maleta.goal}`}
     >
       <span className="case-art counter-art">
-        <span key={`${open}-${shakeKey}`} className={`case-body ${open && fresh ? 'case-open-pop' : ''} ${shakeKey ? 'case-shake' : ''}`}>
-          <MaletaSprite id={id} open={open} className="case-sprite" />
+        {shown && <span aria-hidden="true" className="case-glow" />}
+        <span key={`${shown}-${shakeKey}`} className={`case-body ${motion} ${shakeKey ? 'case-shake' : ''}`}>
+          {shown ? (
+            <>
+              {/* a fechada estala os fechos e some; a aberta sobe no lugar */}
+              <span className="case-layer case-layer-closed">
+                <MaletaSprite id={id} className="case-sprite" />
+              </span>
+              <span className="case-layer case-layer-open">
+                <MaletaSprite id={id} open className="case-sprite" />
+              </span>
+            </>
+          ) : (
+            <MaletaSprite id={id} className="case-sprite" />
+          )}
         </span>
-        {!open && (
+        {shown && (
+          <span aria-hidden="true" className="case-sparks">
+            {SPARKS.map(([x, delay]) => (
+              <i key={x} style={{ left: `${x}%`, animationDelay: `${380 + delay}ms` }} />
+            ))}
+          </span>
+        )}
+        {!free && (
           <>
             <span aria-hidden="true" className={`case-chains ${stage === 'unlocking' ? 'is-falling' : ''}`}>
               <CorrentesSprite className="case-sprite" />
@@ -92,14 +125,16 @@ function DifficultyPick({ mode, blackUnlocked, onChange }) {
 /**
  * Balcão de Maletas (Patch 0.8.0), depois do NOVO JOGO: uma bancada de madeira vista de
  * cima, sob a lâmpada, com as 5 maletas de partida (data/maletas.js). Trancada: corrente e
- * cadeado; tocar mostra a meta. Liberada: aberta no veludo; tocar seleciona e abre logo
- * abaixo a escolha das peças (Brancas = normal, Pretas = difícil) e o INICIAR RUN.
+ * cadeado; tocar mostra a meta. Liberada: fechada até você tocar (Patch 0.8.2); tocar abre
+ * a maleta e mostra logo abaixo o que ela muda, a escolha das peças (Brancas = normal,
+ * Pretas = difícil) e o INICIAR. Uma aberta por vez.
  * Em desafio (`challenge`), o título mostra a regra; o Só no Osso só aceita a Clássica.
  */
 export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = {}, challenge = null, onStart, onBack }) {
   const rule = challengeOf(challenge);
   const allowed = (id) => !rule?.maleta || rule.maleta === id;
-  const [selected, setSelected] = useState(() => MALETA_IDS.find((id) => unlocked.includes(id) && allowed(id)) ?? 'classica');
+  const [selected, setSelected] = useState(null); // a maleta aberta (nenhuma até o primeiro toque)
+  const [closing, setClosing] = useState(null); // a que acabou de fechar (anima a tampa descendo)
   const [info, setInfo] = useState(null); // maleta trancada tocada (mostra a meta)
   const [shake, setShake] = useState({ id: null, n: 0 });
   const [mode, setMode] = useState('normal');
@@ -125,8 +160,12 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
       return;
     }
     setInfo(null);
+    if (id === selected) return;
+    if (selected) sound.playCaseClose();
+    setClosing(selected);
     setSelected(id);
-    sound.playPowerSelect();
+    sound.playCaseOpen();
+    haptic([12, 50, 12]);
   };
 
   const chooseMode = (id) => {
@@ -140,7 +179,7 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
     sound.playClick();
   };
 
-  const maleta = MALETAS[selected];
+  const maleta = selected ? MALETAS[selected] : null;
   const lockedInfo = info ? MALETAS[info] : null;
 
   return (
@@ -155,14 +194,15 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
           <span>{rule ? rule.rule : 'Cada maleta muda o começo e uma regra da run'}</span>
         </h1>
 
-        <div className="counter-top">
+        <div className={`counter-top ${selected || info ? '' : 'is-waiting'}`}>
           {MALETA_IDS.map((id) => (
             <CaseSlot
               key={id}
               id={id}
               unlocked={unlocked.includes(id)}
               fresh={fresh.includes(id)}
-              selected={id === selected && !info}
+              open={id === selected}
+              closing={id === closing}
               disabled={!allowed(id)}
               shakeKey={shake.id === id ? shake.n : 0}
               onPick={pick}
@@ -183,8 +223,13 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
               <p className="mt-1 font-term text-[17px] leading-tight text-bone-200">{rule?.name}: só a {MALETAS[rule?.maleta]?.name}.</p>
             )}
           </div>
+        ) : !maleta ? (
+          <div className="counter-card counter-card-hint" role="status">
+            <p className="counter-hint-title">TOQUE NUMA MALETA PARA ABRIR</p>
+            <p className="counter-hint-text">Cada uma traz um começo diferente e uma regra da casa.</p>
+          </div>
         ) : (
-          <div className="counter-card" role="group" aria-label={maleta.name}>
+          <div key={selected} className="counter-card counter-card-open" role="group" aria-label={maleta.name}>
             <p className="counter-card-title">{maleta.name.toUpperCase()}</p>
             <p className="counter-card-sub">{maleta.title}</p>
             <p className="counter-buff">+ {maleta.buff}</p>

@@ -5240,17 +5240,154 @@
   }
 }
 
-.case-open-pop {
-  animation: caseOpenPop 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
-  transform-origin: 50% 80%;
+/* Patch 0.8.2: maleta abrindo no toque. A fechada dá o tranco dos fechos e some; a aberta
+   sobe por cima (a tampa esticando a partir da base), com o brilho de dentro e as faíscas. */
+.case-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
-@keyframes caseOpenPop {
-  from {
-    transform: scaleY(0.7);
+.case-opening .case-layer-closed {
+  animation: caseLatch 240ms ease-out both;
+}
+
+.case-opening .case-layer-open {
+  animation: caseLidOpen 540ms cubic-bezier(0.2, 1.4, 0.4, 1) 200ms both;
+  transform-origin: 50% 88%;
+}
+
+@keyframes caseLatch {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
   }
-  to {
+  30% {
+    transform: translateY(-3px) scaleX(1.03);
+  }
+  65% {
+    transform: translateY(1px);
+  }
+  99% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+
+@keyframes caseLidOpen {
+  0% {
+    transform: scaleY(0.6);
+    opacity: 0;
+    filter: brightness(1.9);
+  }
+  12% {
+    opacity: 1;
+  }
+  55% {
+    transform: scaleY(1.07);
+  }
+  100% {
     transform: scaleY(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.case-glow {
+  position: absolute;
+  inset: -14%;
+  display: block;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 52%, rgba(255, 214, 140, 0.7), rgba(255, 170, 60, 0.18) 42%, transparent 64%);
+  animation: caseGlow 1s ease-out 200ms both;
+}
+
+@keyframes caseGlow {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+.case-sparks {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.case-sparks i {
+  position: absolute;
+  bottom: 46%;
+  width: 3px;
+  height: 3px;
+  background: #ffe08a;
+  box-shadow: 0 0 4px #ffb347;
+  opacity: 0;
+  animation: caseSpark 760ms ease-out both;
+}
+
+.case-sparks i:nth-child(even) {
+  width: 2px;
+  height: 2px;
+  background: #fff6d8;
+}
+
+@keyframes caseSpark {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-48px);
+    opacity: 0;
+  }
+}
+
+/* a que estava aberta fecha: a tampa desce e quica no fecho */
+.case-closing {
+  animation: caseLidClose 280ms ease-in;
+  transform-origin: 50% 86%;
+}
+
+@keyframes caseLidClose {
+  0% {
+    transform: scaleY(1.1) translateY(-2px);
+  }
+  60% {
+    transform: scaleY(0.93);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* corrente caiu: a maleta (ainda fechada) dá um pulinho de alívio */
+.case-freed {
+  animation: caseFreed 440ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes caseFreed {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-7px);
   }
 }
 
@@ -5318,9 +5455,24 @@
   text-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
 }
 
-.reduce-motion .case-open-pop,
-.reduce-motion .case-shake {
+.reduce-motion .case-shake,
+.reduce-motion .case-opening .case-layer,
+.reduce-motion .case-closing,
+.reduce-motion .case-freed,
+.reduce-motion .case-glow,
+.reduce-motion .counter-art,
+.reduce-motion .counter-card-open,
+.reduce-motion .counter-hint-title {
   animation: none !important;
+}
+
+.reduce-motion .case-opening .case-layer-closed,
+.reduce-motion .case-sparks {
+  display: none;
+}
+
+.reduce-motion .case-glow {
+  opacity: 0.4;
 }
 
 .reduce-motion .case-chains.is-falling,
@@ -5708,6 +5860,91 @@
   width: 100%;
 }
 
+/* Patch 0.8.2: nenhuma aberta ainda. As fechadas (liberadas) dão uma balançadinha de vez em
+   quando, cada uma no seu tempo, chamando o toque. */
+.counter-top.is-waiting .counter-case:not(.is-locked):not(.is-disabled) .counter-art {
+  animation: caseIdle 3.2s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+.counter-top.is-waiting .counter-case:nth-child(2) .counter-art {
+  animation-delay: 0.6s;
+}
+
+.counter-top.is-waiting .counter-case:nth-child(3) .counter-art {
+  animation-delay: 1.3s;
+}
+
+.counter-top.is-waiting .counter-case:nth-child(4) .counter-art {
+  animation-delay: 1.9s;
+}
+
+.counter-top.is-waiting .counter-case:nth-child(5) .counter-art {
+  animation-delay: 2.5s;
+}
+
+@keyframes caseIdle {
+  0%,
+  72%,
+  100% {
+    transform: none;
+  }
+  78% {
+    transform: rotate(-2.5deg);
+  }
+  85% {
+    transform: rotate(2.5deg);
+  }
+  91% {
+    transform: rotate(-1deg);
+  }
+}
+
+.counter-card-hint {
+  text-align: center;
+}
+
+.counter-hint-title {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.5;
+  color: #f2b84b;
+  animation: counterHint 1.8s ease-in-out infinite;
+}
+
+@keyframes counterHint {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.counter-hint-text {
+  margin-top: 4px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+  color: var(--color-bone-300);
+}
+
+.counter-card-open {
+  animation: counterCardIn 320ms ease-out 180ms both;
+}
+
+@keyframes counterCardIn {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 /* Peças Brancas / Peças Pretas */
 .diff-pick {
   margin-top: 10px;
@@ -6014,20 +6251,90 @@
 }
 
 /* ---------- Patch 0.8.0: O Dono da Noite (nó 19) ----------
-   Apagão (preto), estrobo vermelho-sangue (abaixo de 3 piscadas por segundo) e a
-   revelação numa luz vermelha que respira. Com "menos movimento", o vermelho fica parado. */
+   Patch 0.8.2: a entrada em fases. flicker (a luz da mesa falha: a cena é transparente e uma
+   sombra preta pisca por cima, 3 apagadas e a queimada final, abaixo de 3 por segundo), dark
+   (breu e a vinheta do coração), strobe (estrobo vermelho a ~2 por segundo e o círculo de
+   runas se desenhando), eyes (os olhos abrindo no meio do círculo) e reveal (o cartão, com o
+   círculo girando apagado atrás e runas subindo como brasa). "Menos movimento": tudo parado. */
 .secret-scene {
+  --rune: #ffd9c4;
   background: #000;
   color: var(--color-bone-50);
   overflow-y: auto;
+}
+
+.secret-scene.secret-flicker {
+  background: transparent;
+}
+
+.secret-shade {
+  background: #000;
+  opacity: 0;
+}
+
+.secret-flicker .secret-shade {
+  animation: secret-flicker 1500ms steps(1, end) both;
+}
+
+/* apagadas em 0,14 s, 0,6 s e 1,1 s (engine: FLICKER_CUTS) e a queimada em 1,42 s */
+@keyframes secret-flicker {
+  0% {
+    opacity: 0.16;
+  }
+  9.3% {
+    opacity: 0.94;
+  }
+  20% {
+    opacity: 0.24;
+  }
+  40% {
+    opacity: 0.96;
+  }
+  47% {
+    opacity: 0.32;
+  }
+  73.3% {
+    opacity: 0.97;
+  }
+  80% {
+    opacity: 0.46;
+  }
+  94.7%,
+  100% {
+    opacity: 1;
+  }
 }
 
 .secret-flash {
   opacity: 0;
 }
 
+/* breu: só uma vinheta vermelha bem escura pulsando com o coração */
+.secret-scene.secret-dark .secret-flash {
+  background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(110, 0, 8, 0.42) 100%);
+  animation: secret-heart 780ms ease-out 2 both;
+}
+
+@keyframes secret-heart {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.3;
+  }
+  32% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .secret-scene.secret-strobe .secret-flash {
-  background: radial-gradient(ellipse at 50% 40%, rgba(200, 16, 24, 0.95), rgba(60, 0, 6, 0.95) 70%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(200, 16, 24, 0.9), rgba(60, 0, 6, 0.92) 70%);
   animation: secret-strobe 450ms steps(1, end) infinite;
 }
 
@@ -6040,7 +6347,18 @@
   }
 }
 
+.secret-scene.secret-eyes {
+  --rune: #ff3b2f;
+}
+
+.secret-scene.secret-eyes .secret-flash {
+  opacity: 1;
+  background: radial-gradient(circle at 50% 50%, rgba(160, 10, 20, 0.34), transparent 55%);
+  animation: secret-breathe 1.6s ease-in-out infinite;
+}
+
 .secret-scene.secret-reveal {
+  --rune: #c8261d;
   background:
     radial-gradient(ellipse 80% 60% at 50% 38%, rgba(140, 8, 18, 0.55), transparent 70%),
     #050203;
@@ -6062,9 +6380,278 @@
   }
 }
 
+/* o círculo de runas (art/RuneArt.jsx) */
+.secret-runes {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(86vw, 360px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  color: var(--rune);
+  transition:
+    opacity 500ms ease,
+    width 700ms ease;
+}
+
+.secret-runes svg {
+  overflow: visible;
+  filter: drop-shadow(0 0 3px rgba(255, 40, 30, 0.95)) drop-shadow(0 0 10px rgba(200, 16, 24, 0.6));
+}
+
+.secret-strobe .secret-runes,
+.secret-eyes .secret-runes {
+  opacity: 1;
+}
+
+.secret-reveal .secret-runes {
+  width: min(112vw, 470px);
+  opacity: 0.32;
+}
+
+.rc-line,
+.rc-dots,
+.rc-glyph {
+  stroke: var(--rune);
+  transition: stroke 400ms ease;
+}
+
+.rc-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.rc-dots,
+.rc-glyph,
+.rc-eyes {
+  opacity: 0;
+}
+
+.secret-strobe .rc-line {
+  animation: rc-draw 900ms ease-out both;
+}
+
+.secret-strobe .rc-late {
+  animation-delay: 250ms;
+}
+
+.secret-strobe .rc-later {
+  animation-delay: 480ms;
+}
+
+.secret-strobe .rc-latest {
+  animation-delay: 700ms;
+}
+
+.secret-strobe .rc-dots {
+  animation: rc-fade 500ms ease-out 600ms both;
+}
+
+.secret-strobe .rc-glyph {
+  animation: rc-glyph 340ms ease-out both;
+  animation-delay: calc(700ms + var(--i) * 130ms);
+}
+
+.secret-eyes .rc-line,
+.secret-reveal .rc-line {
+  stroke-dashoffset: 0;
+}
+
+.secret-eyes .rc-dots,
+.secret-eyes .rc-glyph,
+.secret-reveal .rc-dots,
+.secret-reveal .rc-glyph {
+  opacity: 1;
+}
+
+@keyframes rc-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rc-glyph {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+    stroke: #fff4ea;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* o círculo gira devagar desde que se desenha (mesma animação nas 3 fases: não reinicia) */
+.rc-spin {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+}
+
+.secret-strobe .rc-spin,
+.secret-eyes .rc-spin,
+.secret-reveal .rc-spin {
+  animation: rc-spin 48s linear infinite;
+}
+
+@keyframes rc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* os olhos: abrem, piscam uma vez e encaram */
+.secret-eyes .rc-eyes {
+  opacity: 1;
+  filter: drop-shadow(0 0 2px #ffd24a) drop-shadow(0 0 7px rgba(255, 120, 0, 0.85));
+}
+
+.rc-eye {
+  transform-box: view-box;
+}
+
+.secret-eyes .rc-eye {
+  animation: rc-eye-open 1300ms ease-out 150ms both;
+}
+
+@keyframes rc-eye-open {
+  0% {
+    transform: scaleY(0);
+  }
+  32%,
+  58% {
+    transform: scaleY(1);
+  }
+  64% {
+    transform: scaleY(0.12);
+  }
+  70%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* runas e brasas subindo pelo escuro */
+.secret-drift {
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.secret-strobe .secret-drift,
+.secret-eyes .secret-drift,
+.secret-reveal .secret-drift {
+  opacity: 1;
+}
+
+.drift-rune,
+.drift-ember {
+  position: absolute;
+  bottom: -24px;
+  display: block;
+  opacity: 0;
+  animation-name: drift-up;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.drift-rune {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 70, 50, 0.75);
+  filter: drop-shadow(0 0 3px rgba(255, 30, 20, 0.8));
+}
+
+.drift-ember {
+  width: 3px;
+  height: 3px;
+  background: #ff7a2a;
+  box-shadow: 0 0 5px #ff3b1a;
+}
+
+@keyframes drift-up {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(10px, -52vh);
+  }
+  85% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-6px, -106vh);
+    opacity: 0;
+  }
+}
+
+.secret-skip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  color: rgba(244, 236, 210, 0.32);
+  pointer-events: none;
+}
+
+.secret-card-in {
+  animation: secret-card-in 620ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes secret-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+    filter: brightness(2.2);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
 .reduce-motion .secret-scene .secret-flash {
   animation: none;
   opacity: 0.6;
+}
+
+.reduce-motion .secret-scene .secret-shade,
+.reduce-motion .secret-scene .rc-line,
+.reduce-motion .secret-scene .rc-dots,
+.reduce-motion .secret-scene .rc-glyph,
+.reduce-motion .secret-scene .rc-spin,
+.reduce-motion .secret-scene .rc-eye,
+.reduce-motion .secret-card-in {
+  animation: none !important;
+}
+
+.reduce-motion .secret-scene .rc-line {
+  stroke-dashoffset: 0;
+}
+
+.reduce-motion .secret-drift {
+  display: none;
 }
 
 .secret-card {

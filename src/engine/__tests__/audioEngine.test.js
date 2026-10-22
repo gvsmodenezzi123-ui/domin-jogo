@@ -109,7 +109,14 @@ class FakeAudioContext {
     return n;
   }
   createOscillator() {
-    return new FakeSource(this, 'osc');
+    const osc = new FakeSource(this, 'osc');
+    osc.detune = new FakeParam(0);
+    return osc;
+  }
+  createWaveShaper() {
+    const n = new FakeNode(this, 'shaper');
+    n.curve = null;
+    return n;
   }
   createBufferSource() {
     return new FakeSource(this, 'buffer');
@@ -194,6 +201,22 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     }
   });
 
+  it('entrada do Dono e maletas (Patch 0.8.2): os efeitos novos tocam dentro da polifonia', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    engine.playTrack('bossFight');
+    const before = engine.ctx.sources.length;
+    const effects = ['playLightsFlicker', 'playHeartbeat', 'playThunder', 'playRuneIgnite', 'playDonoEyes', 'playCaseOpen', 'playCaseClose'];
+    effects.forEach((name) => engine[name]());
+    for (let i = 0; i < 120; i += 1) {
+      vi.advanceTimersByTime(20);
+      engine.ctx.advance(0.02);
+      expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+    }
+    expect(engine.ctx.sources.length - before).toBeGreaterThan(30);
+    engine.stopMusic();
+  });
+
   it('cada nota termina com stop, disconnect de todos os nós e sem referências', () => {
     const engine = engineWithFakeAudio();
     const before = engine.ctx.nodes.length;
@@ -209,14 +232,33 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     }
   });
 
-  it('nota do baixo que vai ser cortada lá na frente continua ocupando vaga até sair', () => {
+  it('nota do baixo que vai ser cortada lá na frente soa até a próxima entrar, sem somar com ela', () => {
     const engine = engineWithFakeAudio();
     const at = engine.ctx.currentTime + 0.1;
     engine.bassNote(45, at, 1);
     engine.bassNote(47, at + 0.1, 1); // corta a anterior só em at + 0.1
-    // a primeira ainda soa entre agora e at + 0.1: conta 2
-    expect(engine.liveCost()).toBe(2);
+    const [first] = engine.voices;
+    expect(first.released).toBe(true);
+    expect(first.end).toBeCloseTo(at + 0.12, 5); // segue soando até a segunda entrar
+    // uma depois da outra: nunca as duas juntas
+    expect(engine.liveCost()).toBe(1);
     for (let i = 0; i < 6; i += 1) engine.tone({ freq: 500 + i, dur: 1 });
+    expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+  });
+
+  it('polifonia (Patch 0.8.2): a nota agendada não corta na hora as que ainda estão tocando', () => {
+    const engine = engineWithFakeAudio();
+    const now = engine.ctx.currentTime;
+    // 6 notas curtas tocando agora (acabam em ~0,08 s)
+    for (let i = 0; i < 6; i += 1) engine.drum({ at: now + 0.005, freq: 2000, filter: 'bandpass', q: 1, peak: 0.1, dur: 0.05 });
+    // a próxima leva, agendada para depois que elas acabam, não precisa cortar nenhuma
+    for (let i = 0; i < 6; i += 1) engine.drum({ at: now + 0.1, freq: 2000, filter: 'bandpass', q: 1, peak: 0.1, dur: 0.05 });
+    expect(engine.voices.filter((v) => v.released)).toHaveLength(0);
+    // uma leva que entra no meio delas corta as mais velhas no instante em que entra
+    engine.drum({ at: now + 0.04, freq: 2000, filter: 'bandpass', q: 1, peak: 0.1, dur: 0.02 });
+    const cut = engine.voices.filter((v) => v.released);
+    expect(cut).toHaveLength(1);
+    expect(cut[0].end).toBeCloseTo(now + 0.06, 5);
     expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
   });
 
@@ -255,14 +297,52 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     engine.stopMusic();
   });
 
-  it('as faixas do jogo rodam a ~128 BPM com swing, e a da Loja é mais lenta', () => {
-    for (const name of ['botecoJazz', 'sinucaFunk', 'bossFight']) expect(TRACKS[name].bpm).toBe(128);
+  it('as faixas do jogo rodam a ~128 BPM com swing, a da Loja é mais lenta e a dos chefes mais rápida', () => {
+    for (const name of ['botecoJazz', 'sinucaFunk']) expect(TRACKS[name].bpm).toBe(128);
+    expect(TRACKS.bossFight.bpm).toBeGreaterThan(140);
     expect(TRACKS[SHOP_MUSIC].bpm).toBeLessThan(128);
     const t = TRACKS.botecoJazz;
     const pair = stepDuration(t, 0) + stepDuration(t, 1);
     expect(pair).toBeCloseTo((2 * 60) / 128 / 4, 6);
     expect(stepDuration(t, 0)).toBeGreaterThan(stepDuration(t, 1));
     expect(stepDuration(t, 0, 1.08)).toBeLessThan(stepDuration(t, 0));
+  });
+
+  it('chefes (Patch 0.8.2): faixa elétrica com serra saturada, arpejo, caixa, chimbal e o som aberto', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    engine.playTrack('bossFight');
+    const before = engine.ctx.sources.length;
+    for (let i = 0; i < 80; i += 1) {
+      vi.advanceTimersByTime(25);
+      engine.ctx.advance(0.025);
+      expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+    }
+    const played = engine.ctx.sources.slice(before);
+    expect(played.some((s) => s.kind === 'osc' && s.type === 'sawtooth')).toBe(true);
+    expect(played.some((s) => s.kind === 'osc' && s.type === 'square')).toBe(true);
+    expect(played.filter((s) => s.kind === 'buffer').length).toBeGreaterThan(10); // chimbal e caixa
+    expect(engine.ctx.nodes.some((n) => n.kind === 'shaper' && n.curve)).toBe(true);
+    const target = engine.warmth.frequency.events.filter((e) => e[0] === 'target').at(-1);
+    expect(target[1]).toBe(TRACKS.bossFight.cutoff);
+    // voltar para o boteco fecha o som de novo
+    engine.playTrack('botecoJazz');
+    expect(engine.warmth.frequency.events.filter((e) => e[0] === 'target').at(-1)[1]).toBe(WARM_CUTOFF);
+    engine.stopMusic();
+  });
+
+  it('entrada do Dono: a trilha cala e volta sozinha (ou na hora, ao pular)', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    engine.playTrack('bossFight');
+    engine.hushMusic(5);
+    expect(engine.musicLevel()).toBe(0);
+    engine.ctx.advance(1);
+    engine.hushMusic(0); // pulou a entrada
+    expect(engine.musicLevel()).toBeGreaterThan(0);
+    const last = engine.musicBus.gain.events.filter((e) => e[0] === 'exp').at(-1);
+    expect(last[1]).toBeCloseTo(engine.musicLevel(), 5);
+    engine.stopMusic();
   });
 
   it('vitória: a trilha sai, a fanfarra toca e a faixa da Loja só entra depois', () => {

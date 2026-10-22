@@ -111,7 +111,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.1</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.2</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -257,7 +257,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.8.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.8.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

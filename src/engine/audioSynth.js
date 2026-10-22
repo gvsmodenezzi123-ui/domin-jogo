@@ -46,6 +46,14 @@ export const DUCK_HOLD = 0.2;
 const DUCK_RELEASE = 0.35;
 /** Prioridade na hora de cortar uma voz quando a polifonia estoura (menor sai primeiro). */
 const PRIORITY = { music: 0, voice: 1, sfx: 2 };
+
+/**
+ * Instantes (s) em que a luz apaga na entrada do Dono, iguais aos degraus do CSS
+ * `secret-flicker` (1,5 s): 3 apagadas que voltam e a queimada final (`FLICKER_OUT`),
+ * abaixo de 3 piscadas por segundo.
+ */
+export const FLICKER_CUTS = [0.14, 0.6, 1.1];
+export const FLICKER_OUT = 1.42;
 /** Andamento base e o empurrão da camada de tensão. */
 export const BASE_BPM = 128;
 const TENSION_TEMPO = 1.08;
@@ -102,6 +110,10 @@ export const voiceProfile = (character) => VOICE_PROFILES[VOICE_ALIASES[characte
 // (midi) e a abertura do piano elétrico (midi, sem a fundamental). `bass`: passo → intervalo em
 // semitons a partir da fundamental. `comp`: passo → duração (s) do acorde do piano. `kick`, `rim`:
 // passos da percussão base. `level`: volume da faixa.
+// Patch 0.8.2, `style: 'electric'` (chefes): o baixo vira serra saturada com filtro varrendo, o
+// piano vira power chord distorcido, entra um arpejo de onda quadrada (`lead`: passo → intervalo),
+// caixa (`snare`), chimbal em semicolcheia (`hats`) e o bumbo fica mais pesado. `cutoff` abre o
+// passa-baixa da saída enquanto a faixa toca.
 export const TRACKS = {
   // Boteco da Esquina: bossa-funk em ii-V-I, contrabaixo andando e piano elétrico macio
   botecoJazz: {
@@ -139,21 +151,28 @@ export const TRACKS = {
     kick: [0, 7, 10],
     rim: [4, 12],
   },
-  // Submundo e chefes: menor, bumbo marcado, piano escuro
+  // Chefes (Patch 0.8.2): elétrica e agressiva, 152 BPM em Mi frígio. Baixo de serra saturado em
+  // galope, power chords distorcidos em contratempo, arpejo de onda quadrada por cima, bumbo duplo,
+  // caixa no 2 e no 4 e chimbal correndo em semicolcheias.
   bossFight: {
-    bpm: BASE_BPM,
+    bpm: 152,
     swing: 0,
-    level: 0.95,
+    level: 0.78, // ~2 dB acima das outras: mais densa, sem estourar
+    style: 'electric',
+    cutoff: 5200,
     chords: [
-      { root: 45, ep: [57, 60, 64] }, // Am
-      { root: 41, ep: [57, 60, 65] }, // F
-      { root: 38, ep: [57, 62, 65] }, // Dm
-      { root: 40, ep: [56, 62, 64] }, // E7
+      { root: 40, ep: [52, 59] }, // E5
+      { root: 40, ep: [52, 59] }, // E5
+      { root: 41, ep: [53, 60] }, // F5 (o meio-tom frígio)
+      { root: 38, ep: [50, 57] }, // D5
     ],
-    bass: { 0: 0, 2: 0, 4: 0, 6: 12, 8: 0, 10: 0, 12: 0, 14: 12 },
-    comp: { 0: 0.5, 6: 0.22, 11: 0.3 },
-    kick: [0, 4, 8, 12],
-    rim: [4, 12],
+    bass: { 0: 0, 1: 0, 2: 12, 3: 0, 4: 0, 5: 0, 6: 12, 7: 0, 8: 0, 9: 0, 10: 12, 11: 0, 12: 0, 13: 3, 14: 5, 15: 7 },
+    comp: { 0: 0.24, 3: 0.12, 6: 0.18, 10: 0.24, 14: 0.12 },
+    lead: { 0: 24, 2: 31, 4: 27, 6: 31, 8: 36, 10: 31, 12: 27, 14: 34 },
+    kick: [0, 3, 6, 8, 11, 14],
+    snare: [4, 12],
+    hats: true,
+    rim: [],
   },
   // Loja Clandestina: lounge suave, sem bumbo, piano longo e baixo em mínimas
   lojaLounge: {
@@ -195,6 +214,16 @@ export const TRACKS = {
 export const SHOP_MUSIC = 'lojaLounge';
 /** Faixa do beco do Corvo da Madrugada. */
 export const MARKET_MUSIC = 'becoNoir';
+
+/** Curva de saturação (overdrive suave) do baixo e dos power chords elétricos. */
+function driveCurve(amount = 28, size = 1024) {
+  const curve = new Float32Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const x = (i * 2) / size - 1;
+    curve[i] = ((1 + amount) * x) / (1 + amount * Math.abs(x));
+  }
+  return curve;
+}
 
 /** Duração da semicolcheia `step` (com swing nas do contratempo). */
 export function stepDuration(track, step, tempo = 1) {
@@ -287,6 +316,21 @@ export class SoundEngine {
   }
 
   /**
+   * Silencia a trilha por `seconds` (a entrada do Dono, Patch 0.8.2): a música some em meio
+   * segundo e volta sozinha no fim; `hushMusic(0)` traz de volta na hora (pular a entrada).
+   * O sequenciador segue no relógio, mudo, para a faixa voltar no tempo certo.
+   */
+  hushMusic(seconds) {
+    if (!this.musicBus || !this.ctx) return;
+    const wait = Math.max(0, seconds);
+    this.musicHoldUntil = this.ctx.currentTime + wait;
+    if (wait > 0) this.rampMusic(SILENT, 0.5);
+    this.later(wait, () => {
+      if (this.isPlayingMusic && this.ctx.currentTime >= this.musicHoldUntil - 0.05) this.rampMusic(this.musicLevel(), 0.8);
+    });
+  }
+
+  /**
    * Ducking dinâmico: a música desce 30% (exponencial), fica baixa 200 ms e volta suave.
    * Chamado a cada pedra na mesa, dano de coração e sílaba do rival.
    */
@@ -317,8 +361,25 @@ export class SoundEngine {
       const f = this.warmth.frequency;
       f.cancelScheduledValues(t);
       f.setValueAtTime(f.value, t);
-      f.setTargetAtTime(next ? TENSE_CUTOFF : WARM_CUTOFF, t, 0.25);
+      f.setTargetAtTime(this.cutoffNow(), t, 0.25);
     }
+  }
+
+  /** Corte do passa-baixa da saída agora: quente, aberto na tensão, ou o da faixa elétrica tocando. */
+  cutoffNow() {
+    const base = this.tension ? TENSE_CUTOFF : WARM_CUTOFF;
+    const track = this.isPlayingMusic ? TRACKS[this.seq?.name] : null;
+    return Math.max(base, track?.cutoff ?? 0);
+  }
+
+  /** Leva o passa-baixa para o corte da faixa (a elétrica dos chefes abre o som). */
+  applyCutoff() {
+    if (!this.warmth) return;
+    const t = this.ctx.currentTime;
+    const f = this.warmth.frequency;
+    f.cancelScheduledValues(t);
+    f.setValueAtTime(f.value, t);
+    f.setTargetAtTime(this.cutoffNow(), t, 0.3);
   }
 
   // --- VOZES (polifonia limitada e limpeza de nós) ---
@@ -340,15 +401,54 @@ export class SoundEngine {
     return this.liveVoices().filter((v) => !(v.released && v.end <= now + 0.03));
   }
 
-  /** Quantas fontes (osciladores e ruído) estão soando agora: é isso que pesa no áudio do iOS. */
+  /**
+   * Trecho em que a voz ocupa vaga: do início até o corte (`cutAt`, quando cortada; depois
+   * dele só sobra o fade de 15 ms do gate) ou até o `stop` menos 20 ms (a cauda já muda do
+   * envelope, igual ao fade de quem é cortado).
+   */
+  span(v) {
+    return [v.born, v.released ? v.cutAt : v.end - 0.02];
+  }
+
+  /** Vozes que soam em algum ponto de [from, to) (com 1 µs de folga contra arredondamento). */
+  overlapping(from, to) {
+    return this.liveVoices().filter((v) => {
+      const [a, b] = this.span(v);
+      return a < to - 1e-6 && b > from + 1e-6;
+    });
+  }
+
+  /**
+   * Pico de fontes (osciladores e ruído) soando juntas, de agora em diante: é isso que pesa no
+   * áudio do iOS. Conta também as notas já agendadas pelo sequenciador (o "lookahead"), cada
+   * uma no seu trecho; uma nota que acaba antes da próxima começar não soma com ela.
+   */
   liveCost() {
-    return this.soundingVoices().reduce((sum, v) => sum + v.cost, 0);
+    const now = this.ctx.currentTime;
+    const events = [];
+    for (const v of this.liveVoices()) {
+      const [a, b] = this.span(v);
+      const start = Math.max(a, now);
+      if (b <= start + 1e-6) continue; // já acabou, ou foi cortada antes de começar
+      events.push([start, v.cost], [b, -v.cost]);
+    }
+    events.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    let current = 0;
+    let peak = 0;
+    for (const [, delta] of events) {
+      current += delta;
+      peak = Math.max(peak, current);
+    }
+    return peak;
   }
 
   /**
    * Cria uma voz: fontes → nós de `build(env)` → env (envelope da nota) → gate → barramento.
    * O gate é um ganho só para cortar a voz sem mexer no envelope (cancelar uma rampa no meio
    * faz o Safari pular de volume). Estourou a polifonia: corta a menos importante e mais velha.
+   * Patch 0.8.2: a conta é feita no trecho em que a nova voz vai soar (não no "agora"), e a
+   * cortada sai no instante em que a nova entra. Antes, a nota agendada lá na frente cortava
+   * na hora as que estavam tocando e a faixa rápida dos chefes ficava com buracos de silêncio.
    * `mono`: só uma por grupo (baixo, piano): a nova corta a anterior no instante em que entra.
    * `offset`: ponto de partida das fontes de buffer (ruído).
    */
@@ -363,15 +463,18 @@ export class SoundEngine {
     const { sources, nodes = [] } = build(env);
     // cada fonte conta como uma voz: abre espaço cortando as menos importantes e mais velhas
     const cost = Math.min(sources.length, MAX_VOICES);
+    const from = Math.max(at, this.ctx.currentTime);
+    const to = end - 0.02;
     for (;;) {
-      const live = this.soundingVoices();
+      const live = this.overlapping(from, to);
       if (live.reduce((sum, v) => sum + v.cost, 0) + cost <= MAX_VOICES) break;
-      const candidates = live.filter((v) => !v.released);
+      // cortável: ainda não cortada, ou cortada para mais tarde do que a entrada da nova
+      const candidates = live.filter((v) => !v.released || v.cutAt > from + 1e-6);
       if (!candidates.length) break;
       const victim = candidates.reduce((a, b) => (b.priority < a.priority || (b.priority === a.priority && b.born < a.born) ? b : a));
-      this.release(victim);
+      this.release(victim, from);
     }
-    const voice = { env, gate, sources, nodes, end, priority, mono, cost, born: at, done: false, released: false };
+    const voice = { env, gate, sources, nodes, end, priority, mono, cost, born: at, done: false, released: false, cutAt: null };
     let pending = sources.length;
     for (const src of sources) {
       src.onended = () => {
@@ -388,10 +491,14 @@ export class SoundEngine {
 
   /** Corta uma voz em `when` (agora, por padrão) com fade de 15 ms e libera a vaga na polifonia. */
   release(voice, when = null) {
-    if (!voice || voice.done || voice.released) return;
-    voice.released = true;
+    if (!voice || voice.done) return;
     const t = Math.max(this.ctx.currentTime, when ?? 0);
+    // já cortada: só adianta o corte (a polifonia pode precisar da vaga antes)
+    if (voice.released && voice.cutAt <= t) return;
     const g = voice.gate.gain;
+    if (voice.released) g.cancelScheduledValues(t);
+    voice.released = true;
+    voice.cutAt = t;
     g.setValueAtTime(1, t);
     g.linearRampToValueAtTime(0, t + 0.015);
     const stopAt = Math.min(voice.end, t + 0.02);
@@ -713,6 +820,7 @@ export class SoundEngine {
     const t = this.ctx.currentTime;
     const start = Math.max(t + 0.08, this.musicHoldUntil);
     this.seq = { name, step: 0, next: start };
+    this.applyCutoff();
     // entrada limpa: a trilha nova sobe do silêncio
     const g = this.musicBus.gain;
     g.cancelScheduledValues(t);
@@ -744,13 +852,31 @@ export class SoundEngine {
   scheduleStep(track, step, at, tempo) {
     const beat = step % 16;
     const chord = track.chords[Math.floor(step / 16) % track.chords.length];
+    const electric = track.style === 'electric';
     const bass = track.bass[beat];
-    if (bass !== undefined) this.bassNote(chord.root + bass, at, beat === 0 ? 1 : 0.8);
+    if (bass !== undefined) {
+      if (electric) this.sawBass(chord.root + bass, at, beat % 4 === 0 ? 1 : 0.78);
+      else this.bassNote(chord.root + bass, at, beat === 0 ? 1 : 0.8);
+    }
     const comp = track.comp[beat];
-    if (comp) this.epChord(chord.ep, at, comp / tempo, beat === 0 ? 1 : 0.78);
-    if (track.kick.includes(beat)) this.kick(at);
+    if (comp) {
+      if (electric) this.powerChord(chord.ep, at, comp / tempo, beat === 0 ? 1 : 0.82);
+      else this.epChord(chord.ep, at, comp / tempo, beat === 0 ? 1 : 0.78);
+    }
+    const lead = track.lead?.[beat];
+    if (lead !== undefined) this.leadNote(chord.root + lead, at, beat % 8 === 0 ? 1 : 0.8);
+    if (track.kick.includes(beat)) this.kick(at, electric);
+    if (track.snare?.includes(beat)) this.snare(at);
     if (track.rim.includes(beat)) this.rim(at);
     if (track.brush?.includes(beat)) this.drum({ at, freq: 4200, filter: 'bandpass', q: 0.7, peak: 0.08, dur: 0.16, attack: 0.03 });
+    // chimbal da faixa elétrica: semicolcheias, acento no contratempo, aberto no fim do compasso
+    if (track.hats) {
+      const open = beat === 14;
+      const accent = beat % 4 === 2;
+      const boost = this.tension ? 1.25 : 1;
+      this.drum({ at, freq: 9000, filter: 'highpass', q: 0.9, peak: (open ? 0.15 : accent ? 0.12 : 0.065) * boost, dur: open ? 0.14 : 0.024 });
+      return;
+    }
     // camada de tensão: hi-hats em semicolcheias, acento no contratempo e um aberto no fim do compasso
     if (this.tension) {
       const open = beat === 14;
@@ -827,7 +953,8 @@ export class SoundEngine {
     });
   }
 
-  kick(at) {
+  kick(at, hard = false) {
+    // `hard` (faixa elétrica): começa mais agudo (o "clique" do pedal duplo) e soca mais forte
     this.spawn({
       at,
       end: at + 0.16,
@@ -836,16 +963,134 @@ export class SoundEngine {
       build: (env) => {
         const g = env.gain;
         g.setValueAtTime(SILENT, at);
-        g.exponentialRampToValueAtTime(0.5, at + 0.003);
-        g.exponentialRampToValueAtTime(SILENT, at + 0.13);
+        g.exponentialRampToValueAtTime(hard ? 0.62 : 0.5, at + 0.003);
+        g.exponentialRampToValueAtTime(SILENT, at + (hard ? 0.12 : 0.13));
         const osc = this.ctx.createOscillator();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(115, at);
-        osc.frequency.exponentialRampToValueAtTime(48, at + 0.1);
+        osc.frequency.setValueAtTime(hard ? 170 : 115, at);
+        osc.frequency.exponentialRampToValueAtTime(hard ? 44 : 48, at + (hard ? 0.07 : 0.1));
         osc.connect(env);
         return { sources: [osc] };
       },
     });
+  }
+
+  /** Saturação compartilhada (criada uma vez); sem WaveShaper (navegador antigo), passa direto. */
+  driveNode() {
+    if (typeof this.ctx.createWaveShaper !== 'function') return null;
+    this.driveShape = this.driveShape ?? driveCurve();
+    const shaper = this.ctx.createWaveShaper();
+    shaper.curve = this.driveShape;
+    shaper.oversample = 'none';
+    return shaper;
+  }
+
+  /** Baixo elétrico dos chefes: serra saturada, filtro ressonante abrindo e fechando a cada nota (mono). */
+  sawBass(note, at, vel) {
+    const freq = midi(note);
+    const dur = 0.17;
+    this.spawn({
+      at,
+      end: at + dur + 0.04,
+      bus: this.musicBus,
+      priority: PRIORITY.music,
+      mono: 'bass',
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.42 * vel, at + 0.004);
+        g.exponentialRampToValueAtTime(0.2 * vel, at + 0.07);
+        g.exponentialRampToValueAtTime(SILENT, at + dur);
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+        const tone = this.ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.Q.value = 7;
+        tone.frequency.setValueAtTime(2400, at);
+        tone.frequency.exponentialRampToValueAtTime(320, at + 0.12);
+        osc.connect(tone);
+        const drive = this.driveNode();
+        if (drive) {
+          tone.connect(drive);
+          drive.connect(env);
+        } else tone.connect(env);
+        return { sources: [osc], nodes: drive ? [tone, drive] : [tone] };
+      },
+    });
+  }
+
+  /** Power chord distorcido (fundamental + quinta, 2 vozes), curto e seco, em contratempo (mono). */
+  powerChord(notes, at, dur, vel) {
+    const tail = dur + 0.06;
+    this.spawn({
+      at,
+      end: at + tail + 0.03,
+      bus: this.musicBus,
+      priority: PRIORITY.music,
+      mono: 'ep',
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.13 * vel, at + 0.006);
+        g.exponentialRampToValueAtTime(0.07 * vel, at + dur * 0.6);
+        g.exponentialRampToValueAtTime(SILENT, at + tail);
+        const tone = this.ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.Q.value = 1.2;
+        tone.frequency.value = 3200;
+        const drive = this.driveNode();
+        if (drive) {
+          drive.connect(tone);
+        }
+        tone.connect(env);
+        const sources = notes.slice(0, 2).map((n, i) => {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.value = midi(n);
+          osc.detune.value = i ? 7 : -7;
+          osc.connect(drive ?? tone);
+          return osc;
+        });
+        return { sources, nodes: drive ? [drive, tone] : [tone] };
+      },
+    });
+  }
+
+  /** Arpejo elétrico: onda quadrada com um "bend" curto para baixo, filtrada e seca (mono). */
+  leadNote(note, at, vel) {
+    const freq = midi(note);
+    const dur = 0.11;
+    this.spawn({
+      at,
+      end: at + dur + 0.03,
+      bus: this.musicBus,
+      priority: PRIORITY.music,
+      mono: 'lead',
+      build: (env) => {
+        const g = env.gain;
+        g.setValueAtTime(SILENT, at);
+        g.exponentialRampToValueAtTime(0.075 * vel, at + 0.004);
+        g.exponentialRampToValueAtTime(SILENT, at + dur);
+        const osc = this.ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq * 1.03, at);
+        osc.frequency.exponentialRampToValueAtTime(freq, at + 0.02);
+        const tone = this.ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.Q.value = 3;
+        tone.frequency.setValueAtTime(3600, at);
+        tone.frequency.exponentialRampToValueAtTime(1400, at + dur);
+        osc.connect(tone);
+        tone.connect(env);
+        return { sources: [osc], nodes: [tone] };
+      },
+    });
+  }
+
+  /** Caixa da faixa elétrica: estalo de ruído com corpo médio. */
+  snare(at) {
+    this.drum({ at, freq: 1900, filter: 'bandpass', q: 0.8, peak: 0.26, dur: 0.11, attack: 0.001 });
   }
 
   /** Aro da caixa (bossa): estalo de madeira curto. */
@@ -1043,6 +1288,64 @@ export class SoundEngine {
     this.noise({ freq: 1400, filter: 'bandpass', q: 0.6, peak: 0.3, dur: 0.22, attack: 0.004, delay: 0.04 });
     [0.12, 0.42, 0.85].forEach((delay, i) => this.noise({ freq: 160 - i * 30, filter: 'lowpass', q: 0.8, peak: 0.55 - i * 0.12, dur: 0.9 + i * 0.3, attack: 0.05, delay }));
     this.tone({ type: 'sine', freq: 52, freqEnd: 30, peak: 0.6, dur: 1.6, attack: 0.08, delay: 0.1 });
+  }
+
+  /**
+   * Entrada do Dono (Patch 0.8.2), 1: a luz do boteco falhando. O zumbido da fiação por baixo e
+   * um estalo elétrico em cada apagada (no mesmo tempo das piscadas do CSS `secret-flicker`).
+   */
+  playLightsFlicker() {
+    this.duck();
+    this.tone({ type: 'sawtooth', freq: 60, freqEnd: 58, peak: 0.07, dur: FLICKER_OUT, attack: 0.05 });
+    FLICKER_CUTS.forEach((delay, i) => {
+      this.noise({ freq: 5200, filter: 'highpass', q: 0.8, peak: 0.26, dur: 0.035, delay });
+      this.tone({ type: 'square', freq: 118 - i * 8, freqEnd: 70, peak: 0.07, dur: 0.07, delay: delay + 0.01 });
+    });
+    // o último estalo, mais forte: a lâmpada queima
+    this.noise({ freq: 2600, filter: 'bandpass', q: 0.9, peak: 0.34, dur: 0.06, delay: FLICKER_OUT });
+    this.tone({ type: 'triangle', freq: 1900, freqEnd: 240, peak: 0.06, dur: 0.16, delay: FLICKER_OUT + 0.01 });
+  }
+
+  /** 2: no escuro total, dois pares de batidas de coração graves. */
+  playHeartbeat() {
+    [0, 0.2, 0.78, 0.98].forEach((delay, i) => this.tone({ type: 'triangle', freq: i % 2 ? 64 : 74, freqEnd: 38, peak: i % 2 ? 0.5 : 0.62, dur: 0.16, delay }));
+  }
+
+  /** 3: as runas do círculo acendendo uma a uma: um "tim" frio descendo, meio-tom contra meio-tom. */
+  playRuneIgnite(count = 8, gap = 0.13) {
+    const notes = [659, 622, 698, 587, 554, 523, 494, 466];
+    for (let i = 0; i < count; i += 1) {
+      this.tone({ type: 'triangle', freq: notes[i % notes.length], freqEnd: notes[i % notes.length] * 0.985, peak: 0.07, dur: 0.2, attack: 0.008, delay: i * gap });
+    }
+  }
+
+  /** 4: os olhos dourados abrindo no breu: um ronco grave e um brilho dissonante por cima. */
+  playDonoEyes() {
+    this.duck();
+    this.tone({ type: 'sawtooth', freq: 55, freqEnd: 49, peak: 0.16, dur: 1.5, attack: 0.35 });
+    this.tone({ type: 'sine', freq: 1244.5, peak: 0.035, dur: 1.2, attack: 0.45, delay: 0.1 });
+    this.tone({ type: 'sine', freq: 1318.5, peak: 0.03, dur: 1.1, attack: 0.5, delay: 0.16 });
+  }
+
+  /**
+   * Maleta abrindo no Balcão (Patch 0.8.2): os dois fechos estalando, a dobradiça rangendo, a
+   * tampa assentando no veludo e um brilho curto (o que tem dentro).
+   */
+  playCaseOpen() {
+    [0, 0.07].forEach((delay, i) => {
+      this.noise({ freq: 3400 - i * 300, filter: 'highpass', q: 0.9, peak: 0.26, dur: 0.022, delay });
+      this.tone({ type: 'square', freq: 980 - i * 120, freqEnd: 520, peak: 0.045, dur: 0.035, delay });
+    });
+    this.tone({ type: 'sawtooth', freq: 230, freqEnd: 150, peak: 0.035, dur: 0.22, attack: 0.03, delay: 0.14 });
+    this.noise({ freq: 520, filter: 'lowpass', q: 0.7, peak: 0.2, dur: 0.12, attack: 0.02, delay: 0.3 });
+    this.tone({ type: 'triangle', freq: 1568, peak: 0.07, dur: 0.3, delay: 0.32 });
+    this.tone({ type: 'triangle', freq: 2349, peak: 0.05, dur: 0.36, delay: 0.38 });
+  }
+
+  /** A maleta que estava aberta fecha quando você abre outra: baque abafado da tampa. */
+  playCaseClose() {
+    this.tone({ type: 'triangle', freq: 150, freqEnd: 72, peak: 0.24, dur: 0.08, delay: 0.05 });
+    this.noise({ freq: 900, q: 1, peak: 0.12, dur: 0.04, delay: 0.05 });
   }
 
   /** Dano de coração: dois baques de batimento e um estalo rachando (a música abaixa). */
