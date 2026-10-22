@@ -38,6 +38,7 @@
  * Ícones: mapas de pixels 12x12 (cada caractere aponta para a paleta; '.' é vazio).
  */
 
+import { mixSeed } from '../engine/seedEngine.js';
 import { boardTileCount, canPlayOn, isDouble, pipSum, sortHand } from '../engine/dominoLogic.js';
 import { directDamage, emit, gainCoins, loseCoins, patchFx, proc } from '../engine/effects.js';
 import { getEnhancement } from './enhancedTiles.js';
@@ -59,16 +60,11 @@ export function markUsed(state, owner, id) {
 
 export const isUsed = (state, owner, id) => state.fx.used[owner].includes(id);
 
-/** Sorteio de 0 a 99 fixo pela semente da run e pelo momento da partida (sem Math.random no reducer). */
-function roll(state, salt) {
-  let h = ((state.seed ?? 0) >>> 0) ^ 0x811c9dc5;
-  const text = `${salt}-${state.round}-${state.seq}`;
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h % 100;
-}
+/**
+ * Sorteio de 0 a 99 fixo pela semente da run e pelo momento da partida (sem Math.random no
+ * reducer), pelo `mixSeed` do motor de sementes.
+ */
+const roll = (state, salt) => mixSeed(state.seed ?? 0, `${salt}-${state.round}-${state.seq}`) % 100;
 
 /** `seat` compra `count` pedras do topo do dorme de graça (Rádio de Pilha), como elas são no baralho dele. */
 function forceDraw(state, seat, count) {

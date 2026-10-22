@@ -13,6 +13,8 @@
  * especiais (curinga, ±1, Bucha de Aço) levam `via`.
  */
 
+import { mulberry32, shuffleWith } from './seedEngine.js';
+
 export const MAX_PIP = 6;
 export const HAND_SIZE = 7;
 export const MAX_HEARTS = 5;
@@ -70,27 +72,11 @@ export function createDoubleSixSet() {
 export const FULL_SET = Object.freeze(createDoubleSixSet());
 export const TOTAL_PIPS = FULL_SET.reduce((sum, t) => sum + t.a + t.b, 0);
 
-/** Fisher–Yates. Não altera o array original. */
-export function shuffle(items, rng = Math.random) {
-  const out = items.slice();
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
+/** Fisher–Yates. Não altera o array original (o mesmo do motor de sementes, engine/seedEngine.js). */
+export const shuffle = (items, rng = Math.random) => shuffleWith(items, rng);
 
-/** Gerador determinístico (mulberry32) — útil para testes e seeds de rodada. */
-export function createSeededRng(seed) {
-  let s = seed >>> 0;
-  return function rng() {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/** Gerador determinístico (Mulberry32 do motor de sementes): as seeds da run e dos testes. */
+export const createSeededRng = mulberry32;
 
 export const isDouble = (tile) => tile.a === tile.b;
 export const pipSum = (tile) => tile.a + tile.b;

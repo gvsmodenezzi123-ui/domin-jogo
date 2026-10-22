@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import OptionsPanel from './OptionsPanel.jsx';
+import SeedChip from './SeedChip.jsx';
 
 /** Pausa: o rival espera enquanto o menu está aberto. */
-export default function PauseMenu({ rivalName = 'O rival', muted, onToggleMute, onResume, onQuit, settings, onSettings }) {
+export default function PauseMenu({ rivalName = 'O rival', seedCode = null, muted, onToggleMute, onResume, onQuit, settings, onSettings }) {
   const [options, setOptions] = useState(false);
   return (
     <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-6" role="dialog" aria-modal="true" aria-labelledby="pause-title">
@@ -35,6 +36,8 @@ export default function PauseMenu({ rivalName = 'O rival', muted, onToggleMute, 
               </button>
               <p className="font-term text-[15px] leading-tight text-bone-400">A run fica salva no mapa; esta mesa recomeça.</p>
             </div>
+            {/* Patch 0.9.2: a semente da run no canto, para copiar e repetir */}
+            <SeedChip code={seedCode} className="pause-seed mt-4" />
           </>
         )}
       </div>

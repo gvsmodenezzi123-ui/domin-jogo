@@ -4,6 +4,7 @@ import { MALETAS, MALETA_IDS } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { sound } from '../engine/audioSynth.js';
 import { markMaletasSeen } from '../engine/meta.js';
+import { SEED_MAX_LENGTH, normalizeSeed } from '../engine/seedEngine.js';
 import { haptic } from '../engine/progress.js';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
@@ -144,6 +145,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
   const [shake, setShake] = useState({ id: null, n: 0 });
   const [mode, setMode] = useState('normal');
   const [warn, setWarn] = useState({ n: 0, text: '' });
+  // Patch 0.9.2: semente opcional (em branco, o jogo sorteia uma nova ao iniciar)
+  const [seed, setSeed] = useState('');
   const modesOpen = { normal: true, hard: blackUnlocked, inferno: silverUnlocked };
   // na primeira vez que uma maleta aparece liberada, as correntes caem
   const [fresh] = useState(() => unlocked.filter((id) => id !== 'classica' && !seen.includes(id)));
@@ -246,7 +249,27 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
                 {warn.text}
               </p>
             )}
-            <button type="button" data-tone="play" className="btn-pixel counter-start" onClick={() => onStart({ maleta: selected, mode, challenge })}>
+            <label className="seed-field">
+              <span className="seed-field-label">SEMENTE (OPCIONAL)</span>
+              <input
+                className="seed-field-input"
+                type="text"
+                value={seed}
+                onChange={(e) => setSeed(e.target.value.toUpperCase().slice(0, SEED_MAX_LENGTH))}
+                placeholder="BUX-9K2 · em branco: sorteia"
+                maxLength={SEED_MAX_LENGTH}
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                aria-describedby="seed-field-hint"
+              />
+              <span id="seed-field-hint" className="seed-field-hint">
+                {normalizeSeed(seed) ? `A run sai igual para quem usar ${normalizeSeed(seed)}.` : 'Cole uma semente para repetir uma run.'}
+              </span>
+            </label>
+            <button type="button" data-tone="play" className="btn-pixel counter-start" onClick={() => onStart({ maleta: selected, mode, challenge, seed })}>
               INICIAR
             </button>
           </div>

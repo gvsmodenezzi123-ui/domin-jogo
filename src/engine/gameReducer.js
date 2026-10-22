@@ -28,6 +28,7 @@ import { CAPS_PER_BOSS, CAPS_PER_CHALLENGE, CAPS_PER_CLEAR, CAPS_PER_RIVAL, CHAL
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
 import { FIRST_RIVAL, RIVALS, SECRET_BOSS, getRival, rivalFor, rivalOf } from '../data/rivals.js';
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
+import { normalizeSeed, seedNumberOf } from './seedEngine.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
 import { availableNodes, campaignOf, coinReward, currentNode, mixSeed, regionIdOf } from './campaignMap.js';
 import {
@@ -165,6 +166,8 @@ export function createInitialState() {
     fx: createRoundFx(),
     pending: null,
     seed: null,
+    // Patch 0.9.2: a semente como o jogador vê e copia ("BUX-9K2"); `seed` é o número dela
+    seedCode: null,
     events: [],
     seq: 0,
   };
@@ -1099,6 +1102,8 @@ function newRun(state, action) {
   const maleta = maletaOf(maletaId);
   const perks = (action.perks ?? []).filter((id) => UPGRADES[id]);
   const bare = challenge === 'soNoOsso';
+  // semente em texto (Patch 0.9.2): o número sai dela quando o App não manda os dois
+  const seedCode = normalizeSeed(action.seedCode);
   const sized = { maleta: maletaId, perks };
   const relics = bare ? [] : [...maleta.relics, ...(action.relics ?? [])].filter((id, i, all) => getRelic(id) && all.indexOf(id) === i).slice(0, relicSlotsFor(sized));
   const maxHearts = challenge === 'tudoOuNada' ? 1 : mode.maxHearts;
@@ -1114,7 +1119,8 @@ function newRun(state, action) {
     coins: { ...base.coins, player: startCoinsFor(mode.startCoins, maletaId, perks) },
     relics: bySeat(relics, []),
     decks: bySeat(bare ? {} : { ...maleta.playerDeck, ...(action.playerDeck ?? {}) }, {}),
-    seed: Number.isFinite(action.seed) ? action.seed >>> 0 : null,
+    seed: Number.isFinite(action.seed) ? action.seed >>> 0 : seedCode ? seedNumberOf(seedCode) : null,
+    seedCode,
     unlocks: (action.unlocks ?? state.unlocks ?? []).filter((id) => RELICS[id]),
     seq: state.seq,
     events: state.events,
@@ -1131,6 +1137,7 @@ function loadRun(state, action) {
     ...createInitialState(),
     phase,
     seed: save.seed ?? null,
+    seedCode: normalizeSeed(save.seedCode),
     run: {
       node: save.node,
       cleared: [...save.cleared],

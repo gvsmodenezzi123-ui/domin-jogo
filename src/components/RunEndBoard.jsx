@@ -19,7 +19,7 @@ function Caps({ value, className = '' }) {
 /**
  * "A Conta do Boteco" (Patch 0.8.0): a lousa que abre sozinha no fim de toda run, perdida
  * ou vencida. Mostra as Tampinhas Douradas que a run rendeu, o saldo e as 4 melhorias
- * permanentes para comprar ali mesmo (engine/meta.js grava). TENTAR DE NOVO leva direto ao
+ * permanentes para comprar ali mesmo (engine/meta.js grava). TENTAR NOVAMENTE leva direto ao
  * Balcão de Maletas, já com os bônus valendo.
  */
 export default function RunEndBoard({ runCaps = 0, onRetry, onMenu }) {
@@ -79,7 +79,7 @@ export default function RunEndBoard({ runCaps = 0, onRetry, onMenu }) {
         </ul>
       </div>
       <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onRetry}>
-        TENTAR DE NOVO
+        TENTAR NOVAMENTE
       </button>
       <button type="button" className="text-action mt-2 font-pixel text-[9px] text-bone-300" onClick={onMenu}>
         MENU

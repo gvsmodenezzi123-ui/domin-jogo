@@ -86,6 +86,48 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.2: sementes e a lousa da tentativa
+
+### Motor de sementes (`engine/seedEngine.js`)
+
+- **PRNG Mulberry32** leve e sem dependências: `generateRandomSeed()` (6 caracteres
+  maiúsculos em dois grupos, ex.: `BUX-9K2`, sem 0/O/1/I), `initPRNG(semente)` (texto →
+  hash de 32 bits), `random()`, `randomRange(min, max)`, `randomInt` e `shuffle(array, chave)`.
+- **Uma run inteira sai da semente:** a teia de caminhos e o elenco de cada região, a vitrine
+  da Loja Clandestina, o Mercado Negro, o dinheiro do Seu Tião e os sorteios dos talismãs já
+  saíam do número da semente. Agora usam este motor (é o mesmo Mulberry32 e o mesmo
+  `mixSeed` de antes, então runs e saves antigos não mudam). O embaralhamento das 28 pedras
+  de cada rodada também passou a sair dela, numa sequência própria por nó, rival e rodada.
+  Mesma semente + mesmas escolhas = mesmas mesas, mesmas mãos e mesmos itens.
+- **Balcão:** campo **SEMENTE (OPCIONAL)** embaixo das peças. Em branco, o jogo sorteia uma
+  semente nova; colando uma, a run sai igual. Com ou sem hífen, maiúscula ou minúscula, é a
+  mesma semente.
+- **Pausa e fim da run:** a semente no canto com o botão **COPIAR SEMENTE**
+  (`navigator.clipboard`, com "COPIADA!" na hora). Runs salvas antes do 0.9.2 aparecem como
+  `#número`, e colar `#número` repete aquela run.
+- O save guarda a semente em texto (`seedCode`).
+
+### Estatísticas da tentativa (`engine/runStats.js`)
+
+Coletor em memória (com uma cópia no aparelho, `buxaria:run_stats`, para o CONTINUAR não
+perder a conta), alimentado pelos eventos da mesa: `doublePlays`, `mugginsHit`,
+`mugginsGoldEarned`, `trancaWins`, `trancaLosses`, `biggestRivalDamage` (o rival que mais te
+tirou corações; o que você paga comprando com coração ou com Dado de Osso/Cálice não conta) e
+`tampinhasCollected`.
+
+### A lousa do fim (`RunSummaryBoard.jsx`, `GameOverModal.jsx`, `VictoryModal.jsx`)
+
+Quadro-negro de bar em moldura de madeira, escrito a giz, com rabiscos de contagem e uma
+pedrinha desenhada, e a canaleta com os tocos de giz e o apagador:
+
+- **Cabeçalho:** "TENTATIVA CONCLUÍDA" ou "NOCAUTEADO POR [RIVAL]", e a semente com o botão
+  de copiar.
+- **Placar:** Buchas Jogadas, Múltiplos de 5 Fechados (+$ ganhos), Desempenho em Trancas
+  (Vitórias | Derrotas), Maior Algoz e Tampinhas de Boteco Conquistadas, mais a ficha curta
+  (mesas, região, modo e maleta).
+- **COPIAR RESUMO** copia o texto da run para mandar numa conversa; **TENTAR NOVAMENTE** (na
+  Conta do Boteco, logo abaixo) volta ao Balcão de Maletas.
+
 ## Patch 0.9.1: estatísticas da conta (Caderno de Fiado)
 
 ### Motor (`engine/accountStats.js`, gravado em `buxaria_lifetime_stats`)

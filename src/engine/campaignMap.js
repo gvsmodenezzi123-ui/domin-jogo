@@ -23,6 +23,7 @@
 import { REGIONS } from '../data/campaign.js';
 import { RIVALS } from '../data/rivals.js';
 import { createSeededRng } from './dominoLogic.js';
+import { mixSeed, shuffleWith } from './seedEngine.js';
 
 export const FLOORS = 6;
 export const LANES = 3;
@@ -60,23 +61,10 @@ const FLOOR_PATTERNS = [
 export const nodeId = (region, floor, lane) => `r${region}-f${floor}-l${lane}`;
 
 /** Mistura a semente da run com um texto (id do nó, região) para sortear sem depender da ordem. */
-export function mixSeed(seed, text) {
-  let h = (seed >>> 0) ^ 0x811c9dc5;
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h >>> 0;
-}
+export { mixSeed };
 
-const shuffled = (items, rng) => {
-  const out = items.slice();
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-};
+// sorteios da teia e do elenco: o Fisher–Yates do motor de sementes
+const shuffled = shuffleWith;
 
 /**
  * Elenco desta run na região: o chefe fixo e 4 dos outros 5 (sorteados pela semente).

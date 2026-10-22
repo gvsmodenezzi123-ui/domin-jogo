@@ -43,15 +43,16 @@ import {
   unlockAchievement,
 } from './engine/achievements.js';
 import { trackStatsEvents } from './engine/accountStats.js';
+import { trackRunStatsEvents } from './engine/runStats.js';
+import { generateRandomSeed, initPRNG, normalizeSeed, seedLabelOf, shuffle as seededShuffle } from './engine/seedEngine.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
-import { mapRegionId, regionIdOf } from './engine/campaignMap.js';
+import { mapRegionId, nodeOf, regionIdOf } from './engine/campaignMap.js';
 import {
   FULL_SET,
   boardTilesInOrder,
   getOpenEnds,
   getPlayableMoves,
   getValidSides,
-  shuffle,
 } from './engine/dominoLogic.js';
 import { bonusFloat, buildPlayerHint, deriveHurtKey, deriveTioZeMood, deriveTioZeSpeech } from './engine/gameFeedback.js';
 import { foreseenRivalTile } from './engine/foresight.js';
@@ -95,9 +96,15 @@ import {
 import { snapshotRun } from './engine/save.js';
 import { sellPriceFor } from './engine/shop.js';
 
-const newDeck = () => shuffle(FULL_SET);
+// Patch 0.9.2: as pedras de cada rodada saem da semente da run (engine/seedEngine.js), numa
+// sequência própria para cada mesa e rodada (`key`): mesma semente + mesmas escolhas = mesmas mãos
+const dealDeck = (state, key) => {
+  if (state.seed != null) initPRNG(state.seedCode ?? state.seed);
+  return seededShuffle(FULL_SET, key);
+};
 /** Semente da run: sorteia a teia de caminhos, as vitrines e as gorjetas do Seu Tião. */
-const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+/** A semente da run nova: a digitada no Balcão (normalizada) ou uma sorteada. */
+const seedForRun = (typed) => normalizeSeed(typed) ?? generateRandomSeed();
 
 const DEV_KEY = 'buxaria:dev';
 /**
@@ -571,6 +578,8 @@ export default function App() {
     // Patch 0.9.1: a carreira (Caderno de Fiado) soma os mesmos eventos; vem antes das
     // conquistas para o ponto de partida das tampinhas ainda não ter as desta mesa
     trackStatsEvents(fresh, latestState.current);
+    // Patch 0.9.2: os números desta tentativa (lousa do fim)
+    trackRunStatsEvents(fresh, latestState.current);
     trackAchievements(fresh, latestState.current);
   }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
 
@@ -804,7 +813,9 @@ export default function App() {
   };
 
   /** INICIAR RUN no Balcão: a maleta, as peças (Brancas/Pretas), o desafio e as melhorias compradas. */
-  const newGame = ({ maleta = 'classica', mode = 'normal', challenge = null } = {}) => {
+  const newGame = ({ maleta = 'classica', mode = 'normal', challenge = null, seed = '' } = {}) => {
+    const seedCode = seedForRun(seed);
+    const seedNumber = initPRNG(seedCode);
     wakeAudio();
     sound.playClick();
     cutTo(() => {
@@ -812,7 +823,7 @@ export default function App() {
       clearRunSave();
       setSave(null);
       setTitlePick(false);
-      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id, maleta, challenge, perks: loadUpgrades(), unlocks: loadUnlockedRelics() });
+      dispatch({ type: 'NEW_RUN', seed: seedNumber, seedCode, mode: modeOf(mode).id, maleta, challenge, perks: loadUpgrades(), unlocks: loadUnlockedRelics() });
     });
   };
 
@@ -833,7 +844,7 @@ export default function App() {
     sound.playClick();
     cutTo(() => {
       resetTable();
-      dispatch({ type: 'START_SECRET', deck: newDeck() });
+      dispatch({ type: 'START_SECRET', deck: dealDeck(state, `${state.run.node}:${SECRET_BOSS}:1`) });
     });
   };
 
@@ -845,6 +856,8 @@ export default function App() {
     }
     wakeAudio();
     sound.playClick();
+    // a semente do save volta a ser a ativa (as rodadas seguintes saem dela)
+    initPRNG(saved.seedCode ?? saved.seed ?? 0);
     cutTo(() => {
       resetTable();
       dispatch({ type: 'LOAD_RUN', save: saved, perks: loadUpgrades(), unlocks: loadUnlockedRelics() });
@@ -856,14 +869,14 @@ export default function App() {
     sound.playClick();
     cutTo(() => {
       resetTable();
-      dispatch({ type: 'CHOOSE_NODE', nodeId, deck: newDeck() });
+      dispatch({ type: 'CHOOSE_NODE', nodeId, deck: dealDeck(state, `${nodeId}:${nodeOf(state, nodeId)?.rivalId ?? 'parada'}:1`) });
     });
   };
 
   const nextRound = () => {
     sound.playClick();
     setSelectedId(null);
-    dispatch({ type: 'NEXT_ROUND', deck: newDeck() });
+    dispatch({ type: 'NEXT_ROUND', deck: dealDeck(state, `${state.run.node}:${state.rivalId}:${state.round + 1}`) });
   };
 
   // venceu a mesa: volta para o mapa da teia (no botão ou sozinho depois de uns segundos)
@@ -987,7 +1000,7 @@ export default function App() {
     }
     setSelectedId(null);
     // trocar de rival recomeça a partida: precisa de um baralho novo
-    dispatch(action.op === 'setRival' ? { ...action, deck: newDeck() } : action);
+    dispatch(action.op === 'setRival' ? { ...action, deck: dealDeck(state, `dev:${action.rivalId}:${state.seq}`) } : action);
     if (action.op === 'setRival') {
       clearFloats();
       clearTableAnim();
@@ -1266,6 +1279,7 @@ export default function App() {
       {menuOpen && (
         <PauseMenu
           rivalName={rival.name}
+          seedCode={seedLabelOf(state)}
           muted={muted}
           onToggleMute={toggleMute}
           onResume={closeMenu}

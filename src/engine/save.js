@@ -14,6 +14,7 @@
  * tampinhas da run. Saves da versão 3 continuam valendo (Maleta Clássica, sem desafio).
  */
 
+import { SEED_MAX_LENGTH } from './seedEngine.js';
 import { MODES, modeOf } from '../data/difficulty.js';
 import { MALETAS } from '../data/maletas.js';
 import { CHALLENGES } from '../data/meta.js';
@@ -38,6 +39,7 @@ export function snapshotRun(state, resume, savedAt = 0) {
     challenge: state.challenge ?? null,
     fiadoUsed: Boolean(state.run.fiadoUsed),
     seed: state.seed,
+    seedCode: state.seedCode ?? null,
     node: state.run.node,
     cleared: [...state.run.cleared],
     path: [...state.run.path],
@@ -96,6 +98,8 @@ export function isValidSave(save) {
   if (save.maleta != null && !MALETAS[save.maleta]) return false;
   if (save.challenge != null && !CHALLENGES[save.challenge]) return false;
   if (save.seed != null && !isInt(save.seed)) return false;
+  // Patch 0.9.2: a semente em texto (saves antigos não têm)
+  if (save.seedCode != null && (typeof save.seedCode !== 'string' || save.seedCode.length > SEED_MAX_LENGTH)) return false;
   const campaign = generateCampaign(save.seed ?? 0);
   const known = (id) => typeof id === 'string' && campaign.byId.has(id);
   if (save.node !== null && !known(save.node)) return false;

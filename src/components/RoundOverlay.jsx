@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
 import { modeBadge, modeOf } from '../data/difficulty.js';
-import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { getRelic } from '../data/relics.js';
 import { currentNode } from '../engine/campaignMap.js';
@@ -11,7 +10,8 @@ import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
-import RunEndBoard from './RunEndBoard.jsx';
+import GameOverModal from './GameOverModal.jsx';
+import VictoryModal from './VictoryModal.jsx';
 
 const KIND_TITLE = {
   normal: 'BATIDA!',
@@ -116,28 +116,6 @@ function KnockedOut({ rival }) {
   );
 }
 
-function RunStats({ state }) {
-  const { stats } = state;
-  return (
-    <dl className="mx-auto mt-4 grid max-w-[250px] grid-cols-2 gap-y-1 text-left font-term text-lg">
-      <dt className="text-bone-300">Mesas vencidas</dt>
-      <dd className="text-right text-bone-50">{stats.matchesWon}</dd>
-      <dt className="text-bone-300">Nós percorridos</dt>
-      <dd className="text-right text-bone-50">{state.run.cleared.length}</dd>
-      <dt className="text-bone-300">Região</dt>
-      <dd className="text-right text-bone-50">{currentNode(state)?.region ?? 1}/{REGIONS.length}</dd>
-      <dt className="text-bone-300">Rodadas vencidas</dt>
-      <dd className="text-right text-bone-50">{stats.roundsWon.player}</dd>
-      <dt className="text-bone-300">Moedas ganhas</dt>
-      <dd className="text-right text-bone-50">${stats.coinsEarned}</dd>
-      <dt className="text-bone-300">Pedras de grife</dt>
-      <dd className="text-right text-bone-50">{Object.keys(state.decks.player).length}</dd>
-      <dt className="text-bone-300">Maleta</dt>
-      <dd className="text-right text-bone-50">{maletaOf(state.maleta).short}</dd>
-    </dl>
-  );
-}
-
 /**
  * Resultado da rodada, do nó (vitória → volta ao mapa da teia), da run vencida
  * (último chefe) ou da run perdida (você zerou).
@@ -169,7 +147,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="round-title">
       <div
-        className={`${matchWon || runWon ? 'chalkboard' : 'overlay-card'} max-h-[94%] w-full max-w-[360px] overflow-y-auto px-4 py-5 text-center`}
+        className={`${matchWon ? 'chalkboard' : runWon || runOver ? 'run-end-card' : 'overlay-card'} max-h-[94%] w-full ${runWon || runOver ? 'max-w-[380px]' : 'max-w-[360px]'} overflow-y-auto px-4 py-5 text-center`}
       >
         {matchWon && (
           <>
@@ -201,44 +179,31 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
           </>
         )}
 
+        {/* Patch 0.9.2: o fim da run virou a lousa da tentativa (RunSummaryBoard) */}
         {runOver && (
-          <>
-            <div className="mx-auto mb-3 w-fit">
-              <RivalAvatar rival={rival} mood="smug" pixel={5} />
-            </div>
-            <p className="font-pixel text-[8px] text-bone-400">FIM DA RUN{state.challenge ? ` · DESAFIO ${challengeOf(state.challenge)?.name.toUpperCase()}` : ''}</p>
-            <h2 id="round-title" className="mt-2 font-pixel text-[16px] leading-snug text-blood-400 text-shadow-pixel">
-              {name} TE QUEBROU
-            </h2>
-            <p className="mt-2 font-term text-xl text-bone-200">
-              {KIND_TITLE[result.kind]} {subtitle}
-            </p>
-            <RunStats state={state} />
-            <RunEndBoard runCaps={state.stats.caps ?? 0} onRetry={onRestart} onMenu={onMenu} />
-          </>
+          <GameOverModal
+            state={state}
+            rival={rival}
+            kicker={`FIM DA RUN${state.challenge ? ` · DESAFIO ${challengeOf(state.challenge)?.name.toUpperCase()}` : ''}`}
+            howItEnded={`${KIND_TITLE[result.kind]} ${subtitle}`}
+            onRetry={onRestart}
+            onMenu={onMenu}
+          />
         )}
 
         {runWon && (
-          <>
-            <KnockedOut rival={rival} />
-            <p className="font-pixel text-[8px] text-bone-400">
-              {modeBadge(state.mode)}
-              {state.stats.matchesWon} MESAS · {REGIONS.length} REGIÕES
-            </p>
-            <h2 id="round-title" className="run-won-title mt-2 font-pixel text-[15px] leading-snug text-brass-300 text-shadow-pixel">
-              {secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
-            </h2>
-            <p className="mt-2 font-term text-xl text-bone-200">
-              {KIND_TITLE[result.kind]} {secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}
-            </p>
-            {state.challenge && <p className="mt-1 font-pixel text-[8px] text-amber-300">DESAFIO CONCLUÍDO: {challengeOf(state.challenge)?.name.toUpperCase()}</p>}
-            <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[10px] text-[#9fe08a]">
-              <span>PRÊMIO FINAL</span>
-              <CoinCount value={`${prizeShown}`} className="chalk-coins text-[14px]" size={18} />
-            </div>
-            <RunStats state={state} />
-            <RunEndBoard runCaps={state.stats.caps ?? 0} onRetry={onRestart} onMenu={onMenu} />
-          </>
+          <VictoryModal
+            state={state}
+            rival={rival}
+            portrait={<KnockedOut rival={rival} />}
+            kicker={`${modeBadge(state.mode)}${state.stats.matchesWon} MESAS · ${REGIONS.length} REGIÕES`}
+            title={secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
+            howItEnded={`${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}`}
+            challengeLine={state.challenge ? `DESAFIO CONCLUÍDO: ${challengeOf(state.challenge)?.name.toUpperCase()}` : null}
+            prizeShown={prizeShown}
+            onRetry={onRestart}
+            onMenu={onMenu}
+          />
         )}
 
         {!matchWon && !runOver && !runWon && (
