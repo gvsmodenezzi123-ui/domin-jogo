@@ -50,13 +50,13 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
   manda o jogo para o fundo sem fechar a partida.
 - **Painel DEV por build:** `VITE_DEV_PANEL=on|off`. Sem a variável (o site), o painel segue
   escondido até os 3 toques.
-- **Assinatura:** sem segredos, sai a build de debug assinada com a chave fixa de
+- **Assinatura:** sem segredos, a build de release sai assinada com a chave fixa de
   `android-extras/debug.keystore`. Ela é a mesma em todo build, então o APK novo instala por
   cima do antigo e o progresso fica.
 - **Play Store:** crie em Settings → Secrets and variables → Actions os segredos
   `ANDROID_KEYSTORE_BASE64` (o .jks em base64), `ANDROID_KEYSTORE_PASSWORD` e
   `ANDROID_KEY_ALIAS`. Com eles o workflow gera a build de release assinada com a sua chave.
-  Na troca de chave, desinstale o APK de debug uma vez.
+  Na troca de chave, desinstale o APK antigo uma vez.
 - **Ícones:** saem de `assets/` (e `assets/dev/` para o DEV) pelo `@capacitor/assets`.
 
 ## Regras básicas

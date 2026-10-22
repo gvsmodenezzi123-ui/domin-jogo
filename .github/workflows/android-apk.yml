@@ -5,11 +5,11 @@ name: APK Android
 #   Buxaria DEV  com.buxaria.domino.dev  painel DEV já liberado
 # Os dois instalam lado a lado. Ficam na aba Actions (artefatos) e numa Release
 # "Buxaria X.Y.Z (APK, build N)".
-# Assinatura: sem segredos, usa a chave de debug fixa de android-extras/debug.keystore
-# (a mesma em todo build: o APK novo instala por cima do antigo e o progresso fica).
-# Para a Play Store, crie os segredos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD e
-# ANDROID_KEY_ALIAS (Settings → Secrets and variables → Actions): aí sai o build de release
-# assinado com a sua chave.
+# Assinatura (build de release): sem segredos, usa a chave fixa de
+# android-extras/debug.keystore (a mesma em todo build: o APK novo instala por cima do
+# antigo e o progresso fica). Para a Play Store, crie os segredos ANDROID_KEYSTORE_BASE64,
+# ANDROID_KEYSTORE_PASSWORD e ANDROID_KEY_ALIAS (Settings → Secrets and variables →
+# Actions): aí o APK sai assinado com a sua chave.
 on:
   push:
     branches: [main, claude/buxaria-patch-0-1]
@@ -90,41 +90,46 @@ jobs:
           sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
           grep -n "screenOrientation" android/app/src/main/AndroidManifest.xml
           grep -n "versionCode\|versionName" android/app/build.gradle
-          npx cap sync android
+          cat >> android/app/build.gradle <<'GRADLE'
 
-      - name: Chave de assinatura
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/buxaria.jks"
-            echo "SIGNED=1" >> "$GITHUB_ENV"
-          else
-            # chave de debug fixa: todo build sai com a mesma assinatura
-            mkdir -p "$HOME/.android"
-            cp android-extras/debug.keystore "$HOME/.android/debug.keystore"
-            echo "Sem os segredos da chave: APK de debug com a chave fixa do repositório."
-          fi
+          // Buxaria: a assinatura vem do workflow (chave fixa do repositório ou a dos segredos)
+          android {
+              signingConfigs {
+                  buxaria {
+                      storeFile file(System.getenv("BUXARIA_KEYSTORE"))
+                      storePassword System.getenv("BUXARIA_KS_PASS")
+                      keyAlias System.getenv("BUXARIA_KS_ALIAS")
+                      keyPassword System.getenv("BUXARIA_KS_PASS")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.buxaria
+                  }
+              }
+          }
+          GRADLE
+          npx cap sync android
 
       - name: Gerar o APK
         working-directory: android
         env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          chmod +x gradlew
-          OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"
-          if [ "$SIGNED" = "1" ]; then
-            ./gradlew assembleRelease --no-daemon \
-              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/buxaria.jks" \
-              -Pandroid.injected.signing.store.password="$KS_PASS" \
-              -Pandroid.injected.signing.key.alias="$KS_ALIAS" \
-              -Pandroid.injected.signing.key.password="$KS_PASS"
-            cp app/build/outputs/apk/release/app-release.apk "$OUT"
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/buxaria.jks"
+            export BUXARIA_KEYSTORE="$RUNNER_TEMP/buxaria.jks" BUXARIA_KS_PASS="$KS_PASS" BUXARIA_KS_ALIAS="$KS_ALIAS"
+            echo "Assinando com a chave dos segredos."
           else
-            ./gradlew assembleDebug --no-daemon
-            cp app/build/outputs/apk/debug/app-debug.apk "$OUT"
+            export BUXARIA_KEYSTORE="$GITHUB_WORKSPACE/android-extras/debug.keystore" BUXARIA_KS_PASS=android BUXARIA_KS_ALIAS=androiddebugkey
+            echo "Sem os segredos: assinando com a chave fixa do repositório."
           fi
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$OUT"
           ls -la "$OUT"
 
       - uses: actions/upload-artifact@v4
