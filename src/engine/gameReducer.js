@@ -746,7 +746,7 @@ function skipDiscard(state) {
 }
 
 /** Canivete Suíço: abre a escolha da pedra que vai virar bucha (1x por partida). */
-function useCanivete(state) {
+function openCanivete(state) {
   if (!canUseCanivete(state)) return state;
   return { ...state, pending: { type: 'canivete' } };
 }
@@ -1203,7 +1203,7 @@ export function gameReducer(state, action) {
     case 'TIO_ZE_ACT':
       return tioZeAct(state);
     case 'USE_CANIVETE':
-      return useCanivete(state);
+      return openCanivete(state);
     case 'CANIVETE_PICK':
       return caniveteTransform(state, action);
     case 'CANCEL_CANIVETE':

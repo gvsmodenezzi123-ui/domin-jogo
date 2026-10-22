@@ -1,4 +1,5 @@
-import { BlackCase, useUnlockSequence } from './CaseSelect.jsx';
+import { BlackCase } from './CaseSelect.jsx';
+import { useUnlockSequence } from './useUnlockSequence.js';
 
 /**
  * Recompensa por zerar a Maleta Branca (Patch 0.6.3): antes do final, uma lousa escura

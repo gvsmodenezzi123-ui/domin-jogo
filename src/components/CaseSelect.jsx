@@ -3,37 +3,8 @@ import { HARD_LOCKED_TEXT, MODES } from '../data/difficulty.js';
 import { sound } from '../engine/audioSynth.js';
 import { haptic, loadHardIntroSeen, saveHardIntroSeen } from '../engine/progress.js';
 import LampRig from './LampRig.jsx';
-import { prefersReducedMotion } from './motion.js';
 import { CadeadoSprite, CorrentesSprite, MaletaBrancaSprite, MaletaPretaSprite } from './art/CaseArt.jsx';
-
-/** Do cadeado abrindo até a maleta aberta (ms). */
-const UNLOCK_AT = 450;
-const OPEN_AT = 1250;
-
-/**
- * Sequência da Maleta Preta destrancando: 'locked' → 'unlocking' (o cadeado abre e as
- * correntes caem, com o som seco da corrente) → 'open'. Com `play` falso fica no `rest`.
- */
-export function useUnlockSequence(play, rest = 'locked') {
-  const [stage, setStage] = useState(play ? 'locked' : rest);
-  useEffect(() => {
-    if (!play) return undefined;
-    const quick = prefersReducedMotion();
-    const timers = [
-      setTimeout(
-        () => {
-          setStage('unlocking');
-          sound.playChainUnlock();
-          haptic([20, 40, 60]);
-        },
-        quick ? 50 : UNLOCK_AT,
-      ),
-      setTimeout(() => setStage('open'), quick ? 120 : OPEN_AT),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, [play]);
-  return stage;
-}
+import { useUnlockSequence } from './useUnlockSequence.js';
 
 /** A Maleta Preta em qualquer estágio: trancada (corrente e cadeado), destrancando ou aberta (com a aura). */
 export function BlackCase({ stage, shakeKey = 0, className = '' }) {
