@@ -111,7 +111,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.0</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.1</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -137,7 +137,8 @@ function Credits() {
 
 /**
  * Tela inicial (Patch 0.5.5): limpa e de cinema. Lâmpada balançando, o logo BUXARIA em
- * SVG, o crédito do criador em letra de máquina e, no centro, só a palavra JOGAR.
+ * SVG e, no centro, só a palavra JOGAR. O crédito do criador fica discreto no canto de
+ * baixo, ao lado da versão (Patch 0.8.0).
  * Tocar em JOGAR troca a palavra, no mesmo lugar, por CONTINUAR / NOVO JOGO / VOLTAR.
  * Coleções (livro) e Opções (engrenagem) viram ícones nos cantos de cima.
  * O primeiro toque também destrava o áudio no iOS. 3 toques no logo liberam o painel DEV.
@@ -224,9 +225,6 @@ export default function TitleScreen({
         <h1 className="w-full">
           <BuxariaLogo className="title-logo-svg mx-auto" onClick={onSecretTap} />
         </h1>
-        <button type="button" className="text-action title-credit" onClick={() => open('credits')}>
-          Criador: Gabriel Modenezzi
-        </button>
       </div>
 
       {/* JOGAR, e no mesmo lugar as escolhas: só tipografia, sem caixas */}
@@ -251,11 +249,17 @@ export default function TitleScreen({
         </div>
       </nav>
 
-      <footer className="relative z-[5] flex flex-col items-center gap-1">
+      <footer className="relative z-[5] flex w-full flex-col items-center gap-1">
         {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
-        <p className="title-version">
-          PATCH 0.8.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
-        </p>
+        {/* o crédito do criador mora discreto no canto de baixo; tocar abre os créditos */}
+        <div className="title-footer-row">
+          <button type="button" className="text-action title-credit" onClick={() => open('credits')}>
+            Criador: Gabriel Modenezzi
+          </button>
+          <p className="title-version">
+            PATCH 0.8.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          </p>
+        </div>
       </footer>
 
       {modal === 'options' && (

@@ -196,7 +196,7 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, progress = 
               </p>
             )}
             <button type="button" data-tone="play" className="btn-pixel counter-start" onClick={() => onStart({ maleta: selected, mode, challenge })}>
-              INICIAR RUN
+              INICIAR
             </button>
           </div>
         )}

@@ -19,7 +19,6 @@ import {
 } from '../dominoLogic.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
 import { isValidSave, snapshotRun } from '../save.js';
-import { rivalRules } from '../rivalInfo.js';
 
 const t = (a, b) => makeTile(a, b);
 const act = (s, type, extra = {}) => gameReducer(s, { type, ...extra });
@@ -149,8 +148,8 @@ describe('calibragem da Maleta Preta', () => {
         if (RELICS[rel].rarity === 'necrotico') expect(BOSS_IDS).toContain(id);
       }
     }
-    expect(rivalRules('beto', 'hard').join(' ')).toContain('$3');
-    expect(rivalRules('beto').join(' ')).toContain('$2');
+    expect(rivalFor('beto', 'hard').mechanics.drawFee).toBe(3);
+    expect(rivalFor('beto').mechanics.drawFee).toBe(2);
   });
 
   it('Beto Cigano no difícil cobra $3 a cada compra do dorme', () => {

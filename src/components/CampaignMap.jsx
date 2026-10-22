@@ -1,6 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { REGIONS } from '../data/campaign.js';
-import { AI_TIERS, getRival, rivalFor, tierOf } from '../data/rivals.js';
+import { getRival, rivalFor } from '../data/rivals.js';
 import {
   COIN_EVENT_MAX,
   COIN_EVENT_MIN,
@@ -11,7 +11,7 @@ import {
   mapRegionId,
   mixSeed,
 } from '../engine/campaignMap.js';
-import { rivalBlurb, rivalRules } from '../engine/rivalInfo.js';
+import { rivalBlurb } from '../engine/rivalInfo.js';
 import { relicSlotsFor } from '../engine/loadout.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
@@ -175,8 +175,7 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
   let action;
   let kind = NODE_LABEL[node.type];
   if (fight) {
-    const tier = AI_TIERS[tierOf(rival, mode)];
-    if (known) kind = `${node.boss ? 'CHEFE' : 'MESA'} · IA ${tier.label}`;
+    if (known) kind = node.boss ? 'CHEFE' : 'MESA';
     art = (
       <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
         <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={46} smoke={known} />
@@ -184,7 +183,8 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
     );
     title = known ? rival.name.toUpperCase() : '???';
     line = known ? `${rival.title} · ${rival.hearts}♥` : unknownLine;
-    notes = known ? [rivalBlurb(rival.id), ...rivalRules(rival.id, mode).map((r) => `• ${r}`)] : [];
+    // só o jeito de jogar dele (sem nível de IA nem pedras de grife)
+    notes = known ? [rivalBlurb(rival.id)] : [];
     action = `SENTAR À MESA · ${rival.name.toUpperCase()}`;
   } else if (node.type === 'shop') {
     art = <ValtinhoSprite className="h-12 w-12 shrink-0" />;

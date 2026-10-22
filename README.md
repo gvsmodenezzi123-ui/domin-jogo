@@ -86,6 +86,15 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.8.1: ajustes de texto
+
+- O botão do Balcão de Maletas virou só INICIAR.
+- **Rodapé do mapa:** o rival mostra só o jeito de jogar dele. Saíram o nível de IA, os
+  talismãs, as regras da mesa e as pedras de grife (`engine/rivalInfo.js` ficou só com essa
+  linha).
+- **Tela inicial:** "Criador: Gabriel Modenezzi" saiu de baixo do logo e foi para o canto de
+  baixo, apagadinho, ao lado da versão. Tocar ainda abre os créditos.
+
 ## Patch 0.8.0: Balcão de Maletas, Conta do Boteco, desafios e o Dono da Noite
 
 ### Balcão de Maletas (`CaseCounter.jsx`, `data/maletas.js`, `art/CaseArt.jsx`)
@@ -105,7 +114,7 @@ sob a lâmpada, com 5 maletas de partida em pixel art 48x48.
   progresso, quando ela soma).
 - **Liberada:** a maleta abre no veludo. Na primeira vez as correntes caem.
 - **Escolha das peças:** tocar numa maleta liberada abre embaixo PEÇAS BRANCAS (normal) e
-  PEÇAS PRETAS (difícil, com cadeado até zerar a campanha), e o INICIAR RUN.
+  PEÇAS PRETAS (difícil, com cadeado até zerar a campanha), e o INICIAR.
 - **Peças Pretas:** derrotar o Comendador nas Peças Brancas mostra "VOCÊ DESBLOQUEOU: PEÇAS
   PRETAS (MODO DIFÍCIL)" e grava `buxaria_black_tiles_unlocked = true`. Quem tinha a Maleta
   Preta do 0.6.3 já vem com elas liberadas.

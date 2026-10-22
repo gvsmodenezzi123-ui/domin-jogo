@@ -3382,11 +3382,20 @@
 }
 
 .title-credit {
-  margin-top: 14px;
   font-family: var(--font-term);
-  font-size: 19px;
-  letter-spacing: 0.08em;
-  color: rgba(233, 220, 180, 0.55);
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: rgba(233, 220, 180, 0.32);
+}
+
+/* rodapé da tela inicial: crédito no canto esquerdo, versão no direito, os dois apagadinhos */
+.title-footer-row {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .title-menu {

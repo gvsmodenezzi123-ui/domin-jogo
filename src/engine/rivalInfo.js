@@ -1,11 +1,7 @@
 /**
- * O que o mapa e a mesa contam sobre cada rival: o jeito de jogar dele e as
- * regras próprias (mecânicas, talismãs e pedras de grife do baralho dele).
+ * O que o mapa conta sobre cada rival: só o jeito de jogar dele, em uma linha
+ * (desde o 0.8.0 sem nível de IA, talismãs nem pedras de grife).
  */
-
-import { getEnhancement } from '../data/enhancedTiles.js';
-import { getRelic } from '../data/relics.js';
-import { rivalFor } from '../data/rivals.js';
 
 /** Jeito de jogar, em uma linha. */
 const BLURB = {
@@ -29,37 +25,4 @@ const BLURB = {
   comendador: 'O dono do boteco. Dois talismãs lendários.',
 };
 
-const MECHANIC_TEXT = {
-  doubleBuchaDamage: () => 'Batida de bucha dele dá dano em dobro.',
-  drawFee: (n) => `Cada compra sua do dorme paga $${n} pra ele.`,
-  healOnPlayerPass: () => 'Você passou a vez: ela recupera 1♥.',
-  exposeHeaviest: () => 'Enxerga a sua pedra mais pesada.',
-  predictDoubles: () => 'Enxerga as suas buchas.',
-  stealOnCross: (n) => `Jogada dele que casa as duas pontas rouba $${n} seu.`,
-  trancaWeight: (n) => `As pedras dele valem ${n}× na contagem da tranca.`,
-  trancaShield: () => 'Imune ao primeiro dano de tranca da partida.',
-};
-
 export const rivalBlurb = (id) => BLURB[id] ?? '';
-
-/** Regras da mesa desse rival, uma por linha (no modo da run: as Peças Pretas mudam o baralho dele). */
-export function rivalRules(id, mode = 'normal') {
-  const rival = rivalFor(id, mode);
-  const lines = [];
-  for (const [key, value] of Object.entries(rival.mechanics ?? {})) {
-    if (value && MECHANIC_TEXT[key]) lines.push(MECHANIC_TEXT[key](value));
-  }
-  const relics = rival.relics.map(getRelic).filter(Boolean);
-  if (relics.length) lines.push(`Talismã${relics.length > 1 ? 's' : ''}: ${relics.map((r) => r.name).join(' e ')}.`);
-  const counts = {};
-  for (const enh of Object.values(rival.deck ?? {})) counts[enh] = (counts[enh] ?? 0) + 1;
-  const parts = Object.entries(counts)
-    .map(([enh, n]) => {
-      const e = getEnhancement(enh);
-      return e ? `${n} de ${e.name}` : null;
-    })
-    .filter(Boolean);
-  if (parts.length === 1 && counts[Object.keys(counts)[0]] === 1) lines.push(`1 pedra de ${getEnhancement(Object.keys(counts)[0]).name} no baralho dele.`);
-  else if (parts.length) lines.push(`Pedras de grife no baralho: ${parts.join(', ')}.`);
-  return lines;
-}
