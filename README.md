@@ -33,6 +33,32 @@ O PWA precisa de HTTPS. Duas opções:
 - Importe o repositório pelo site deles (login com GitHub) e escolha a branch.
 - O Vite é detectado sozinho: build `npm run build`, pasta `dist`.
 
+## APK Android
+
+O workflow `.github/workflows/android-apk.yml` roda a cada push em `main` e nesta branch do
+patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
+
+| APK | App | Painel DEV |
+| --- | --- | --- |
+| `buxaria-X.Y.Z-jogo.apk` | **Buxaria** (`com.buxaria.domino`) | não existe (os 3 toques não fazem nada) |
+| `buxaria-X.Y.Z-dev.apk` | **Buxaria DEV** (`com.buxaria.domino.dev`, ícone com selo DEV) | já vem liberado |
+
+- **Onde baixar:** na Release "Buxaria X.Y.Z (APK, build N)" do repositório, ou nos
+  artefatos da execução na aba Actions.
+- **Como o app se comporta:** os dois instalam lado a lado. O jogo vai inteiro dentro do APK
+  (abre offline, sem service worker), em tela cheia e em retrato. O botão voltar do Android
+  manda o jogo para o fundo sem fechar a partida.
+- **Painel DEV por build:** `VITE_DEV_PANEL=on|off`. Sem a variável (o site), o painel segue
+  escondido até os 3 toques.
+- **Assinatura:** sem segredos, sai a build de debug assinada com a chave fixa de
+  `android-extras/debug.keystore`. Ela é a mesma em todo build, então o APK novo instala por
+  cima do antigo e o progresso fica.
+- **Play Store:** crie em Settings → Secrets and variables → Actions os segredos
+  `ANDROID_KEYSTORE_BASE64` (o .jks em base64), `ANDROID_KEYSTORE_PASSWORD` e
+  `ANDROID_KEY_ALIAS`. Com eles o workflow gera a build de release assinada com a sua chave.
+  Na troca de chave, desinstale o APK de debug uma vez.
+- **Ícones:** saem de `assets/` (e `assets/dev/` para o DEV) pelo `@capacitor/assets`.
+
 ## Regras básicas
 
 - Duplo-seis (28 pedras), 7 para cada lado, 14 no **Dorme**. 5 corações para cada um.

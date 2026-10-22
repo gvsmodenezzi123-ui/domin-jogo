@@ -1,0 +1,10 @@
+{
+  "appId": "com.buxaria.domino",
+  "appName": "Buxaria",
+  "webDir": "dist",
+  "backgroundColor": "#0b0907",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

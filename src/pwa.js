@@ -24,6 +24,8 @@ export function installTouchGuards() {
 
 export function registerServiceWorker() {
   if (!import.meta.env.PROD || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  // no APK (Capacitor) os arquivos já moram dentro do app: sem service worker
+  if (import.meta.env.VITE_NATIVE === '1') return;
   window.addEventListener('load', () => {
     try {
       navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((error) => {

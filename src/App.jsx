@@ -85,8 +85,15 @@ const newDeck = () => shuffle(FULL_SET);
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const DEV_KEY = 'buxaria:dev';
+/**
+ * Painel DEV por build (APK): 'on' = já vem liberado; 'off' = não existe (os 3 toques não
+ * fazem nada); sem a variável (site) = escondido até os 3 toques. Vem de VITE_DEV_PANEL.
+ */
+const DEV_BUILD = import.meta.env.VITE_DEV_PANEL ?? '';
 
 function readDevFlag() {
+  if (DEV_BUILD === 'on') return true;
+  if (DEV_BUILD === 'off') return false;
   try {
     return window.localStorage.getItem(DEV_KEY) === '1';
   } catch {
@@ -869,12 +876,14 @@ export default function App() {
 
   // Painel DEV: 3 toques no título (tela inicial) ou em "VOCÊ" (no duelo).
   const unlockDev = useCallback(() => {
+    if (DEV_BUILD === 'off') return;
     saveDevFlag();
     setDevUnlocked(true);
     sound.init();
     sound.playChime('info');
   }, []);
   const openDevFromGame = useCallback(() => {
+    if (DEV_BUILD === 'off') return;
     unlockDev();
     setDevOpen(true);
   }, [unlockDev]);

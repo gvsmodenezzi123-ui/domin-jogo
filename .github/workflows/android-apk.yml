@@ -1,0 +1,162 @@
+name: APK Android
+
+# Gera dois APKs do Buxaria a cada push (Capacitor embrulha o build do jogo num app):
+#   Buxaria      com.buxaria.domino      sem painel DEV
+#   Buxaria DEV  com.buxaria.domino.dev  painel DEV já liberado
+# Os dois instalam lado a lado. Ficam na aba Actions (artefatos) e numa Release
+# "Buxaria X.Y.Z (APK, build N)".
+# Assinatura: sem segredos, usa a chave de debug fixa de android-extras/debug.keystore
+# (a mesma em todo build: o APK novo instala por cima do antigo e o progresso fica).
+# Para a Play Store, crie os segredos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD e
+# ANDROID_KEY_ALIAS (Settings → Secrets and variables → Actions): aí sai o build de release
+# assinado com a sua chave.
+on:
+  push:
+    branches: [main, claude/buxaria-patch-0-1]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: APK ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: jogo
+            label: Buxaria
+            app_id: com.buxaria.domino
+            app_name: Buxaria
+            dev_panel: 'off'
+            assets: assets
+          - variant: dev
+            label: Buxaria DEV
+            app_id: com.buxaria.domino.dev
+            app_name: Buxaria DEV
+            dev_panel: 'on'
+            assets: assets/dev
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Build do jogo
+        env:
+          VITE_DEV_PANEL: ${{ matrix.dev_panel }}
+          VITE_NATIVE: '1'
+        run: npm run build
+
+      - name: Projeto Android (Capacitor)
+        env:
+          APP_ID: ${{ matrix.app_id }}
+          APP_NAME: ${{ matrix.app_name }}
+        run: |
+          npm install --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets@3
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.appId=process.env.APP_ID;c.appName=process.env.APP_NAME;fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+          npx cap add android
+
+      - name: Ícone e tela de abertura
+        run: >-
+          npx capacitor-assets generate --android --assetPath ${{ matrix.assets }}
+          --iconBackgroundColor '#0d0a07' --iconBackgroundColorDark '#0d0a07'
+          --splashBackgroundColor '#0b0907' --splashBackgroundColorDark '#0b0907'
+
+      - name: Tela cheia, retrato e versão
+        env:
+          APP_ID: ${{ matrix.app_id }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          ACTIVITY=$(find android/app/src/main/java -name MainActivity.java | head -1)
+          sed "s/__PACKAGE__/$APP_ID/" android-extras/MainActivity.java > "$ACTIVITY"
+          sed -i 's/android:name=".MainActivity"/android:name=".MainActivity" android:screenOrientation="portrait"/' android/app/src/main/AndroidManifest.xml
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
+          grep -n "screenOrientation" android/app/src/main/AndroidManifest.xml
+          grep -n "versionCode\|versionName" android/app/build.gradle
+          npx cap sync android
+
+      - name: Chave de assinatura
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/buxaria.jks"
+            echo "SIGNED=1" >> "$GITHUB_ENV"
+          else
+            # chave de debug fixa: todo build sai com a mesma assinatura
+            mkdir -p "$HOME/.android"
+            cp android-extras/debug.keystore "$HOME/.android/debug.keystore"
+            echo "Sem os segredos da chave: APK de debug com a chave fixa do repositório."
+          fi
+
+      - name: Gerar o APK
+        working-directory: android
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          chmod +x gradlew
+          OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"
+          if [ "$SIGNED" = "1" ]; then
+            ./gradlew assembleRelease --no-daemon \
+              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/buxaria.jks" \
+              -Pandroid.injected.signing.store.password="$KS_PASS" \
+              -Pandroid.injected.signing.key.alias="$KS_ALIAS" \
+              -Pandroid.injected.signing.key.password="$KS_PASS"
+            cp app/build/outputs/apk/release/app-release.apk "$OUT"
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "$OUT"
+          fi
+          ls -la "$OUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buxaria-${{ matrix.variant }}
+          path: buxaria-*-${{ matrix.variant }}.apk
+          if-no-files-found: error
+
+  release:
+    name: Release com os dois APKs
+    needs: apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: apks
+          merge-multiple: true
+
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="apk-v$VERSION-build${{ github.run_number }}"
+          ls -la apks
+          gh release create "$TAG" apks/*.apk \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Buxaria $VERSION (APK, build ${{ github.run_number }})" \
+            --notes "Dois APKs do Buxaria $VERSION (branch ${GITHUB_REF_NAME}, commit ${GITHUB_SHA::7}):
+          - buxaria-$VERSION-jogo.apk: o jogo, sem painel DEV.
+          - buxaria-$VERSION-dev.apk: Buxaria DEV, com o painel DEV liberado.
+          Os dois instalam lado a lado. No Android, permita instalar apps desta fonte quando ele pedir."
