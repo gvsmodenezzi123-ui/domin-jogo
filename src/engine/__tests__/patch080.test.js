@@ -250,7 +250,8 @@ describe('Patch 0.8.0: save versão 4', () => {
   it('guarda maleta, desafio, fiado e tampinhas; save da versão 3 continua valendo', () => {
     const s = act(createInitialState(), 'NEW_RUN', { seed: 11, maleta: 'trapaceiro', challenge: 'mesaBebada', perks: ['fiado'] });
     const save = snapshotRun({ ...s, run: { ...s.run, fiadoUsed: true }, stats: { ...s.stats, caps: 4 } }, 'map', 1);
-    expect(save).toMatchObject({ v: 4, maleta: 'trapaceiro', challenge: 'mesaBebada', fiadoUsed: true });
+    // (Patch 0.9.4: o save foi para a versão 5; a 4 e a 3 continuam valendo)
+    expect(save).toMatchObject({ v: 5, maleta: 'trapaceiro', challenge: 'mesaBebada', fiadoUsed: true });
     expect(isValidSave(save)).toBe(true);
     const loaded = act(createInitialState(), 'LOAD_RUN', { save, perks: ['fiado'] });
     expect(loaded).toMatchObject({ maleta: 'trapaceiro', challenge: 'mesaBebada', perks: ['fiado'] });

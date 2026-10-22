@@ -86,6 +86,61 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.4: regras de mesa, eventos [?] no mapa e a mesa mais leve no iPhone
+
+### Regras de Mesa (`data/tableModifiers.js`)
+Algumas mesas comuns do mapa (~40%, nunca a 1ª da run nem chefe) vêm com uma regra do clima do
+boteco, que vale a partida inteira:
+- **Mesa Úmida / Copo Derramado:** a 1ª pedra sua em cada rodada soma +1 ponto livre na soma das
+  pontas, para o múltiplo de 5 (nunca atrapalha: um múltiplo de verdade continua valendo).
+- **Fumaça Densa:** o dorme some da tela (pilha e número viram fumaça) e a compra paga em moedas
+  sobe para $4.
+- **Aposta Alta / Clima Pesado:** a 1ª batida da partida (de quem bater primeiro) dói em dobro
+  (2 na simples, 4 na bucha) e o passe voluntário custa $5.
+- **Mesa Desnivelada:** a 1ª pedra de cada ponta tem de deixar número par na esquerda e ímpar na
+  direita; depois, dominó normal. A IA e o "sem jogadas" seguem a mesma regra.
+- **Rádio Ligado no Máximo:** múltiplo de 5 paga $5 (para os dois lados) e a batida de bucha
+  perde o dano dobrado.
+- No mapa: selo de cera âmbar com o ícone da regra na polaroid do rival; ao tocar no nó, o
+  banner âmbar com o nome e a regra. Na mesa: o lacre no canto de cima do feltro (tocar abre o
+  lembrete) e o aviso "REGRA DA MESA" quando a partida começa.
+
+### Eventos de dilema (`data/encounters.js`, `engine/encounters.js`, `EncounterModal.jsx`)
+- Nós "[?]" nos andares 2 a 5: 1 na região 1, 1 ou 2 nas outras. Ao entrar, o beco à meia-luz
+  com duas linhas de cena e exatamente duas escolhas:
+  - **O Bêbado do Fundo do Bar:** a bucha [6|6] de Rubi entra no seu baralho, mas custa 1
+    coração máximo até o fim da run (ou empurra o velho e segue ileso).
+  - **Batida Policial Noturna:** $5 de propina, ou esconder a banca (60% ileso, 40% perde 1
+    talismã confiscado).
+  - **Aposta de Esquina:** aposta $3 (50%: voltam $7; 50%: perde os $3) ou ignora.
+  - **Engradado Esquecido no Beco:** +$4 com 30% de corte (1 coração, nunca o último) ou deixa.
+- O desfecho sai da semente da run e do nó (sair e voltar dá no mesmo), aplica na hora, toca o
+  som e o VOLTAR AO MAPA sai com o corte de cena. Escolher já conta o nó como feito.
+
+### Teia v2, sementes e saves
+- As runs novas usam a teia v2 (com os eventos e as regras). A v1 continua gerando exatamente o
+  mapa de antes (conferido em 2000 sementes), então quem tem run salva do 0.9.3 continua nela.
+- Save versão 5: guarda a versão da teia e as cicatrizes (corações máximos perdidos para o
+  Bêbado). Saves 3 e 4 continuam valendo.
+
+### Mesa mais leve (quedas de quadro no Safari iOS)
+- A luz das pedras parou de seguir o balanço da lâmpada a ~15 vezes por segundo (cada mudança
+  repintava sombra e brilho das pedras). Agora fica parada no ponto de repouso da lâmpada e só é
+  recalculada quando entra ou sai pedra; o facho e a mancha continuam balançando (na GPU).
+- Nenhum filter pesado na mesa nem no leque: a bucha atravessada, a pedra escurecida, o clarão
+  da pedra que entra e as pedras flutuando trocaram drop-shadow/brightness por sombra própria,
+  película e camada de opacidade (todos os drop-shadow da mesa ficaram em até 4 px).
+- O feltro é uma camada isolada (`contain: layout paint`, `translateZ(0)`, `will-change`).
+- `React.memo` das pedras compara o que elas mostram (valores, material, estilo): as pedras
+  paradas da corrente não redesenham a cada jogada. Brilho e material animado continuam só na
+  pedra erguida e nas duas pontas.
+- O áudio já soltava (`.disconnect()`) cada nó no fim da nota; a batida de pedra termina e solta
+  tudo em até ~110 ms (teste novo).
+- Medido no Chromium com a CPU freada 4× (imitando celular), numa partida: mesa parada com 3
+  pinturas em 6 s (antes 229); jogando, de ~51 para ~55 quadros por segundo, com metade dos
+  quadros travados e 4× menos pintura. Com freio 6×: de 36 para 49 quadros por segundo. Em
+  iPhone de verdade não deu para medir daqui.
+
 ## Patch 0.9.3: tudo cabe na tela, maletas em carrossel e o pesadelo do Balcão
 
 ### Sem scroll (só o mapa rola)

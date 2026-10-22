@@ -174,7 +174,7 @@ describe('Seu Tião das Moedas', () => {
   it('o evento não deixa entrar de novo depois de sair (o nó fica feito)', () => {
     let seed = 1;
     while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'coins')) seed += 1;
-    let s = act(createInitialState(), 'NEW_RUN', { seed });
+    let s = act(createInitialState(), 'NEW_RUN', { seed, map: 1 });
     s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s)[0], deck: FULL_SET.slice() });
     s = act(act(s, 'DEV', { op: 'winMatch' }), 'OPEN_MAP');
     const id = availableNodes(s).find((x) => campaignOf(s).byId.get(x).type === 'coins');
@@ -189,7 +189,7 @@ describe('Seu Tião das Moedas', () => {
 
 describe('atalhos do painel DEV (Patch 0.6.2)', () => {
   it('entra direto na loja, no Mercado Negro e no Seu Tião da região atual, até no meio da mesa', () => {
-    let s = act(createInitialState(), 'NEW_RUN', { seed: 11 });
+    let s = act(createInitialState(), 'NEW_RUN', { seed: 11, map: 1 });
     s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s)[0], deck: FULL_SET.slice() });
     expect(s.phase).toBe('playing');
     for (const [kind, phase, leave] of [
@@ -213,7 +213,7 @@ describe('atalhos do painel DEV (Patch 0.6.2)', () => {
 describe('Mercado Negro do Corvo da Madrugada', () => {
   function marketState(seed = 1, relics = []) {
     while (!generateCampaign(seed).regions[0].nodes.some((n) => n.floor === 2 && n.type === 'black')) seed += 1;
-    let s = act(createInitialState(), 'NEW_RUN', { seed, relics });
+    let s = act(createInitialState(), 'NEW_RUN', { seed, relics, map: 1 });
     s = act(s, 'CHOOSE_NODE', { nodeId: availableNodes(s)[0], deck: FULL_SET.slice() });
     s = act(act(s, 'DEV', { op: 'winMatch' }), 'OPEN_MAP');
     const id = availableNodes(s).find((x) => campaignOf(s).byId.get(x).type === 'black');

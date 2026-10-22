@@ -5,6 +5,7 @@ import BlackMarketModal from './components/BlackMarketModal.jsx';
 import BossIntro from './components/BossIntro.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
 import CoinEventModal from './components/CoinEventModal.jsx';
+import EncounterModal from './components/EncounterModal.jsx';
 import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
 import FloatingTexts from './components/FloatingTexts.jsx';
@@ -218,6 +219,33 @@ function runEventFx(ev, shell, table, offset = 0) {
     case 'marketOpen':
       at(() => sound.playChime('enemy'));
       break;
+    // Patch 0.9.4: eventos [?] do mapa
+    case 'encounterOpen':
+      at(() => sound.playChime('enemy'));
+      break;
+    case 'encounterResolved':
+      at(() => {
+        if (ev.tone === 'good') sound.playChime('player');
+        else if (ev.tone === 'bad') sound.playChime('enemy');
+        else sound.playClick();
+      });
+      break;
+    case 'relicLost':
+      at(() => {
+        sound.playLock();
+        haptic([40, 40, 40]);
+      });
+      break;
+    case 'maxHeartLost':
+      at(() => {
+        sound.playHeartHit();
+        shake(shell, 6);
+        haptic([60, 40, 90]);
+      });
+      break;
+    case 'deckTile':
+      at(() => sound.playRubySub(), 380);
+      break;
     case 'shopOpen':
       at(() => sound.playChime('info'));
       break;
@@ -276,6 +304,7 @@ function musicFor(state) {
   if (state.phase === 'blackMarket') return MARKET_MUSIC;
   if (state.phase === 'map') return REGIONS[mapRegionId(state) - 1].music;
   if (state.phase === 'coinEvent') return REGIONS[regionIdOf(state) - 1].music;
+  if (state.phase === 'encounter') return MARKET_MUSIC;
   const rival = getRival(state.rivalId);
   return rival.boss ? bossMusicOf(rival.id) : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
 }
@@ -303,6 +332,10 @@ function procOrigin(ev, tileId, table) {
   if (ev.source === 'relic') {
     const slot = centerOf(`[data-relic-slot="${ev.owner ?? 'player'}:${ev.id}"]`);
     if (slot) return { x: slot.x, y: slot.y - 14 };
+  }
+  if (ev.source === 'table') {
+    const seal = centerOf('[data-table-mod]');
+    if (seal) return { x: Math.min(seal.x + 90, window.innerWidth - 110), y: seal.y + 26 };
   }
   if (ev.source === 'rival') {
     const avatar = centerOf('[data-rival-avatar]');
@@ -586,7 +619,8 @@ export default function App() {
   // Save: no mapa, na loja e no beco (ao vencer o nó e depois do Seu Tião, volta no mapa);
   // some quando a run acaba.
   useEffect(() => {
-    if (state.phase === 'map' || state.phase === 'matchWon' || state.phase === 'coinEvent') writeRunSave(snapshotRun(state, 'map', Date.now()));
+    // Patch 0.9.4: no evento [?] também (antes de escolher, o CONTINUAR reabre o mesmo evento; depois, o nó já conta)
+    if (state.phase === 'map' || state.phase === 'matchWon' || state.phase === 'coinEvent' || state.phase === 'encounter') writeRunSave(snapshotRun(state, 'map', Date.now()));
     else if (state.phase === 'shop') writeRunSave(snapshotRun(state, 'shop', Date.now()));
     else if (state.phase === 'blackMarket') writeRunSave(snapshotRun(state, 'blackMarket', Date.now()));
     else if (state.phase === 'gameOver' || state.phase === 'runWon') clearRunSave();
@@ -1054,7 +1088,7 @@ export default function App() {
   }
 
   // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
-  const sceneChip = ['shop', 'blackMarket', 'coinEvent'].includes(state.phase);
+  const sceneChip = ['shop', 'blackMarket', 'coinEvent', 'encounter'].includes(state.phase);
   const devPanel = devOpen && (
     <DevPanel
       state={state}
@@ -1116,6 +1150,26 @@ export default function App() {
       <TileSkinContext.Provider value={tileSkin}>
         <div ref={shellRef} className="app-shell h-full">
           <CoinEventModal state={state} onLeave={leaveTo('LEAVE_EVENT')} />
+          {devChip}
+          {devPanel}
+        </div>
+        {veil}
+      </TileSkinContext.Provider>
+    );
+  }
+
+  if (state.phase === 'encounter') {
+    return (
+      <TileSkinContext.Provider value={tileSkin}>
+        <div ref={shellRef} className="app-shell h-full">
+          <EncounterModal
+            state={state}
+            onChoose={(choice) => {
+              sound.playClick();
+              dispatch({ type: 'ENCOUNTER_CHOOSE', choice });
+            }}
+            onLeave={leaveTo('LEAVE_ENCOUNTER')}
+          />
           {devChip}
           {devPanel}
         </div>
@@ -1195,6 +1249,7 @@ export default function App() {
         incoming={tableAnim}
         noMoves={forcedPass && !menuOpen && !devOpen}
         boneyardCount={state.boneyard.length}
+        tableMod={state.tableMod}
       />
 
       <PlayerRack

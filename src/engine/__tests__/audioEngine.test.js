@@ -436,3 +436,14 @@ describe('Patch 0.9.3: sons novos e efeitos em 0%', () => {
     expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
   });
 });
+
+describe('Patch 0.9.4: batida de pedra não acumula nós de áudio', () => {
+  it('cada batida termina e solta (disconnect) todos os nós em até ~120 ms', () => {
+    const engine = engineWithFakeAudio();
+    for (let i = 0; i < 30; i += 1) {
+      engine.ctx.currentTime = i * 0.05;
+      engine.playTileSlam(i % 4 === 0, null);
+      for (const v of engine.voices) expect(v.end - v.born).toBeLessThanOrEqual(0.121);
+    }
+  });
+});

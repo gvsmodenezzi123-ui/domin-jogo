@@ -30,7 +30,10 @@ import { FIRST_RIVAL, RIVALS, SECRET_BOSS, getRival, rivalFor, rivalOf } from '.
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
 import { normalizeSeed, seedNumberOf } from './seedEngine.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
-import { availableNodes, campaignOf, coinReward, currentNode, mixSeed, regionIdOf } from './campaignMap.js';
+import { MAP_VERSION, availableNodes, campaignOf, coinReward, currentNode, mixSeed, regionIdOf } from './campaignMap.js';
+import { resolveEncounter, encounterOptionBlock } from './encounters.js';
+import { RADIO_FIVE_BONUS, WET_BONUS_POINTS, tableModIs, tableModifierOf } from '../data/tableModifiers.js';
+import { encounterOf } from '../data/encounters.js';
 import {
   DAMAGE,
   MAX_HEARTS,
@@ -100,6 +103,7 @@ export function createRoundFx() {
     ruby: null, // cadeira que toma dano se comprar/passar em seguida (Rubi do adversário)
     misses: bySeat(0, 0), // compras/passes seguidos (Dedal de Chumbo)
     used: bySeat([], []), // talismãs de uso único já gastos na rodada (Borracha, Relógio)
+    wetUsed: false, // Mesa Úmida (Patch 0.9.4): a 1ª pedra sua da rodada já ganhou o +1
     undo: null, // Relógio: como estava antes da última jogada do rival
     lastDraw: bySeat(null, null), // última pedra comprada (Espelho Retrovisor)
     passes: bySeat(0, 0), // passes seguidos de cada lado (Cinzeiro Cheio de Bitucas)
@@ -116,6 +120,7 @@ export function createMatchFx() {
     fitaUsed: bySeat(false, false), // Fita Crepe do Gambiarra (1x por partida)
     fitaArmed: null,
     caniveteUsed: false, // Canivete Suíço (1x por partida)
+    stakesUsed: false, // Aposta Alta (Patch 0.9.4): a 1ª batida da partida já dobrou
   };
 }
 
@@ -158,11 +163,15 @@ export function createInitialState() {
     //   node: id do nó onde você está (null antes do 1º); cleared: nós concluídos;
     //   path: o caminho percorrido; match: partidas jogadas; history: rivais enfrentados
     //   fiadoUsed: o passe de graça do Fiado de Rua já foi usado; secret: a noite do Dono começou
-    run: { node: null, cleared: [], path: [], match: 0, history: [], fiadoUsed: false, secret: false },
+    //   Patch 0.9.4: map: versão da teia (2 = com eventos e regras de mesa); scars: corações
+    //   máximos perdidos na run (o Bêbado do Fundo do Bar)
+    run: { node: null, cleared: [], path: [], match: 0, history: [], fiadoUsed: false, secret: false, scars: 0 },
     matchFx: createMatchFx(), // efeitos que valem a partida inteira
     shop: null,
     market: null, // Mercado Negro do Corvo da Madrugada
     coinEvent: null, // prêmio do Seu Tião das Moedas
+    encounter: null, // Patch 0.9.4: evento de dilema do nó [?] ({ id, node, choice, outcome })
+    tableMod: null, // Patch 0.9.4: regra de mesa da partida atual (data/tableModifiers.js)
     fx: createRoundFx(),
     pending: null,
     seed: null,
@@ -274,7 +283,9 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
     roundResult: null,
     shop: null,
   };
-  next = emit(next, { type: 'duelStart', rivalId: rival.id, match: next.run.match });
+  next = emit(next, { type: 'duelStart', rivalId: rival.id, match: next.run.match, tableMod: next.tableMod ?? null });
+  const mod = tableModifierOf(next.tableMod);
+  if (mod) next = proc(next, { source: 'table', id: mod.id, text: `REGRA DA MESA: ${mod.name.toUpperCase()}`, tone: 'info', owner: 'player' });
   return startRound(next, deck);
 }
 
@@ -289,7 +300,7 @@ const necroticCount = (state) => state.relics.player.filter((id) => RELICS[id]?.
  */
 function startSecret(state, { deck }) {
   if (state.phase !== 'secretReveal' || !deck) return state;
-  return startMatch({ ...state, roundResult: null }, SECRET_BOSS, deck);
+  return startMatch({ ...state, roundResult: null, tableMod: null }, SECRET_BOSS, deck);
 }
 
 /**
@@ -608,17 +619,26 @@ function playTile(state, { actor, tileId, side }) {
     via: placement.via,
   });
 
-  const multipleOfFive = isMultipleOfFive(board);
+  // Mesa Úmida (Patch 0.9.4): a 1ª pedra SUA na rodada soma +1 na conta (nunca atrapalha)
+  const wet = actor === 'player' && tableModIs(state, 'mesaUmida') && !state.fx.wetUsed;
+  if (wet) next = patchFx(next, { wetUsed: true });
+  const plainFive = isMultipleOfFive(board);
+  const wetSum = endsSum(board) + WET_BONUS_POINTS;
+  const wetFive = wet && !plainFive && wetSum % 5 === 0;
+  const multipleOfFive = plainFive || wetFive;
   if (multipleOfFive) {
-    const coins = { ...next.coins, [actor]: next.coins[actor] + MULTIPLE_OF_FIVE_BONUS };
-    const stats =
-      actor === 'player' ? { ...next.stats, coinsEarned: next.stats.coinsEarned + MULTIPLE_OF_FIVE_BONUS } : next.stats;
+    // Rádio Ligado no Máximo: o múltiplo de 5 paga $5 (para os dois lados)
+    const bonus = tableModIs(state, 'radioLigado') ? RADIO_FIVE_BONUS : MULTIPLE_OF_FIVE_BONUS;
+    const coins = { ...next.coins, [actor]: next.coins[actor] + bonus };
+    const stats = actor === 'player' ? { ...next.stats, coinsEarned: next.stats.coinsEarned + bonus } : next.stats;
     next = emit({ ...next, coins, stats }, {
       type: 'bonus5',
       by: actor,
-      sum: endsSum(board),
-      amount: MULTIPLE_OF_FIVE_BONUS,
+      sum: wetFive ? wetSum : endsSum(board),
+      amount: bonus,
+      wet: wetFive,
     });
+    if (wetFive) next = proc(next, { source: 'table', id: 'mesaUmida', text: `MESA ÚMIDA: +1 NA SOMA (${wetSum})`, tone: 'player', owner: 'player' });
   }
 
   // Carlinhos Mão Leve: jogada que casa as duas pontas rouba moedas suas
@@ -651,7 +671,19 @@ function playTile(state, { actor, tileId, side }) {
 
   if (newHand.length === 0) {
     const kind = classifyBatida(tile, endsBefore);
-    const boosted = applyBatidaDamage(next, actor, DAMAGE[kind], tile);
+    let base = DAMAGE[kind];
+    // Rádio Ligado no Máximo (Patch 0.9.4): a batida de bucha perde o dano dobrado
+    if (kind === 'bucha' && tableModIs(next, 'radioLigado')) {
+      base = DAMAGE.normal;
+      next = proc(next, { source: 'table', id: 'radioLigado', text: 'RÁDIO NO MÁXIMO: BUCHA SEM DOBRO', tone: 'info', owner: actor });
+    }
+    // Aposta Alta: a 1ª batida da partida (de quem for) dói em dobro
+    if (tableModIs(next, 'apostaAlta') && !next.matchFx.stakesUsed) {
+      next = { ...next, matchFx: { ...next.matchFx, stakesUsed: true } };
+      next = proc(next, { source: 'table', id: 'apostaAlta', text: `APOSTA ALTA: DANO ${base}→${base * 2}`, tone: tone(actor), owner: actor });
+      base *= 2;
+    }
+    const boosted = applyBatidaDamage(next, actor, base, tile);
     // Seu Arlindo, o Rei da Bucha: batida com carroça dele dói em dobro
     if (actor === 'tioZe' && isDouble(tile) && rivalMechanics(next).doubleBuchaDamage) {
       boosted.steps.push({ id: null, before: boosted.damage, after: boosted.damage * 2, label: 'REI DA BUCHA' });
@@ -673,7 +705,7 @@ function playTile(state, { actor, tileId, side }) {
       winner: actor,
       loser: foe,
       damage: boosted.damage,
-      baseDamage: DAMAGE[kind],
+      baseDamage: base,
       reason: 'batida',
       lastTileId: tile.id,
       double: isDouble(tile),
@@ -1005,7 +1037,7 @@ function clearCurrent(state) {
 
 /** Volta para o mapa da teia (sai da loja, do mercado, do evento ou da vitória). */
 function backToMap(state, extra = {}) {
-  const next = clearCurrent({ ...state, phase: 'map', shop: null, market: null, coinEvent: null, ...extra });
+  const next = clearCurrent({ ...state, phase: 'map', shop: null, market: null, coinEvent: null, encounter: null, tableMod: null, ...extra });
   return emit(next, { type: 'mapOpen', node: next.run.node });
 }
 
@@ -1048,11 +1080,15 @@ function enterNode(state, node, deck) {
     next = { ...next, phase: 'map', run: { ...next.run, cleared: [...cleared, id] } };
     return emit(next, { type: 'nodeClosed', node: id, kind: node.type });
   }
-  next = emit(next, { type: 'nodeEnter', node: id, kind: node.type });
+  next = emit(next, { type: 'nodeEnter', node: id, kind: node.type, tableMod: node.mod ?? null });
   switch (node.type) {
     case 'combat':
     case 'boss':
-      return startMatch(next, node.rivalId, deck);
+      // Patch 0.9.4: a regra de mesa do nó (se tiver) vale a partida inteira
+      return startMatch({ ...next, tableMod: node.mod ?? null }, node.rivalId, deck);
+    case 'event':
+      next = { ...next, phase: 'encounter', encounter: { id: node.encounter, node: id, choice: null, outcome: null } };
+      return emit(next, { type: 'encounterOpen', id: node.encounter, node: id });
     case 'shop':
       next = { ...next, phase: 'shop', shop: buildShop(next, 0) };
       return emit(next, { type: 'shopOpen' });
@@ -1087,6 +1123,26 @@ function leaveMarket(state) {
   return backToMap(state);
 }
 
+/**
+ * Evento de dilema (Patch 0.9.4): a escolha vale na hora (o desfecho sai da semente) e o nó já
+ * conta como feito (sair do jogo no meio não deixa escolher de novo).
+ */
+function chooseEncounter(state, { choice }) {
+  const enc = state.encounter;
+  if (state.phase !== 'encounter' || !enc || enc.choice || !encounterOf(enc.id)) return state;
+  if (choice !== 'a' && choice !== 'b') return state;
+  if (encounterOptionBlock(state, enc.id, choice)) return state;
+  const { state: applied, outcome } = resolveEncounter(state, enc.id, choice, enc.node);
+  let next = clearCurrent({ ...applied, encounter: { ...enc, choice, outcome } });
+  next = emit(next, { type: 'encounterResolved', id: enc.id, choice, tone: outcome.tone });
+  return next;
+}
+
+function leaveEncounter(state) {
+  if (state.phase !== 'encounter' || !state.encounter?.choice) return state;
+  return backToMap(state);
+}
+
 function leaveEvent(state) {
   if (state.phase !== 'coinEvent') return state;
   return backToMap(state);
@@ -1110,6 +1166,8 @@ function newRun(state, action) {
   const fresh = {
     ...base,
     phase: 'map',
+    // Patch 0.9.4: teia v2 (eventos e regras de mesa); `map: 1` refaz a teia de antes (testes, simulações)
+    run: { ...base.run, map: action.map === 1 ? 1 : MAP_VERSION },
     mode: mode.id,
     maleta: maletaId,
     challenge,
@@ -1146,6 +1204,8 @@ function loadRun(state, action) {
       history: [...save.history],
       fiadoUsed: Boolean(save.fiadoUsed),
       secret: false,
+      map: save.map === MAP_VERSION ? MAP_VERSION : 1,
+      scars: Number.isInteger(save.scars) && save.scars > 0 ? save.scars : 0,
     },
     maleta: MALETAS[save.maleta] ? save.maleta : DEFAULT_MALETA,
     challenge: CHALLENGES[save.challenge] ? save.challenge : null,
@@ -1183,7 +1243,7 @@ function loadRun(state, action) {
 // Painel DEV (src/components/DevPanel.jsx)
 // ---------------------------------------------------------------------------
 
-const DEV_PLAYING_ONLY = new Set(['addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch']);
+const DEV_PLAYING_ONLY = new Set(['addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch', 'setTableMod']);
 
 /** Põe [a|b] na sua mão: puxa do dorme ou do rival; se a pedra estiver na mesa, cria uma cópia. */
 function devAddTile(state, { a, b, enhancement }) {
@@ -1247,13 +1307,15 @@ function devAction(state, action) {
     }
     case 'openStop': {
       // atalho do painel DEV: entra na loja, no Mercado Negro ou no Seu Tião da região atual
-      if (!['shop', 'black', 'coins'].includes(action.kind)) return state;
+      // Patch 0.9.4: 'event' abre um nó [?] (só na teia v2), com o dilema escolhido em `encounter`
+      if (!['shop', 'black', 'coins', 'event'].includes(action.kind)) return state;
       const campaign = campaignOf(state);
       const region = regionIdOf(state);
       const stops = [...campaign.byId.values()].filter((n) => n.type === action.kind);
-      const node = stops.find((n) => n.region === region) ?? stops[0];
-      if (!node) return state;
-      const fresh = { ...state, shop: null, market: null, coinEvent: null, roundResult: null };
+      const found = stops.find((n) => n.region === region) ?? stops[0];
+      if (!found) return state;
+      const node = action.kind === 'event' && encounterOf(action.encounter) ? { ...found, encounter: action.encounter } : found;
+      const fresh = { ...state, shop: null, market: null, coinEvent: null, encounter: null, tableMod: null, roundResult: null };
       return emit(enterNode(fresh, node, null), { type: 'dev', op, kind: action.kind });
     }
     case 'setRival': {
@@ -1261,8 +1323,15 @@ function devAction(state, action) {
       // pula para um nó desse rival na teia desta run (região, loja e chefe batem com ele)
       const node = [...campaignOf(state).byId.values()].find((n) => n.rivalId === action.rivalId);
       const run = node ? { ...state.run, node: node.id, path: [node.id], cleared: [] } : state.run;
-      const jumped = { ...state, pending: null, shop: null, market: null, coinEvent: null, run };
+      const jumped = { ...state, pending: null, shop: null, market: null, coinEvent: null, encounter: null, tableMod: node?.mod ?? null, run };
       return startMatch(jumped, action.rivalId, action.deck, { advance: state.run.match === 0 });
+    }
+    case 'setTableMod': {
+      // Patch 0.9.4: liga (ou tira) uma regra de mesa na partida em andamento
+      const id = tableModifierOf(action.id) ? action.id : null;
+      let next = { ...state, tableMod: id, matchFx: { ...state.matchFx, stakesUsed: false }, fx: { ...state.fx, wetUsed: false } };
+      next = emit(next, { type: 'dev', op, id });
+      return id ? proc(next, { source: 'table', id, text: `REGRA DA MESA: ${tableModifierOf(id).name.toUpperCase()}`, tone: 'info', owner: 'player' }) : next;
     }
     case 'emptyTioZeHand': {
       const hand = state.hands.tioZe;
@@ -1316,7 +1385,8 @@ export function gameReducer(state, action) {
       // a mesa fica num nó de verdade da teia: ao vencer, o mapa segue dali
       const node = [...campaignOf(fresh).byId.values()].find((n) => n.rivalId === rivalId);
       const next = node ? { ...fresh, run: { ...fresh.run, node: node.id, path: [node.id] } } : fresh;
-      return startMatch(next, rivalId, action.deck);
+      // Patch 0.9.4: `tableMod` força uma regra de mesa (testes e simulações)
+      return startMatch({ ...next, tableMod: tableModifierOf(action.tableMod) ? action.tableMod : null }, rivalId, action.deck);
     }
     case 'NEXT_ROUND':
       if (state.phase !== 'roundOver') return state;
@@ -1363,6 +1433,10 @@ export function gameReducer(state, action) {
       return marketBuy(state, action);
     case 'LEAVE_MARKET':
       return leaveMarket(state);
+    case 'ENCOUNTER_CHOOSE':
+      return chooseEncounter(state, action);
+    case 'LEAVE_ENCOUNTER':
+      return leaveEncounter(state);
     case 'LEAVE_EVENT':
       return leaveEvent(state);
     case 'DEV':

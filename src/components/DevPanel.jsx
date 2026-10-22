@@ -8,6 +8,8 @@ import { challengeOf } from '../data/meta.js';
 import { relicSlotsFor } from '../engine/loadout.js';
 import { REGIONS } from '../data/campaign.js';
 import { RIVALS } from '../data/rivals.js';
+import { ENCOUNTERS, ENCOUNTER_IDS } from '../data/encounters.js';
+import { TABLE_MODIFIERS, TABLE_MODIFIER_IDS } from '../data/tableModifiers.js';
 import DominoTile from './DominoTile.jsx';
 import RelicIcon from './RelicIcon.jsx';
 
@@ -162,6 +164,23 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
           <button type="button" data-tone="brass" className="btn-pixel mt-2 w-full" disabled={!playing} onClick={() => dev('winMatch')}>
             VENCER O NÓ (VOLTA AO MAPA)
           </button>
+          {/* Patch 0.9.4: regra de mesa na partida em andamento */}
+          <label className="mt-2 block">
+            <span className="dev-label">REGRA DA MESA</span>
+            <select
+              className="dev-select mt-1"
+              value={state.tableMod ?? ''}
+              disabled={!playing}
+              onChange={(e) => dev('setTableMod', { id: e.target.value || null })}
+            >
+              <option value="">Nenhuma</option>
+              {TABLE_MODIFIER_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {TABLE_MODIFIERS[id].name}
+                </option>
+              ))}
+            </select>
+          </label>
         </section>
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-stops">
@@ -178,6 +197,14 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
             <button type="button" data-tone="play" className="btn-pixel btn-mini" onClick={() => dev('openStop', { kind: 'coins' })}>
               SEU TIÃO
             </button>
+          </div>
+          {/* Patch 0.9.4: os dilemas do nó [?] (só nas runs da teia nova) */}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {ENCOUNTER_IDS.map((id) => (
+              <button key={id} type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={() => dev('openStop', { kind: 'event', encounter: id })}>
+                [?] {ENCOUNTERS[id].title.toUpperCase()}
+              </button>
+            ))}
           </div>
         </section>
 

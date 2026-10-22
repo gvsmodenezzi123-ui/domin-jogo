@@ -25,7 +25,8 @@ const act = (s, type, extra = {}) => gameReducer(s, { type, ...extra });
 const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra });
 const lastOf = (s, type) => [...s.events].reverse().find((e) => e.type === type);
 
-const freshRun = (seed = 7) => act(createInitialState(), 'NEW_RUN', { seed });
+// teia v1 (a de antes do 0.9.4; os saves antigos continuam nela): a v2 tem os testes do patch094
+const freshRun = (seed = 7) => act(createInitialState(), 'NEW_RUN', { seed, map: 1 });
 const nodeOfId = (s, id) => campaignOf(s).byId.get(id);
 
 /** Entra no nó `id` e conclui: vence a mesa (DEV) ou sai da loja, do mercado ou do evento. */

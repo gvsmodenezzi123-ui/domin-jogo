@@ -21,6 +21,7 @@ import { DEFAULT_STYLE } from '../src/data/rivals.js';
 import { availableNodes, nodeOf } from '../src/engine/campaignMap.js';
 import { FULL_SET, createSeededRng, getOpenEnds, getValidSides, makeTile, shuffle } from '../src/engine/dominoLogic.js';
 import { createInitialState, gameReducer } from '../src/engine/gameReducer.js';
+import { encounterOptionBlock } from '../src/engine/encounters.js';
 import { dressTile, requiredOpeningFor, rulesFor } from '../src/engine/powers.js';
 import { relicBuyBlock, tileBuyBlock } from '../src/engine/shop.js';
 
@@ -150,6 +151,16 @@ function shopActions(state) {
  * Uma run inteira. Devolve se venceu, quantas mesas ganhou, os chefes que derrubou, quem
  * acabou com ele e os talismãs/pedras de grife com que terminou.
  */
+/** Escolha do robô num dilema do mapa: paga a propina se der, revira o estojo com folga de vida. */
+function encounterPick(state) {
+  const { id } = state.encounter;
+  const can = (opt) => !encounterOptionBlock(state, id, opt);
+  if (id === 'policia') return can('a') && state.relics.player.length > 0 ? 'a' : 'b';
+  if (id === 'engradado') return state.hearts.player > 2 ? 'a' : 'b';
+  if (id === 'esquina') return can('a') && state.coins.player >= 12 ? 'a' : 'b';
+  return 'b';
+}
+
 export function simulateRun({ mode = 'normal', seed = 1, maleta = 'classica', perks = [], unlocks = [], samples = 0 } = {}) {
   const rng = createSeededRng(seed * 7919 + 13);
   const deck = () => shuffle(FULL_SET, rng);
@@ -191,6 +202,10 @@ export function simulateRun({ mode = 'normal', seed = 1, maleta = 'classica', pe
         break;
       case 'coinEvent':
         action = { type: 'LEAVE_EVENT' };
+        break;
+      case 'encounter':
+        // Patch 0.9.4: dilemas do mapa (robô cauteloso: só arrisca com folga)
+        action = state.encounter.choice ? { type: 'LEAVE_ENCOUNTER' } : { type: 'ENCOUNTER_CHOOSE', choice: encounterPick(state) };
         break;
       case 'secretReveal':
         action = { type: 'START_SECRET', deck: deck() };

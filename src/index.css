@@ -42,11 +42,11 @@
   --animate-avatar-hit: avatar-hit 520ms steps(6, end) both;
   --animate-overlay-in: overlay-in 420ms ease-out 850ms both;
 
+  /* Patch 0.9.4: sem filter nas entradas (o clarão virou uma camada em opacity, .tile-flash) */
   @keyframes tile-drop {
     0% {
       opacity: 0;
       transform: scale(1.45) translateY(-6px);
-      filter: brightness(1.4);
     }
     70% {
       opacity: 1;
@@ -55,7 +55,6 @@
     100% {
       opacity: 1;
       transform: scale(1);
-      filter: none;
     }
   }
 
@@ -63,7 +62,6 @@
     0% {
       opacity: 0;
       transform: translateY(-22px) scale(1.25);
-      filter: brightness(1.5);
     }
     35% {
       opacity: 1;
@@ -71,7 +69,6 @@
     }
     62% {
       transform: translateY(2px) scale(0.93);
-      filter: brightness(1.15);
     }
     80% {
       transform: translateY(-2px) scale(1.03);
@@ -79,7 +76,6 @@
     100% {
       opacity: 1;
       transform: none;
-      filter: none;
     }
   }
 
@@ -8445,4 +8441,479 @@
   .run-tab-board {
     margin-top: 6px;
   }
+}
+
+/* ---------- Patch 0.9.4: Regras de Mesa ----------
+   Selo de cera âmbar na polaroid do mapa, banner âmbar no rodapé e o lacre no canto do feltro. */
+.map-mod-badge {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  background: radial-gradient(circle at 40% 35%, #ffcf6a, #c98a1c 70%);
+  border: 2px solid #0b0705;
+  border-radius: 50%;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.6),
+    0 0 6px rgba(255, 190, 80, 0.55);
+}
+
+.map-mod-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, rgba(58, 36, 6, 0.96), rgba(34, 20, 4, 0.96));
+  border: 2px solid #ffbf3f;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(255, 176, 40, 0.25);
+}
+
+.map-mod-banner-icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.map-mod-banner-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.4;
+  color: #ffd27a;
+}
+
+.map-mod-banner-rule {
+  margin-top: 1px;
+  font-family: var(--font-term);
+  font-size: 15px;
+  line-height: 1.02;
+  color: #ffe9b8;
+}
+
+/* nó de evento "[?]": a placa de madeira na ficha, com o anel âmbar pulsando de leve */
+.web-stop-event .web-stop-chip {
+  --chip-ring: #ffbf3f;
+  background: radial-gradient(circle at 50% 30%, #3a2410, #120a04 75%);
+}
+
+.web-stop-event .web-stop-art {
+  width: 36px;
+  height: 36px;
+  margin-top: 0;
+}
+
+.web-stop-event.web-open .web-stop-chip {
+  animation: eventChipGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes eventChipGlow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 2px #ffbf3f,
+      inset 0 -6px 10px rgba(0, 0, 0, 0.45),
+      0 3px 0 #000,
+      0 6px 10px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px #ffe08a,
+      inset 0 -6px 10px rgba(0, 0, 0, 0.45),
+      0 3px 0 #000,
+      0 0 14px rgba(255, 191, 63, 0.7);
+  }
+}
+
+.table-mod {
+  top: 10px;
+  left: 10px;
+}
+
+.table-mod-seal {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: radial-gradient(circle at 40% 35%, #ffcf6a, #b97a16 72%);
+  border: 2px solid #0b0705;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3),
+    0 3px 0 rgba(0, 0, 0, 0.6);
+  opacity: 0.86;
+}
+
+.table-mod-seal.is-open,
+.table-mod-seal:active {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+.table-mod-tip {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  width: min(250px, calc(100vw - 40px));
+  padding: 7px 9px 8px;
+  background: rgba(30, 18, 4, 0.97);
+  border: 2px solid #ffbf3f;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(255, 176, 40, 0.3);
+  animation: counterCardIn 180ms ease-out both;
+}
+
+.table-mod-tip-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.5;
+  color: #ffd27a;
+}
+
+.table-mod-tip-rule {
+  margin-top: 2px;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.02;
+  color: #ffe9b8;
+}
+
+/* Fumaça Densa: o dorme some na fumaça */
+.boneyard-pile.is-smoke .boneyard-count {
+  color: #d8dde2;
+  animation: none;
+}
+
+.boneyard-smoke {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  opacity: 0.9;
+}
+
+/* ---------- Patch 0.9.4: eventos de dilema (nó [?]) ----------
+   Beco à meia-luz: lâmpada fraca, neblina rasteira e a vinheta fechando; o cartão no meio com
+   a arte do evento, as duas linhas de cena e as duas escolhas (ou o desfecho). */
+.encounter-scene {
+  color: var(--color-bone-50);
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 38%, rgba(255, 196, 120, 0.1), transparent 70%),
+    radial-gradient(ellipse 90% 80% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.88) 100%),
+    repeating-linear-gradient(0deg, #150d09 0 2px, transparent 2px 22px),
+    linear-gradient(180deg, #24160e, #0c0705 75%, #050302);
+}
+
+.encounter-lamp {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 420px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.encounter-lamp .lamp-rig {
+  left: 50%;
+}
+
+.encounter-fog {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(120, 110, 100, 0.16), transparent);
+}
+
+.encounter-scroll {
+  position: relative;
+  z-index: 4;
+  height: 100%;
+  overflow: hidden;
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+  padding: calc(max(env(safe-area-inset-top), 10px) + 74px) max(14px, env(safe-area-inset-right, 0px)) max(env(safe-area-inset-bottom), 14px)
+    max(14px, env(safe-area-inset-left, 0px));
+}
+
+.encounter-fit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 100%;
+}
+
+.encounter-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 12px 12px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(20, 13, 8, 0.95), rgba(9, 6, 4, 0.96));
+  border: 2px solid #0b0705;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 191, 63, 0.3),
+    0 8px 0 rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(0, 0, 0, 0.8);
+  animation: counterCardIn 320ms ease-out both;
+}
+
+.encounter-kicker {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  color: #ffbf3f;
+}
+
+.encounter-art {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 72px;
+  margin-top: 6px;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.7));
+}
+
+.encounter-art-pair {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.encounter-title {
+  margin-top: 6px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #f4ecd2;
+  text-shadow: 0 3px 0 #000;
+}
+
+.encounter-text {
+  margin-top: 6px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.08;
+  color: var(--color-bone-200, #ddd0aa);
+}
+
+.encounter-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.encounter-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 9px;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(240, 204, 120, 0.35);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+.encounter-option:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.encounter-option.tone-blood {
+  border-color: rgba(230, 80, 60, 0.6);
+}
+
+.encounter-option.tone-brass {
+  border-color: rgba(255, 191, 63, 0.65);
+}
+
+.encounter-option.tone-quiet {
+  border-color: rgba(200, 190, 170, 0.3);
+}
+
+.encounter-option.is-blocked {
+  opacity: 0.45;
+}
+
+.encounter-option-key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #0b0705;
+  background: #ffbf3f;
+  border: 2px solid #0b0705;
+}
+
+.encounter-option.tone-blood .encounter-option-key {
+  background: #e0543e;
+}
+
+.encounter-option.tone-quiet .encounter-option-key {
+  background: #c9bb98;
+}
+
+.encounter-option-label {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.45;
+  color: #f4ecd2;
+}
+
+.encounter-option-detail {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.02;
+  color: var(--color-bone-300);
+}
+
+.encounter-outcome {
+  margin-top: 10px;
+  padding: 9px 10px 10px;
+  border: 2px solid rgba(240, 204, 120, 0.35);
+  animation: counterCardIn 260ms ease-out both;
+}
+
+.encounter-outcome.is-good {
+  border-color: #8fe36a;
+  background: rgba(60, 120, 40, 0.14);
+}
+
+.encounter-outcome.is-bad {
+  border-color: #e0543e;
+  background: rgba(140, 30, 20, 0.16);
+}
+
+.encounter-outcome-head {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #ffd27a;
+}
+
+.encounter-outcome.is-good .encounter-outcome-head {
+  color: #9fe08a;
+}
+
+.encounter-outcome.is-bad .encounter-outcome-head {
+  color: #ff8c7a;
+}
+
+.encounter-outcome-line {
+  margin-top: 3px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.05;
+  color: var(--color-bone-100);
+}
+
+.encounter-leave {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.encounter-purse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px dotted rgba(240, 204, 120, 0.2);
+}
+
+.reduce-motion .web-stop-event.web-open .web-stop-chip {
+  animation: none;
+}
+
+@media (max-height: 700px) {
+  .encounter-scroll {
+    padding-top: calc(max(env(safe-area-inset-top), 8px) + 50px);
+  }
+
+  .encounter-text {
+    font-size: 17px;
+  }
+}
+
+/* ---------- Patch 0.9.4: performance da mesa (Safari iOS) ----------
+   O feltro vira uma camada isolada: o balanço da lâmpada e o voo das pedras não fazem o
+   navegador recalcular o cabeçalho, os corações e os botões. Dentro da mesa, nenhum filter
+   pesado: a bucha atravessada ganha sombra no box-shadow (antes drop-shadow de 5 px), a pedra
+   escurecida ganha uma película (antes brightness + sepia), o clarão da pedra que entra é uma
+   camada em opacity (antes brightness animado) e o halo da lâmpada fica em 4 px. */
+.felt-table {
+  contain: layout paint;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.felt-table .lamp-flicker-sprite {
+  filter: drop-shadow(0 3px 4px rgba(255, 217, 138, 0.55));
+}
+
+.domino-face.tile-crosswise {
+  --cast-a: 0.85;
+}
+
+.domino-face.tile-dimmed::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(48, 30, 10, 0.34);
+  pointer-events: none;
+}
+
+.animate-tile-drop::after,
+.animate-tile-slam::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 4px;
+  background: rgba(255, 244, 214, 0.55);
+  pointer-events: none;
+  animation: tileFlash 280ms ease-out both;
+}
+
+@keyframes tileFlash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.reduce-motion .animate-tile-drop::after,
+.reduce-motion .animate-tile-slam::after {
+  display: none;
+}
+
+/* o leque continua flutuando (transform), mas sem drop-shadow de 8–12 px em cada pedra: a
+   sombra de cada uma já vem no box-shadow dela (var(--cast)); a erguida só escurece a dela */
+.hand-float,
+.hand-float-lifted {
+  filter: none;
+}
+
+.hand-float-lifted .domino-face {
+  --cast-a: 0.95;
+}
+
+.ai-spotlight {
+  filter: drop-shadow(0 0 4px rgba(255, 214, 90, 0.75));
 }

@@ -152,6 +152,8 @@ export const canPlayOn = (tile, endValue) => hasValue(tile, endValue);
  *   wildSides:   pontas que aceitam qualquer número (Cristal, na sua próxima jogada)
  *   fuzzy:       aceita 1 número de diferença da ponta (Borracha Escolar)
  *   steelZero:   a [0|0] encaixa em qualquer ponta (Bucha de Aço)
+ *   tilted:      Mesa Desnivelada (regra de mesa, Patch 0.9.4): a 1ª pedra de cada ponta tem
+ *                de deixar número PAR na esquerda e ÍMPAR na direita
  */
 export const BASE_RULES = Object.freeze({});
 
@@ -161,6 +163,9 @@ const otherSide = (side) => (side === SIDES.LEFT ? SIDES.RIGHT : SIDES.LEFT);
  * Encaixe "forçado" (curinga ou ±1): escolhe o giro da pedra. Prefere fechar
  * múltiplo de 5, depois o lado que encosta mais perto do número da ponta.
  */
+/** Mesa Desnivelada: o número que a pedra deixa na ponta (`outer`) serve? (só a 1ª pedra de cada ponta) */
+const levelOk = (board, side, rules, outer) => !rules.tilted || board[side].length > 0 || outer % 2 === (side === SIDES.LEFT ? 0 : 1);
+
 function forcedOrientation(tile, endValue, otherEnd, accepts) {
   const options = [
     { inner: tile.a, outer: tile.b },
@@ -188,20 +193,25 @@ export function getPlacement(tile, board, side, rules = BASE_RULES) {
   if (side !== SIDES.LEFT && side !== SIDES.RIGHT) return null;
   if (rules.frozenSides?.includes(side)) return null;
   const end = ends[side];
+  // Mesa Desnivelada: nos encaixes "forçados" o giro já escolhe o lado que deixa a paridade certa
+  const level = (outer) => levelOk(board, side, rules, outer);
   const exact = orientTile(tile, end);
-  if (exact) return { ...exact, via: 'match' };
-  if (rules.steelZero && tile.a === 0 && tile.b === 0) return { inner: 0, outer: 0, via: 'steel' };
+  if (exact && level(exact.outer)) return { ...exact, via: 'match' };
+  if (rules.steelZero && tile.a === 0 && tile.b === 0 && level(0)) return { inner: 0, outer: 0, via: 'steel' };
   const otherEnd = ends[otherSide(side)];
+  const free = (inner) => level(inner === tile.a ? tile.b : tile.a);
   if (rules.wildSides?.includes(side)) {
-    return { ...forcedOrientation(tile, end, otherEnd, () => true), via: 'wild' };
+    const wild = forcedOrientation(tile, end, otherEnd, free);
+    return wild ? { ...wild, via: 'wild' } : null;
   }
   if (rules.fuzzy) {
-    const near = forcedOrientation(tile, end, otherEnd, (v) => Math.abs(v - end) === 1);
+    const near = forcedOrientation(tile, end, otherEnd, (v) => Math.abs(v - end) === 1 && free(v));
     if (near) return { ...near, via: 'fuzzy' };
   }
   // Dado de Osso Humano: toda pedra do dono conta como tendo um 6 (encaixa em ponta 6)
   if (rules.sixWild && end === 6) {
-    return { ...forcedOrientation(tile, end, otherEnd, () => true), via: 'six' };
+    const six = forcedOrientation(tile, end, otherEnd, free);
+    return six ? { ...six, via: 'six' } : null;
   }
   return null;
 }
@@ -392,10 +402,16 @@ export function getDrawCost(drawsThisTurn) {
  * `heartCost`: quantos corações custa a compra paga com coração (Pacto do Coveiro: 2).
  * `maxDraws`: compras permitidas no turno (Maleta Seca: 1).
  */
-export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts, heartCost = 1, maxDraws = DRAW_LADDER.length }) {
+export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts, heartCost = 1, maxDraws = DRAW_LADDER.length, coinCost = null }) {
   // `maxDraws`: Maleta Seca deixa 1 compra por turno
   const base = drawsThisTurn < maxDraws ? getDrawCost(drawsThisTurn) : null;
-  const cost = base?.type === 'heart' && heartCost !== base.amount ? { type: 'heart', amount: heartCost } : base;
+  // `coinCost`: a compra paga em moedas com outro preço (Fumaça Densa: $4)
+  const cost =
+    base?.type === 'heart' && heartCost !== base.amount
+      ? { type: 'heart', amount: heartCost }
+      : base?.type === 'coins' && coinCost != null && coinCost !== base.amount
+        ? { type: 'coins', amount: coinCost }
+        : base;
   if (boneyardCount <= 0) return { allowed: false, reason: 'empty', cost };
   if (!cost) return { allowed: false, reason: 'limit', cost: null };
   if (cost.type === 'coins' && coins < cost.amount) return { allowed: false, reason: 'coins', cost };

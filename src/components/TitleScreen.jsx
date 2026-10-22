@@ -26,17 +26,17 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-const AFTER_STOP = { shop: 'saiu da loja', black: 'saiu do beco', coins: 'passou pelo Seu Tião' };
+const AFTER_STOP = { shop: 'saiu da loja', black: 'saiu do beco', coins: 'passou pelo Seu Tião', event: 'passou por um imprevisto' };
 
 /** "Região 2 · andar 3 · Loja do Valtinho · 4♥ · $17" a partir do save (a teia sai da semente). */
 function saveSummary(save) {
-  const node = save.node ? generateCampaign(save.seed ?? 0).byId.get(save.node) : null;
+  const node = save.node ? generateCampaign(save.seed ?? 0, save.map ?? 1).byId.get(save.node) : null;
   const where = node ? `Região ${node.region}/${REGIONS.length} · andar ${node.floor}` : 'Entrada do boteco';
   let what = '';
   if (save.resume === 'shop') what = 'na loja';
   else if (save.resume === 'blackMarket') what = 'no Mercado Negro';
   else if (node?.rivalId && !save.cleared.includes(node.id)) what = getRival(node.rivalId).name;
-  else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type];
+  else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type] ?? '';
   else if (node) what = `${getRival(node.rivalId).name} vencido`;
   const kit = [save.maleta && save.maleta !== 'classica' ? maletaOf(save.maleta).short.toLowerCase() : null, save.mode === 'hard' ? 'Peças Pretas' : save.mode === 'inferno' ? 'Peças Prateadas' : null, challengeOf(save.challenge)?.name]
     .filter(Boolean)
@@ -114,7 +114,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.3</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.4</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -267,7 +267,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.9.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.9.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

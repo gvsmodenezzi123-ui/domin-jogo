@@ -24,6 +24,7 @@ import {
   pipSum,
 } from './dominoLogic.js';
 import { fiadoAvailable, maxDrawsFor } from './loadout.js';
+import { HIGH_STAKES_PASS_FEE, SMOKE_DRAW_COINS, tableModIs } from '../data/tableModifiers.js';
 
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
@@ -82,6 +83,8 @@ export function rulesFor(state, seat, { frozen = true } = {}) {
   else if (rules.wildSides) rules = { ...rules, wildSides: undefined };
   const frozenSides = frozen ? (state.fx?.frozen?.[seat] ?? []) : [];
   if (frozenSides.length) rules = { ...rules, frozenSides };
+  // Mesa Desnivelada (Patch 0.9.4): a 1ª pedra de cada ponta deixa par na esquerda e ímpar na direita
+  if (tableModIs(state, 'mesaDesnivelada')) rules = { ...rules, tilted: true };
   return rules;
 }
 
@@ -220,13 +223,17 @@ export function drawAvailabilityFor(state, seat) {
     hearts: state.hearts[seat],
     heartCost: heartDrawCostFor(state, seat),
     maxDraws: maxDrawsFor(state, seat),
+    // Fumaça Densa (Patch 0.9.4): a compra paga em moedas sobe para $4
+    coinCost: tableModIs(state, 'fumacaDensa') ? SMOKE_DRAW_COINS : null,
   });
 }
 
 /** Quanto custa o passe estratégico de `seat` ($3; Moeda Furada: $1; Fiado de Rua: o 1º da run de graça). */
 export function passFeeFor(state, seat = 'player') {
   if (seat === 'player' && fiadoAvailable(state)) return 0;
-  return relicsOf(state, seat).reduce((fee, relic) => Math.min(fee, relic.passFee ?? PASS_FEE), PASS_FEE);
+  // Aposta Alta (Patch 0.9.4): o passe voluntário custa $5 (a Moeda Furada ainda barateia)
+  const base = tableModIs(state, 'apostaAlta') ? HIGH_STAKES_PASS_FEE : PASS_FEE;
+  return relicsOf(state, seat).reduce((fee, relic) => Math.min(fee, relic.passFee ?? base), base);
 }
 
 /** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`); `fiado` marca o passe na conta. */

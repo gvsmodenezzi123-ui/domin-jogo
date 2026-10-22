@@ -4,6 +4,8 @@ import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
 import NoMovesBanner from './NoMovesBanner.jsx';
+import { tableModifierOf } from '../data/tableModifiers.js';
+import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
 
 /** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
@@ -18,8 +20,22 @@ const B = BASE_UNIT_PX;
  * lâmpada fica no meio). Com 3 ou menos o número fica âmbar; vazio, vermelho. Cada
  * compra dá um pulinho no número.
  */
-const BoneyardPile = memo(function BoneyardPile({ count }) {
-  const tone = count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
+const BoneyardPile = memo(function BoneyardPile({ count, hidden = false }) {
+  // Fumaça Densa (Patch 0.9.4): o dorme some na fumaça (nem a pilha nem o número aparecem)
+  const tone = hidden ? 'is-smoke' : count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
+  if (hidden) {
+    return (
+      <div className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`} role="status" aria-label="Dorme escondido pela fumaça">
+        <span className="boneyard-smoke" aria-hidden="true">
+          <TableModIcon icon="smoke" className="h-9 w-9" />
+        </span>
+        <span className="boneyard-info" aria-hidden="true">
+          <span className="boneyard-count font-pixel text-shadow-pixel">?</span>
+          <span className="boneyard-label font-pixel">FUMAÇA</span>
+        </span>
+      </div>
+    );
+  }
   return (
     <div
       className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`}
@@ -37,6 +53,41 @@ const BoneyardPile = memo(function BoneyardPile({ count }) {
         </span>
         <span className="boneyard-label font-pixel">{count === 0 ? 'VAZIO' : 'DORME'}</span>
       </span>
+    </div>
+  );
+});
+
+/**
+ * Selo da Regra de Mesa (Patch 0.9.4) no canto de cima, à esquerda, do feltro: o ícone num
+ * lacre de cera âmbar. Tocar abre um lembrete curto da regra (some sozinho em 5 s).
+ */
+const TableModSeal = memo(function TableModSeal({ id }) {
+  const mod = tableModifierOf(id);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => setOpen(false), 5000);
+    return () => clearTimeout(timer);
+  }, [open]);
+  if (!mod) return null;
+  return (
+    <div className="table-mod absolute z-[8]">
+      <button
+        type="button"
+        data-table-mod={mod.id}
+        className={`table-mod-seal ${open ? 'is-open' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={`Regra da mesa: ${mod.name}. Toque para ler`}
+      >
+        <TableModIcon icon={mod.icon} className="h-5 w-5" />
+      </button>
+      {open && (
+        <div className="table-mod-tip" role="status">
+          <p className="table-mod-tip-name">REGRA DA MESA · {mod.name.toUpperCase()}</p>
+          <p className="table-mod-tip-rule">{mod.rule}</p>
+        </div>
+      )}
     </div>
   );
 });
@@ -101,6 +152,7 @@ function TableBoard({
   incoming = null,
   noMoves = false,
   boneyardCount = null,
+  tableMod = null,
 }) {
   const [areaRef, size] = useElementSize();
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
@@ -247,7 +299,8 @@ function TableBoard({
       <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
-      {boneyardCount !== null && <BoneyardPile count={boneyardCount} />}
+      {boneyardCount !== null && <BoneyardPile count={boneyardCount} hidden={tableMod === 'fumacaDensa'} />}
+      <TableModSeal id={tableMod} />
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
 

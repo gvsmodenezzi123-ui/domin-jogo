@@ -18,6 +18,7 @@ import {
 } from '../dominoLogic.js';
 import { MATCH_PRIZE, createInitialState, gameReducer } from '../gameReducer.js';
 import { canUndo } from '../powers.js';
+import { encounterOptionBlock } from '../encounters.js';
 import { relicBuyBlock, rerollCost, sellPriceOf } from '../shop.js';
 
 const t = (a, b) => makeTile(a, b);
@@ -30,7 +31,7 @@ const dev = (s, op, extra = {}) => gameReducer(s, { type: 'DEV', op, ...extra })
 function newRun(seed = seedWithShop(42), extra = {}) {
   const deck = shuffle(FULL_SET, createSeededRng(seed));
   if (extra.rivalId) return gameReducer(createInitialState(), { type: 'START_DUEL', deck, seed, ...extra });
-  const map = gameReducer(createInitialState(), { type: 'NEW_RUN', seed, ...extra });
+  const map = gameReducer(createInitialState(), { type: 'NEW_RUN', seed, map: 1, ...extra });
   return gameReducer(map, { type: 'CHOOSE_NODE', nodeId: availableNodes(map)[0], deck });
 }
 
@@ -440,6 +441,14 @@ describe('simulação de runs inteiras', () => {
           if (market.relics.player.length < RELIC_SLOTS) market = gameReducer(market, { type: 'MARKET_BUY', index: Math.floor(rng() * 3) });
           next = gameReducer(market, { type: 'LEAVE_MARKET' });
         } else if (s.phase === 'coinEvent') next = gameReducer(s, { type: 'LEAVE_EVENT' });
+        // Patch 0.9.4: eventos [?] da teia v2 (escolhe ao acaso; sem dinheiro, a opção segura)
+        else if (s.phase === 'encounter') {
+          if (s.encounter.choice) next = gameReducer(s, { type: 'LEAVE_ENCOUNTER' });
+          else {
+            const pick = rng() < 0.5 && !encounterOptionBlock(s, s.encounter.id, 'a') ? 'a' : 'b';
+            next = gameReducer(s, { type: 'ENCOUNTER_CHOOSE', choice: pick });
+          }
+        }
         else if (s.pending?.type === 'drawChoice') next = gameReducer(s, { type: 'DRAW_PICK', tileId: s.pending.options.at(-1).id });
         else if (s.pending?.type === 'discard') next = gameReducer(s, { type: 'DISCARD', tileId: s.hands.player[0].id });
         else if (s.turn === 'tioZe') next = gameReducer(s, { type: 'TIO_ZE_ACT' });

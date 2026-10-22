@@ -1,6 +1,7 @@
 import { memo, useContext } from 'react';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { TileSkinContext } from './tileSkin.js';
+import { sameTileProps } from './tileMemo.js';
 
 /**
  * Posições dos pips numa grade 3x3 [linha, coluna], pensadas para a metade de
@@ -210,9 +211,9 @@ function DominoTile({
       disabled={onClick ? disabled : undefined}
       aria-label={label ?? `Pedra ${values[0]} e ${values[1]}${enh ? ` (${enh.name})` : ''}`}
       aria-pressed={onClick ? selected : undefined}
-      className={`domino-face relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${
-        dimmed ? 'brightness-[.6] sepia-[.35]' : ''
-      } ${crosswise ? 'drop-shadow-[0_6px_5px_rgba(0,0,0,0.7)]' : ''} ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
+      className={`domino-face relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${dimmed ? 'tile-dimmed' : ''} ${
+        crosswise ? 'tile-crosswise' : ''
+      } ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
         enh && dimmed ? 'tile-enh-still' : ''
       } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
       style={{ ...shared, ...surface }}
@@ -264,4 +265,4 @@ function DominoTile({
   );
 }
 
-export default memo(DominoTile);
+export default memo(DominoTile, sameTileProps);

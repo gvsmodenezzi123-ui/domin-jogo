@@ -18,10 +18,17 @@
  *   - pelo menos uma bifurcação põe lado a lado uma mesa e um desvio sem luta.
  * Tudo puro e determinístico: a mesma semente sempre gera o mesmo mapa (o save guarda só
  * a semente e o caminho percorrido).
+ *
+ * Versão 2 da teia (Patch 0.9.4, runs novas; `state.run.map`): cada região ganha 1 ou 2 nós de
+ * EVENTO "[?]" nos andares 2–5 (data/encounters.js) e algumas mesas comuns ganham uma REGRA DE
+ * MESA (data/tableModifiers.js: `node.mod`). A versão 1 continua gerando exatamente o mapa de
+ * antes, para o CONTINUAR das runs salvas antes do 0.9.4.
  */
 
 import { REGIONS } from '../data/campaign.js';
+import { ENCOUNTER_IDS } from '../data/encounters.js';
 import { RIVALS } from '../data/rivals.js';
+import { TABLE_MODIFIER_IDS } from '../data/tableModifiers.js';
 import { createSeededRng } from './dominoLogic.js';
 import { mixSeed, shuffleWith } from './seedEngine.js';
 
@@ -37,7 +44,12 @@ export const NODE_LABEL = Object.freeze({
   shop: 'LOJA DO VALTINHO',
   black: 'MERCADO NEGRO',
   coins: 'SEU TIÃO DAS MOEDAS',
+  event: 'EVENTO',
 });
+/** Versão da teia das runs novas (1 = até o Patch 0.9.3; 2 = com eventos e regras de mesa). */
+export const MAP_VERSION = 2;
+/** Chance de uma mesa comum (andares 2–5, e a entrada das regiões 2 e 3) ganhar regra de mesa. */
+export const TABLE_MOD_CHANCE = 0.4;
 /** Prêmio do Seu Tião das Moedas. */
 export const COIN_EVENT_MIN = 1;
 export const COIN_EVENT_MAX = 12;
@@ -149,9 +161,28 @@ function arrangements(items) {
 
 const ARRANGEMENTS = arrangements(['combat', 'combat', 'combat', ...SPECIALS]);
 
+/** Teia v2: andares 2–5 com 1 a 3 nós somando `total` (7 com um evento, 8 com dois). */
+function floorPatterns(total) {
+  const out = [];
+  for (let a = 1; a <= 3; a += 1)
+    for (let b = 1; b <= 3; b += 1)
+      for (let c = 1; c <= 3; c += 1) {
+        const d = total - a - b - c;
+        if (d >= 1 && d <= 3) out.push([a, b, c, d]);
+      }
+  return out;
+}
+
+const V2 = {
+  1: { patterns: floorPatterns(7), arrangements: arrangements(['combat', 'combat', 'combat', ...SPECIALS, 'event']) },
+  2: { patterns: floorPatterns(8), arrangements: arrangements(['combat', 'combat', 'combat', ...SPECIALS, 'event', 'event']) },
+};
+
 /** Sorteia uma teia candidata para a região; devolve null se ela não passar nas garantias. */
-function tryRegion(regionId, cast, rng) {
-  const pattern = FLOOR_PATTERNS[Math.floor(rng() * FLOOR_PATTERNS.length)];
+function tryRegion(regionId, cast, rng, events = 0) {
+  // v1 (events = 0): exatamente os sorteios de antes; v2: padrões e arranjos com os eventos
+  const patterns = events ? V2[events].patterns : FLOOR_PATTERNS;
+  const pattern = patterns[Math.floor(rng() * patterns.length)];
   const lanesByFloor = { 1: [1], 6: [1] };
   for (let f = 2; f <= 5; f += 1) lanesByFloor[f] = lanesFor(pattern[f - 2], rng);
 
@@ -173,7 +204,7 @@ function tryRegion(regionId, cast, rng) {
   const middle = [2, 3, 4, 5].flatMap((f) => floors[f]);
   const paths = middlePaths(floors);
   const forks = [floors[1][0], ...middle].filter((n) => n.floor <= 4 && n.next.length >= 2);
-  const valid = ARRANGEMENTS.filter((types) => {
+  const valid = (events ? V2[events].arrangements : ARRANGEMENTS).filter((types) => {
     const typeOf = new Map(middle.map((n, i) => [n, types[i]]));
     const fights = paths.map((path) => path.filter((n) => typeOf.get(n) === 'combat').length);
     if (Math.min(...fights) < 1 || Math.max(...fights) < 2) return false;
@@ -236,29 +267,64 @@ function fallbackRegion(regionId, cast) {
 
 const cache = new Map();
 
-/** A teia da run inteira para esta semente (memorizada). */
-export function generateCampaign(seed = 0) {
+/**
+ * Teia v2: regras de mesa nas mesas comuns e qual dilema mora em cada nó de evento, tudo pela
+ * semente (sorteios próprios, que não mexem nos da teia).
+ */
+function dressV2(key, regions) {
+  const order = shuffled([...ENCOUNTER_IDS], createSeededRng(mixSeed(key, 'eventos-ordem')));
+  let nextEncounter = 0;
+  return regions.map((region) => ({
+    ...region,
+    nodes: region.nodes.map((node) => {
+      if (node.type === 'event') {
+        const encounter = order[nextEncounter % order.length];
+        nextEncounter += 1;
+        return Object.freeze({ ...node, encounter });
+      }
+      // a 1ª mesa da run fica limpa (é onde se aprende); a entrada das regiões 2 e 3 pode ter regra
+      const eligible = node.type === 'combat' && !(node.region === 1 && node.floor === 1);
+      if (!eligible) return node;
+      const rng = createSeededRng(mixSeed(key, `regra-${node.id}`));
+      if (rng() >= TABLE_MOD_CHANCE) return node;
+      return Object.freeze({ ...node, mod: TABLE_MODIFIER_IDS[Math.floor(rng() * TABLE_MODIFIER_IDS.length)] });
+    }),
+  }));
+}
+
+/** Quantos eventos a região tem na teia v2 (a 1ª: um; as outras: um ou dois). */
+const eventsFor = (key, regionId) => (regionId === 1 ? 1 : createSeededRng(mixSeed(key, `eventos-${regionId}`))() < 0.5 ? 1 : 2);
+
+/** A teia da run inteira para esta semente e versão (memorizada). */
+export function generateCampaign(seed = 0, version = 1) {
   const key = (Number.isFinite(seed) ? seed : 0) >>> 0;
-  if (cache.has(key)) return cache.get(key);
-  const regions = REGIONS.map((region) => {
+  const v = version === MAP_VERSION ? MAP_VERSION : 1;
+  const cacheKey = `${key}:${v}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+  let regions = REGIONS.map((region) => {
     const cast = runCast(key, region.id);
     const rng = createSeededRng(mixSeed(key, `regiao-${region.id}`));
+    const events = v === 1 ? 0 : eventsFor(key, region.id);
     for (let i = 0; i < MAX_TRIES; i += 1) {
-      const built = tryRegion(region.id, cast, rng);
+      const built = tryRegion(region.id, cast, rng, events);
       if (built) return built;
     }
     return fallbackRegion(region.id, cast);
   });
+  if (v === MAP_VERSION) regions = dressV2(key, regions);
   const byId = new Map(regions.flatMap((r) => r.nodes.map((n) => [n.id, n])));
   // os 15 da run, na ordem das regiões (entrada, comuns, chefe)
   const cast = regions.flatMap((r) => [r.cast.intro, ...r.cast.commons, r.cast.boss]);
-  const campaign = Object.freeze({ seed: key, regions, byId, cast });
+  const campaign = Object.freeze({ seed: key, version: v, regions, byId, cast });
   if (cache.size > 32) cache.clear();
-  cache.set(key, campaign);
+  cache.set(cacheKey, campaign);
   return campaign;
 }
 
-export const campaignOf = (state) => generateCampaign(state.seed ?? 0);
+/** A versão da teia de uma run (saves e runs de antes do 0.9.4: 1). */
+export const mapVersionOf = (state) => (state?.run?.map === MAP_VERSION ? MAP_VERSION : 1);
+
+export const campaignOf = (state) => generateCampaign(state.seed ?? 0, mapVersionOf(state));
 
 export const nodeOf = (state, id) => (id ? (campaignOf(state).byId.get(id) ?? null) : null);
 

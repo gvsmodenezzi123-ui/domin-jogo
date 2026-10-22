@@ -23,6 +23,8 @@ import RivalAvatar from './RivalAvatar.jsx';
 import { MenuGlyph } from './UiGlyphs.jsx';
 import { CorvoSprite, TiaoMoedasSprite } from './art/NecroticArt.jsx';
 import { ValtinhoSprite } from './art/SceneArt.jsx';
+import { EventPlaqueIcon, TableModIcon } from './art/TableModArt.jsx';
+import { tableModifierOf } from '../data/tableModifiers.js';
 
 /** Altura de cada andar (px), cabeçalho de cada região e folga embaixo. */
 const STEP = 98;
@@ -98,8 +100,9 @@ const STOP_ART = {
   shop: (cls) => <ValtinhoSprite className={cls} />,
   black: (cls) => <CorvoSprite className={cls} />,
   coins: (cls) => <TiaoMoedasSprite className={cls} />,
+  event: (cls) => <EventPlaqueIcon className={cls} />,
 };
-const STOP_CAPTION = { shop: 'LOJA', black: 'BECO', coins: 'SEU TIÃO' };
+const STOP_CAPTION = { shop: 'LOJA', black: 'BECO', coins: 'SEU TIÃO', event: '???' };
 const STATUS_LABEL = { open: 'ABERTO', done: 'JÁ PASSOU', ahead: 'MAIS ADIANTE', gone: 'FORA DO CAMINHO' };
 
 /**
@@ -113,8 +116,9 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
   const { node } = point;
   const fight = node.type === 'combat' || node.type === 'boss';
   const rival = fight ? getRival(node.rivalId) : null;
+  const mod = tableModifierOf(node.mod);
   const label = fight
-    ? `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}`
+    ? `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}${mod ? `, regra da mesa: ${mod.name}` : ''}`
     : NODE_LABEL[node.type];
   const cls = `web-node web-${status} ${selected ? 'web-selected' : ''}`;
   if (fight) {
@@ -143,6 +147,12 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
         </span>
         <span className="polaroid-caption font-pixel">{known ? rival.name.toUpperCase() : '???'}</span>
         {node.boss && <span className="map-boss-tag font-pixel">CHEFE</span>}
+        {/* Patch 0.9.4: selo da regra de mesa gravado no canto da polaroid */}
+        {mod && (
+          <span aria-hidden="true" className="map-mod-badge">
+            <TableModIcon icon={mod.icon} className="h-full w-full" />
+          </span>
+        )}
       </button>
     );
   }
@@ -199,6 +209,12 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
     line = 'O Corvo da Madrugada, no beco escuro.';
     notes = closed ? ['Só no Osso: o beco está vazio esta noite. Você passa reto.'] : ['Só talismãs Necróticos, de $18 a $26. Fortes, e cobram o preço deles.'];
     action = closed ? 'PASSAR RETO (FECHADO)' : 'ENTRAR NO BECO';
+  } else if (node.type === 'event') {
+    art = <EventPlaqueIcon className="h-12 w-12 shrink-0" />;
+    title = 'IMPREVISTO DA NOITE [?]';
+    line = 'Um imprevisto da noite.';
+    notes = ['Duas escolhas: arriscar ou ficar na sua. O que é, só se descobre entrando.'];
+    action = 'ENCARAR O IMPREVISTO';
   } else {
     art = <TiaoMoedasSprite className="h-12 w-12 shrink-0" />;
     title = 'SEU TIÃO DAS MOEDAS';
@@ -218,7 +234,17 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
           <p className="truncate font-term text-[16px] leading-none text-bone-300">{line}</p>
         </div>
       </div>
-      {notes.length > 0 && (
+      {/* Patch 0.9.4: a regra de mesa do confronto, em âmbar */}
+      {fight && tableModifierOf(node.mod) && (
+        <div className="map-mod-banner mt-1.5" role="note">
+          <TableModIcon icon={tableModifierOf(node.mod).icon} className="map-mod-banner-icon" />
+          <div className="min-w-0">
+            <p className="map-mod-banner-name">REGRA DA MESA: {tableModifierOf(node.mod).name.toUpperCase()}</p>
+            <p className="map-mod-banner-rule">{tableModifierOf(node.mod).rule}</p>
+          </div>
+        </div>
+      )}
+      {notes.length > 0 && !(fight && node.mod) && (
         <ul className="web-notes mt-1.5 grid gap-0.5 font-term text-[15px] leading-[1.05] text-bone-200">
           {notes.map((n, i) => (
             <li key={n} className={i > 0 && fight ? 'text-brass-300' : ''}>

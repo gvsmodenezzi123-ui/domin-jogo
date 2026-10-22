@@ -12,6 +12,9 @@
  * a mesma semente gera outro mapa: saves da versão 2 também não valem mais.
  * Versão 4 (Patch 0.8.0): guarda a maleta da run, o desafio, o Fiado de Rua usado e as
  * tampinhas da run. Saves da versão 3 continuam valendo (Maleta Clássica, sem desafio).
+ * Versão 5 (Patch 0.9.4): guarda a versão da teia (`map`: 2 = com eventos [?] e regras de
+ * mesa) e as cicatrizes (`scars`: corações máximos perdidos para o Bêbado). Saves 3 e 4 continuam
+ * valendo com a teia de antes (map 1), então o CONTINUAR volta exatamente no mesmo mapa.
  */
 
 import { SEED_MAX_LENGTH } from './seedEngine.js';
@@ -20,13 +23,13 @@ import { MALETAS } from '../data/maletas.js';
 import { CHALLENGES } from '../data/meta.js';
 import { RELIC_IDS } from '../data/relics.js';
 import { MAX_RELIC_SLOTS } from './loadout.js';
-import { generateCampaign } from './campaignMap.js';
+import { MAP_VERSION, generateCampaign } from './campaignMap.js';
 import { ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { FULL_SET, MAX_HEARTS } from './dominoLogic.js';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 /** Versões que o CONTINUAR ainda aceita. */
-const READABLE = [3, 4];
+const READABLE = [3, 4, 5];
 const RESUMES = ['map', 'shop', 'blackMarket'];
 
 export function snapshotRun(state, resume, savedAt = 0) {
@@ -40,6 +43,8 @@ export function snapshotRun(state, resume, savedAt = 0) {
     fiadoUsed: Boolean(state.run.fiadoUsed),
     seed: state.seed,
     seedCode: state.seedCode ?? null,
+    map: state.run.map === MAP_VERSION ? MAP_VERSION : 1,
+    scars: state.run.scars ?? 0,
     node: state.run.node,
     cleared: [...state.run.cleared],
     path: [...state.run.path],
@@ -100,7 +105,10 @@ export function isValidSave(save) {
   if (save.seed != null && !isInt(save.seed)) return false;
   // Patch 0.9.2: a semente em texto (saves antigos não têm)
   if (save.seedCode != null && (typeof save.seedCode !== 'string' || save.seedCode.length > SEED_MAX_LENGTH)) return false;
-  const campaign = generateCampaign(save.seed ?? 0);
+  // Patch 0.9.4: a teia da versão que a run começou (saves antigos: a de antes)
+  if (save.map != null && save.map !== 1 && save.map !== MAP_VERSION) return false;
+  if (save.scars != null && (!isInt(save.scars) || save.scars < 0 || save.scars > 5)) return false;
+  const campaign = generateCampaign(save.seed ?? 0, save.map === MAP_VERSION ? MAP_VERSION : 1);
   const known = (id) => typeof id === 'string' && campaign.byId.has(id);
   if (save.node !== null && !known(save.node)) return false;
   if (!Array.isArray(save.cleared) || !save.cleared.every(known)) return false;

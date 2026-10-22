@@ -13,15 +13,15 @@
  *   biggestRivalDamage   o rival que mais te tirou corações (id; o nome sai de data/rivals.js)
  *   tampinhasCollected   Tampinhas Douradas ganhas nesta run
  *
- * Corações que você mesmo paga (comprar com coração, Dado de Osso, Cálice) não contam como
- * dano de rival.
+ * Corações que você mesmo paga (comprar com coração, Dado de Osso, Cálice) e os dos eventos do
+ * mapa (Patch 0.9.4) não contam como dano de rival.
  */
 
 import { readJson, writeJson } from './storage.js';
 
 const STORE_KEY = 'buxaria:run_stats';
 /** Motivos de coração perdido que são custo seu, não golpe do rival. */
-const SELF_COSTS = new Set(['draw', 'dadoOsso', 'caliceGalo', 'dev']);
+const SELF_COSTS = new Set(['draw', 'dadoOsso', 'caliceGalo', 'dev', 'evento']);
 
 const emptyRunStats = (seed = null) => ({
   seed,

@@ -59,7 +59,11 @@ export const MODE_IDS = Object.freeze(Object.keys(MODES));
 export const modeOf = (mode) => MODES[mode] ?? MODES.normal;
 
 /** Corações máximos do jogador na run deste estado (desafio Tudo ou Nada: 1). */
-export const playerMaxHearts = (state) => (state?.challenge === 'tudoOuNada' ? 1 : modeOf(state?.mode).maxHearts);
+/**
+ * Corações máximos do jogador: os do modo (Tudo ou Nada: 1), menos as cicatrizes da run
+ * (Patch 0.9.4: o Bêbado do Fundo do Bar cobra 1 em sangue), nunca menos de 1.
+ */
+export const playerMaxHearts = (state) => Math.max(1, (state?.challenge === 'tudoOuNada' ? 1 : modeOf(state?.mode).maxHearts) - (state?.run?.scars ?? 0));
 
 /** Aviso das Peças Pretas trancadas. */
 export const BLACK_LOCKED_TEXT = 'TRANCADO! DERROTE O COMENDADOR MOREIRA NAS PEÇAS BRANCAS PARA LIBERAR AS PEÇAS PRETAS.';
