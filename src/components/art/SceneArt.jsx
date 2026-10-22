@@ -46,6 +46,54 @@ function drawBook() {
   return c.rows();
 }
 
+// --- Caderno de Fiado (ESTATÍSTICAS DA CONTA, Patch 0.9.1): caderno pardo com espiral,
+// cantoneiras de lata, as linhas da conta e o lápis atravessado
+const LEDGER_PAL = {
+  k: '#0b0705',
+  K: '#0b0705',
+  P: '#d7b878', // papel pardo
+  p: '#b8955a', // papel na sombra
+  h: '#efd9a4', // papel no claro
+  l: '#8a6a3a', // linhas da conta
+  r: '#b0322a', // margem vermelha
+  m: '#aab1b8', // cantoneira de lata
+  M: '#e6eaee',
+  s: '#6f767c', // espiral
+  S: '#c9cfd4',
+  y: '#e8b84a', // lápis
+  Y: '#a8761c',
+  e: '#f0a8a0', // borracha
+  g: '#3a3a3a', // grafite
+};
+
+function drawLedger() {
+  const c = pixelCanvas(40, 40);
+  c.rect(7, 6, 26, 30, 'P');
+  c.shade('P', 'h', (x, y) => y <= 8 || x <= 9);
+  c.shade('P', 'p', (x, y) => y >= 33 || x >= 30);
+  // margem vermelha e as linhas da conta, com pauzinhos de contagem
+  c.rect(12, 9, 1, 25, 'r');
+  for (let y = 12; y < 34; y += 4) c.rect(13, y, 18, 1, 'l');
+  for (const [x, y] of [[15, 10], [17, 10], [19, 10], [21, 10]]) c.rect(x, y, 1, 2, 'l');
+  c.line(14, 11, 22, 10, 'l');
+  c.rect(15, 14, 5, 1, 'l').rect(22, 14, 3, 1, 'l').rect(15, 18, 7, 1, 'l').rect(15, 22, 4, 1, 'l').rect(21, 26, 6, 1, 'l');
+  // espiral em cima
+  for (let x = 10; x <= 30; x += 4) {
+    c.rect(x, 4, 2, 4, 's');
+    c.set(x, 4, 'S');
+  }
+  // cantoneiras de lata
+  c.rect(7, 31, 5, 5, 'm').rect(28, 31, 5, 5, 'm').rect(28, 6, 5, 3, 'm');
+  c.set(8, 32, 'M').set(29, 32, 'M').set(29, 7, 'M');
+  // lápis atravessado
+  c.line(18, 36, 35, 19, 'y', 2);
+  c.line(19, 37, 36, 20, 'Y');
+  c.rect(34, 17, 3, 3, 'e');
+  c.set(17, 37, 'g').set(16, 38, 'g');
+  c.outline('k').outline('K');
+  return c.rows();
+}
+
 // --- Engrenagem de latão (OPÇÕES)
 const GEAR_PAL = {
   k: '#0b0705',
@@ -184,6 +232,7 @@ function drawValtinho(blink) {
 
 const BOOK_RECTS = mapToRects(drawBook(), BOOK_PAL, 'bk');
 const GEAR_RECTS = mapToRects(drawGear(), GEAR_PAL, 'gr');
+const LEDGER_RECTS = mapToRects(drawLedger(), LEDGER_PAL, 'ld');
 const CUP_RECTS = mapToRects(drawCup(), CUP_PAL, 'cp');
 const VALT_RECTS = mapToRects(drawValtinho(false), VALT_PAL, 'vt');
 const VALT_BLINK_RECTS = mapToRects(drawValtinho(true), VALT_PAL, 'vb');
@@ -194,6 +243,11 @@ export function BookIcon({ className = 'w-10 h-10' }) {
 
 export function GearIcon({ className = 'w-10 h-10' }) {
   return <PixelSvg className={className}>{GEAR_RECTS}</PixelSvg>;
+}
+
+/** Caderno de Fiado (Estatísticas da Conta, Patch 0.9.1). */
+export function LedgerIcon({ className = 'w-10 h-10' }) {
+  return <PixelSvg className={className}>{LEDGER_RECTS}</PixelSvg>;
 }
 
 export function DiceCupIcon({ className = 'w-10 h-10' }) {

@@ -12,7 +12,8 @@ import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
 import LampRig from './LampRig.jsx';
-import { BookIcon, GearIcon } from './art/SceneArt.jsx';
+import AccountStatsModal from './AccountStatsModal.jsx';
+import { BookIcon, GearIcon, LedgerIcon } from './art/SceneArt.jsx';
 
 function isStandalone() {
   if (typeof window === 'undefined') return false;
@@ -111,7 +112,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.0</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.1</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -209,11 +210,17 @@ export default function TitleScreen({
       <div aria-hidden="true" className="room-flicker pointer-events-none absolute inset-0 z-[2]" />
       <LampRig part="body" lamp={120} cord={40} beamWidth={380} className="z-[3]" />
 
-      {/* ícones nos cantos: Coleções (livro) e Opções (engrenagem de latão) */}
+      {/* ícones nos cantos: Coleções (livro), Estatísticas da Conta (caderno de fiado,
+          Patch 0.9.1) e Opções (engrenagem de latão) */}
       <div className="title-corners" aria-label="Atalhos">
-        <button type="button" className="icon-btn title-icon" onClick={() => open('book')} aria-label="Coleções: Livro de Boteco">
-          <BookIcon className="h-10 w-10" />
-        </button>
+        <div className="title-corner-group">
+          <button type="button" className="icon-btn title-icon" onClick={() => open('book')} aria-label="Coleções: Livro de Boteco">
+            <BookIcon className="h-10 w-10" />
+          </button>
+          <button type="button" className="icon-btn title-icon" onClick={() => open('stats')} aria-label="Estatísticas da conta: Caderno de Fiado">
+            <LedgerIcon className="h-10 w-10" />
+          </button>
+        </div>
         <button type="button" className="icon-btn title-icon" onClick={() => open('options')} aria-label="Opções">
           <GearIcon className="h-10 w-10" />
         </button>
@@ -258,7 +265,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.9.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.9.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>
@@ -273,6 +280,7 @@ export default function TitleScreen({
           <CollectionBook collection={collection} />
         </MenuModal>
       )}
+      {modal === 'stats' && <AccountStatsModal onClose={close} />}
       {modal === 'credits' && (
         <MenuModal id="credits-title" title="CRÉDITOS DA MESA" onClose={close}>
           <Credits />

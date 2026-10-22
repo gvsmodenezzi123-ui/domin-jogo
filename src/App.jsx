@@ -42,6 +42,7 @@ import {
   trackAchievements,
   unlockAchievement,
 } from './engine/achievements.js';
+import { trackStatsEvents } from './engine/accountStats.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
 import { mapRegionId, regionIdOf } from './engine/campaignMap.js';
 import {
@@ -567,6 +568,9 @@ export default function App() {
     // Patch 0.7.0: as conquistas conferem as metas nos eventos novos (ao vencer o Tio Zé,
     // ao jogar a 3ª pedra paga com coração, ao vencer a tranca com 1 pedra...); no 0.8.0
     // também as tampinhas, as maletas e os desafios
+    // Patch 0.9.1: a carreira (Caderno de Fiado) soma os mesmos eventos; vem antes das
+    // conquistas para o ponto de partida das tampinhas ainda não ter as desta mesa
+    trackStatsEvents(fresh, latestState.current);
     trackAchievements(fresh, latestState.current);
   }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
 

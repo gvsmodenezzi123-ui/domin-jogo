@@ -86,6 +86,44 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.1: estatísticas da conta (Caderno de Fiado)
+
+### Motor (`engine/accountStats.js`, gravado em `buxaria_lifetime_stats`)
+
+A carreira inteira, somada run após run. Fica fora do reducer: não mexe em regra, seed nem
+save. O App passa os eventos novos da mesa para `trackStatsEvents` (logo antes das
+conquistas). "Apagar tudo" não apaga a carreira, como a meta.
+
+| Campo | O que soma |
+| --- | --- |
+| `runsStarted` / `runsWon` / `runsLost` | runs iniciadas no Balcão (continuar não conta de novo), zeradas e perdidas |
+| `totalGoldSpent` | $ gastos na loja (talismã, pedra de grife, reembaralhar), no Mercado Negro, em passes e compras pagas do dorme |
+| `totalMugginsClosed` / `totalMugginsEarnings` | pontas fechadas em múltiplo de 5 e o $ que isso rendeu |
+| `totalTrancasWon` | rodadas vencidas por tranca |
+| `totalBuchasPlayed` | buchas que você jogou na mesa |
+| `tilesPlayedCount` | `{ '6-6': 42, ... }` das 28 pedras que você jogou |
+| `rivalsDefeated` / `rivalsLostTo` / `biggestLossRival` | mesas vencidas contra cada rival, runs que cada um encerrou e o maior algoz |
+| `totalCapsEarned` | Tampinhas Douradas ganhas na vida (quem já tinha tampinhas começa com o saldo) |
+
+Métodos: `trackTilePlay(a, b)`, `trackGoldSpent(amount)`, `trackRunEnd(isVictory, rivalId)`,
+mais `trackRunStart`, `trackMuggins`, `trackTrancaWon`, `trackRivalDefeated`,
+`trackCapsEarned` e `trackStatsEvents(events, state)`, que junta tudo numa gravação só.
+
+### Tela (`AccountStatsModal.jsx`)
+
+Ícone do caderno no alto da tela inicial, ao lado do livro. Caderno de fiado em papel pardo
+gasto, espiral de arame, cantoneiras de lata, linhas pautadas com margem vermelha e letra de
+máquina. Três páginas:
+
+- **Resumo da Carreira:** runs zeradas / iniciadas e o aproveitamento, runs perdidas, dinheiro
+  gasto na vida e tampinhas coletadas.
+- **Análise de Dominó:** a peça mais jogada desenhada (ex.: Bucha de Sena [6|6]) com quantas
+  vezes entrou na mesa, múltiplos de 5 fechados e o $ que renderam, trancas vencidas e buchas
+  batidas.
+- **Dossiê de Rivais:** a maior vítima e o maior algoz, com retrato.
+
+VOLTAR AO MENU (no alto) ou Esc fecha.
+
 ## Patch 0.9.0: trilha e entrada de cada chefe, Modo Inferno e Conta do Boteco mais cara
 
 ### Uma trilha por chefe (`engine/audioSynth.js`, `data/campaign.js` → `BOSS_TRACKS`)
