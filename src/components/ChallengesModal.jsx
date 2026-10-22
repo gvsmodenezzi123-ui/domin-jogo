@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { CHALLENGES, CHALLENGE_IDS, CAPS_PER_CHALLENGE } from '../data/meta.js';
 import { loadChallenges, loadEquippedFrame, saveEquippedFrame, subscribeMeta } from '../engine/meta.js';
 import { BottleCapIcon } from './ArtSprites.jsx';
+import PagedBlocks from './PagedBlocks.jsx';
 
 const challengesKey = () => {
   const { unlocked, done } = loadChallenges();
@@ -13,6 +14,7 @@ const frameKey = () => loadEquippedFrame() ?? '';
  * Desafios (Patch 0.8.0): regras extremas, liberadas por metas. Trancado mostra a meta;
  * liberado mostra a regra e o JOGAR (abre o Balcão de Maletas com o desafio valendo);
  * concluído dá a moldura, que dá para equipar aqui (ela enfeita a sua mão na mesa).
+ * Patch 0.9.3: sem scroll, um cartão por bloco em páginas (PagedBlocks).
  */
 export default function ChallengesModal({ onPlay }) {
   const key = useSyncExternalStore(subscribeMeta, challengesKey, () => '|');
@@ -22,14 +24,14 @@ export default function ChallengesModal({ onPlay }) {
   const done = doneRaw ? doneRaw.split(',') : [];
 
   return (
-    <ul className="grid gap-2">
+    <PagedBlocks className="min-h-0 flex-1" gap={8} label="Páginas dos desafios">
       {CHALLENGE_IDS.map((id) => {
         const challenge = CHALLENGES[id];
         const open = unlocked.includes(id);
         const finished = done.includes(id);
         const equipped = frame === challenge.frame;
         return (
-          <li key={id} className={`challenge-card ${open ? '' : 'is-locked'} ${finished ? 'is-done' : ''}`}>
+          <div key={id} role="group" aria-label={open ? challenge.name : 'Desafio bloqueado'} className={`challenge-card ${open ? '' : 'is-locked'} ${finished ? 'is-done' : ''}`}>
             <span className={`challenge-frame frame-${challenge.frame} ${finished ? '' : 'is-dim'}`} aria-hidden="true">
               {open ? '♠' : '?'}
             </span>
@@ -62,9 +64,9 @@ export default function ChallengesModal({ onPlay }) {
                 </div>
               )}
             </div>
-          </li>
+          </div>
         );
       })}
-    </ul>
+    </PagedBlocks>
   );
 }

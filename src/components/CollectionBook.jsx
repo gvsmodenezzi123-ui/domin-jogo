@@ -9,6 +9,7 @@ import DominoTile from './DominoTile.jsx';
 import RelicIcon from './RelicIcon.jsx';
 import { RetroCard } from './RetroCard.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
+import PagedBlocks from './PagedBlocks.jsx';
 
 const TABS = [
   { id: 'relics', label: 'TALISMÃS', ids: RELIC_IDS },
@@ -40,7 +41,7 @@ function progressText(achievementId, progress) {
 function LockedRelic({ relic, achievement, progress }) {
   const extra = progressText(achievement.id, progress);
   return (
-    <RetroCard as="li" rarity="neutral" className="book-entry book-entry-locked">
+    <RetroCard as="div" role="listitem" rarity="neutral" className="book-entry book-entry-locked">
       <span className="book-icon book-icon-lg">
         <span className="book-lock-silhouette" aria-hidden="true">
           <RelicIcon relic={relic} size={40} />
@@ -86,7 +87,8 @@ function Entry({ kind, id, known, badge = null }) {
   }
   return (
     <RetroCard
-      as="li"
+      as="div"
+      role="listitem"
       rarity={known && rarity ? rarity : 'neutral'}
       className={`book-entry ${known ? '' : 'book-entry-unknown'}`}
       style={rarity && known ? { '--rarity': getRarity(rarity).color } : undefined}
@@ -113,6 +115,8 @@ function Entry({ kind, id, known, badge = null }) {
  * hotbar do rival, no seu baralho). O que falta aparece como silhueta com "?".
  * Patch 0.7.0: os 10 talismãs de conquista mostram a meta enquanto estão trancados
  * e, liberados, aparecem inteiros com o selo DESBLOQUEADO.
+ * Patch 0.9.3: sem scroll. Cada seção vira páginas de livro (PagedBlocks): as setas embaixo,
+ * ou arrastar para o lado, viram a folha. Trocar de fita volta para a primeira página.
  */
 export default function CollectionBook({ collection }) {
   const [tab, setTab] = useState('relics');
@@ -128,9 +132,9 @@ export default function CollectionBook({ collection }) {
   const isKnown = (id) => seen.has(id) || (tab === 'relics' && unlockedRelic(id) === true);
   const found = current.ids.filter(isKnown).length;
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* abas de fita marcadora, como num álbum encadernado */}
-      <div className="sticky top-0 z-10 grid grid-cols-3 gap-1.5 pb-1" role="tablist" aria-label="Seções do livro">
+      <div className="grid shrink-0 grid-cols-3 gap-1.5 pb-1" role="tablist" aria-label="Seções do livro">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -145,7 +149,7 @@ export default function CollectionBook({ collection }) {
           </button>
         ))}
       </div>
-      <p className="mt-2 text-center font-pixel text-[8px] text-bone-400">
+      <p className="mt-2 shrink-0 text-center font-pixel text-[8px] text-bone-400">
         {found}/{current.ids.length} DESCOBERTOS
         {tab === 'relics' && (
           <span className="text-amber-300">
@@ -154,13 +158,13 @@ export default function CollectionBook({ collection }) {
           </span>
         )}
       </p>
-      <ul className="mt-2 grid gap-1.5" role="tabpanel">
+      <PagedBlocks key={tab} className="book-pages mt-2 min-h-0 flex-1" gap={6} theme="book" role="list" label={`Páginas de ${current.label.toLowerCase()}`}>
         {current.ids.map((id) => {
           const unlocked = tab === 'relics' ? unlockedRelic(id) : null;
           if (unlocked === false) return <LockedRelic key={id} relic={RELICS[id]} achievement={ACHIEVEMENT_BY_RELIC[id]} progress={achievements.progress} />;
           return <Entry key={id} kind={tab} id={id} known={isKnown(id)} badge={unlocked ? ACHIEVEMENT_BY_RELIC[id].title : null} />;
         })}
-      </ul>
+      </PagedBlocks>
     </div>
   );
 }

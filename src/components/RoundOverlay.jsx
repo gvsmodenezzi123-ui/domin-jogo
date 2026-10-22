@@ -103,11 +103,11 @@ function useCountUp(target, ms = 900) {
 }
 
 /** Retrato do derrotado na lousa: nocauteado, torto, com o carimbo de K.O. */
-function KnockedOut({ rival }) {
+function KnockedOut({ rival, size = 88 }) {
   return (
     <div className="ko-wrap mx-auto mb-2 w-fit">
       <div className="ko-portrait">
-        <RivalAvatar rival={rival} mood="hurt" size={88} smoke={false} />
+        <RivalAvatar rival={rival} mood="hurt" size={size} smoke={false} />
       </div>
       <span className="ko-stamp font-pixel" aria-hidden="true">
         K.O.
@@ -119,6 +119,8 @@ function KnockedOut({ rival }) {
 /**
  * Resultado da rodada, do nó (vitória → volta ao mapa da teia), da run vencida
  * (último chefe) ou da run perdida (você zerou).
+ * Patch 0.9.3: nada rola. O fim da run vira páginas (GameOverModal/VictoryModal); a rodada e
+ * a mesa vencida se apertam em tela baixa (`.round-card`, index.css) para caber inteiras.
  */
 export default function RoundOverlay({ state, rival, onNext, onContinue, autoContinue = true, onRestart, onMenu }) {
   const { roundResult: result, phase, hands, hearts, coins } = state;
@@ -147,7 +149,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="round-title">
       <div
-        className={`${matchWon ? 'chalkboard' : runWon || runOver ? 'run-end-card' : 'overlay-card'} max-h-[94%] w-full ${runWon || runOver ? 'max-w-[380px]' : 'max-w-[360px]'} overflow-y-auto px-4 py-5 text-center`}
+        className={`${matchWon ? 'chalkboard round-card max-h-[94%] py-5' : runWon || runOver ? 'run-end-card flex max-h-[97%] flex-col py-4' : 'overlay-card round-card max-h-[94%] py-5'} w-full ${runWon || runOver ? 'max-w-[380px]' : 'max-w-[360px]'} overflow-hidden px-4 text-center`}
       >
         {matchWon && (
           <>
@@ -195,7 +197,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
           <VictoryModal
             state={state}
             rival={rival}
-            portrait={<KnockedOut rival={rival} />}
+            portrait={<KnockedOut rival={rival} size={64} />}
             kicker={`${modeBadge(state.mode)}${state.stats.matchesWon} MESAS · ${REGIONS.length} REGIÕES`}
             title={secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
             howItEnded={`${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}`}

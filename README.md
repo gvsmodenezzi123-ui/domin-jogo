@@ -86,6 +86,45 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.3: tudo cabe na tela, maletas em carrossel e o pesadelo do Balcão
+
+### Sem scroll (só o mapa rola)
+- Nenhuma tela rola mais, a não ser o mapa da campanha (que continua rolando para você ver até
+  onde a teia vai). O painel DEV também rola, mas só existe no APK de testes.
+- O que não cabe vira **páginas** (`PagedBlocks.jsx` + `pagePack.js`): o conteúdo é repartido
+  pela altura que sobra; embaixo aparecem as setas de pixel e as bolinhas, e arrastar para o
+  lado também vira a folha (som de papel, `playPageTurn`). Se tudo cabe, não aparece barra.
+  Bloco maior que uma página inteira encolhe para caber; título de parte nunca fica sozinho
+  no pé da folha.
+- Em páginas: o Livro de Boteco (cada fita), o Caderno de Fiado, os créditos, os desafios, as
+  opções e o **fim da run**: a lousa da tentativa e a Conta do Boteco viram folhas, com
+  TENTAR NOVAMENTE e MENU fixos embaixo. O cabeçalho do nocaute ficou de lado (rival e texto
+  lado a lado) para a lousa caber já na primeira folha.
+- Loja do Valtinho, Mercado Negro e Seu Tião: o palco de cima (parede, beco) cede espaço em
+  tela baixa e o resto aperta um pouco; se ainda assim passar, a cena inteira encolhe para
+  caber (`useFitScale.js`). Pausa e resultado da rodada também não rolam.
+- Auditoria em 360×640, 375×667, 360×780, 390×844 e 412×915 (todas as telas, sem nada rolando
+  e sem botão cortado).
+
+### Balcão de Maletas em carrossel
+- As maletas aparecem uma por vez, grandes no meio, com as vizinhas menores dos lados.
+  **Arraste para o lado** para ver as outras (a maleta segue o dedo e assenta na mais perto),
+  ou use as setas e bolinhas logo abaixo. Tocar na do meio abre a maleta (como antes); tocar
+  numa vizinha traz ela para o meio. Trancada: a meta aparece direto no cartão.
+- Com uma maleta aberta, a lâmpada sobe e o carrossel encolhe: cartão, dificuldade (agora em
+  três colunas), semente e INICIAR cabem inteiros na tela.
+
+### O pesadelo da dificuldade
+- **Peças Pretas** (difícil): a luz da lâmpada esfria, a sombra fecha em azul de madrugada e
+  um zumbido grave incha por baixo (`playDread(1)`).
+- **Peças Prateadas** (Modo Inferno): o balcão fica vermelho de brasa, o canto pulsa como um
+  coração, sobem fagulhas e o coração bate no escuro (`playDread(2)`). O INICIAR fica
+  vermelho nas duas.
+
+### Correção
+- Com os EFEITOS em 0% nas opções, dois sons (o sino da pedra de cristal e os acordes de metais) tentavam
+  uma rampa exponencial até zero e davam erro no console. Agora não.
+
 ## Patch 0.9.2: sementes e a lousa da tentativa
 
 ### Motor de sementes (`engine/seedEngine.js`)

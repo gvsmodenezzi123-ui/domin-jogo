@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BLACK_LOCKED_TEXT, MODES, SILVER_LOCKED_TEXT } from '../data/difficulty.js';
-import { MALETAS, MALETA_IDS } from '../data/maletas.js';
+import { DEFAULT_MALETA, MALETAS, MALETA_IDS } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { sound } from '../engine/audioSynth.js';
 import { markMaletasSeen } from '../engine/meta.js';
@@ -9,6 +9,7 @@ import { haptic } from '../engine/progress.js';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
 import { TileSkinContext } from './tileSkin.js';
+import { ArrowGlyph } from './UiGlyphs.jsx';
 import { useUnlockSequence } from './useUnlockSequence.js';
 import { CadeadoSprite, CorrentesSprite, MaletaSprite } from './art/CaseArt.jsx';
 
@@ -17,6 +18,18 @@ function progressOf(id, progress) {
   if (id === 'borracharia') return `Trancas vencidas: ${Math.min(progress.trancaWins ?? 0, 3)}/3`;
   return null;
 }
+
+/** Brasa subindo no Modo Inferno: posição (%), atraso e duração (s). */
+const EMBERS = [
+  [8, 0, 5.2],
+  [19, 1.8, 6.1],
+  [31, 0.9, 4.7],
+  [44, 2.6, 5.8],
+  [57, 0.4, 6.4],
+  [68, 1.4, 5.1],
+  [79, 3.1, 6],
+  [91, 2.1, 4.9],
+];
 
 /** Faíscas que sobem da maleta quando ela abre (posição e atraso de cada uma). */
 const SPARKS = [
@@ -34,7 +47,7 @@ const SPARKS = [
  * forro de veludo, sai um brilho e umas faíscas. Abrir outra fecha a anterior (`closing`).
  * Na primeira vez que aparece liberada, o cadeado abre e as correntes caem (`fresh`).
  */
-function CaseSlot({ id, unlocked, fresh, open, closing, disabled, shakeKey, onPick }) {
+function CaseSlot({ id, unlocked, fresh, open, closing, disabled, waiting = false, focused = true, shakeKey, onPick }) {
   const stage = useUnlockSequence(fresh, unlocked ? 'open' : 'locked');
   const maleta = MALETAS[id];
   const free = stage === 'open'; // sem corrente: dá para abrir
@@ -43,8 +56,9 @@ function CaseSlot({ id, unlocked, fresh, open, closing, disabled, shakeKey, onPi
   return (
     <button
       type="button"
-      className={`scene-tap counter-case ${shown ? 'is-selected is-open' : ''} ${unlocked ? '' : 'is-locked'} ${disabled ? 'is-disabled' : ''}`}
+      className={`scene-tap counter-case ${shown ? 'is-selected is-open' : ''} ${unlocked ? '' : 'is-locked'} ${disabled ? 'is-disabled' : ''} ${waiting ? 'is-waiting' : ''}`}
       onClick={() => onPick(id)}
+      tabIndex={focused ? undefined : -1}
       aria-pressed={shown}
       aria-label={unlocked ? `${maleta.name}: ${shown ? maleta.buff : 'fechada, toque para abrir'}` : `${maleta.name}: trancada. ${maleta.goal}`}
     >
@@ -114,7 +128,7 @@ function DifficultyPick({ mode, unlocked, onChange }) {
               {on ? '■' : ''}
             </span>
             <TileSkinContext.Provider value={SKIN_OF[id]}>
-              <DominoTile values={[5, 3]} unit={11} depth={2} className="diff-tile" />
+              <DominoTile values={[5, 3]} unit={10} depth={2} orientation="horizontal" className="diff-tile" />
             </TileSkinContext.Provider>
             <span className="diff-text">
               <span className="diff-name">{MODES[id].name}</span>
@@ -128,20 +142,116 @@ function DifficultyPick({ mode, unlocked, onChange }) {
   );
 }
 
+/** Distância (em px) entre a maleta do meio e a vizinha: a mesma conta do CSS (`--case-step`). */
+const caseStep = () => (typeof window === 'undefined' ? 140 : Math.min(window.innerWidth * 0.36, 150));
+
+/**
+ * O carrossel das maletas (Patch 0.9.3): uma maleta grande no meio, as vizinhas menores e
+ * apagadas dos lados. Arrastar para o lado (ou as setas e bolinhas logo abaixo) passa de uma
+ * para a outra; a maleta acompanha o dedo e assenta na mais perto quando solta. Tocar na do meio abre
+ * (ou mostra a meta, se trancada); tocar numa vizinha traz ela para o meio.
+ */
+function CaseCarousel({ ids, focus, onFocus, children }) {
+  const [drag, setDrag] = useState(null); // { x, dx, moved } enquanto o dedo está no balcão
+  const trackRef = useRef(null);
+  const swallowClick = useRef(false);
+  const last = ids.length - 1;
+  const shift = drag?.moved ? drag.dx / caseStep() : 0;
+
+  const onPointerDown = (e) => {
+    swallowClick.current = false;
+    setDrag({ x: e.clientX, dx: 0, moved: false, id: e.pointerId });
+  };
+  const onPointerMove = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) < 8) return;
+    if (!drag.moved) trackRef.current?.setPointerCapture?.(e.pointerId); // só agarra quando vira arrasto (o toque simples vira clique)
+    // nas pontas a fila resiste (borracha)
+    const edge = (focus === 0 && dx > 0) || (focus === last && dx < 0);
+    setDrag({ ...drag, dx: edge ? dx * 0.35 : dx, moved: true });
+  };
+  const onPointerUp = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (drag.moved) {
+      swallowClick.current = true;
+      // arrastou um pouco mais de 1/5 do passo: já conta como uma maleta
+      const moved = -drag.dx / caseStep();
+      let steps = Math.round(moved);
+      if (steps === 0 && Math.abs(drag.dx) > caseStep() * 0.2) steps = moved > 0 ? 1 : -1;
+      const target = Math.max(0, Math.min(last, focus + steps));
+      if (target !== focus) onFocus(target);
+    }
+    setDrag(null);
+  };
+
+  return (
+    <div className="case-carousel">
+      <div
+        ref={trackRef}
+        className={`case-track ${drag?.moved ? 'is-dragging' : ''}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => setDrag(null)}
+        onClickCapture={(e) => {
+          // o clique que vem no fim de um arrasto não abre maleta
+          if (swallowClick.current) {
+            e.stopPropagation();
+            e.preventDefault();
+            swallowClick.current = false;
+          }
+        }}
+        role="group"
+        aria-roledescription="carrossel"
+        aria-label="Maletas do balcão"
+      >
+        {ids.map((id, i) => {
+          const d = i - focus + shift;
+          const far = Math.abs(d);
+          const scale = 1 - Math.min(far, 1.5) * 0.3;
+          return (
+            <div
+              key={id}
+              className={`case-slot ${i === focus ? 'is-focus' : ''}`}
+              style={{
+                transform: `translateX(calc(-50% + ${d.toFixed(3)} * var(--case-step))) scale(${scale.toFixed(3)})`,
+                opacity: far > 2.2 ? 0 : Math.max(0, 1 - Math.min(far, 2) * 0.38),
+                zIndex: 10 - Math.round(far * 2),
+                visibility: far > 2.4 ? 'hidden' : undefined,
+              }}
+              aria-hidden={i === focus ? undefined : true}
+            >
+              {children(id, i)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Sons de cada dificuldade ao escolher (Peças Pretas e Prateadas anunciam o pesadelo). */
+const MODE_SOUND = { normal: () => sound.playClick(), hard: () => sound.playDread(1), inferno: () => sound.playDread(2) };
+
 /**
  * Balcão de Maletas (Patch 0.8.0), depois do NOVO JOGO: uma bancada de madeira vista de
  * cima, sob a lâmpada, com as 5 maletas de partida (data/maletas.js). Trancada: corrente e
- * cadeado; tocar mostra a meta. Liberada: fechada até você tocar (Patch 0.8.2); tocar abre
- * a maleta e mostra logo abaixo o que ela muda, a escolha das peças (Brancas = normal,
+ * cadeado; a meta aparece no cartão. Liberada: fechada até você tocar (Patch 0.8.2); tocar
+ * abre a maleta e mostra logo abaixo o que ela muda, a escolha das peças (Brancas = normal,
  * Pretas = difícil, Prateadas = inferno) e o INICIAR. Uma aberta por vez.
  * Em desafio (`challenge`), o título mostra a regra; o Só no Osso só aceita a Clássica.
+ * Patch 0.9.3: sem scroll. As maletas viram um carrossel (arraste para o lado para ver as
+ * outras); com uma aberta (`is-picked`) a lâmpada sobe e tudo cabe na tela. Peças Pretas e
+ * Prateadas mudam a cor do balcão (`mode-hard` / `mode-inferno`): a luz esfria, a sombra
+ * fecha e, no inferno, o salão fica vermelho com brasa subindo.
  */
 export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnlocked = false, progress = {}, challenge = null, onStart, onBack }) {
   const rule = challengeOf(challenge);
   const allowed = (id) => !rule?.maleta || rule.maleta === id;
+  const [focus, setFocus] = useState(() => Math.max(0, MALETA_IDS.indexOf(rule?.maleta ?? DEFAULT_MALETA)));
   const [selected, setSelected] = useState(null); // a maleta aberta (nenhuma até o primeiro toque)
   const [closing, setClosing] = useState(null); // a que acabou de fechar (anima a tampa descendo)
-  const [info, setInfo] = useState(null); // maleta trancada tocada (mostra a meta)
   const [shake, setShake] = useState({ id: null, n: 0 });
   const [mode, setMode] = useState('normal');
   const [warn, setWarn] = useState({ n: 0, text: '' });
@@ -155,23 +265,38 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
     if (fresh.length) markMaletasSeen(fresh);
   }, [fresh]);
 
+  const focusId = MALETA_IDS[focus];
+  const focusOpen = unlocked.includes(focusId) && allowed(focusId);
+
+  const focusTo = (index) => {
+    const next = Math.max(0, Math.min(MALETA_IDS.length - 1, index));
+    if (next === focus) return;
+    setFocus(next);
+    // passar para outra maleta fecha a que estava aberta
+    if (selected) {
+      setClosing(selected);
+      setSelected(null);
+      sound.playCaseClose();
+    } else {
+      sound.playCaseSlide();
+    }
+    haptic(8);
+  };
+
   const pick = (id) => {
-    if (!unlocked.includes(id)) {
-      setInfo(id);
+    const index = MALETA_IDS.indexOf(id);
+    if (index !== focus) {
+      focusTo(index);
+      return;
+    }
+    if (!unlocked.includes(id) || !allowed(id)) {
       setShake((s) => ({ id, n: s.n + 1 }));
       sound.playChainRattle();
       haptic([30, 40, 30]);
       return;
     }
-    if (!allowed(id)) {
-      setInfo(id);
-      setShake((s) => ({ id, n: s.n + 1 }));
-      return;
-    }
-    setInfo(null);
     if (id === selected) return;
-    if (selected) sound.playCaseClose();
-    setClosing(selected);
+    setClosing(null);
     setSelected(id);
     sound.playCaseOpen();
     haptic([12, 50, 12]);
@@ -184,15 +309,36 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
       haptic([30, 40, 30]);
       return;
     }
+    if (id !== mode) MODE_SOUND[id]();
     setMode(id);
-    sound.playClick();
+    if (id !== 'normal') haptic(id === 'inferno' ? [40, 60, 40, 60, 90] : [30, 50, 60]);
   };
 
   const maleta = selected ? MALETAS[selected] : null;
-  const lockedInfo = info ? MALETAS[info] : null;
+  const focused = MALETAS[focusId];
 
   return (
-    <div className="case-scene counter-scene fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby="counter-title">
+    <div
+      className={`case-scene counter-scene mode-${mode} fixed inset-0 z-[70] ${maleta ? 'is-picked' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="counter-title"
+      onKeyDown={(e) => {
+        if (e.target?.tagName === 'INPUT') return;
+        if (e.key === 'ArrowRight') focusTo(focus + 1);
+        if (e.key === 'ArrowLeft') focusTo(focus - 1);
+      }}
+    >
+      {/* o pesadelo: a cor do balcão muda com a dificuldade */}
+      <div aria-hidden="true" className="counter-dread">
+        <span className="dread-hard" />
+        <span className="dread-inferno" />
+        <span className="dread-embers">
+          {EMBERS.map(([x, delay, dur]) => (
+            <i key={x} style={{ left: `${x}%`, animationDelay: `${delay}s`, animationDuration: `${dur}s` }} />
+          ))}
+        </span>
+      </div>
       <div className="case-lamp" aria-hidden="true">
         <LampRig part="light" lamp={52} cord={24} beamWidth={420} />
         <LampRig part="body" lamp={52} cord={24} beamWidth={420} className="z-[6]" />
@@ -200,42 +346,67 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
       <div className="case-scroll">
         <h1 id="counter-title" className="case-title">
           {rule ? `DESAFIO: ${rule.name.toUpperCase()}` : 'BALCÃO DE MALETAS'}
-          <span>{rule ? rule.rule : 'Cada maleta muda o começo e uma regra da run'}</span>
+          <span>{rule ? rule.rule : 'Arraste para o lado e escolha a sua maleta'}</span>
         </h1>
 
-        <div className={`counter-top ${selected || info ? '' : 'is-waiting'}`}>
-          {MALETA_IDS.map((id) => (
+        <CaseCarousel ids={MALETA_IDS} focus={focus} onFocus={focusTo}>
+          {(id, i) => (
             <CaseSlot
-              key={id}
               id={id}
               unlocked={unlocked.includes(id)}
               fresh={fresh.includes(id)}
               open={id === selected}
               closing={id === closing}
               disabled={!allowed(id)}
+              waiting={i === focus && !selected}
+              focused={i === focus}
               shakeKey={shake.id === id ? shake.n : 0}
               onPick={pick}
             />
-          ))}
+          )}
+        </CaseCarousel>
+        <div className="case-dots">
+          <button type="button" className="case-nav" onClick={() => focusTo(focus - 1)} disabled={focus === 0} aria-label="Maleta anterior">
+            <ArrowGlyph dir="prev" size={12} />
+          </button>
+          <div className="case-dot-row" role="tablist" aria-label="Escolher maleta">
+            {MALETA_IDS.map((id, i) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={i === focus}
+                aria-label={MALETAS[id].name}
+                className={`case-dot ${i === focus ? 'is-on' : ''} ${unlocked.includes(id) ? '' : 'is-locked'}`}
+                onClick={() => focusTo(i)}
+              />
+            ))}
+          </div>
+          <button type="button" className="case-nav" onClick={() => focusTo(focus + 1)} disabled={focus === MALETA_IDS.length - 1} aria-label="Próxima maleta">
+            <ArrowGlyph dir="next" size={12} />
+          </button>
         </div>
 
-        {lockedInfo ? (
-          <div key={`info-${info}-${shake.n}`} className="counter-card counter-card-locked animate-shop-alert" role="status">
-            <p className="counter-card-title">{lockedInfo.name.toUpperCase()}</p>
-            {!unlocked.includes(info) ? (
+        {!focusOpen ? (
+          <div key={`info-${focusId}-${shake.id === focusId ? shake.n : 0}`} className={`counter-card counter-card-locked ${shake.id === focusId ? 'animate-shop-alert' : ''}`} role="status">
+            <p className="counter-card-title">{focused.name.toUpperCase()}</p>
+            {!unlocked.includes(focusId) ? (
               <div className="book-unlock-goal mt-1.5">
                 <p className="font-pixel text-[7px] leading-snug text-amber-300">[?] COMO DESBLOQUEAR:</p>
-                <p className="mt-0.5 font-term text-[16px] leading-[1.05] text-amber-100">{lockedInfo.goal}</p>
-                {progressOf(info, progress) && <p className="mt-0.5 font-pixel text-[7px] text-amber-400/80">{progressOf(info, progress)}</p>}
+                <p className="mt-0.5 font-term text-[16px] leading-[1.05] text-amber-100">{focused.goal}</p>
+                {progressOf(focusId, progress) && <p className="mt-0.5 font-pixel text-[7px] text-amber-400/80">{progressOf(focusId, progress)}</p>}
               </div>
             ) : (
-              <p className="mt-1 font-term text-[17px] leading-tight text-bone-200">{rule?.name}: só a {MALETAS[rule?.maleta]?.name}.</p>
+              <p className="mt-1 font-term text-[17px] leading-tight text-bone-200">
+                {rule?.name}: só a {MALETAS[rule?.maleta]?.name}.
+              </p>
             )}
           </div>
         ) : !maleta ? (
           <div className="counter-card counter-card-hint" role="status">
-            <p className="counter-hint-title">TOQUE NUMA MALETA PARA ABRIR</p>
-            <p className="counter-hint-text">Cada uma traz um começo diferente e uma regra da casa.</p>
+            <p className="counter-card-title">{focused.name.toUpperCase()}</p>
+            <p className="counter-hint-title mt-1.5">TOQUE NA MALETA PARA ABRIR</p>
+            <p className="counter-hint-text">{focused.title}. Cada uma traz um começo diferente e uma regra da casa.</p>
           </div>
         ) : (
           <div key={selected} className="counter-card counter-card-open" role="group" aria-label={maleta.name}>
@@ -269,7 +440,12 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
                 {normalizeSeed(seed) ? `A run sai igual para quem usar ${normalizeSeed(seed)}.` : 'Cole uma semente para repetir uma run.'}
               </span>
             </label>
-            <button type="button" data-tone="play" className="btn-pixel counter-start" onClick={() => onStart({ maleta: selected, mode, challenge, seed })}>
+            <button
+              type="button"
+              data-tone={mode === 'normal' ? 'play' : 'blood'}
+              className="btn-pixel counter-start"
+              onClick={() => onStart({ maleta: selected, mode, challenge, seed })}
+            >
               INICIAR
             </button>
           </div>

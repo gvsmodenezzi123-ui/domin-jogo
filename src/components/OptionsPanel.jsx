@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PagedBlocks from './PagedBlocks.jsx';
 
 function Slider({ id, label, value, onChange }) {
   const pct = Math.round(value * 100);
@@ -24,6 +25,7 @@ function Slider({ id, label, value, onChange }) {
 }
 
 /**
+ * Patch 0.9.3: sem scroll; em tela baixa as opções se repartem em páginas (PagedBlocks).
  * OPÇÕES: volume dos efeitos e da música, vibração, animações e resetar o progresso
  * (apaga a run salva e o Livro de Boteco; pede confirmação).
  */
@@ -32,12 +34,12 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
   const [done, setDone] = useState(false);
   const set = (patch) => onChange({ ...settings, ...patch });
   return (
-    <div className="grid gap-4">
+    <PagedBlocks className="min-h-0 flex-1" gap={16} label="Páginas das opções">
       <Slider id="opt-sfx" label="EFEITOS (SFX)" value={settings.sfx} onChange={(sfx) => set({ sfx })} />
       <Slider id="opt-music" label="MÚSICA" value={settings.music} onChange={(music) => set({ music })} />
       <button
         type="button"
-        className="btn-pixel"
+        className="btn-pixel w-full"
         data-tone={settings.haptics ? 'brass' : undefined}
         aria-pressed={settings.haptics}
         onClick={() => set({ haptics: !settings.haptics })}
@@ -46,7 +48,7 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
       </button>
       <button
         type="button"
-        className="btn-pixel"
+        className="btn-pixel w-full"
         data-tone={settings.reducedMotion ? undefined : 'brass'}
         aria-pressed={!settings.reducedMotion}
         onClick={() => set({ reducedMotion: !settings.reducedMotion })}
@@ -86,6 +88,6 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
           )}
         </div>
       )}
-    </div>
+    </PagedBlocks>
   );
 }

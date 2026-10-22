@@ -19,10 +19,11 @@ function Caps({ value, className = '' }) {
 /**
  * "A Conta do Boteco" (Patch 0.8.0): a lousa que abre sozinha no fim de toda run, perdida
  * ou vencida. Mostra as Tampinhas Douradas que a run rendeu, o saldo e as 4 melhorias
- * permanentes para comprar ali mesmo (engine/meta.js grava). TENTAR NOVAMENTE leva direto ao
- * Balcão de Maletas, já com os bônus valendo.
+ * permanentes para comprar ali mesmo (engine/meta.js grava).
+ * Patch 0.9.3: a conta é uma página da lousa do fim (PagedBlocks); TENTAR NOVAMENTE e MENU
+ * moram fixos embaixo (RunEndActions), à mão em qualquer página.
  */
-export default function RunEndBoard({ runCaps = 0, onRetry, onMenu }) {
+export default function RunEndBoard({ runCaps = 0 }) {
   const caps = useSyncExternalStore(subscribeMeta, loadGoldCaps, () => 0);
   const ownedKey = useSyncExternalStore(subscribeMeta, upgradesKey, () => '');
   const owned = ownedKey ? ownedKey.split(',') : [];
@@ -35,7 +36,7 @@ export default function RunEndBoard({ runCaps = 0, onRetry, onMenu }) {
   };
 
   return (
-    <section className="run-tab mt-4" aria-labelledby="tab-title">
+    <section className="run-tab" aria-labelledby="tab-title">
       <div className="run-tab-earned">
         <span className="chalk-dim font-pixel text-[7px]">TAMPINHAS DESTA RUN</span>
         <Caps value={`+${runCaps}`} className="run-tab-gain" />
@@ -78,12 +79,23 @@ export default function RunEndBoard({ runCaps = 0, onRetry, onMenu }) {
           })}
         </ul>
       </div>
-      <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onRetry}>
+    </section>
+  );
+}
+
+/**
+ * Os botões do fim da run (Patch 0.9.3): TENTAR NOVAMENTE leva direto ao Balcão de Maletas,
+ * já com os bônus da conta valendo; MENU volta para a tela inicial.
+ */
+export function RunEndActions({ onRetry, onMenu }) {
+  return (
+    <div className="run-end-actions shrink-0">
+      <button type="button" data-tone="play" className="btn-pixel run-end-retry" onClick={onRetry}>
         TENTAR NOVAMENTE
       </button>
-      <button type="button" className="text-action mt-2 font-pixel text-[9px] text-bone-300" onClick={onMenu}>
+      <button type="button" className="btn-pixel run-end-menu" onClick={onMenu}>
         MENU
       </button>
-    </section>
+    </div>
   );
 }

@@ -2,19 +2,22 @@ import { useState } from 'react';
 import OptionsPanel from './OptionsPanel.jsx';
 import SeedChip from './SeedChip.jsx';
 
-/** Pausa: o rival espera enquanto o menu está aberto. */
+/**
+ * Pausa: o rival espera enquanto o menu está aberto.
+ * Patch 0.9.3: sem scroll (as opções se repartem em páginas quando a tela é baixa).
+ */
 export default function PauseMenu({ rivalName = 'O rival', seedCode = null, muted, onToggleMute, onResume, onQuit, settings, onSettings }) {
   const [options, setOptions] = useState(false);
   return (
     <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-6" role="dialog" aria-modal="true" aria-labelledby="pause-title">
-      <div className="overlay-card max-h-[90%] w-full max-w-[300px] overflow-y-auto px-5 py-6 text-center">
-        <h2 id="pause-title" className="font-pixel text-[16px] text-bone-50 text-shadow-pixel">
+      <div className="overlay-card pause-card flex max-h-[92%] w-full max-w-[300px] flex-col overflow-hidden px-5 py-6 text-center">
+        <h2 id="pause-title" className="shrink-0 font-pixel text-[16px] text-bone-50 text-shadow-pixel">
           {options ? 'OPÇÕES' : 'PAUSA'}
         </h2>
         {options ? (
-          <div className="mt-4 text-left">
+          <div className="mt-4 flex min-h-0 flex-1 flex-col text-left">
             <OptionsPanel settings={settings} onChange={onSettings} />
-            <button type="button" className="btn-pixel mt-4 w-full" onClick={() => setOptions(false)}>
+            <button type="button" className="btn-pixel mt-4 w-full shrink-0" onClick={() => setOptions(false)}>
               VOLTAR
             </button>
           </div>

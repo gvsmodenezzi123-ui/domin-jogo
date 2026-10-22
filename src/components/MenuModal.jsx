@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 
-/** Janela por cima do menu/mesa, com título e botão FECHAR. Esc também fecha. */
+/**
+ * Janela por cima do menu/mesa, com título e botão FECHAR. Esc também fecha.
+ * Patch 0.9.3: sem scroll. O miolo é uma coluna que encolhe até o teto da janela; quem tem
+ * conteúdo comprido (livro, créditos, desafios) o reparte em páginas com PagedBlocks.
+ */
 export default function MenuModal({ id, title, onClose, children, wide = false, variant = 'card' }) {
   const leather = variant === 'leather';
   useEffect(() => {
@@ -25,7 +29,7 @@ export default function MenuModal({ id, title, onClose, children, wide = false, 
             </button>
           )}
         </div>
-        <div className={`mt-3 min-h-0 flex-1 overflow-y-auto text-left ${leather ? 'book-page' : ''}`}>{children}</div>
+        <div className={`menu-modal-body mt-3 flex min-h-0 flex-1 flex-col overflow-hidden text-left ${leather ? 'book-page' : ''}`}>{children}</div>
       </div>
     </div>
   );

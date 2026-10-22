@@ -10,6 +10,7 @@ import RelicIcon from './RelicIcon.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { CorvoSprite } from './art/NecroticArt.jsx';
+import { useFitScale } from './useFitScale.js';
 
 /** Falas do Corvo da Madrugada: ao abrir o beco e reagindo ao que você faz. */
 const GREETINGS = ['Psiu... aqui, no escuro.', 'Coisa que o Valtinho não tem coragem de vender.', 'Paga em dinheiro. Sem recibo, sem pergunta.'];
@@ -69,6 +70,8 @@ function Corvo() {
  * nada seu: aqui só se paga. Segurar um talismã mostra o efeito (e o preço que ele cobra).
  */
 export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
+  // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
+  const fit = useFitScale();
   const [complaint, setComplaint] = useState(null);
   const [alert, setAlert] = useState(0);
   const { market } = state;
@@ -94,7 +97,8 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
 
   return (
     <div className={`bm-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="bm-title">
-      <div className="bm-scroll">
+      <div ref={fit.outerRef} className="bm-scroll">
+        <div ref={fit.innerRef} className="scene-fit" style={fit.style}>
         <header className="bm-head">
           <h1 id="bm-title" className="bm-neon">
             MERCADO NEGRO
@@ -183,6 +187,7 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
             </span>
           </button>
         </footer>
+        </div>
       </div>
     </div>
   );

@@ -919,7 +919,8 @@ export class SoundEngine {
       bus: this.sfxBus,
       priority: PRIORITY.sfx,
       build: (env) => {
-        const peak = this.sfxVolume * 0.13;
+        // Patch 0.9.3: com os efeitos em 0% a rampa exponencial não aceita zero
+        const peak = Math.max(2 * SILENT, this.sfxVolume * 0.13);
         const g = env.gain;
         g.setValueAtTime(SILENT, at);
         g.exponentialRampToValueAtTime(peak, at + 0.004);
@@ -1528,6 +1529,47 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 210, freqEnd: 120, peak: 0.22, dur: 0.035, attack: 0.001, delay: 0.012 });
   }
 
+  /**
+   * Virar a página (Patch 0.9.3: livro, caderno, lousa): o papel arrastando (ruído que sobe de
+   * grave para agudo), a borda estalando e a folha assentando de leve.
+   */
+  playPageTurn() {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - (this.lastPageAt ?? -1e9) < 90) return;
+    this.lastPageAt = now;
+    this.noise({ freq: 1800, filter: 'bandpass', q: 0.7, peak: 0.16, dur: 0.1, attack: 0.025 });
+    this.noise({ freq: 5200, filter: 'highpass', q: 0.6, peak: 0.08, dur: 0.045, delay: 0.06 });
+    this.tone({ type: 'triangle', freq: 170, freqEnd: 110, peak: 0.07, dur: 0.03, attack: 0.002, delay: 0.12 });
+  }
+
+  /** Carrossel do Balcão (Patch 0.9.3): a maleta arrastada na madeira e o toque ao assentar. */
+  playCaseSlide() {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - (this.lastSlideAt ?? -1e9) < 70) return;
+    this.lastSlideAt = now;
+    this.noise({ freq: 700, filter: 'lowpass', q: 0.8, peak: 0.22, dur: 0.11, attack: 0.03 });
+    this.tone({ type: 'triangle', freq: 190, freqEnd: 120, peak: 0.12, dur: 0.04, attack: 0.002, delay: 0.1 });
+  }
+
+  /**
+   * A dificuldade escolhida no Balcão (Patch 0.9.3): o pesadelo chegando.
+   * 1 (Peças Pretas): um zumbido grave que incha e bate contra ele mesmo, e o ronco por baixo.
+   * 2 (Peças Prateadas, Inferno): mais grave e mais áspero, e o coração batendo no escuro.
+   */
+  playDread(level = 1) {
+    this.duck();
+    if (level >= 2) {
+      this.tone({ type: 'sine', freq: 62, freqEnd: 41, peak: 0.62, dur: 1.1, attack: 0.08 });
+      this.tone({ type: 'sawtooth', freq: 124, freqEnd: 83, peak: 0.07, dur: 0.9, attack: 0.1 });
+      this.noise({ freq: 220, filter: 'lowpass', q: 0.9, peak: 0.3, dur: 0.9, attack: 0.12 });
+      this.playHeartbeat();
+      return;
+    }
+    this.tone({ type: 'sine', freq: 87, freqEnd: 73, peak: 0.42, dur: 0.95, attack: 0.12 });
+    this.tone({ type: 'sine', freq: 92, freqEnd: 77, peak: 0.26, dur: 0.85, attack: 0.16 });
+    this.noise({ freq: 320, filter: 'lowpass', q: 0.8, peak: 0.16, dur: 0.7, attack: 0.15 });
+  }
+
   /** REEMBARALHAR: dados chacoalhando dentro do copo de couro e o copo batendo no balcão. */
   playDiceShake() {
     this.duck();
@@ -1769,8 +1811,8 @@ export class SoundEngine {
         build: (env) => {
           const g = env.gain;
           g.setValueAtTime(SILENT, at);
-          g.exponentialRampToValueAtTime(this.sfxVolume * peak, at + 0.02);
-          g.setValueAtTime(this.sfxVolume * peak * 0.85, at + Math.max(0.03, dur * 0.6));
+          g.exponentialRampToValueAtTime(Math.max(2 * SILENT, this.sfxVolume * peak), at + 0.02);
+          g.setValueAtTime(Math.max(2 * SILENT, this.sfxVolume * peak * 0.85), at + Math.max(0.03, dur * 0.6));
           g.exponentialRampToValueAtTime(SILENT, at + dur);
           const lp = this.ctx.createBiquadFilter();
           lp.type = 'lowpass';

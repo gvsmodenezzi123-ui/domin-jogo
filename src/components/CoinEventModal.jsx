@@ -7,6 +7,7 @@ import { prefersReducedMotion } from './motion.js';
 import RivalSpeech from './RivalSpeech.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { TiaoMoedasSprite } from './art/NecroticArt.jsx';
+import { useFitScale } from './useFitScale.js';
 
 /** Espera a cena clarear, voo de cada moeda e intervalo entre elas (ms). */
 const START_MS = 650;
@@ -30,6 +31,8 @@ function lineFor(reward, seq) {
  * a última fecha com o tilintar do caixa. O botão de saída volta para o mapa a qualquer hora.
  */
 export default function CoinEventModal({ state, onLeave }) {
+  // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
+  const fit = useFitScale();
   const reward = state.coinEvent?.reward ?? 0;
   const after = state.coins.player;
   const before = after - reward;
@@ -64,7 +67,8 @@ export default function CoinEventModal({ state, onLeave }) {
 
   return (
     <div className={`tiao-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
-      <div className="tiao-scroll">
+      <div ref={fit.outerRef} className="tiao-scroll">
+        <div ref={fit.innerRef} className="scene-fit" style={fit.style}>
         <header className="tiao-head">
           <h1 id="tiao-title" className="tiao-sign">
             SEU TIÃO DAS MOEDAS
@@ -115,6 +119,7 @@ export default function CoinEventModal({ state, onLeave }) {
             VOLTAR AO MAPA
           </button>
         </footer>
+        </div>
       </div>
     </div>
   );

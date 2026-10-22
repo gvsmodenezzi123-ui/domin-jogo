@@ -12,6 +12,7 @@ import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
 import LampRig from './LampRig.jsx';
+import PagedBlocks from './PagedBlocks.jsx';
 import AccountStatsModal from './AccountStatsModal.jsx';
 import { BookIcon, GearIcon, LedgerIcon } from './art/SceneArt.jsx';
 
@@ -109,10 +110,11 @@ function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges,
 }
 
 function Credits() {
+  // Patch 0.9.3: um parágrafo por bloco; o que não cabe vai para a página seguinte
   return (
-    <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
+    <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.2</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.3</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -132,7 +134,7 @@ function Credits() {
         React, Vite, Tailwind e muita pedra batida.
       </p>
       <p className="text-bone-400">Jogue com moderação. O boteco fecha às 2h.</p>
-    </div>
+    </PagedBlocks>
   );
 }
 
@@ -265,7 +267,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.9.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.9.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

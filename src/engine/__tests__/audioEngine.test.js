@@ -410,3 +410,29 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     engine.stopMusic();
   });
 });
+
+describe('Patch 0.9.3: sons novos e efeitos em 0%', () => {
+  it('virar página, deslizar maleta e o pesadelo do Balcão cabem nas 6 vozes', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    for (const play of [() => engine.playPageTurn(), () => engine.playCaseSlide(), () => engine.playDread(1), () => engine.playDread(2)]) {
+      play();
+      expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+      vi.advanceTimersByTime(2000);
+      expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+    }
+  });
+
+  it('com os efeitos em 0% nenhum som estoura a rampa exponencial', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    engine.setVolumes({ sfx: 0 });
+    const names = Object.getOwnPropertyNames(SoundEngine.prototype).filter((n) => n.startsWith('play') && n !== 'playTrack');
+    expect(names.length).toBeGreaterThan(30);
+    for (const name of names) {
+      engine[name]();
+      vi.advanceTimersByTime(3000);
+    }
+    expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+  });
+});

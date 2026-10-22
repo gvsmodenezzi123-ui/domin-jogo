@@ -14,6 +14,7 @@ import RelicIcon from './RelicIcon.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { DiceCupIcon, ValtinhoSprite } from './art/SceneArt.jsx';
+import { useFitScale } from './useFitScale.js';
 
 /** Falas do Valtinho ao abrir a loja (uma por visita) e reagindo ao que você faz. */
 const GREETINGS = ['Só mercadoria quente...', 'Vai levar ou vai ficar só olhando?', 'O Tio Zé mandou te cobrar o dobro...'];
@@ -108,6 +109,8 @@ function Valtinho() {
  * opcional da teia: sair dela volta para o mapa, que mostra as próximas bifurcações.
  */
 export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press }) {
+  // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
+  const fit = useFitScale();
   const [sellId, setSellId] = useState(null);
   const [alert, setAlert] = useState(0);
   const [complaint, setComplaint] = useState(null);
@@ -171,7 +174,8 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
 
   return (
     <div className={`shop-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
-      <div className="shop-scroll">
+      <div ref={fit.outerRef} className="shop-scroll">
+        <div ref={fit.innerRef} className="scene-fit" style={fit.style}>
         {/* toldo listrado com a barra denteada */}
         <header className="shop-awning">
           <div className="shop-awning-inner">
@@ -344,6 +348,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
             </span>
           </button>
         </footer>
+        </div>
       </div>
 
       {selling && (

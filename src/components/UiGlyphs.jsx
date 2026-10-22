@@ -59,3 +59,15 @@ export function EyeGlyph({ size = 14, className = '' }) {
     </Box>
   );
 }
+
+/**
+ * Seta de pixel (Patch 0.9.3: páginas e o carrossel das maletas). Desenhada em SVG: no Android
+ * o "◀" de texto vira figurinha colorida.
+ */
+export function ArrowGlyph({ dir = 'next', size = 12, className = '' }) {
+  return (
+    <svg viewBox="0 0 6 8" width={Math.round(size * 0.75)} height={size} shapeRendering="crispEdges" aria-hidden="true" className={className}>
+      {dir === 'prev' ? <path d="M4 0h2v8H4zM2 2h2v4H2zM0 3h2v2H0z" fill="currentColor" /> : <path d="M0 0h2v8H0zM2 2h2v4H2zM4 3h2v2H4z" fill="currentColor" />}
+    </svg>
+  );
+}

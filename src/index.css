@@ -3564,9 +3564,8 @@
 
 .shop-scroll {
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
   padding-bottom: max(env(safe-area-inset-bottom), 12px);
@@ -4233,11 +4232,10 @@
   background: rgba(8, 6, 4, 0.86);
 }
 
-/* notas do rival no rodapé: no máximo ~4 linhas, o resto rola */
+/* notas do rival no rodapé: no máximo ~4 linhas (Patch 0.9.3: sem rolar; os textos são curtos) */
 .web-notes {
   max-height: 68px;
-  overflow-y: auto;
-  scrollbar-width: none;
+  overflow: hidden;
 }
 
 /* ligações a giz: as que ainda dá para andar, as já andadas e as que ficaram para trás */
@@ -4443,9 +4441,8 @@
 
 .bm-scroll {
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
   padding-bottom: max(env(safe-area-inset-bottom), 12px);
@@ -4801,9 +4798,8 @@
 
 .tiao-scroll {
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
   padding-bottom: max(env(safe-area-inset-bottom), 12px);
@@ -5164,8 +5160,8 @@
   position: relative;
   z-index: 4;
   height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5769,16 +5765,6 @@
     linear-gradient(180deg, #3a2414 0%, #2a190d 55%, #160d06 100%);
 }
 
-.counter-top {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 8px;
-  width: 100%;
-  max-width: 420px;
-}
-
 .counter-case {
   display: flex;
   width: calc((100% - 16px) / 3);
@@ -5795,7 +5781,7 @@
 }
 
 .counter-art {
-  width: 96px;
+  width: var(--case-size, 96px);
 }
 
 .counter-case.is-selected {
@@ -5885,25 +5871,9 @@
 
 /* Patch 0.8.2: nenhuma aberta ainda. As fechadas (liberadas) dão uma balançadinha de vez em
    quando, cada uma no seu tempo, chamando o toque. */
-.counter-top.is-waiting .counter-case:not(.is-locked):not(.is-disabled) .counter-art {
+.counter-case.is-waiting:not(.is-locked):not(.is-disabled) .counter-art {
   animation: caseIdle 3.2s ease-in-out infinite;
   transform-origin: 50% 90%;
-}
-
-.counter-top.is-waiting .counter-case:nth-child(2) .counter-art {
-  animation-delay: 0.6s;
-}
-
-.counter-top.is-waiting .counter-case:nth-child(3) .counter-art {
-  animation-delay: 1.3s;
-}
-
-.counter-top.is-waiting .counter-case:nth-child(4) .counter-art {
-  animation-delay: 1.9s;
-}
-
-.counter-top.is-waiting .counter-case:nth-child(5) .counter-art {
-  animation-delay: 2.5s;
 }
 
 @keyframes caseIdle {
@@ -6283,7 +6253,8 @@
   --rune: #ffd9c4;
   background: #000;
   color: var(--color-bone-50);
-  overflow-y: auto;
+  overflow: hidden;
+  overflow: clip;
 }
 
 .secret-scene.secret-flicker {
@@ -7783,4 +7754,695 @@
     linear-gradient(180deg, #a0703c 0 45%, #3a3a3a 45% 100%);
   border: 1px solid #1d1008;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Patch 0.9.3: páginas no lugar do scroll ----------
+   PagedBlocks.jsx: os blocos da página atual ficam no fluxo; os das outras páginas ficam por
+   cima, invisíveis (mesma largura, então a altura medida é a mesma). Embaixo, a barra com as
+   setas de pixel e as bolinhas. Arrastar para o lado também vira a página. */
+.paged {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  overflow: clip;
+  touch-action: none;
+}
+
+.paged-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* sem corte próprio: quando a página encolhe (scale) o corte encolheria junto; quem corta é
+     a caixa .paged, e a página da vez sempre cabe nela */
+}
+
+.paged-block {
+  flex: none;
+  min-width: 0;
+  display: flow-root;
+}
+
+.paged-block.is-off {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.pager {
+  --pager-ink: var(--color-bone-100);
+  --pager-btn: rgba(0, 0, 0, 0.35);
+  flex: none;
+  height: 38px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--pager-ink);
+}
+
+.pager-btn {
+  width: 46px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--pager-ink);
+  background: var(--pager-btn);
+  border: 2px solid currentColor;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.pager-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.pager-btn:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.pager-middle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1;
+}
+
+.pager-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.pager-dots i {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  opacity: 0.3;
+}
+
+.pager-dots i.is-on {
+  opacity: 1;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* cores da barra em cada cenário */
+.pager-book {
+  --pager-ink: #f0cc78;
+  --pager-btn: rgba(40, 22, 10, 0.75);
+}
+
+.pager-ledger {
+  --pager-ink: #3a2410;
+  --pager-btn: rgba(255, 244, 214, 0.55);
+}
+
+.pager-ledger .pager-btn {
+  box-shadow: 0 3px 0 rgba(58, 36, 16, 0.45);
+}
+
+.pager-chalk {
+  --pager-ink: rgba(244, 240, 226, 0.92);
+  --pager-btn: rgba(20, 32, 24, 0.85);
+}
+
+.reduce-motion .pager-dots i.is-on {
+  box-shadow: none;
+}
+
+/* ---------- Patch 0.9.3: Balcão de Maletas sem scroll ----------
+   Maleta aberta: a lâmpada sobe, as maletas viram uma fileira de cinco e o cartão cabe
+   inteiro. A dificuldade vira três colunas (pedra em cima, nome embaixo). */
+.case-lamp {
+  transition: transform 260ms ease-out;
+}
+
+.counter-scene.is-picked .case-lamp {
+  transform: translateY(-30px);
+}
+
+.counter-scene.is-picked .case-scroll {
+  padding-top: calc(max(env(safe-area-inset-top), 10px) + 62px);
+  padding-bottom: max(env(safe-area-inset-bottom), 10px);
+}
+
+.counter-scene.is-picked .case-title span {
+  display: none;
+}
+
+.counter-scene.is-picked .counter-card {
+  margin-top: 8px;
+  padding: 10px 10px 12px;
+}
+
+.counter-scene.is-picked .counter-buff,
+.counter-scene.is-picked .counter-debuff {
+  margin-top: 4px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.counter-scene.is-picked .counter-start {
+  margin-top: 10px;
+}
+
+.counter-scene.is-picked .case-back {
+  margin-top: 8px;
+}
+
+.diff-pick {
+  margin-top: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.diff-option {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 8px 3px 6px;
+  text-align: center;
+}
+
+.diff-box {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+  border-width: 1px;
+  font-size: 7px;
+}
+
+.diff-text {
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.diff-name {
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+.diff-tag {
+  line-height: 1.3;
+}
+
+.diff-lock {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+}
+
+.seed-field {
+  margin-top: 8px;
+}
+
+/* celular baixinho: a semente perde a dica de baixo (o campo já diz "em branco: sorteia") */
+@media (max-height: 680px) {
+  .counter-scene.is-picked .seed-field-hint {
+    display: none;
+  }
+
+  .counter-scene.is-picked .counter-card-sub {
+    display: none;
+  }
+}
+
+/* ---------- Patch 0.9.3: o carrossel das maletas ----------
+   Uma maleta grande no meio, as vizinhas menores dos lados (CaseCounter.jsx calcula a posição
+   de cada uma; o passo entre elas é --case-step, a mesma conta do caseStep() do JS). */
+.counter-scene {
+  --case-size: clamp(100px, 21vh, 164px);
+  --case-step: min(36vw, 150px);
+}
+
+.counter-scene.is-picked {
+  --case-size: clamp(70px, 14vh, 140px);
+}
+
+.case-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 460px;
+  margin-top: 10px;
+}
+
+.case-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow-x: clip;
+  height: calc(var(--case-size) + 34px);
+  touch-action: none;
+  cursor: grab;
+  transition: height 260ms ease-out;
+}
+
+.case-track.is-dragging {
+  cursor: grabbing;
+}
+
+.case-slot {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform-origin: 50% 70%;
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 300ms ease;
+  will-change: transform;
+}
+
+.case-track.is-dragging .case-slot {
+  transition: none;
+}
+
+.case-slot .counter-case {
+  width: calc(var(--case-size) + 18px);
+}
+
+.case-slot:not(.is-focus) .counter-name {
+  opacity: 0.6;
+}
+
+.case-nav {
+  position: relative;
+  z-index: 12;
+  flex: none;
+  width: 40px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: #f2d79a;
+  background: rgba(10, 6, 3, 0.6);
+  border: 2px solid rgba(240, 204, 120, 0.4);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+.case-nav:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.case-nav:disabled {
+  opacity: 0.22;
+}
+
+.case-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.case-dot-row {
+  display: flex;
+}
+
+.case-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+.case-dot::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  background: rgba(244, 236, 210, 0.28);
+  border: 2px solid rgba(0, 0, 0, 0.65);
+}
+
+.case-dot.is-locked::before {
+  background: rgba(130, 120, 110, 0.35);
+}
+
+.case-dot.is-on::before {
+  background: #f2b84b;
+  box-shadow: 0 0 8px rgba(242, 184, 75, 0.75);
+}
+
+.counter-card-hint .counter-card-title {
+  text-align: center;
+}
+
+/* ---------- Patch 0.9.3: o pesadelo do Balcão ----------
+   Peças Pretas: a luz esfria e a sombra fecha em azul de madrugada. Peças Prateadas (Inferno):
+   o salão fica vermelho de brasa, o canto pulsa como coração e sobem fagulhas. A troca é um
+   fade (as camadas já existem, só acendem). */
+.counter-dread {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.counter-dread > span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+.dread-hard {
+  background:
+    radial-gradient(ellipse 72% 58% at 50% 40%, transparent 28%, rgba(3, 5, 16, 0.82) 100%),
+    linear-gradient(180deg, rgba(26, 34, 84, 0.42), rgba(8, 6, 26, 0.6));
+}
+
+.dread-inferno {
+  background:
+    radial-gradient(ellipse 78% 66% at 50% 44%, transparent 30%, rgba(36, 0, 0, 0.9) 100%),
+    linear-gradient(180deg, rgba(110, 8, 6, 0.5), rgba(34, 0, 0, 0.66));
+}
+
+.dread-inferno::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 60% at 50% 100%, rgba(255, 70, 20, 0.32), transparent 70%);
+  animation: dreadPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dreadPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  18% {
+    opacity: 1;
+  }
+  34% {
+    opacity: 0.6;
+  }
+  48% {
+    opacity: 0.95;
+  }
+}
+
+.dread-embers i {
+  position: absolute;
+  bottom: -8px;
+  width: 3px;
+  height: 3px;
+  background: #ffae4a;
+  box-shadow: 0 0 6px #ff5a1a;
+  animation: emberRise linear infinite;
+}
+
+@keyframes emberRise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  60% {
+    transform: translate(14px, -60vh);
+  }
+  100% {
+    transform: translate(-6px, -102vh);
+    opacity: 0;
+  }
+}
+
+.counter-scene.mode-hard .dread-hard {
+  opacity: 1;
+}
+
+.counter-scene.mode-inferno .dread-hard {
+  opacity: 0.55;
+}
+
+.counter-scene.mode-inferno .dread-inferno,
+.counter-scene.mode-inferno .dread-embers {
+  opacity: 1;
+}
+
+.counter-scene .lamp-beam,
+.counter-scene .lamp-pool,
+.counter-scene .lamp-bulb-glow {
+  transition: filter 700ms ease;
+}
+
+.counter-scene.mode-hard .lamp-beam,
+.counter-scene.mode-hard .lamp-pool,
+.counter-scene.mode-hard .lamp-bulb-glow {
+  filter: hue-rotate(185deg) saturate(0.5) brightness(0.8);
+}
+
+.counter-scene.mode-inferno .lamp-beam,
+.counter-scene.mode-inferno .lamp-pool,
+.counter-scene.mode-inferno .lamp-bulb-glow {
+  filter: hue-rotate(-40deg) saturate(3.4) brightness(0.9);
+}
+
+.counter-scene .case-title,
+.counter-scene .counter-card {
+  transition:
+    color 700ms ease,
+    text-shadow 700ms ease,
+    box-shadow 700ms ease;
+}
+
+.counter-scene.mode-hard .counter-card {
+  box-shadow:
+    inset 0 0 0 1px rgba(150, 160, 255, 0.4),
+    0 0 16px rgba(40, 50, 140, 0.35),
+    0 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.counter-scene.mode-hard .case-title {
+  color: #dfe3ff;
+  text-shadow:
+    0 0 10px rgba(110, 120, 255, 0.45),
+    0 3px 0 #000;
+}
+
+.counter-scene.mode-inferno .counter-card {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 90, 60, 0.6),
+    0 0 20px rgba(210, 20, 10, 0.45),
+    0 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.counter-scene.mode-inferno .case-title {
+  color: #ffd6c8;
+  text-shadow:
+    0 0 10px rgba(255, 40, 20, 0.7),
+    0 3px 0 #000;
+}
+
+.reduce-motion .dread-inferno::after {
+  animation: none;
+  opacity: 0.7;
+}
+
+.reduce-motion .dread-embers {
+  display: none;
+}
+
+.reduce-motion .case-slot,
+.reduce-motion .case-track {
+  transition: none;
+}
+
+/* ---------- Patch 0.9.3: o fim da run em páginas ----------
+   Cabeçalho mais baixo (o rival de lado, o texto ao lado) para a lousa caber na mesma página;
+   TENTAR NOVAMENTE e MENU fixos embaixo, à mão em qualquer página. */
+.run-end-head.is-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.run-end-face {
+  flex: none;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(240, 204, 120, 0.2);
+}
+
+.paged-block > .run-slate {
+  margin-top: 0;
+}
+
+.run-end-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.run-end-retry {
+  flex: 1;
+}
+
+.run-end-menu {
+  flex: none;
+  width: 84px;
+}
+
+/* Caderno em folhas (Patch 0.9.3): cada linha é um bloco; os títulos de parte respiram menos */
+.paged-block > .ledger-section {
+  margin: 10px 0 2px;
+}
+
+.paged-block > .ledger-rival {
+  margin-top: 6px;
+}
+
+/* ---------- Patch 0.9.3: loja, beco e Seu Tião sem scroll ----------
+   O palco de cima (parede do Valtinho, beco do Corvo) é o que cede: encolhe até o mínimo para
+   o balcão e a placa de saída caberem. Em tela baixa tudo aperta um pouco; se mesmo assim não
+   couber, a cena inteira encolhe (useFitScale.js). */
+.scene-fit {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 100%;
+}
+
+.shop-backwall {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 116px;
+  max-height: 196px;
+}
+
+.bm-alley {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 124px;
+  max-height: 210px;
+}
+
+@media (max-height: 760px) {
+  .shop-awning-inner {
+    padding-top: 5px;
+    padding-bottom: 7px;
+  }
+
+  .shop-counter {
+    gap: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .shop-good-art {
+    height: 44px;
+  }
+
+  .shop-display {
+    padding: 8px 8px 6px;
+  }
+
+  .shop-pouch {
+    gap: 6px;
+    padding: 6px 8px 8px;
+  }
+
+  .shop-controls,
+  .bm-controls {
+    padding-top: 8px;
+  }
+
+  .shop-plank {
+    padding: 8px 14px 10px;
+  }
+
+  .shop-npc-wrap,
+  .bm-npc-wrap {
+    scale: 0.82;
+    transform-origin: 50% 100%;
+  }
+
+  .bm-head {
+    padding-bottom: 2px;
+  }
+
+  .bm-coat {
+    padding: 8px 8px 10px;
+  }
+
+  .bm-coat-label {
+    margin-bottom: 6px;
+  }
+
+  .bm-good-desc {
+    font-size: 14px;
+  }
+
+  .bm-pouch {
+    margin-top: 8px;
+  }
+}
+
+.run-end-portrait {
+  flex: none;
+}
+
+.run-end-portrait .ko-wrap {
+  margin-bottom: 0;
+}
+
+/* tela baixa: a lousa e a conta apertam (giz menor, casas mais baixas) */
+@media (max-height: 760px) {
+  .run-slate-board {
+    padding: 10px 10px 10px;
+  }
+
+  .slate-grid {
+    gap: 5px;
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .slate-cell {
+    padding: 4px 6px 5px;
+  }
+
+  .slate-value {
+    font-size: 17px;
+  }
+
+  .slate-sheet {
+    margin-top: 6px;
+    font-size: 14px;
+  }
+
+  .slate-copy {
+    margin-top: 8px;
+    padding: 6px;
+  }
+
+  .run-tab-item {
+    padding: 2px 0 4px;
+  }
+
+  .run-tab-board {
+    margin-top: 6px;
+  }
 }
