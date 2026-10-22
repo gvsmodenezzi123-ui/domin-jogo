@@ -22,27 +22,8 @@
  *   prizeBonus         moedas extras ao vencê-lo
  *   felt / decor       cores do feltro da mesa dele e enfeites (giz, caneca, cinzas...)
  *   art                retrato 40x40 em components/ArtSprites.jsx (via components/artRegistry.js)
- *   faces / palette    retrato 16x16 antigo (dados de reserva; o jogo desenha o `art` 40x40)
  *   lines              falas curtas por situação (o que faltar usa as do Tio Zé)
  */
-
-import { TIO_ZE_FACES, TIO_ZE_PALETTE } from '../components/sprites.js';
-import {
-  ALEMAO,
-  BAIANO,
-  BIGODE,
-  CARLINHOS,
-  CIDA,
-  COMENDADOR,
-  FAUSTO,
-  PAULINHO,
-  SERGINHO,
-  SOFIA,
-  TONHO,
-  VALDIR,
-} from './portraits.js';
-
-const K = '#0b0806';
 
 /** Falas do Tio Zé; também servem de reserva para o que um rival não tiver. */
 export const TIO_ZE_LINES = Object.freeze({
@@ -71,119 +52,6 @@ export function pickTioZeLine(kind, seed = 0) {
   if (!lines || !lines.length) return null;
   return lines[Math.abs(seed) % lines.length];
 }
-
-function face(base, overrides) {
-  return Object.freeze(base.map((row, i) => overrides[i] ?? row));
-}
-
-/** Gera os 4 humores a partir do rosto base e das linhas que mudam em cada um. */
-function moods(base, { thinking, smug, hurt }) {
-  return Object.freeze({
-    idle: face(base, {}),
-    thinking: face(base, thinking),
-    smug: face(base, smug),
-    hurt: face(base, hurt),
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Retratos
-// ---------------------------------------------------------------------------
-
-const ARLINDO = [
-  '.....kkkkkk.....',
-  '...kkssssLsskk..',
-  '..ksssssssLsssk.',
-  '.kwssssssssssswk',
-  '.kwwssssssssswwk',
-  '.kwsGGGGsGGGGswk',
-  '.kwGeepGsGeepGwk',
-  '.ksGGGGsSsGGGGsk',
-  '.kssssssSSssssk.',
-  '.kswwwwwwwwwwsk.',
-  '.ksswmmmmmmwssk.',
-  '..kssssssssssk..',
-  '...kSssssssSk...',
-  '....kkSSSSkk....',
-  '..cckrrRRrrkcc..',
-  'cccCcccrrcccCccc',
-];
-
-const NEIDE = [
-  '.....kkkkkk.....',
-  '....kgggGggk....',
-  '...kgGgggggGk...',
-  '..kggggggggggk..',
-  '.kgggssssssgggk.',
-  '.kggssssssssggk.',
-  '.kgFFFFssFFFFgk.',
-  '.kgFepFssFepFgk.',
-  '.kgssssSSssssgk.',
-  '.kgsBssssssBsgk.',
-  '.kgssslLLlsssgk.',
-  '.kgssssssssssgk.',
-  '..kgSssssssSgk..',
-  '...kkSSSSSSkk...',
-  '..PPkwwwwwwkPPP.',
-  'PPPqPPPPPPPPqPPP',
-];
-
-const MARCAO = [
-  '....kkkkkkkk....',
-  '...kOOOOOOOOk...',
-  '..kOOOOyyOOOOk..',
-  '..kOOOOOOOOOOk..',
-  '.kbbbbbbbbbbbbbk',
-  '.kssssssssssssk.',
-  '.ksKKKssssKKKsk.',
-  '.ksepsssssspesk.',
-  '.kssssSSSSssssk.',
-  '.kdsdsdsdsdsdsk.',
-  '.ksdmmmmmmmmdsk.',
-  '.kdsdsdsdsdsdsk.',
-  'kkddddddddddddkk',
-  'kssSSSSSSSSSSssk',
-  'BBBBkBBBBBBkBBBB',
-  'BBBBBBgBBgBBBBBB',
-];
-
-const TIAO = [
-  '....kkkkkkkk....',
-  '...kHHHHHHhHk...',
-  '..kHHHHHHHHhHk..',
-  '.kHHHHHHHHHHHHk.',
-  '.kHHssssssssHHk.',
-  '.kHsssssssssssk.',
-  '.ksKKsssssKKssk.',
-  '.ksepssssspesrk.',
-  '.ksssssSSsssrsk.',
-  '.ksssKKKKKKsssk.',
-  '.kssmmymmmmssstt',
-  '.kSsssssssssssk.',
-  '..kSssssssssSk..',
-  '...kkSSSSSSkk...',
-  '..RRkSyyyySkRR..',
-  'RRRRRkSSSSkRRRRR',
-];
-
-const BETO = [
-  '....kkkkkkkk....',
-  '...kRRRRRRRRk...',
-  '..kRRwRRRRwRRk..',
-  '.kRRRRRRRRRRRRkR',
-  '.kccRRRRRRRRcckR',
-  '.kccsssssssscck.',
-  '.kcsKKssssKKsck.',
-  '.kcsegssssegsck.',
-  '.kcssssSSssssck.',
-  'yykssbssssbssky.',
-  'y.ksbmmmmmmbsk.y',
-  '..ksbbbbbbbbsk..',
-  '...kbbbbbbbbk...',
-  '....kkSSSSkk....',
-  '..VVkyyyyyykVV..',
-  'VVVVVvVVVVvVVVVV',
-];
 
 // ---------------------------------------------------------------------------
 // Estilos de jogo (pesos da IA; o padrão é o do Tio Zé)
@@ -229,8 +97,6 @@ export const RIVALS = Object.freeze({
     // retrato 40x40 (components/ArtSprites.jsx); a fumaça sai da brasa (artRegistry.js)
     art: 'tioZe',
     decor: [],
-    faces: TIO_ZE_FACES,
-    palette: TIO_ZE_PALETTE,
     lines: TIO_ZE_LINES,
   }),
   tonho: Object.freeze({
@@ -251,8 +117,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 0,
     felt: { light: '#2c4a7a', mid: '#1f3660', dark: '#142446' },
     decor: [],
-    faces: TONHO.faces,
-    palette: TONHO.palette,
     lines: {
       intro: ['Ô de casa! Chegou o gás!', 'Rapidinho, que tenho entrega.'],
       play: ['Vai, vai!', 'Essa é levinha.', 'Pra já!', 'Entregue!'],
@@ -286,8 +150,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 0,
     felt: { light: '#5a5f2a', mid: '#454a1f', dark: '#2f3315' },
     decor: ['chalk'],
-    faces: BAIANO.faces,
-    palette: BAIANO.palette,
     lines: {
       intro: ['Ê, meu rei! Bora uma partidinha?', 'Aqui é na tabela, visse?'],
       play: ['Tranquilo...', 'Na caçapa.', 'Devagar, meu rei.'],
@@ -321,8 +183,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 2,
     felt: { light: '#4a4d50', mid: '#35383a', dark: '#232527' },
     decor: [],
-    faces: VALDIR.faces,
-    palette: VALDIR.palette,
     lines: {
       intro: ['Senta aí. Pneu e dominó, é comigo.', 'Mesa pesada, rapaz.'],
       play: ['Toma.', 'Remendado.', 'Calibrado.'],
@@ -356,16 +216,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 3,
     felt: { light: '#5a2230', mid: '#431823', dark: '#2c0f17' },
     decor: [],
-    faces: moods(NEIDE, {
-      thinking: { 7: '.kgFpeFssFpeFgk.', 10: '.kgsssllllsssgk.' },
-      smug: { 7: '.kgFkkFssFkkFgk.', 10: '.kgsslLeeLlssgk.' },
-      hurt: { 7: '.kgFkpFssFpkFgk.', 10: '.kgssslllllssgk.', 11: '.kgssssRsssssgk.' },
-    }),
-    palette: {
-      k: K, g: '#a9a6a0', G: '#d6d3cc', s: '#e0a982', S: '#a87352', F: '#7a1f5c', e: '#f3ecda',
-      p: '#120c08', B: '#e0786a', l: '#b3182a', L: '#e0453f', w: '#f4efe2', P: '#6b3f8f', q: '#e06aa8',
-      R: '#c8261d',
-    },
     lines: {
       intro: ['Senta, querido. A mesa é minha.', 'Vamos ver quem conta menos.'],
       play: ['Hum-hum.', 'Fecha aqui, abre ali...', 'Calma, querido.'],
@@ -402,15 +252,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 10,
     felt: { light: '#3f5530', mid: '#2f4123', dark: '#1f2c17' },
     decor: ['tear', 'mug'],
-    faces: moods(ARLINDO, {
-      thinking: { 6: '.kwGpeeGsGpeeGwk', 10: '.ksswkkkkkkwssk.' },
-      smug: { 6: '.kwGkkkGsGkkkGwk', 10: '.ksswmeeeemwssk.' },
-      hurt: { 6: '.kwGekeGsGekeGwk', 10: '.kssmmmmmmmmssk.', 11: '..ksssssRssssk..' },
-    }),
-    palette: {
-      k: K, s: '#d39a70', S: '#9c6644', L: '#f0c39a', w: '#e9e4d6', G: '#2a2a2a', e: '#cfe3ea',
-      p: '#120c08', m: '#4a1a14', c: '#8a6a3e', C: '#b08a52', r: '#a3221a', R: '#d9473c',
-    },
     lines: {
       intro: ['Sente aí, rapaz. Jogo desde 1962.', 'Na minha época, isso era pouco.'],
       play: ['Hum.', 'Devagarinho...', 'Olha só.', 'Paciência, rapaz.'],
@@ -446,15 +287,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 2,
     felt: { light: '#7a6420', mid: '#5c4a16', dark: '#3d300d' },
     decor: ['neon'],
-    faces: moods(MARCAO, {
-      thinking: { 7: '.kspesssssspesk.', 10: '.ksdkkkkkkkkdsk.' },
-      smug: { 7: '.kskksssssskksk.', 10: '.ksdmeeeeeemdsk.' },
-      hurt: { 7: '.kskeksssskeksk.', 11: '.kdsdsRsdsdsdsk.' },
-    }),
-    palette: {
-      k: K, O: '#e07a1f', y: '#ffd24a', b: '#9c4f10', s: '#b97a52', S: '#8a5634', K: '#2a1a10',
-      e: '#efe3c2', p: '#120c08', d: '#6e4a32', m: '#4a1a14', B: '#2d4f7a', g: '#141a20', R: '#c8261d',
-    },
     lines: {
       intro: ['Bora, que o guincho tá ligado!', 'Vou te rebocar dessa mesa.'],
       play: ['TOMA!', 'Pesado!', 'Segura essa!', 'Rebocado!'],
@@ -490,8 +322,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 2,
     felt: { light: '#8a4524', mid: '#69331a', dark: '#472210' },
     decor: ['neon'],
-    faces: SERGINHO.faces,
-    palette: SERGINHO.palette,
     lines: {
       intro: ['Vinte e dois, número da sorte!', 'Joga rápido que eu tô com fome.'],
       play: ['Tô sem nada... brincadeira!', 'Pá!', 'Viu? Nem pensei.', 'Rapidinho!'],
@@ -525,8 +355,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 3,
     felt: { light: '#5c2448', mid: '#451a36', dark: '#2d1023' },
     decor: ['neon'],
-    faces: CIDA.faces,
-    palette: CIDA.palette,
     lines: {
       intro: ['Senta, meu filho. Já comeu?', 'Marmita quentinha e dominó.'],
       play: ['Tempero da Cida.', 'Prova essa.', 'Hum, no ponto.'],
@@ -560,8 +388,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 3,
     felt: { light: '#1f5a5c', mid: '#164446', dark: '#0d2d2f' },
     decor: ['neon'],
-    faces: PAULINHO.faces,
-    palette: PAULINHO.palette,
     lines: {
       intro: ['Penteado no lugar, olho na sua mão.', 'Eu vejo tudo, parceiro.'],
       play: ['Penteado.', 'Visto e anotado.', 'Hmm, sei o que você tem.'],
@@ -595,15 +421,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 4,
     felt: { light: '#7a1c22', mid: '#5c1419', dark: '#3d0c10' },
     decor: ['neon'],
-    faces: moods(TIAO, {
-      thinking: { 7: '.kspessssspesrk.', 10: '.kssskkkkksssstt' },
-      smug: { 7: '.kskkssssskksrk.', 10: '.kssmeyeemsssttt' },
-      hurt: { 7: '.ksekssssseksrk.', 10: '.kssmmmmmmmssstt', 11: '.kSsssssRsssssk.' },
-    }),
-    palette: {
-      k: K, H: '#141010', h: '#4a4a5a', s: '#c08a5e', S: '#8a5a38', K: '#141010', e: '#efe3c2',
-      p: '#120c08', r: '#e08080', m: '#4a1a14', y: '#e8b84a', t: '#d9c49a', R: '#a3221a',
-    },
     lines: {
       intro: ['Chega mais. Sem movimento brusco.', 'Aqui ninguém sai sem pagar.'],
       play: ['Na moral.', 'Corta.', 'Fica a dica.', 'Malandragem.'],
@@ -639,15 +456,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 15,
     felt: { light: '#1f2a5a', mid: '#161f45', dark: '#0d132d' },
     decor: ['ash', 'coins', 'velvet'],
-    faces: moods(BETO, {
-      thinking: { 7: '.kcsgessssgesck.', 10: 'y.ksbkkkkkkbsk.y' },
-      smug: { 7: '.kcskksssskksck.', 10: 'y.ksbmeyyembsk.y' },
-      hurt: { 7: '.kcskesssskesck.', 11: '..ksbbbRbbbbsk..' },
-    }),
-    palette: {
-      k: K, R: '#b3182a', w: '#f4ecd2', c: '#1a1010', s: '#a8704a', S: '#7a4a2c', K: '#1a1010',
-      e: '#efe3c2', g: '#3fbf6a', y: '#e8b84a', b: '#2a1a12', m: '#4a1a14', V: '#4a2a6a', v: '#7a4aa0',
-    },
     lines: {
       intro: ['As cartas disseram que você vinha.', 'Aposta alta hoje, freguês.'],
       // blefa: diz que não tem nada... e joga
@@ -684,8 +492,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 4,
     felt: { light: '#1f7a4a', mid: '#165c37', dark: '#0d3d24' },
     decor: ['toxic'],
-    faces: CARLINHOS.faces,
-    palette: CARLINHOS.palette,
     lines: {
       intro: ['Opa, deixa eu guardar sua carteira.', 'Mão leve, consciência mais ainda.'],
       play: ['Peguei.', 'Ninguém viu.', 'Leve, leve...'],
@@ -719,8 +525,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 6,
     felt: { light: '#6e5a1c', mid: '#534314', dark: '#372c0c' },
     decor: ['coins'],
-    faces: BIGODE.faces,
-    palette: BIGODE.palette,
     lines: {
       intro: ['Aposta no bicho ou na pedra?', 'Meu bigode vale mais que sua casa.'],
       play: ['Ouro puro.', 'Banca paga.', 'Hmm, rico.'],
@@ -754,8 +558,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 5,
     felt: { light: '#4a2a7a', mid: '#38205c', dark: '#25143d' },
     decor: ['runes'],
-    faces: SOFIA.faces,
-    palette: SOFIA.palette,
     lines: {
       intro: ['As runas me contaram das suas buchas.', 'Sente, filho. O destino já embaralhou.'],
       play: ['Previsto.', 'As runas mandaram.', 'Hmm, eu já sabia.'],
@@ -789,8 +591,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 6,
     felt: { light: '#25252a', mid: '#18181c', dark: '#0d0d10' },
     decor: [],
-    faces: FAUSTO.faces,
-    palette: FAUSTO.palette,
     lines: {
       intro: ['Boa noite. Vamos fazer um pacto?', 'Minhas pedras mudam de forma.'],
       play: ['Experimento concluído.', 'Transmutação.', 'Interessante.'],
@@ -824,8 +624,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 6,
     felt: { light: '#6a3a1c', mid: '#502b14', dark: '#351c0c' },
     decor: ['rust'],
-    faces: ALEMAO.faces,
-    palette: ALEMAO.palette,
     lines: {
       intro: ['Ferro velho, pedra pesada.', 'Aqui tudo pesa o dobro, rapaz.'],
       play: ['Sucata!', 'Pesado.', 'Bum.'],
@@ -859,8 +657,6 @@ export const RIVALS = Object.freeze({
     prizeBonus: 40,
     felt: { light: '#6a0f12', mid: '#500b0d', dark: '#350608' },
     decor: ['cognac', 'mahogany'],
-    faces: COMENDADOR.faces,
-    palette: COMENDADOR.palette,
     lines: {
       intro: ['Este boteco é meu. E você também.', 'Chegou longe. Vamos ver até onde.'],
       play: ['Minha mesa, minhas regras.', 'Hm.', 'Elegante.'],
@@ -877,9 +673,48 @@ export const RIVALS = Object.freeze({
       hurtRelic: ['Como ousa?!'],
     },
   }),
+  // Patch 0.8.0: nó 19 secreto. Só aparece se você vencer o Comendador com 3+ Necróticos.
+  donoDaNoite: Object.freeze({
+    id: 'donoDaNoite',
+    art: 'donoDaNoite', // retrato 48x48 em components/art/SecretBossArt.jsx
+    name: 'O Dono da Noite',
+    title: 'Nó 19 · Ninguém Sabe o Nome',
+    region: 3,
+    boss: true,
+    secret: true,
+    rarity: 'mitico',
+    hearts: 9,
+    coins: 66,
+    relics: ['anel', 'dedal'],
+    deck: { '6-6': 'fantasma', '0-0': 'rubi', '3-3': 'cristal' },
+    // Noite Eterna: imune a batida comum e a dano direto; só bucha ou tranca machucam
+    mechanics: { noiteEterna: true },
+    style: style({ five: 8, pressure: 7, heavy: 1.5, follow: 3, trancaBias: 0, aggression: 1.6 }),
+    reflexMs: 1100,
+    prizeBonus: 66,
+    felt: { light: '#1c1418', mid: '#110b0e', dark: '#060405' },
+    decor: ['runes'],
+    lines: {
+      intro: ['Três almas penduradas no seu cinto. Eu senti o cheiro.', 'Sente. A noite é longa.'],
+      play: ['Hm.', 'Escuro.', 'Mais uma vela apagada.'],
+      playDouble: ['Bucha de defunto.'],
+      draw: ['O dorme me obedece.'],
+      pass: ['Eu espero. Sempre espero.'],
+      bonus5: ['Cinco velas.'],
+      playerPass: ['Medo do escuro?'],
+      winRound: ['A noite cobra.', 'Mais um coração pra coleção.'],
+      loseRound: ['Isso... arde.', 'Bucha. Esperta.'],
+      tranca: ['Trancou. A noite deixa.'],
+      duelWin: ['Fica. Pra sempre.'],
+      duelLose: ['O sol... nasceu?'],
+      hurtRelic: ['Isso não me toca.'],
+    },
+  }),
 });
 
 export const RIVAL_IDS = Object.freeze(Object.keys(RIVALS));
+/** O nó 19 secreto (fora do sorteio da campanha). */
+export const SECRET_BOSS = 'donoDaNoite';
 export const FIRST_RIVAL = 'tioZe';
 export const BOSS_IDS = Object.freeze(RIVAL_IDS.filter((id) => RIVALS[id].boss));
 
@@ -901,7 +736,7 @@ export const AI_TIERS = Object.freeze({
 
 /**
  * Nível de jogo do rival: chefes e a Região 3 são agressivos, a Região 2 calcula, a 1 joga
- * no instinto. Na Maleta Preta (modo difícil) ninguém joga no instinto: as Regiões 1 e 2
+ * no instinto. Nas Peças Pretas (modo difícil) ninguém joga no instinto: as Regiões 1 e 2
  * calculam e a 3 e os chefes atacam.
  */
 export function tierOf(rival, mode = 'normal') {
@@ -914,7 +749,7 @@ function tierStyle(rival, mode = 'normal') {
   const base = rival.style;
   const tier = tierOf(rival, mode);
   if (mode === 'hard') {
-    // Maleta Preta: contas precisas de tranca (sem achismo) e de múltiplo de 5; ataque mais forte
+    // Peças Pretas: contas precisas de tranca (sem achismo) e de múltiplo de 5; ataque mais forte
     if (tier === 'calculista') {
       return style({ ...base, five: Math.max(base.five, 8), fiveSetup: Math.max(base.fiveSetup, 4), trancaBias: 0, heartDrawMin: Math.min(base.heartDrawMin, 2) });
     }
@@ -944,7 +779,7 @@ function tierStyle(rival, mode = 'normal') {
 
 /** Pesos que a IA usa de fato com esse rival (o estilo dele + o nível da região). */
 export const PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id])])));
-/** Os mesmos pesos na Maleta Preta. */
+/** Os mesmos pesos nas Peças Pretas. */
 export const HARD_PLAY_STYLES = Object.freeze(Object.fromEntries(RIVAL_IDS.map((id) => [id, tierStyle(RIVALS[id], 'hard')])));
 export const playStyleOf = (id, mode = 'normal') => {
   const table = mode === 'hard' ? HARD_PLAY_STYLES : PLAY_STYLES;
@@ -952,7 +787,7 @@ export const playStyleOf = (id, mode = 'normal') => {
 };
 
 // ---------------------------------------------------------------------------
-// Maleta Preta (Patch 0.6.3): o que muda em cada rival no modo difícil
+// Peças Pretas (Patch 0.6.3): o que muda em cada rival no modo difícil
 //   Região 1  1 pedra de grife e 1 talismã cada
 //   Região 2  2 pedras de grife e até 2 talismãs passivos (e contas precisas)
 //   Região 3  quase mini-chefes: 3 pedras de grife (Rubi, Fantasma) e 2 talismãs perigosos
@@ -980,9 +815,10 @@ export const HARD_LOADOUTS = Object.freeze({
   fausto: { relics: ['maoGrande', 'dedal'], deck: { '3-6': 'cristal', '1-4': 'cristal', '0-6': 'rubi' } },
   alemao: { relics: ['buchaDeAco', 'dedal'], deck: { '6-6': 'chumbo', '4-5': 'chumbo', '5-5': 'fantasma' } },
   comendador: { hearts: 8, relics: ['trancaCadaverica', 'falsaPartida'], deck: { '6-6': 'fantasma', '5-5': 'rubi', '4-6': 'ouro' } },
+  donoDaNoite: { hearts: 10, relics: ['anel', 'dedal'], deck: { '6-6': 'fantasma', '0-0': 'rubi', '3-3': 'cristal', '5-5': 'rubi' } },
 });
 
-/** Os 18 rivais como eles sentam à mesa na Maleta Preta. */
+/** Os rivais como eles sentam à mesa nas Peças Pretas. */
 export const HARD_RIVALS = Object.freeze(
   Object.fromEntries(
     RIVAL_IDS.map((id) => {

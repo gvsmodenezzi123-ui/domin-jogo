@@ -127,8 +127,6 @@ export function createEmptyBoard() {
   return { root: null, left: [], right: [] };
 }
 
-export const isBoardEmpty = (board) => board.root === null;
-
 /** Todas as pedras na mesa, da ponta esquerda até a ponta direita. */
 export function boardTilesInOrder(board) {
   if (!board.root) return [];
@@ -142,8 +140,10 @@ export function boardTileCount(board) {
 /** Pontas abertas { left, right } ou null se a mesa está vazia. */
 export function getOpenEnds(board) {
   if (!board.root) return null;
-  const left = board.left.length ? board.left[board.left.length - 1].outer : board.root.left;
-  const right = board.right.length ? board.right[board.right.length - 1].outer : board.root.right;
+  // Mesa Bêbada (desafio, Patch 0.8.0): `board.drunk` troca o número de uma ponta até a
+  // próxima pedra entrar nela
+  const left = board.drunk?.left ?? (board.left.length ? board.left[board.left.length - 1].outer : board.root.left);
+  const right = board.drunk?.right ?? (board.right.length ? board.right[board.right.length - 1].outer : board.root.right);
   return { left, right };
 }
 
@@ -260,11 +260,18 @@ export function placeTile(board, tile, side, rules = BASE_RULES, meta = {}) {
   // posiciona as pedras nessa ordem, então uma pedra nova nunca move as antigas.
   const placed = { id: tile.id, a: tile.a, b: tile.b, inner, outer, seq: boardTileCount(board), ...extra };
   if (via !== 'match') placed.via = via;
-  return {
+  const next = {
     root: board.root,
     left: side === SIDES.LEFT ? [...board.left, placed] : board.left,
     right: side === SIDES.RIGHT ? [...board.right, placed] : board.right,
   };
+  // a pedra nova "acorda" a ponta bêbada onde entrou; a outra continua trocada
+  if (board.drunk) {
+    const rest = { ...board.drunk };
+    delete rest[side];
+    if (Object.keys(rest).length) next.drunk = rest;
+  }
+  return next;
 }
 
 /** Id da pedra que segura a ponta `side` (a raiz, se o ramo está vazio). */
@@ -397,9 +404,11 @@ export function getDrawCost(drawsThisTurn) {
  * Verifica se a próxima compra é possível.
  * Comprar com coração exige um coração a mais do que o custo: a compra nunca mata.
  * `heartCost`: quantos corações custa a compra paga com coração (Pacto do Coveiro: 2).
+ * `maxDraws`: compras permitidas no turno (Maleta Seca: 1).
  */
-export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts, heartCost = 1 }) {
-  const base = getDrawCost(drawsThisTurn);
+export function getDrawAvailability({ drawsThisTurn, boneyardCount, coins, hearts, heartCost = 1, maxDraws = DRAW_LADDER.length }) {
+  // `maxDraws`: Maleta Seca deixa 1 compra por turno
+  const base = drawsThisTurn < maxDraws ? getDrawCost(drawsThisTurn) : null;
   const cost = base?.type === 'heart' && heartCost !== base.amount ? { type: 'heart', amount: heartCost } : base;
   if (boneyardCount <= 0) return { allowed: false, reason: 'empty', cost };
   if (!cost) return { allowed: false, reason: 'limit', cost: null };

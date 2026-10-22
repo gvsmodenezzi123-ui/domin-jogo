@@ -16,8 +16,9 @@ import { rerollCost } from '../data/campaign.js';
 import { mixSeed, regionOfState } from './campaignMap.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { RARITIES } from '../data/rarities.js';
-import { RELICS, RELIC_IDS, RELIC_SLOTS, isRelicAvailable } from '../data/relics.js';
+import { RELICS, RELIC_IDS, isRelicAvailable } from '../data/relics.js';
 import { FULL_SET, createSeededRng } from './dominoLogic.js';
+import { hasPerk, relicSlotsFor, shopPrice } from './loadout.js';
 
 export const SHOP_RELIC_OFFERS = 3;
 export const SHOP_TILE_OFFERS = 2;
@@ -85,9 +86,10 @@ export function buildShop(state, rerolls = 0) {
   const owned = new Set(state.relics.player);
   // talismãs trancados por conquista só entram depois de liberados (Patch 0.7.0)
   const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicAvailable(id, state.unlocks));
+  // Maleta do Trapaceiro: tudo aqui custa 20% a mais
   const relics = pickByRarity(relicPool, (id) => RELICS[id].rarity, chances, SHOP_RELIC_OFFERS, rng).map((id) => ({
     id,
-    price: RELICS[id].price,
+    price: shopPrice(state, RELICS[id].price),
     sold: false,
   }));
 
@@ -96,18 +98,18 @@ export function buildShop(state, rerolls = 0) {
   const tileIds = pickWeighted(plainIds, () => 1, SHOP_TILE_OFFERS, rng);
   const tiles = tileIds.map((tileId) => {
     const [enhancement] = pickByRarity(ENHANCEMENT_IDS, (e) => ENHANCEMENTS[e].rarity, chances, 1, rng);
-    return { tileId, enhancement, price: ENHANCEMENTS[enhancement].price, sold: false };
+    return { tileId, enhancement, price: shopPrice(state, ENHANCEMENTS[enhancement].price), sold: false };
   });
 
-  // Nota de 3 Reais: o 1º reembaralhar da visita é de graça
-  const freeFirst = rerolls === 0 && state.relics.player.some((id) => RELICS[id]?.firstRerollFree);
+  // Nota de 3 Reais (talismã) e Amizade com o Valtinho (Conta do Boteco): o 1º reembaralhar da visita é de graça
+  const freeFirst = rerolls === 0 && (hasPerk(state, 'valtinho') || state.relics.player.some((id) => RELICS[id]?.firstRerollFree));
   return { relics, tiles, rerolls, rerollCost: freeFirst ? 0 : rerollCost(rerolls) };
 }
 
 /** Por que não dá para comprar esse talismã agora (ou null se dá). */
 export function relicBuyBlock(state, offer) {
   if (!offer || offer.sold) return 'sold';
-  if (state.relics.player.length >= RELIC_SLOTS) return 'full';
+  if (state.relics.player.length >= relicSlotsFor(state)) return 'full';
   if (state.coins.player < offer.price) return 'coins';
   return null;
 }

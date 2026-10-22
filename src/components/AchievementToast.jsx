@@ -9,7 +9,8 @@ export const TOAST_HOLD_MS = 3800;
 const TOTAL_MS = TOAST_SLIDE_MS * 2 + TOAST_HOLD_MS;
 
 /**
- * Aviso de conquista (Patch 0.7.0) no alto da tela, por cima de tudo (mapa, loja, mesa,
+ * Aviso de conquista (Patch 0.7.0; no 0.8.0 também maleta, desafio e moldura liberados,
+ * com `kicker` e `line` próprios) no alto da tela, por cima de tudo (mapa, loja, mesa,
  * menus e o corte de cena). O App guarda a fila e passa um aviso por vez: o cartão desce
  * do topo com a fanfarra metálica, fica 3,8 s e sobe de volta; aí `onDone` tira ele da fila.
  * A descida/subida é uma animação de CSS só (`achievement-toast-card`), sem estado aqui.
@@ -38,12 +39,16 @@ export default function AchievementToast({ toast, onDone }) {
         {/* a fonte de pixel do jogo (Press Start 2P) é a monoespaçada; a VT323 em 16px
             tem o corpo de um texto de 11px nas outras fontes */}
         <span className="flex min-w-0 flex-col gap-1">
-          <span className="achievement-kicker font-pixel text-[10px] font-bold leading-none text-yellow-400">CONQUISTA DESBLOQUEADA!</span>
+          <span className="achievement-kicker font-pixel text-[10px] font-bold leading-none text-yellow-400">{toast.kicker ?? 'CONQUISTA DESBLOQUEADA!'}</span>
           <span className="font-term text-[16px] leading-[0.95] text-[#f4ecd2]">
             <span className="block truncate text-amber-200">{toast.title}</span>
-            <span className="block">
-              Talismã liberado: <span className="text-amber-300">{toast.relicName}</span>
-            </span>
+            {toast.line ? (
+              <span className="block">{toast.line}</span>
+            ) : (
+              <span className="block">
+                Talismã liberado: <span className="text-amber-300">{toast.relicName}</span>
+              </span>
+            )}
           </span>
         </span>
       </div>

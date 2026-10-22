@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ENHANCEMENTS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
-import { RELIC_SLOTS, getRelic } from '../data/relics.js';
+import { getRelic } from '../data/relics.js';
+import { relicSlotsFor } from '../engine/loadout.js';
 import { sound } from '../engine/audioSynth.js';
 import { availableNodes, regionOfState } from '../engine/campaignMap.js';
 import { haptic } from '../engine/progress.js';
@@ -275,11 +276,11 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           {/* frente do balcão: a Bolsa de Talismãs, 4 nichos entalhados */}
           <div key={`pouch-${alert}`} className={`shop-pouch ${alert ? 'animate-hotbar-full' : ''}`}>
             <p className="shop-pouch-label">
-              BOLSA DE TALISMÃS {state.relics.player.length}/{RELIC_SLOTS}
+              BOLSA DE TALISMÃS {state.relics.player.length}/{relicSlotsFor(state)}
               <span>Toque para vender (50%)</span>
             </p>
             <div className="shop-niches" role="group" aria-label="Seus talismãs (toque para vender)">
-              {Array.from({ length: RELIC_SLOTS }, (_, i) => {
+              {Array.from({ length: relicSlotsFor(state) }, (_, i) => {
                 const relic = getRelic(state.relics.player[i]);
                 if (!relic) return <span key={`empty-${i}`} className="shop-niche shop-niche-empty" aria-hidden="true" />;
                 return (

@@ -6,6 +6,7 @@
  *   'title' → 'map' → 'playing' ⇄ 'roundOver' → 'matchWon' → 'shop' → 'map' → ...
  *                                             ↘ 'gameOver' (você zerou: fim da run)
  *                                  (último chefe) → 'runWon'
+ *                    (último chefe com 3+ Necróticos) → 'secretReveal' → O Dono da Noite → 'runWon'
  *
  * Uma RUN é a campanha de 18 nós (data/campaign.js), cada nó uma PARTIDA contra
  * um rival. A partida acaba quando alguém zera os corações; vencer abre a Loja
@@ -21,24 +22,27 @@
 
 import { buildTioZeView, decideTioZeAction } from '../ai/tioZeAI.js';
 import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
-import { RELICS, RELIC_SLOTS, getRelic, markUsed } from '../data/relics.js';
+import { RELICS, getRelic, markUsed } from '../data/relics.js';
+import { DEFAULT_MALETA, MALETAS, maletaOf } from '../data/maletas.js';
+import { CAPS_PER_BOSS, CAPS_PER_CHALLENGE, CAPS_PER_CLEAR, CAPS_PER_RIVAL, CHALLENGES, DRUNK_EVERY, UPGRADES } from '../data/meta.js';
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
-import { FIRST_RIVAL, RIVALS, getRival, rivalFor, rivalOf } from '../data/rivals.js';
+import { FIRST_RIVAL, RIVALS, SECRET_BOSS, getRival, rivalFor, rivalOf } from '../data/rivals.js';
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
-import { availableNodes, campaignOf, coinReward, currentNode, regionIdOf } from './campaignMap.js';
+import { availableNodes, campaignOf, coinReward, currentNode, mixSeed, regionIdOf } from './campaignMap.js';
 import {
   DAMAGE,
   MAX_HEARTS,
   MULTIPLE_OF_FIVE_BONUS,
   STARTING_COINS,
+  FULL_SET,
   boardTilesInOrder,
   classifyBatida,
   createEmptyBoard,
+  createSeededRng,
   dealFromDeck,
   endsSum,
   findOpening,
-  getDrawAvailability,
   getOpenEnds,
   getPlacement,
   getTrancaReason,
@@ -54,14 +58,15 @@ import {
   applyBatidaDamage,
   canUndo,
   canUseCanivete,
+  drawAvailabilityFor,
   hasPlayFor,
+  isStrategicPass,
   relicsOf,
   rivalMechanics,
   dressTile,
   drawOptionsFor,
   enhancedTilesInPlay,
   hasRelic,
-  heartDrawCostFor,
   passAvailabilityFor,
   plainTiles,
   playerTurnExhausted,
@@ -74,6 +79,7 @@ import {
   trancaSumOffsets,
   trancaTileValues,
 } from './powers.js';
+import { challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
 import { isValidSave } from './save.js';
 import { buildShop, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
 
@@ -132,12 +138,17 @@ export function createInitialState() {
     duelWinner: null,
     lastPlay: null,
     memory: { playerMissing: [] },
-    stats: { roundsWon: bySeat(0, 0), coinsEarned: 0, matchesWon: 0 },
+    // caps: Tampinhas Douradas ganhas nesta run (o App soma no aparelho a cada mesa vencida)
+    stats: { roundsWon: bySeat(0, 0), coinsEarned: 0, matchesWon: 0, caps: 0 },
     relics: bySeat([], []),
     decks: bySeat({}, {}), // { tileId: aprimoramento } — as pedras trocadas no baralho de cada lado
     rivalId: rival.id,
-    // Patch 0.6.3: maleta da run ('normal' = Maleta Branca, 'hard' = Maleta Preta, ver data/difficulty.js)
+    // dificuldade da run ('normal' = Peças Brancas, 'hard' = Peças Pretas, ver data/difficulty.js)
     mode: 'normal',
+    // Patch 0.8.0: maleta (classe) da run, desafio (ou null) e melhorias da Conta do Boteco
+    maleta: DEFAULT_MALETA,
+    challenge: null,
+    perks: [],
     // Patch 0.7.0: talismãs liberados por conquista (o App passa o que está no aparelho)
     unlocks: [],
     // corações no começo da rodada (Testamento Rasgado volta para eles)
@@ -145,7 +156,8 @@ export function createInitialState() {
     // Patch 0.6.1, mapa em teia (engine/campaignMap.js):
     //   node: id do nó onde você está (null antes do 1º); cleared: nós concluídos;
     //   path: o caminho percorrido; match: partidas jogadas; history: rivais enfrentados
-    run: { node: null, cleared: [], path: [], match: 0, history: [] },
+    //   fiadoUsed: o passe de graça do Fiado de Rua já foi usado; secret: a noite do Dono começou
+    run: { node: null, cleared: [], path: [], match: 0, history: [], fiadoUsed: false, secret: false },
     matchFx: createMatchFx(), // efeitos que valem a partida inteira
     shop: null,
     market: null, // Mercado Negro do Corvo da Madrugada
@@ -217,10 +229,30 @@ function startRound(state, deck) {
   return emit(next, { type: 'roundStart', round: next.round, starter, openingTileId });
 }
 
+/**
+ * Baralho do rival: o dele, mais as pedras de grife extras da Maleta do Bicheiro (sorteadas
+ * pela semente da run, em pedras que ainda são comuns no baralho dele).
+ */
+function rivalDeckFor(state, rival) {
+  const deck = { ...rival.deck };
+  const extra = maletaOf(state.maleta).rivalExtraTiles;
+  if (!extra) return deck;
+  const rng = createSeededRng(mixSeed(state.seed ?? 0, `bicheiro-${rival.id}-${state.run.match}`));
+  const plain = FULL_SET.map((t) => t.id).filter((id) => !deck[id]);
+  for (let i = 0; i < extra && plain.length; i += 1) {
+    const [id] = plain.splice(Math.floor(rng() * plain.length), 1);
+    deck[id] = ENHANCEMENT_IDS[Math.floor(rng() * ENHANCEMENT_IDS.length)];
+  }
+  return deck;
+}
+
 /** Nova partida contra `rivalId`: rival com os corações, talismãs e o baralho dele; os seus corações continuam. */
 function startMatch(state, rivalId, deck, { advance = true } = {}) {
-  // na Maleta Preta o rival senta com o baralho, os talismãs e os corações do modo difícil
+  // nas Peças Pretas o rival senta com o baralho, os talismãs e os corações do modo difícil
   const rival = rivalFor(rivalId, state.mode);
+  // Tudo ou Nada: todo mundo senta com 1 coração
+  const allIn = challengeIs(state, 'tudoOuNada');
+  const rivalHearts = allIn ? 1 : rival.hearts;
   let next = {
     ...state,
     rivalId: rival.id,
@@ -228,9 +260,9 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
       ? { ...state.run, match: state.run.match + 1, history: [...state.run.history, rival.id] }
       : { ...state.run, history: [...state.run.history.slice(0, -1), rival.id] },
     relics: { ...state.relics, tioZe: [...rival.relics] },
-    decks: { ...state.decks, tioZe: { ...rival.deck } },
-    hearts: bySeat(Math.max(1, state.hearts.player), rival.hearts),
-    maxHearts: bySeat(playerMaxHearts(state), rival.hearts),
+    decks: { ...state.decks, tioZe: rivalDeckFor(state, rival) },
+    hearts: bySeat(allIn ? 1 : Math.max(1, state.hearts.player), rivalHearts),
+    maxHearts: bySeat(playerMaxHearts(state), rivalHearts),
     matchFx: createMatchFx(),
     coins: { ...state.coins, tioZe: rival.coins },
     round: 0,
@@ -243,6 +275,20 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
   return startRound(next, deck);
 }
 
+/** Quantos Necróticos chamam O Dono da Noite (vencendo o Comendador com eles na hotbar). */
+export const SECRET_NECROTICS = 3;
+
+const necroticCount = (state) => state.relics.player.filter((id) => RELICS[id]?.rarity === 'necrotico').length;
+
+/**
+ * Nó 19 secreto: depois da revelação, a mesa do Dono da Noite (a partida conta no mesmo nó
+ * do Comendador; vencer encerra a run com o final da noite).
+ */
+function startSecret(state, { deck }) {
+  if (state.phase !== 'secretReveal' || !deck) return state;
+  return startMatch({ ...state, roundResult: null }, SECRET_BOSS, deck);
+}
+
 /**
  * Alguém zerou: se foi o rival, você vence o nó (prêmio e cura; o nó fica concluído e
  * o mapa abre os próximos caminhos; o chefe final encerra a run); se foi você, a run acaba.
@@ -251,26 +297,48 @@ function endMatch(state, winner) {
   if (winner === 'player') {
     const node = currentNode(state);
     const rival = rivalOf(state);
-    const boss = node ? node.boss : rival.boss;
-    const runWon = node ? node.boss && node.region === campaignOf(state).regions.length : rival.id === FINAL_BOSS;
-    const prize = MATCH_PRIZE + rival.prizeBonus;
+    const secretWon = rival.id === SECRET_BOSS;
+    const boss = secretWon || (node ? node.boss : rival.boss);
+    // o chefe da última região (o Comendador) encerra a campanha
+    const finalBoss = !secretWon && (node ? node.boss && node.region === campaignOf(state).regions.length : rival.id === FINAL_BOSS);
+    // Patch 0.8.0: com 3+ Necróticos na hotbar, o final convencional não vem: O Dono da Noite aparece
+    const secret = finalBoss && necroticCount(state) >= SECRET_NECROTICS;
+    const runWon = secretWon || (finalBoss && !secret);
+    // Maleta Seca: o prêmio vem em dobro
+    const prize = (MATCH_PRIZE + rival.prizeBonus) * maletaOf(state.maleta).prizeMultiplier;
+    // Tampinhas Douradas: +1 rival, +3 chefe, +5 por zerar, +10 por concluir o desafio
+    const caps =
+      (boss ? CAPS_PER_BOSS : CAPS_PER_RIVAL) + (runWon ? CAPS_PER_CLEAR : 0) + (finalBoss && state.challenge ? CAPS_PER_CHALLENGE : 0);
     const max = playerMaxHearts(state);
     const healed = boss ? max : Math.min(max, state.hearts.player + HEAL_AFTER_NODE);
     const heal = healed - state.hearts.player;
     const cleared = node && !state.run.cleared.includes(node.id) ? [...state.run.cleared, node.id] : state.run.cleared;
     let next = {
       ...state,
-      phase: runWon ? 'runWon' : 'matchWon',
+      phase: runWon ? 'runWon' : secret ? 'secretReveal' : 'matchWon',
       duelWinner: 'player',
       nextStarter: null,
       pending: null,
       hearts: { ...state.hearts, player: healed },
-      run: { ...state.run, cleared },
-      stats: { ...state.stats, matchesWon: state.stats.matchesWon + 1 },
+      run: { ...state.run, cleared, secret: state.run.secret || secret },
+      stats: { ...state.stats, matchesWon: state.stats.matchesWon + 1, caps: (state.stats.caps ?? 0) + caps },
     };
     next = gainCoins(next, 'player', prize, 'prize');
-    next = { ...next, roundResult: next.roundResult ? { ...next.roundResult, prize, heal } : next.roundResult };
-    return emit(next, { type: 'duelEnd', winner: 'player', prize, heal, runWon, boss, region: node?.region ?? rival.region, mode: state.mode });
+    next = { ...next, roundResult: next.roundResult ? { ...next.roundResult, prize, heal, caps } : next.roundResult };
+    return emit(next, {
+      type: 'duelEnd',
+      winner: 'player',
+      prize,
+      heal,
+      caps,
+      runWon,
+      finalBoss,
+      secret,
+      secretWon,
+      boss,
+      region: node?.region ?? rival.region,
+      mode: state.mode,
+    });
   }
   const next = { ...state, phase: 'gameOver', duelWinner: 'tioZe', nextStarter: null, pending: null };
   return emit(next, { type: 'duelEnd', winner: 'tioZe' });
@@ -290,6 +358,11 @@ function finishRound(state, incoming) {
     result = { ...result, damage: 0, shielded: true };
     next = { ...next, matchFx: { ...next.matchFx, shieldUsed: true } };
     next = proc(next, { source: 'rival', id: next.rivalId, text: 'IMUNE À PRIMEIRA TRANCA', tone: 'enemy', owner: 'tioZe' });
+  }
+  // O Dono da Noite (Noite Eterna): só batida de bucha ou tranca tiram coração dele
+  if (result.winner === 'player' && result.damage > 0 && rivalMechanics(next).noiteEterna && result.kind !== 'tranca' && !result.double) {
+    result = { ...result, damage: 0, immune: true };
+    next = proc(next, { source: 'rival', id: next.rivalId, text: 'NOITE ETERNA: SÓ BUCHA OU TRANCA', tone: 'enemy', owner: 'tioZe' });
   }
   if (result.cadaverica && result.damage > 0) {
     const text = result.loser === 'player' ? `TRANCA CADAVÉRICA: −${result.damage}♥ EM VOCÊ` : `TRANCA CADAVÉRICA: −${result.damage}♥ NO RIVAL`;
@@ -425,12 +498,33 @@ function canAct(state, actor) {
 
 /** Passa a vez. O Chumbo que travava quem jogou derrete; quando a SUA vez termina, o Relógio perde a chance. */
 function endTurn(state, from) {
+  const turns = (state.fx.turns ?? 0) + 1;
   const fx = {
     ...state.fx,
     frozen: { ...state.fx.frozen, [from]: [] },
     undo: from === 'player' ? null : state.fx.undo,
+    turns,
   };
-  return { ...state, turn: other(from), fx };
+  const next = { ...state, turn: other(from), fx };
+  return challengeIs(state, 'mesaBebada') && turns % DRUNK_EVERY === 0 ? drunkTable(next) : next;
+}
+
+/**
+ * Mesa Bêbada (desafio): os números das duas pontas mudam ao acaso (pela semente da run,
+ * da rodada e do momento). Cada ponta fica assim até uma pedra entrar nela.
+ */
+function drunkTable(state) {
+  const ends = getOpenEnds(state.board);
+  if (!ends) return state;
+  const rng = createSeededRng(mixSeed(state.seed ?? 0, `bebada-${state.run.match}-${state.round}-${state.seq}`));
+  const roll = (current) => {
+    const value = Math.floor(rng() * 6);
+    return value >= current ? value + 1 : value; // nunca repete o número que estava
+  };
+  const drunk = { left: roll(ends.left), right: roll(ends.right) };
+  let next = { ...state, board: { ...state.board, drunk } };
+  next = emit(next, { type: 'drunk', ends: drunk });
+  return proc(next, { source: 'challenge', id: 'mesaBebada', text: `MESA BÊBADA: PONTAS VIRARAM ${drunk.left} E ${drunk.right}`, tone: 'info', owner: 'player' });
 }
 
 /** `seat` comprou ou passou: Rubi do adversário, e os talismãs do adversário (Cinzeiro, Dedal, Espelho). */
@@ -577,6 +671,7 @@ function playTile(state, { actor, tileId, side }) {
       baseDamage: DAMAGE[kind],
       reason: 'batida',
       lastTileId: tile.id,
+      double: isDouble(tile),
       sums: null,
     });
   }
@@ -608,13 +703,7 @@ function playTile(state, { actor, tileId, side }) {
 
 function drawTile(state, { actor }) {
   if (!canAct(state, actor) || !state.board.root) return state;
-  const availability = getDrawAvailability({
-    drawsThisTurn: state.drawsThisTurn,
-    boneyardCount: state.boneyard.length,
-    coins: state.coins[actor],
-    hearts: state.hearts[actor],
-    heartCost: heartDrawCostFor(state, actor),
-  });
+  const availability = drawAvailabilityFor(state, actor);
   if (!availability.allowed) return state;
 
   const { cost } = availability;
@@ -698,13 +787,17 @@ function passTurn(state, { actor, intent }) {
   const rule = actor === 'player' && !forced ? passAvailabilityFor(state, 'player') : { allowed: true, cost: 0 };
   if (!rule.allowed) return state;
   const consecutivePasses = state.consecutivePasses + 1;
+  // Fiado de Rua: o 1º passe estratégico da run vai para a conta
+  const fiado = Boolean(rule.fiado) && isStrategicPass(state, 'player');
   let next = {
     ...state,
     pending: forced ? null : state.pending,
     consecutivePasses,
     drawsThisTurn: 0,
     memory: actor === 'player' ? rememberPlayerMissing(state) : state.memory,
+    run: fiado ? { ...state.run, fiadoUsed: true } : state.run,
   };
+  if (fiado) next = proc(next, { source: 'perk', id: 'fiado', text: 'FIADO DE RUA: PASSE NA CONTA', tone: 'player', owner: 'player' });
   if (rule.cost > 0) next = loseCoins(next, actor, rule.cost, 'pass');
   // Dado de Osso Humano: passar (por vontade) custa coração, nunca o último
   const heartCost = forced ? 0 : relicsOf(state, actor).reduce((sum, r) => sum + (r.passHeartCost ?? 0), 0);
@@ -945,6 +1038,11 @@ function enterNode(state, node, deck) {
   const path = state.run.path.at(-1) === id ? state.run.path : [...state.run.path.filter((p) => p !== id), id];
   const cleared = state.run.cleared.filter((c) => c !== id);
   let next = { ...state, pending: null, run: { ...state.run, node: id, path, cleared } };
+  // Só no Osso (desafio): loja e Mercado Negro de portas fechadas, você passa reto
+  if (challengeIs(state, 'soNoOsso') && (node.type === 'shop' || node.type === 'black')) {
+    next = { ...next, phase: 'map', run: { ...next.run, cleared: [...cleared, id] } };
+    return emit(next, { type: 'nodeClosed', node: id, kind: node.type });
+  }
   next = emit(next, { type: 'nodeEnter', node: id, kind: node.type });
   switch (node.type) {
     case 'combat':
@@ -991,25 +1089,35 @@ function leaveEvent(state) {
 
 /** Run nova, parada no mapa antes do primeiro nó (a teia sai da semente). */
 function newRun(state, action) {
-  const relics = (action.relics ?? []).filter((id) => getRelic(id)).slice(0, RELIC_SLOTS);
   const base = createInitialState();
-  // a maleta escolhida (Maleta Preta: 4 corações e $3 para começar)
+  // dificuldade (Peças Pretas: 4 corações e $3), desafio e maleta (Só no Osso: só a Clássica)
   const mode = modeOf(action.mode);
+  const challenge = CHALLENGES[action.challenge] ? action.challenge : null;
+  const maletaId = challenge === 'soNoOsso' ? DEFAULT_MALETA : MALETAS[action.maleta] ? action.maleta : DEFAULT_MALETA;
+  const maleta = maletaOf(maletaId);
+  const perks = (action.perks ?? []).filter((id) => UPGRADES[id]);
+  const bare = challenge === 'soNoOsso';
+  const sized = { maleta: maletaId, perks };
+  const relics = bare ? [] : [...maleta.relics, ...(action.relics ?? [])].filter((id, i, all) => getRelic(id) && all.indexOf(id) === i).slice(0, relicSlotsFor(sized));
+  const maxHearts = challenge === 'tudoOuNada' ? 1 : mode.maxHearts;
   const fresh = {
     ...base,
     phase: 'map',
     mode: mode.id,
-    hearts: { ...base.hearts, player: mode.maxHearts },
-    maxHearts: { ...base.maxHearts, player: mode.maxHearts },
-    coins: { ...base.coins, player: mode.startCoins },
+    maleta: maletaId,
+    challenge,
+    perks,
+    hearts: { ...base.hearts, player: maxHearts },
+    maxHearts: { ...base.maxHearts, player: maxHearts },
+    coins: { ...base.coins, player: startCoinsFor(mode.startCoins, maletaId, perks) },
     relics: bySeat(relics, []),
-    decks: bySeat({ ...(action.playerDeck ?? {}) }, {}),
+    decks: bySeat(bare ? {} : { ...maleta.playerDeck, ...(action.playerDeck ?? {}) }, {}),
     seed: Number.isFinite(action.seed) ? action.seed >>> 0 : null,
     unlocks: (action.unlocks ?? state.unlocks ?? []).filter((id) => RELICS[id]),
     seq: state.seq,
     events: state.events,
   };
-  return emit(fresh, { type: 'runStart', mode: mode.id });
+  return emit(fresh, { type: 'runStart', mode: mode.id, maleta: maletaId, challenge });
 }
 
 /** CONTINUAR: volta para o mapa (ou para a loja / o mercado) exatamente como o save guardou. */
@@ -1021,7 +1129,18 @@ function loadRun(state, action) {
     ...createInitialState(),
     phase,
     seed: save.seed ?? null,
-    run: { node: save.node, cleared: [...save.cleared], path: [...save.path], match: save.match, history: [...save.history] },
+    run: {
+      node: save.node,
+      cleared: [...save.cleared],
+      path: [...save.path],
+      match: save.match,
+      history: [...save.history],
+      fiadoUsed: Boolean(save.fiadoUsed),
+      secret: false,
+    },
+    maleta: MALETAS[save.maleta] ? save.maleta : DEFAULT_MALETA,
+    challenge: CHALLENGES[save.challenge] ? save.challenge : null,
+    perks: (action.perks ?? []).filter((id) => UPGRADES[id]),
     coins: bySeat(save.coins, 0),
     relics: bySeat([...save.relics], []),
     decks: bySeat({ ...save.deck }, {}),
@@ -1029,6 +1148,7 @@ function loadRun(state, action) {
       roundsWon: { ...createInitialState().stats.roundsWon, ...save.stats?.roundsWon },
       coinsEarned: save.stats?.coinsEarned ?? 0,
       matchesWon: save.stats?.matchesWon ?? 0,
+      caps: save.stats?.caps ?? 0,
     },
     unlocks: (action.unlocks ?? state.unlocks ?? []).filter((id) => RELICS[id]),
     seq: state.seq,
@@ -1036,12 +1156,13 @@ function loadRun(state, action) {
   };
   const mode = save.mode === 'hard' ? 'hard' : 'normal';
   const rival = rivalFor(currentNode(next)?.rivalId ?? FIRST_RIVAL, mode);
+  next = { ...next, mode };
+  const max = playerMaxHearts(next);
   next = {
     ...next,
-    mode,
     rivalId: rival.id,
-    hearts: bySeat(Math.min(save.hearts, modeOf(mode).maxHearts), rival.hearts),
-    maxHearts: bySeat(modeOf(mode).maxHearts, rival.hearts),
+    hearts: bySeat(Math.min(save.hearts, max), rival.hearts),
+    maxHearts: bySeat(max, rival.hearts),
     coins: bySeat(save.coins, rival.coins),
   };
   if (phase === 'shop') next = { ...next, shop: save.shop ? { ...save.shop } : buildShop(next, 0) };
@@ -1099,7 +1220,7 @@ function devAction(state, action) {
     case 'toggleRelic': {
       if (!getRelic(action.id)) return state;
       const owned = state.relics.player.includes(action.id);
-      if (!owned && state.relics.player.length >= RELIC_SLOTS) return state;
+      if (!owned && state.relics.player.length >= relicSlotsFor(state)) return state;
       const player = owned ? state.relics.player.filter((id) => id !== action.id) : [...state.relics.player, action.id];
       return emit({ ...state, relics: { ...state.relics, player } }, { type: 'dev', op, id: action.id, on: !owned });
     }
@@ -1160,6 +1281,11 @@ function devAction(state, action) {
     }
     case 'forceTranca':
       return finishRound(state, trancaResult(state, 'forcada'));
+    case 'secretReveal': {
+      // atalho: pula direto para a revelação do Dono da Noite (como se o Comendador tivesse caído)
+      const next = { ...state, phase: 'secretReveal', pending: null, roundResult: null, run: { ...state.run, secret: true } };
+      return emit(next, { type: 'dev', op });
+    }
     default:
       return state;
   }
@@ -1210,6 +1336,8 @@ export function gameReducer(state, action) {
       return cancelCanivete(state);
     case 'UNLOCK_RELICS':
       return unlockRelics(state, action);
+    case 'START_SECRET':
+      return startSecret(state, action);
     case 'OPEN_MAP':
       return continueToMap(state);
     case 'SHOP_BUY_RELIC':

@@ -60,12 +60,13 @@ function useElementSize() {
 const SIDE_LABEL = { left: 'esquerda', right: 'direita', root: 'centro' };
 
 /** Marca da ponta: congelada pelo seu Chumbo, travada pelo Chumbo do rival ou curinga do Cristal. */
-const MARK_CLASS = { frozen: 'end-badge-frozen', blocked: 'end-badge-blocked', wild: 'end-badge-wild', both: 'end-badge-wild' };
+const MARK_CLASS = { frozen: 'end-badge-frozen', blocked: 'end-badge-blocked', wild: 'end-badge-wild', both: 'end-badge-wild', drunk: 'end-badge-drunk' };
 const MARK_LABEL = {
   frozen: ' (congelada para o rival)',
   blocked: ' (travada nesta vez)',
   wild: ' (curinga na sua jogada)',
   both: ' (curinga na sua jogada)',
+  drunk: ' (número trocado pela Mesa Bêbada)',
 };
 
 /** Caixa (px do mundo) de uma pedra de `unit` px centrada no retângulo r (em unidades). */

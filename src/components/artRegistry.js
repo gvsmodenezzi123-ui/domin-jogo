@@ -26,6 +26,8 @@ export const RIVAL_ART = pick({
   fausto: Art.FaustoAvatar,
   alemao: Art.AlemaoAvatar,
   comendador: Art.ComendadorAvatar,
+  // Patch 0.8.0: nó 19 secreto (48x48)
+  donoDaNoite: Art.DonoDaNoiteAvatar,
 });
 
 /** `art` dos talismãs → ícone 40x40. */

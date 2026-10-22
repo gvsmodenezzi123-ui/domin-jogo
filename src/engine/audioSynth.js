@@ -80,6 +80,7 @@ const VOICE_PROFILES = {
   fausto: { baseFreq: 125, mod: 15, type: 'sine', speed: 85 }, // frio, monótono
   alemao: { baseFreq: 85, mod: 25, type: 'square', speed: 95 }, // ferro velho
   comendador: { baseFreq: 95, mod: 35, type: 'triangle', speed: 110 }, // grave, sem pressa
+  donoDaNoite: { baseFreq: 70, mod: 20, type: 'sawtooth', speed: 140 }, // do fundo do poço, devagar
   valtinho: { baseFreq: 118, mod: 42, type: 'triangle', speed: 72 }, // atendente da Loja Clandestina, com o palito na boca
   corvo: { baseFreq: 72, mod: 18, type: 'sawtooth', speed: 105 }, // Corvo da Madrugada: sussurro grave no escuro do beco
   seuTiao: { baseFreq: 150, mod: 55, type: 'triangle', speed: 90 }, // Seu Tião das Moedas: velho risonho, sem pressa
@@ -996,7 +997,7 @@ export class SoundEngine {
   }
 
   /**
-   * Maleta Preta destrancando (Patch 0.6.3): o estalo seco do cadeado, a mola da argola e a
+   * Maleta destrancando no Balcão (Patch 0.6.3): o estalo seco do cadeado, a mola da argola e a
    * corrente escorregando e caindo no feltro.
    */
   playChainUnlock() {
@@ -1007,7 +1008,7 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 120, freqEnd: 70, peak: 0.18, dur: 0.09, delay: 0.5 });
   }
 
-  /** Tocar na Maleta Preta trancada: a corrente sacode contra o cadeado. */
+  /** Tocar numa maleta trancada: a corrente sacode contra o cadeado. */
   playChainRattle() {
     [0, 0.06, 0.13].forEach((delay, i) => this.noise({ freq: 3000 - i * 300, q: 3, peak: 0.18, dur: 0.025, delay }));
     this.tone({ type: 'square', freq: 240, freqEnd: 180, peak: 0.05, dur: 0.04, delay: 0.02 });
@@ -1030,6 +1031,18 @@ export class SoundEngine {
     this.brassChord([67, 72, 76, 79], { delay: 0.2, dur: 0.7, peak: 0.1 });
     [1568, 2093, 2637].forEach((freq, i) => this.tone({ type: 'triangle', freq, peak: 0.06, dur: 0.5, delay: 0.24 + i * 0.05 }));
     this.noise({ freq: 7000, filter: 'highpass', q: 0.6, peak: 0.1, dur: 0.6, attack: 0.01, delay: 0.2 });
+  }
+
+  /**
+   * Trovão do Dono da Noite (Patch 0.8.0): o estalo do raio, o ronco grave que rola por
+   * mais de um segundo e o tremor por baixo. A trilha abaixa enquanto ele passa.
+   */
+  playThunder() {
+    this.duck();
+    this.noise({ freq: 3800, filter: 'highpass', q: 0.7, peak: 0.42, dur: 0.09, attack: 0.002 });
+    this.noise({ freq: 1400, filter: 'bandpass', q: 0.6, peak: 0.3, dur: 0.22, attack: 0.004, delay: 0.04 });
+    [0.12, 0.42, 0.85].forEach((delay, i) => this.noise({ freq: 160 - i * 30, filter: 'lowpass', q: 0.8, peak: 0.55 - i * 0.12, dur: 0.9 + i * 0.3, attack: 0.05, delay }));
+    this.tone({ type: 'sine', freq: 52, freqEnd: 30, peak: 0.6, dur: 1.6, attack: 0.08, delay: 0.1 });
   }
 
   /** Dano de coração: dois baques de batimento e um estalo rachando (a música abaixa). */

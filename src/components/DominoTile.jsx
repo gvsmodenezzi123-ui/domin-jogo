@@ -68,7 +68,7 @@ function Half({ value, horizontal, unit }) {
 }
 
 /**
- * Pedra de dominó em osso amarelado envelhecido (ou ébano, na Maleta Preta: TileSkinContext).
+ * Pedra de dominó em osso amarelado envelhecido (ou ébano, nas Peças Pretas: TileSkinContext).
  *
  * values:      [primeiro, segundo] — esquerda/direita (deitada) ou cima/baixo (em pé)
  * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
@@ -106,7 +106,7 @@ function DominoTile({
   style,
   label,
 }) {
-  // Maleta Preta (Patch 0.6.3): as pedras comuns viram ébano com pips brancos
+  // Peças Pretas (Patch 0.6.3): as pedras comuns viram ébano com pips brancos
   const skin = useContext(TileSkinContext);
   const isDouble = values[0] === values[1];
   // bucha na mesa: perpendicular à linha (em pé na horizontal, deitada na vertical)
@@ -147,7 +147,7 @@ function DominoTile({
   const dividerThickness = Math.max(1, Math.round(unit * 0.06));
   const enh = getEnhancement(enhancement);
   const onyx = !enh && skin === 'onyx';
-  // osso envelhecido (padrão), ébano (Maleta Preta) ou material da peça aprimorada, que vem do CSS
+  // osso envelhecido (padrão), ébano (Peças Pretas) ou material da peça aprimorada, que vem do CSS
   const surface = enh
     ? { '--d': `${depth}px` }
     : onyx

@@ -10,14 +10,21 @@
  * o nó atual, os concluídos e o caminho. Saves da versão 1 (trilha fixa) não valem mais.
  * Versão 3 (Patch 0.6.2): a teia mudou (15 rivais por run, nós únicos por região), então
  * a mesma semente gera outro mapa: saves da versão 2 também não valem mais.
+ * Versão 4 (Patch 0.8.0): guarda a maleta da run, o desafio, o Fiado de Rua usado e as
+ * tampinhas da run. Saves da versão 3 continuam valendo (Maleta Clássica, sem desafio).
  */
 
-import { RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
+import { MALETAS } from '../data/maletas.js';
+import { CHALLENGES } from '../data/meta.js';
+import { RELIC_IDS } from '../data/relics.js';
+import { MAX_RELIC_SLOTS } from './loadout.js';
 import { generateCampaign } from './campaignMap.js';
 import { ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { FULL_SET, MAX_HEARTS } from './dominoLogic.js';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
+/** Versões que o CONTINUAR ainda aceita. */
+const READABLE = [3, 4];
 const RESUMES = ['map', 'shop', 'blackMarket'];
 
 export function snapshotRun(state, resume, savedAt = 0) {
@@ -26,6 +33,9 @@ export function snapshotRun(state, resume, savedAt = 0) {
     savedAt,
     resume,
     mode: state.mode === 'hard' ? 'hard' : 'normal',
+    maleta: state.maleta ?? 'classica',
+    challenge: state.challenge ?? null,
+    fiadoUsed: Boolean(state.run.fiadoUsed),
     seed: state.seed,
     node: state.run.node,
     cleared: [...state.run.cleared],
@@ -51,6 +61,7 @@ export function snapshotRun(state, resume, savedAt = 0) {
       roundsWon: { ...state.stats.roundsWon },
       coinsEarned: state.stats.coinsEarned,
       matchesWon: state.stats.matchesWon,
+      caps: state.stats.caps ?? 0,
     },
   };
 }
@@ -76,10 +87,13 @@ export function isValidMarket(market) {
 
 /** Confere se um save lido do storage é usável (versão, formato, valores, nós da teia). */
 export function isValidSave(save) {
-  if (!save || typeof save !== 'object' || save.v !== SAVE_VERSION) return false;
+  if (!save || typeof save !== 'object' || !READABLE.includes(save.v)) return false;
   if (!RESUMES.includes(save.resume)) return false;
-  // Patch 0.6.3: maleta da run (saves sem o campo são da Maleta Branca)
+  // Patch 0.6.3: maleta da run (saves sem o campo são das Peças Brancas)
   if (save.mode != null && save.mode !== 'normal' && save.mode !== 'hard') return false;
+  // Patch 0.8.0: maleta e desafio (saves sem os campos: Clássica, sem desafio)
+  if (save.maleta != null && !MALETAS[save.maleta]) return false;
+  if (save.challenge != null && !CHALLENGES[save.challenge]) return false;
   if (save.seed != null && !isInt(save.seed)) return false;
   const campaign = generateCampaign(save.seed ?? 0);
   const known = (id) => typeof id === 'string' && campaign.byId.has(id);
@@ -88,7 +102,7 @@ export function isValidSave(save) {
   if (!Array.isArray(save.path) || !save.path.every(known)) return false;
   if (!isInt(save.hearts) || save.hearts < 1 || save.hearts > MAX_HEARTS) return false;
   if (!isInt(save.coins) || save.coins < 0) return false;
-  if (!Array.isArray(save.relics) || save.relics.length > RELIC_SLOTS) return false;
+  if (!Array.isArray(save.relics) || save.relics.length > MAX_RELIC_SLOTS) return false;
   if (!save.relics.every((id) => RELIC_IDS.includes(id))) return false;
   if (!save.deck || typeof save.deck !== 'object') return false;
   if (!Object.entries(save.deck).every(([id, e]) => TILE_IDS.has(id) && ENHANCEMENT_IDS.includes(e))) return false;

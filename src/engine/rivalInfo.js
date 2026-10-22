@@ -42,7 +42,7 @@ const MECHANIC_TEXT = {
 
 export const rivalBlurb = (id) => BLURB[id] ?? '';
 
-/** Regras da mesa desse rival, uma por linha (no modo da run: a Maleta Preta muda o baralho dele). */
+/** Regras da mesa desse rival, uma por linha (no modo da run: as Peças Pretas mudam o baralho dele). */
 export function rivalRules(id, mode = 'normal') {
   const rival = rivalFor(id, mode);
   const lines = [];

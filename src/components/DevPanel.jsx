@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
-import { RELICS, RELIC_IDS, RELIC_SLOTS } from '../data/relics.js';
+import { RELICS, RELIC_IDS } from '../data/relics.js';
+import { maletaOf } from '../data/maletas.js';
+import { challengeOf } from '../data/meta.js';
+import { relicSlotsFor } from '../engine/loadout.js';
 import { REGIONS } from '../data/campaign.js';
 import { RIVALS } from '../data/rivals.js';
 import DominoTile from './DominoTile.jsx';
@@ -29,14 +32,15 @@ function PipPicker({ label, value, onChange }) {
  * inicial, que libera o botão DEV ao lado da sua hotbar). O rival espera
  * enquanto o painel está aberto.
  */
-export default function DevPanel({ state, onAction, onClose, hardUnlocked = false, onToggleHard }) {
+export default function DevPanel({ state, onAction, onClose, blackUnlocked = false, onToggleBlack }) {
   const [a, setA] = useState(6);
   const [b, setB] = useState(6);
   const [enhancement, setEnhancement] = useState('nenhuma');
   const playing = state.phase === 'playing';
   const dev = (op, extra = {}) => onAction({ type: 'DEV', op, ...extra });
   const mine = state.relics.player;
-  const full = mine.length >= RELIC_SLOTS;
+  const slots = relicSlotsFor(state);
+  const full = mine.length >= slots;
 
   return (
     <div className="overlay-backdrop fixed inset-0 z-[80] flex items-end justify-center" role="dialog" aria-modal="true" aria-labelledby="dev-title">
@@ -103,7 +107,7 @@ export default function DevPanel({ state, onAction, onClose, hardUnlocked = fals
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-relics">
           <h3 id="dev-relics" className="dev-label">
-            TALISMÃS {mine.length}/{RELIC_SLOTS}
+            TALISMÃS {mine.length}/{slots}
           </h3>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {RELIC_IDS.map((id) => {
@@ -149,6 +153,9 @@ export default function DevPanel({ state, onAction, onClose, hardUnlocked = fals
                   ))}
                 </optgroup>
               ))}
+              <optgroup label="Secreto">
+                <option value="donoDaNoite">19. {RIVALS.donoDaNoite.name} — {RIVALS.donoDaNoite.title}</option>
+              </optgroup>
             </select>
           </label>
           <button type="button" data-tone="brass" className="btn-pixel mt-2 w-full" disabled={!playing} onClick={() => dev('winMatch')}>
@@ -175,10 +182,25 @@ export default function DevPanel({ state, onAction, onClose, hardUnlocked = fals
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-mode">
           <h3 id="dev-mode" className="dev-label">
-            MALETAS · ESTA RUN: {state.mode === 'hard' ? 'PRETA (DIFÍCIL)' : 'BRANCA (NORMAL)'}
+            ESTA RUN: {maletaOf(state.maleta).short} · {state.mode === 'hard' ? 'PEÇAS PRETAS' : 'PEÇAS BRANCAS'}
+            {state.challenge ? ` · ${challengeOf(state.challenge).name.toUpperCase()}` : ''}
           </h3>
-          <button type="button" data-tone={hardUnlocked ? 'blood' : 'brass'} className="btn-pixel btn-mini mt-2 w-full" onClick={onToggleHard}>
-            {hardUnlocked ? 'TRANCAR A MALETA PRETA' : 'LIBERAR A MALETA PRETA'}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" data-tone={blackUnlocked ? 'blood' : 'brass'} className="btn-pixel btn-mini" onClick={onToggleBlack}>
+              {blackUnlocked ? 'TRANCAR PEÇAS PRETAS' : 'LIBERAR PEÇAS PRETAS'}
+            </button>
+            <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={() => onAction({ op: 'capsAdd' })}>
+              +10 TAMPINHAS
+            </button>
+            <button type="button" data-tone="play" className="btn-pixel btn-mini" onClick={() => onAction({ op: 'metaUnlockAll' })}>
+              LIBERAR MALETAS E DESAFIOS
+            </button>
+            <button type="button" data-tone="blood" className="btn-pixel btn-mini" onClick={() => onAction({ op: 'metaReset' })}>
+              ZERAR TAMPINHAS E META
+            </button>
+          </div>
+          <button type="button" data-tone="blood" className="btn-pixel btn-mini mt-2 w-full" onClick={() => dev('secretReveal')}>
+            REVELAR O DONO DA NOITE (NÓ 19)
           </button>
         </section>
 

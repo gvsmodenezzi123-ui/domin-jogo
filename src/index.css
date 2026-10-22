@@ -551,10 +551,6 @@
   }
 
   /* pedra do Tio Zé revelada (Olho de Vidro, Espelho Retrovisor) */
-  .revealed-tile {
-    outline: 1px solid rgba(130, 240, 255, 0.85);
-    outline-offset: 1px;
-  }
 
   /* ---------- Mesa ---------- */
 
@@ -573,12 +569,6 @@
       inset 0 0 0 3px #120b06,
       inset 0 0 0 5px #3d2512,
       inset 0 0 0 7px #120b06;
-  }
-
-  .lamp-light {
-    background: radial-gradient(ellipse 70% 58% at 50% 34%, rgba(255, 214, 140, 0.2) 0%, rgba(255, 214, 140, 0.07) 38%, transparent 62%);
-    mix-blend-mode: screen;
-    animation: lamp-flicker 7s steps(1, end) infinite;
   }
 
   /* vinheta profunda: o centro fica no foco da lâmpada, os cantos somem no escuro */
@@ -726,10 +716,6 @@
   }
 
   /* mão do rival: o leque girado 180°; a sombra cai para baixo na tela */
-  .rival-float {
-    filter: drop-shadow(0 -5px 4px rgba(0, 0, 0, 0.5));
-    animation: hand-float 4.2s ease-in-out infinite alternate;
-  }
 
   .rival-revealed {
     opacity: 0.84;
@@ -806,11 +792,6 @@
     border-style: dashed;
     border-color: rgba(233, 220, 180, 0.2);
     background: rgba(0, 0, 0, 0.35);
-  }
-
-  .relic-slot-open {
-    outline: 2px solid var(--color-brass-300);
-    outline-offset: 1px;
   }
 
   .relic-slot-spent > span {
@@ -901,73 +882,7 @@
 
   /* ---------- Loja Clandestina ---------- */
 
-  .shop-screen {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 214, 140, 0.12), transparent 70%),
-      radial-gradient(ellipse 120% 90% at 50% 40%, #16110b 0%, #0a0806 60%, #050403 100%);
-  }
-
   /* painel escuro e limpo: moldura fina, sem madeira pesada */
-  .shop-panel {
-    background:
-      repeating-linear-gradient(0deg, rgba(255, 220, 170, 0.025) 0 1px, transparent 1px 4px),
-      linear-gradient(180deg, #19120c, #0f0a07);
-    border: 2px solid #0b0705;
-    box-shadow:
-      inset 0 0 0 1px rgba(240, 204, 120, 0.22),
-      0 4px 0 #000,
-      0 0 30px rgba(0, 0, 0, 0.8);
-  }
-
-  .shop-label {
-    font-family: var(--font-pixel);
-    font-size: 7px;
-    letter-spacing: 0.06em;
-    color: var(--color-bone-400);
-  }
-
-  .shop-item {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
-    padding: 6px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(0, 0, 0, 0.9);
-    box-shadow:
-      inset 3px 0 0 var(--rarity),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-  }
-
-  .shop-item-mythic {
-    box-shadow:
-      inset 3px 0 0 #ffcf4a,
-      inset 0 0 0 1px rgba(200, 38, 29, 0.55),
-      0 0 10px rgba(200, 38, 29, 0.25);
-  }
-
-  .shop-item-sold {
-    opacity: 0.45;
-    filter: grayscale(0.7);
-  }
-
-  .shop-icon {
-    display: flex;
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at 50% 40%, #241810, #0b0705 75%);
-    border: 2px solid var(--rarity);
-  }
-
-  .btn-pixel.btn-buy {
-    min-width: 62px;
-    min-height: 42px;
-    padding: 4px 6px;
-    font-size: 10px;
-  }
 
   .shop-alert {
     color: var(--color-bone-50);
@@ -1070,14 +985,6 @@
 
   .dev-relic:disabled {
     opacity: 0.4;
-  }
-
-  .reward-card {
-    background: rgba(0, 0, 0, 0.45);
-    border: 2px solid var(--rarity, #3d2512);
-    box-shadow:
-      inset 0 0 0 2px #0b0705,
-      0 0 18px rgba(240, 204, 120, 0.2);
   }
 
   /* ---------- Mão do jogador (leque flutuante sobre o feltro) ---------- */
@@ -1202,51 +1109,10 @@
   /* logo com contorno pesado: 8 direções de preto + sombra de sangue */
   /* logo com relevo 3D DUPLO: contorno preto, 1ª extrusão em osso escurecido,
      2ª extrusão em sangue e sombra funda; uma luz quente bate de cima */
-  .title-logo {
-    position: relative;
-    color: transparent;
-    letter-spacing: 0.05em;
-    filter: drop-shadow(0 0 18px rgba(255, 214, 140, 0.3));
-    cursor: default;
-    user-select: none;
-  }
 
   /* embaixo: contorno e as duas extrusões (osso escurecido, depois sangue) */
-  .title-logo::before {
-    content: attr(data-text);
-    position: absolute;
-    inset: 0;
-    color: #000;
-    text-shadow:
-      -3px -3px 0 #000,
-      0 -3px 0 #000,
-      3px -3px 0 #000,
-      3px 0 0 #000,
-      3px 3px 0 #000,
-      0 3px 0 #000,
-      -3px 3px 0 #000,
-      -3px 0 0 #000,
-      2px 2px 0 #8f7a4c,
-      3px 3px 0 #6e5a33,
-      5px 5px 0 #000,
-      6px 6px 0 var(--color-blood-500),
-      7px 7px 0 var(--color-blood-500),
-      8px 8px 0 var(--color-blood-700),
-      10px 10px 0 #000,
-      12px 14px 12px rgba(0, 0, 0, 0.7);
-  }
 
   /* em cima: a face de osso com a luz da lâmpada batendo de cima */
-  .title-logo::after {
-    content: attr(data-text);
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, #fffaf0 0%, #f4ecd2 40%, #d8c690 75%, #b39b5c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-  }
 
   .heart-alive {
     animation: heartbeat 2.4s steps(2, end) infinite;
@@ -1402,32 +1268,10 @@
   }
 
   /* fala do rival: balão compacto colado no retrato, some em 2,5 s */
-  .speech-compact {
-    max-width: calc(100% - 82px);
-    padding: 3px 6px 4px;
-    font-family: var(--font-term);
-    font-size: 15px;
-    line-height: 1;
-    color: #1a1006;
-    background: var(--color-bone-100);
-    border: 2px solid #0b0705;
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
-    animation: speech-in 140ms ease-out both;
-  }
 
   /* terminou de falar e já ficou um tempo: some */
   .speech-leaving {
     animation: speech-out 320ms ease-in forwards;
-  }
-
-  .speech-compact::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 6px;
-    border: 4px solid transparent;
-    border-right-color: #0b0705;
-    border-bottom-color: #0b0705;
   }
 
   /* ---------- Textos flutuantes ---------- */
@@ -1503,21 +1347,6 @@
   /* ---------- Tela inicial ---------- */
 
   /* feixe da lâmpada do menu (balança e pisca com .animate-light-cone) */
-  .title-cone {
-    background: conic-gradient(from 180deg at 50% 9%, transparent 152deg, rgba(255, 214, 140, 0.13) 168deg, rgba(255, 214, 140, 0.2) 180deg, rgba(255, 214, 140, 0.13) 192deg, transparent 208deg);
-    -webkit-mask: linear-gradient(180deg, #000 0%, #000 50%, transparent 92%);
-    mask: linear-gradient(180deg, #000 0%, #000 50%, transparent 92%);
-  }
-
-  .title-lamp {
-    filter: drop-shadow(0 10px 24px rgba(255, 217, 138, 0.65));
-  }
-
-  .title-btn {
-    min-height: 52px;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-  }
 
   /* ---------- Mapa da campanha ---------- */
 
@@ -1589,67 +1418,12 @@
   }
 
   /* trilha a giz de sinuca: traço áspero claro + um eco mais fraco (giz passado duas vezes) */
-  .map-path {
-    fill: none;
-    stroke: rgba(236, 240, 246, 0.32);
-    stroke-width: 3;
-    stroke-dasharray: 5 7;
-    stroke-linecap: round;
-  }
-
-  .map-path-echo {
-    stroke: rgba(160, 200, 255, 0.14);
-    stroke-width: 2;
-    stroke-dasharray: 9 5;
-  }
-
-  .map-path-done {
-    fill: none;
-    stroke: rgba(250, 250, 244, 0.82);
-    stroke-width: 3.5;
-    stroke-dasharray: 10 4;
-    stroke-linecap: round;
-  }
 
   /* marca molhada de fundo de copo de cerveja no feltro */
-  .map-ring {
-    border-radius: 9999px;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(
-      circle,
-      transparent 52%,
-      rgba(0, 0, 0, 0.32) 56%,
-      rgba(0, 0, 0, 0.12) 62%,
-      rgba(255, 230, 170, 0.05) 66%,
-      transparent 70%
-    );
-  }
 
   /* cinzas de cigarro caídas */
-  .map-ash {
-    width: 26px;
-    height: 16px;
-    transform: translate(-50%, -50%);
-    background:
-      radial-gradient(circle at 30% 50%, rgba(190, 190, 185, 0.45) 0 2px, transparent 3px),
-      radial-gradient(circle at 55% 35%, rgba(140, 140, 135, 0.4) 0 1.5px, transparent 2.5px),
-      radial-gradient(circle at 70% 65%, rgba(210, 210, 200, 0.35) 0 1px, transparent 2px),
-      radial-gradient(ellipse at 50% 55%, rgba(60, 60, 58, 0.35), transparent 70%);
-  }
 
   /* alvo do mapa: polaroid presa com fita */
-  .map-node.map-polaroid {
-    flex-direction: column;
-    gap: 0;
-    padding: 4px 4px 3px;
-    background: linear-gradient(170deg, #f1ead6 0%, #ddd2b4 100%);
-    border: 0;
-    border-radius: 2px;
-    box-shadow:
-      inset 0 0 0 1px rgba(90, 70, 40, 0.35),
-      0 3px 0 rgba(0, 0, 0, 0.45),
-      0 8px 14px rgba(0, 0, 0, 0.55);
-  }
 
   .polaroid-photo {
     position: relative;
@@ -1687,44 +1461,12 @@
     background: rgba(200, 38, 29, 0.6);
   }
 
-  .map-node-locked.map-polaroid {
-    background: linear-gradient(170deg, #b9b09a 0%, #9a917c 100%);
-  }
-
-  .map-node {
-    position: absolute;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at 50% 40%, #2a1c12, #0b0705 75%);
-    border: 3px solid #4a3220;
-    box-shadow:
-      inset 0 0 0 2px #120b06,
-      0 3px 0 #000;
-    transform: translate(-50%, -50%);
-  }
-
   .map-node-boss {
     border-color: #8f2219;
     box-shadow:
       inset 0 0 0 2px #2a0806,
       0 3px 0 #000,
       0 0 16px rgba(200, 38, 29, 0.45);
-  }
-
-  .map-node-current {
-    border-color: var(--color-brass-300);
-    animation: node-pulse 1.3s ease-in-out infinite;
-  }
-
-  .map-node-locked {
-    opacity: 0.8;
-  }
-
-  .map-node-selected {
-    outline: 2px solid #fff1a8;
-    outline-offset: 3px;
   }
 
   .map-node-lock {
@@ -1765,83 +1507,9 @@
     mask: var(--chalk-grain);
   }
 
-  .map-node-cleared > span:first-child {
-    filter: grayscale(0.6) brightness(0.65);
-  }
-
   /* ---------- Loja em grade ---------- */
 
-  .shop-card {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 7px 5px 5px;
-    text-align: center;
-    background: rgba(0, 0, 0, 0.4);
-    border: 2px solid #0b0705;
-    box-shadow:
-      inset 0 3px 0 var(--rarity),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-      0 3px 0 #000;
-  }
-
-  .shop-card.shop-item-mythic {
-    box-shadow:
-      inset 0 3px 0 #ffcf4a,
-      inset 0 0 0 1px rgba(200, 38, 29, 0.6),
-      0 3px 0 #000,
-      0 0 12px rgba(200, 38, 29, 0.35);
-  }
-
   /* loja em 4 quadrantes que cabem na tela: topo, talismãs, peças e saída */
-  .shop-grid {
-    grid-template-rows: auto auto auto minmax(0, 1fr);
-    align-content: start;
-  }
-
-  .shop-quadrant {
-    min-height: 0;
-  }
-
-  .shop-card-icon {
-    display: flex;
-    width: 54px;
-    height: 54px;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at 50% 40%, #2a1c12, #0b0705 75%);
-    border: 2px solid var(--rarity);
-  }
-
-  .shop-card-name {
-    min-height: 22px;
-    font-size: 7px;
-    line-height: 1.45;
-    color: var(--color-bone-50);
-    overflow-wrap: anywhere;
-  }
-
-  .shop-card-wide {
-    padding: 7px;
-  }
-
-  .shop-tile-stage {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 58px;
-    background: radial-gradient(circle at 50% 45%, rgba(255, 214, 140, 0.16), transparent 70%);
-  }
-
-  .shop-card .btn-pixel.btn-buy {
-    min-width: 0;
-    min-height: 34px;
-    font-size: 9px;
-  }
 
   /* ---------- Menus ---------- */
 
@@ -1875,11 +1543,6 @@
     background: rgba(107, 20, 16, 0.25);
     border: 2px solid #0b0705;
     box-shadow: inset 0 0 0 1px rgba(224, 83, 63, 0.35);
-  }
-
-  .book-tab {
-    min-height: 34px;
-    font-size: 7px;
   }
 
   .book-entry {
@@ -2094,25 +1757,6 @@
 
   .run-won-title {
     animation: won-glow 1.6s ease-in-out infinite;
-  }
-}
-
-@keyframes lamp-flicker {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  41% {
-    opacity: 0.86;
-  }
-  42% {
-    opacity: 1;
-  }
-  77% {
-    opacity: 0.92;
-  }
-  78% {
-    opacity: 1;
   }
 }
 
@@ -2399,38 +2043,11 @@
   }
 }
 
-@keyframes speech-in {
-  from {
-    opacity: 0;
-    translate: -6px 0;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
 @keyframes speech-out {
   to {
     opacity: 0;
     translate: 0 -4px;
     visibility: hidden;
-  }
-}
-
-@keyframes node-pulse {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 2px #120b06,
-      0 3px 0 #000,
-      0 0 6px 1px rgba(240, 204, 120, 0.4);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 2px #120b06,
-      0 3px 0 #000,
-      0 0 18px 5px rgba(240, 204, 120, 0.8);
   }
 }
 
@@ -2472,15 +2089,11 @@
 /* --- PATCH 0.5: ILUMINAÇÃO DINÂMICA VIVA E FÍSICA REAL (aceleração por GPU) --- */
 
 /* camadas de luz, partículas e vinheta nunca roubam o toque */
-.lamp-light,
 .felt-vignette,
 .felt-bevel,
 .felt-decor,
 .atmo-layer,
-.title-cone,
 .smoke-puff,
-.map-ring,
-.map-ash,
 .impact-ring,
 .ai-spot-ring,
 .tile-shimmer-effect,
@@ -2488,7 +2101,6 @@
 .tile-enh-glow {
   pointer-events: none;
 }
-
 
 @keyframes realLampSwing {
   0% {
@@ -2906,17 +2518,6 @@
 }
 
 /* 4. Pulsação Espectral nas Peças Raras */
-@keyframes gemPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 8px currentColor);
-  }
-  50% {
-    transform: scale(1.04);
-    filter: drop-shadow(0 0 16px currentColor);
-  }
-}
 
 /* 5. Fumaça de Cigarro Subindo (Partículas) */
 @keyframes smokeDrift {
@@ -2993,7 +2594,6 @@
 }
 
 /* ANIMAÇÕES: REDUZIDAS (Opções) */
-.reduce-motion .lamp-light,
 .reduce-motion .heart-alive,
 .reduce-motion .end-badge-active,
 .reduce-motion .slot-ghost,
@@ -3008,15 +2608,12 @@
 .reduce-motion .tile-enh-glow,
 .reduce-motion .tile-enh-layer::after,
 .reduce-motion .animate-relic-proc,
-.reduce-motion .rival-float,
 .reduce-motion .loading-bar,
 .reduce-motion .animate-balloon,
 .reduce-motion .animate-hotbar-full .relic-slot,
 .reduce-motion .felt-decor,
 .reduce-motion .atmo-layer,
 .reduce-motion .ai-spot-ring,
-.reduce-motion .map-node-current,
-.reduce-motion .title-cone,
 .reduce-motion .run-won-title,
 .reduce-motion .tile-enh-layer::before,
 .reduce-motion .swinging-lamp,
@@ -3213,8 +2810,7 @@
 }
 
 /* leque e mão do rival flutuando: transform em vez da propriedade `translate` */
-.hand-float,
-.rival-float {
+.hand-float {
   animation-name: floatY;
   will-change: transform;
 }
@@ -4032,7 +3628,6 @@
   color: #1e1306;
 }
 
-.shop-cash .coin-count,
 .shop-cash span {
   color: #1e1306;
 }
@@ -4562,10 +4157,6 @@
   font-size: 16px;
   line-height: 1;
   color: rgba(246, 230, 192, 0.85);
-}
-
-.shop-plank-avatar {
-  flex-shrink: 0;
 }
 
 /* recibo da venda: papel com a borda picotada */
@@ -5574,41 +5165,6 @@
 }
 
 /* feltro escuro em elipse sob a luz */
-.case-felt {
-  position: relative;
-  margin-top: 14px;
-  display: grid;
-  width: 100%;
-  max-width: 440px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 22px 12px 18px;
-  border-radius: 50% / 22%;
-  background:
-    var(--felt-noise),
-    radial-gradient(ellipse 70% 60% at 50% 40%, #1f2a17 0%, #121a0d 60%, #080b05 100%);
-  background-size:
-    140px 140px,
-    100% 100%;
-  box-shadow:
-    inset 0 0 0 3px #0b0705,
-    inset 0 0 40px rgba(0, 0, 0, 0.75),
-    0 14px 26px rgba(0, 0, 0, 0.6);
-}
-
-.case-pick {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  text-align: center;
-  -webkit-tap-highlight-color: transparent;
-}
 
 .case-art {
   position: relative;
@@ -5631,10 +5187,6 @@
   width: 100%;
   height: 100%;
   filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
-}
-
-.case-pick:active .case-body {
-  transform: translateY(2px);
 }
 
 .case-chains,
@@ -5718,64 +5270,6 @@
 
 /* aura roxa/vermelha suave da Maleta Preta liberada */
 /* contorno roxo/vermelho colado na maleta liberada */
-.case-black.is-open .case-sprite {
-  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.85)) drop-shadow(0 0 14px rgba(200, 38, 29, 0.45)) drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
-}
-
-.case-aura {
-  position: absolute;
-  inset: -30%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.5) 0%, rgba(168, 85, 247, 0.32) 40%, rgba(200, 38, 29, 0.2) 55%, transparent 72%);
-  animation: caseAura 2.6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes caseAura {
-  0%,
-  100% {
-    opacity: 0.65;
-    transform: scale(0.96);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-.case-name {
-  margin-top: 4px;
-  font-family: var(--font-pixel);
-  font-size: 10px;
-  color: #f4ecd2;
-  text-shadow: 0 2px 0 #000;
-}
-
-.case-tag {
-  font-family: var(--font-pixel);
-  font-size: 6px;
-  letter-spacing: 0.06em;
-  color: #d9a946;
-}
-
-.case-pick-black .case-tag {
-  color: #c084fc;
-}
-
-.case-pick-black.is-locked .case-tag {
-  color: #9aa1a8;
-}
-
-.case-desc {
-  font-family: var(--font-term);
-  font-size: 16px;
-  line-height: 1;
-  color: var(--color-bone-200);
-}
-
-.case-pick-black.is-locked .case-desc {
-  opacity: 0.6;
-}
 
 .case-warn {
   margin-top: 12px;
@@ -5797,9 +5291,6 @@
 }
 
 /* recompensa por zerar a Maleta Branca */
-.unlock-case {
-  width: 132px;
-}
 
 .unlock-reward {
   color: rgba(244, 236, 210, 0.45);
@@ -5818,7 +5309,6 @@
   text-shadow: 0 0 10px rgba(168, 85, 247, 0.55);
 }
 
-.reduce-motion .case-aura,
 .reduce-motion .case-open-pop,
 .reduce-motion .case-shake {
   animation: none !important;
@@ -6083,4 +5573,533 @@
   color: #fde68a;
   background: rgba(120, 53, 15, 0.55);
   border: 1px solid rgba(251, 191, 36, 0.8);
+}
+
+/* ---------- Patch 0.8.0: Balcão de Maletas ----------
+   Bancada de madeira vista de cima (tábuas com frestas), sob a mesma lâmpada. */
+.counter-scene {
+  background:
+    radial-gradient(ellipse 70% 46% at 50% 40%, rgba(255, 214, 140, 0.16), transparent 72%),
+    repeating-linear-gradient(180deg, transparent 0 46px, rgba(0, 0, 0, 0.55) 46px 48px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, #3a2414 0%, #2a190d 55%, #160d06 100%);
+}
+
+.counter-top {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.counter-case {
+  display: flex;
+  width: calc((100% - 16px) / 3);
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  background: none;
+  border: 2px solid transparent;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease;
+}
+
+.counter-art {
+  width: 96px;
+}
+
+.counter-case.is-selected {
+  transform: translateY(-3px);
+  border-color: rgba(242, 184, 75, 0.85);
+  background: radial-gradient(ellipse at 50% 60%, rgba(242, 184, 75, 0.18), transparent 70%);
+}
+
+.counter-case.is-selected .case-sprite {
+  filter: drop-shadow(0 0 6px rgba(242, 184, 75, 0.75)) drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
+}
+
+.counter-case.is-locked .case-body {
+  filter: brightness(0.62) saturate(0.6);
+}
+
+.counter-case.is-disabled {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
+.counter-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #000;
+}
+
+.counter-case.is-locked .counter-name {
+  color: var(--color-bone-300);
+}
+
+.counter-card {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 12px 14px;
+  background: linear-gradient(180deg, rgba(14, 9, 6, 0.94), rgba(8, 5, 3, 0.94));
+  border: 2px solid #0b0705;
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 204, 120, 0.25),
+    0 6px 0 rgba(0, 0, 0, 0.5);
+  text-align: left;
+}
+
+.counter-card-locked {
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 191, 36, 0.4),
+    0 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.counter-card-title {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #f4ecd2;
+}
+
+.counter-card-sub {
+  margin-top: 2px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #d9a946;
+}
+
+.counter-buff,
+.counter-debuff {
+  margin-top: 6px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.02;
+}
+
+.counter-buff {
+  color: #9fe08a;
+}
+
+.counter-debuff {
+  color: #ff8c7a;
+}
+
+.counter-start {
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* Peças Brancas / Peças Pretas */
+.diff-pick {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.diff-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(240, 204, 120, 0.18);
+  color: inherit;
+  text-align: left;
+}
+
+.diff-option.is-on {
+  border-color: #f2b84b;
+  background: rgba(242, 184, 75, 0.1);
+}
+
+.diff-option.is-locked {
+  opacity: 0.55;
+}
+
+.diff-box {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f4ecd2;
+  font-size: 10px;
+  line-height: 1;
+  color: #f2b84b;
+}
+
+.diff-tile {
+  flex-shrink: 0;
+}
+
+.diff-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.diff-name {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #f4ecd2;
+}
+
+.diff-tag {
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  letter-spacing: 0.05em;
+  color: var(--color-bone-300);
+}
+
+.diff-lock {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.title-choice-dim {
+  opacity: 0.6;
+}
+
+/* ---------- Patch 0.8.0: Peças Pretas liberadas (celebração) ---------- */
+.black-tiles {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  perspective: 400px;
+}
+
+.black-tile-flip {
+  display: inline-block;
+  animation: black-tile-flip 620ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.7));
+}
+
+@keyframes black-tile-flip {
+  from {
+    transform: rotateY(90deg) translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+.reduce-motion .black-tile-flip {
+  animation: none;
+}
+
+/* ---------- Patch 0.8.0: A Conta do Boteco (fim de run) ---------- */
+.run-tab {
+  text-align: center;
+}
+
+.run-tab-earned {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.caps-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1;
+  color: #ffd98a;
+}
+
+.caps-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.run-tab-gain {
+  font-size: 13px;
+  color: #ffe08a;
+  text-shadow: 0 0 8px rgba(242, 184, 75, 0.6);
+}
+
+.run-tab-board {
+  margin-top: 8px;
+  text-align: left;
+}
+
+.run-tab-balance {
+  font-size: 11px;
+}
+
+.run-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 6px;
+  border-bottom: 1px dashed rgba(240, 240, 230, 0.18);
+}
+
+.run-tab-item:last-child {
+  border-bottom: 0;
+}
+
+.run-tab-item.is-owned {
+  opacity: 0.75;
+}
+
+.run-tab-buy {
+  flex-shrink: 0;
+  min-width: 56px;
+}
+
+.run-tab-buy .caps-count {
+  color: inherit;
+}
+
+.run-tab-owned {
+  flex-shrink: 0;
+  font-size: 7px;
+  color: #9fe08a;
+}
+
+/* ---------- Patch 0.8.0: Desafios e molduras ---------- */
+.challenge-card {
+  display: flex;
+  gap: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.9);
+  box-shadow: inset 3px 0 0 rgba(242, 184, 75, 0.45);
+}
+
+.challenge-card.is-locked {
+  box-shadow: inset 3px 0 0 rgba(233, 220, 180, 0.15);
+}
+
+.challenge-card.is-done {
+  box-shadow: inset 3px 0 0 #9fe08a;
+}
+
+.challenge-done {
+  color: #9fe08a;
+}
+
+.challenge-frame {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #f4ecd2;
+  background: #120c08;
+}
+
+.challenge-frame.is-dim {
+  opacity: 0.4;
+}
+
+.frame-osso {
+  border: 3px double #efe4c4;
+  box-shadow: 0 0 0 2px #0b0705, inset 0 0 0 2px #9c7f4a;
+}
+
+.frame-bebada {
+  border: 3px dashed #c084fc;
+  box-shadow: 0 0 0 2px #0b0705, 0 0 10px rgba(159, 224, 138, 0.5);
+}
+
+.frame-sangue {
+  border: 3px solid #c8261d;
+  box-shadow: 0 0 0 2px #0b0705, 0 0 10px rgba(200, 38, 29, 0.7);
+}
+
+/* moldura equipada: um friso na borda de cima da sua mão */
+.player-frame::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  height: 4px;
+  pointer-events: none;
+}
+
+.player-frame-osso::before {
+  background: repeating-linear-gradient(90deg, #efe4c4 0 10px, #9c7f4a 10px 12px);
+  box-shadow: 0 1px 0 #0b0705;
+}
+
+.player-frame-bebada::before {
+  background: repeating-linear-gradient(90deg, #c084fc 0 8px, #9fe08a 8px 16px);
+  animation: frame-drunk 2.4s ease-in-out infinite;
+}
+
+.player-frame-sangue::before {
+  background: linear-gradient(90deg, transparent, #c8261d 12%, #ff5a4a 50%, #c8261d 88%, transparent);
+  box-shadow: 0 0 8px rgba(200, 38, 29, 0.8);
+}
+
+@keyframes frame-drunk {
+  0%,
+  100% {
+    transform: skewX(0);
+  }
+  50% {
+    transform: skewX(12deg);
+  }
+}
+
+.reduce-motion .player-frame-bebada::before {
+  animation: none;
+}
+
+/* ---------- Patch 0.8.0: Mesa Bêbada (ponta com o número trocado) ---------- */
+.end-badge-drunk {
+  color: #2a0a3a;
+  background: #e2b8ff;
+  box-shadow:
+    0 3px 0 #000,
+    0 0 14px rgba(192, 132, 252, 0.9),
+    inset -3px -3px 0 rgba(90, 30, 120, 0.35);
+  animation: end-drunk 1.6s ease-in-out infinite;
+}
+
+@keyframes end-drunk {
+  0%,
+  100% {
+    rotate: -6deg;
+  }
+  50% {
+    rotate: 6deg;
+  }
+}
+
+.reduce-motion .end-badge-drunk {
+  animation: none;
+}
+
+.map-maleta-badge {
+  color: #f2b84b;
+}
+
+.map-challenge-badge {
+  color: #ff8c7a;
+}
+
+/* ---------- Patch 0.8.0: O Dono da Noite (nó 19) ----------
+   Apagão (preto), estrobo vermelho-sangue (abaixo de 3 piscadas por segundo) e a
+   revelação numa luz vermelha que respira. Com "menos movimento", o vermelho fica parado. */
+.secret-scene {
+  background: #000;
+  color: var(--color-bone-50);
+  overflow-y: auto;
+}
+
+.secret-flash {
+  opacity: 0;
+}
+
+.secret-scene.secret-strobe .secret-flash {
+  background: radial-gradient(ellipse at 50% 40%, rgba(200, 16, 24, 0.95), rgba(60, 0, 6, 0.95) 70%);
+  animation: secret-strobe 450ms steps(1, end) infinite;
+}
+
+@keyframes secret-strobe {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.05;
+  }
+}
+
+.secret-scene.secret-reveal {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 38%, rgba(140, 8, 18, 0.55), transparent 70%),
+    #050203;
+}
+
+.secret-scene.secret-reveal .secret-flash {
+  opacity: 1;
+  background: radial-gradient(ellipse 70% 50% at 50% 35%, rgba(200, 16, 24, 0.22), transparent 70%);
+  animation: secret-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes secret-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.reduce-motion .secret-scene .secret-flash {
+  animation: none;
+  opacity: 0.6;
+}
+
+.secret-card {
+  padding: 18px 14px;
+  background: linear-gradient(180deg, rgba(20, 6, 8, 0.92), rgba(6, 2, 3, 0.95));
+  border: 2px solid #3a0c16;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 210, 74, 0.25),
+    0 0 40px rgba(200, 16, 24, 0.35);
+}
+
+.secret-kicker {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: #ff5a4a;
+}
+
+.secret-portrait {
+  width: fit-content;
+  padding: 4px;
+  background: #0b0507;
+  border: 2px solid #ffd24a;
+  box-shadow: 0 0 18px rgba(255, 210, 74, 0.45);
+}
+
+.secret-title {
+  font-size: 15px;
+  color: #ffd24a;
+  text-shadow:
+    0 3px 0 #000,
+    0 0 14px rgba(200, 16, 24, 0.9);
+}
+
+.secret-rule {
+  padding: 8px 10px;
+  border: 2px dotted rgba(255, 210, 74, 0.6);
+  background: rgba(90, 12, 20, 0.35);
+}
+
+/* mesa do Dono: veludo negro com runas a giz rubro */
+.felt-decor-runes {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' fill='none' stroke='%23c8261d' stroke-width='2.2' stroke-linecap='round' opacity='0.5'%3E%3Ccircle cx='80' cy='80' r='54'/%3E%3Ccircle cx='80' cy='80' r='46' stroke-dasharray='6 9'/%3E%3Cpath d='M80 30 L80 130 M38 56 L122 104 M38 104 L122 56'/%3E%3Cpath d='M74 22 l6 -10 l6 10 M22 76 l-10 4 l10 4 M138 76 l10 4 l-10 4'/%3E%3C/svg%3E") 50% 46% / 260px 260px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.45'%3E%3Cpath d='M10 50 L30 10 L50 50 M18 34 L42 34'/%3E%3C/svg%3E") 12% 18% / 56px 56px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.45'%3E%3Cpath d='M30 8 L30 52 M14 20 L46 40 M46 20 L14 40'/%3E%3C/svg%3E") 86% 78% / 52px 52px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.4'%3E%3Cpath d='M12 12 L48 12 L12 48 L48 48'/%3E%3C/svg%3E") 84% 16% / 44px 44px no-repeat;
 }

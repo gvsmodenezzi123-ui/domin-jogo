@@ -29,8 +29,6 @@ export const LANES = 3;
 /** Rivais por região numa run (entrada + 3 comuns + chefe) e na run inteira. */
 export const RIVALS_PER_REGION = 5;
 export const CAMPAIGN_RIVALS = RIVALS_PER_REGION * REGIONS.length;
-/** Tipos de nó. */
-export const NODE_TYPES = Object.freeze({ combat: 'combat', boss: 'boss', shop: 'shop', black: 'black', coins: 'coins' });
 /** Rótulos para a tela. */
 export const NODE_LABEL = Object.freeze({
   combat: 'COMBATE',

@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { REGIONS } from '../data/campaign.js';
 import { generateCampaign } from '../engine/campaignMap.js';
 import { getRival } from '../data/rivals.js';
+import { maletaOf } from '../data/maletas.js';
+import { challengeOf } from '../data/meta.js';
+import { loadChallenges, loadMetaProgress, loadSeenMaletas, loadUnlockedMaletas, subscribeMeta } from '../engine/meta.js';
 import BuxariaLogo from './BuxariaLogo.jsx';
-import CaseSelect from './CaseSelect.jsx';
+import CaseCounter from './CaseCounter.jsx';
+import ChallengesModal from './ChallengesModal.jsx';
 import CollectionBook from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
 import OptionsPanel from './OptionsPanel.jsx';
@@ -32,16 +36,23 @@ function saveSummary(save) {
   else if (node?.rivalId && !save.cleared.includes(node.id)) what = getRival(node.rivalId).name;
   else if (node && node.type !== 'combat' && node.type !== 'boss') what = AFTER_STOP[node.type];
   else if (node) what = `${getRival(node.rivalId).name} vencido`;
-  const maleta = save.mode === 'hard' ? 'Maleta Preta' : null;
-  return [maleta, where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
+  const kit = [save.maleta && save.maleta !== 'classica' ? maletaOf(save.maleta).short.toLowerCase() : null, save.mode === 'hard' ? 'Peças Pretas' : null, challengeOf(save.challenge)?.name]
+    .filter(Boolean)
+    .join(', ');
+  return [kit || null, where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
+}
+
+/** Chave das maletas e desafios liberados (muda quando a meta muda). */
+function metaSnapshot() {
+  return `${loadUnlockedMaletas().join(',')}|${loadChallenges().unlocked.join(',')}`;
 }
 
 /**
  * Escolha depois do JOGAR, no mesmo lugar, só em texto: CONTINUAR (dourado se há run
- * salva, apagado se não), NOVO JOGO e VOLTAR. Com run salva, o NOVO JOGO pede confirmação
- * ali mesmo, também em texto.
+ * salva, apagado se não), NOVO JOGO, DESAFIOS (Patch 0.8.0) e VOLTAR. Com run salva, o
+ * NOVO JOGO pede confirmação ali mesmo, também em texto.
  */
-function PlayChoices({ save, onNewGame, onContinue, onBack, onTap }) {
+function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges, onBack, onTap }) {
   const [confirm, setConfirm] = useState(false);
   const summary = save ? saveSummary(save) : null;
   if (confirm) {
@@ -86,6 +97,9 @@ function PlayChoices({ save, onNewGame, onContinue, onBack, onTap }) {
       >
         NOVO JOGO
       </button>
+      <button type="button" className={`text-action title-choice ${hasChallenges ? '' : 'title-choice-dim'}`} onClick={onChallenges}>
+        DESAFIOS
+      </button>
       <button type="button" className="text-action title-choice title-choice-quiet" onClick={onBack}>
         VOLTAR
       </button>
@@ -97,7 +111,7 @@ function Credits() {
   return (
     <div className="grid gap-3 text-center font-term text-[18px] leading-tight text-bone-200">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.7.0</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.8.0</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -106,7 +120,7 @@ function Credits() {
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">NA MESA</span>
-        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas.
+        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas. E dizem que, para quem carrega almas demais, a noite tem mais uma mesa.
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">SOM</span>
@@ -139,13 +153,15 @@ export default function TitleScreen({
   onSecretTap,
   onTap,
   devUnlocked = false,
-  hardUnlocked = false,
+  blackUnlocked = false,
   startPicking = false,
 }) {
   const [modal, setModal] = useState(null);
-  const [choosing, setChoosing] = useState(startPicking);
-  // Patch 0.6.3: NOVO JOGO abre a mesa das maletas (Branca = normal, Preta = difícil)
-  const [picking, setPicking] = useState(startPicking);
+  const [choosing, setChoosing] = useState(Boolean(startPicking));
+  // Patch 0.8.0: NOVO JOGO abre o Balcão de Maletas ({ challenge } ou false)
+  const [picking, setPicking] = useState(startPicking || false);
+  // maletas e desafios liberados (relidos quando a meta muda)
+  const metaKey = useSyncExternalStore(subscribeMeta, metaSnapshot, () => '');
   const showInstallHint = isIOS() && !isStandalone();
   const open = (id) => {
     onTap?.();
@@ -165,7 +181,12 @@ export default function TitleScreen({
   };
   const openCases = () => {
     onTap?.();
-    setPicking(true);
+    setPicking({ challenge: null });
+  };
+  const playChallenge = (challenge) => {
+    onTap?.();
+    setModal(null);
+    setPicking({ challenge });
   };
   const closeCases = () => {
     onTap?.();
@@ -216,14 +237,24 @@ export default function TitleScreen({
           </button>
         </div>
         <div className={`title-panel ${choosing ? '' : 'title-panel-off'}`} inert={!choosing}>
-          {choosing && <PlayChoices save={save} onNewGame={openCases} onContinue={onContinue} onBack={back} onTap={onTap} />}
+          {choosing && (
+            <PlayChoices
+              save={save}
+              onNewGame={openCases}
+              onContinue={onContinue}
+              onChallenges={() => open('challenges')}
+              hasChallenges={metaKey.split('|')[1] !== ''}
+              onBack={back}
+              onTap={onTap}
+            />
+          )}
         </div>
       </nav>
 
       <footer className="relative z-[5] flex flex-col items-center gap-1">
         {showInstallHint && <p className="font-term text-base text-bone-400">Tela cheia: Compartilhar → Adicionar à Tela de Início.</p>}
         <p className="title-version">
-          PATCH 0.7.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+          PATCH 0.8.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
         </p>
       </footer>
 
@@ -242,7 +273,22 @@ export default function TitleScreen({
           <Credits />
         </MenuModal>
       )}
-      {picking && <CaseSelect hardUnlocked={hardUnlocked} onPick={(mode) => onNewGame(mode)} onBack={closeCases} />}
+      {modal === 'challenges' && (
+        <MenuModal id="challenges-title" title="DESAFIOS" onClose={close}>
+          <ChallengesModal onPlay={playChallenge} />
+        </MenuModal>
+      )}
+      {picking && (
+        <CaseCounter
+          unlocked={loadUnlockedMaletas()}
+          seen={loadSeenMaletas()}
+          blackUnlocked={blackUnlocked}
+          progress={loadMetaProgress()}
+          challenge={picking.challenge ?? null}
+          onStart={onNewGame}
+          onBack={closeCases}
+        />
+      )}
     </main>
   );
 }

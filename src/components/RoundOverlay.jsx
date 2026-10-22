@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
+import { maletaOf } from '../data/maletas.js';
+import { challengeOf } from '../data/meta.js';
 import { getRelic } from '../data/relics.js';
 import { currentNode } from '../engine/campaignMap.js';
 import { DAMAGE, handSum } from '../engine/dominoLogic.js';
@@ -8,6 +10,7 @@ import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
+import RunEndBoard from './RunEndBoard.jsx';
 
 const KIND_TITLE = {
   normal: 'BATIDA!',
@@ -64,6 +67,7 @@ function MiniHand({ tiles, label, points }) {
 function subtitleFor(result, rival) {
   const playerWon = result.winner === 'player';
   if (result.shielded) return `${rival.name} é imune à primeira tranca. Nada de dano.`;
+  if (result.immune) return 'Noite Eterna: só batida de bucha ou tranca machucam o Dono da Noite.';
   if (result.kind === 'testamento') {
     const lost = (result.burned ?? []).map((id) => getRelic(id)?.name).filter(Boolean).join(' e ');
     return result.owner === 'player'
@@ -127,6 +131,8 @@ function RunStats({ state }) {
       <dd className="text-right text-bone-50">${stats.coinsEarned}</dd>
       <dt className="text-bone-300">Pedras de grife</dt>
       <dd className="text-right text-bone-50">{Object.keys(state.decks.player).length}</dd>
+      <dt className="text-bone-300">Maleta</dt>
+      <dd className="text-right text-bone-50">{maletaOf(state.maleta).short}</dd>
     </dl>
   );
 }
@@ -139,6 +145,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   const { roundResult: result, phase, hands, hearts, coins } = state;
   const matchWon = phase === 'matchWon';
   const runWon = phase === 'runWon';
+  const secretWon = runWon && rival.id === 'donoDaNoite';
   const where = nodeLabel(state);
 
   useEffect(() => {
@@ -197,7 +204,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             <div className="mx-auto mb-3 w-fit">
               <RivalAvatar rival={rival} mood="smug" pixel={5} />
             </div>
-            <p className="font-pixel text-[8px] text-bone-400">FIM DA RUN</p>
+            <p className="font-pixel text-[8px] text-bone-400">FIM DA RUN{state.challenge ? ` · DESAFIO ${challengeOf(state.challenge)?.name.toUpperCase()}` : ''}</p>
             <h2 id="round-title" className="mt-2 font-pixel text-[16px] leading-snug text-blood-400 text-shadow-pixel">
               {name} TE QUEBROU
             </h2>
@@ -205,14 +212,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
               {KIND_TITLE[result.kind]} {subtitle}
             </p>
             <RunStats state={state} />
-            <div className="mt-5 grid gap-2">
-              <button type="button" data-tone="brass" className="btn-pixel" onClick={onRestart}>
-                NOVO JOGO
-              </button>
-              <button type="button" className="btn-pixel" onClick={onMenu}>
-                MENU
-              </button>
-            </div>
+            <RunEndBoard runCaps={state.stats.caps ?? 0} onRetry={onRestart} onMenu={onMenu} />
           </>
         )}
 
@@ -220,28 +220,22 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
           <>
             <KnockedOut rival={rival} />
             <p className="font-pixel text-[8px] text-bone-400">
-              {state.mode === 'hard' ? 'MALETA PRETA · ' : ''}
+              {state.mode === 'hard' ? 'PEÇAS PRETAS · ' : ''}
               {state.stats.matchesWon} MESAS · {REGIONS.length} REGIÕES
             </p>
             <h2 id="round-title" className="run-won-title mt-2 font-pixel text-[15px] leading-snug text-brass-300 text-shadow-pixel">
-              {state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
+              {secretWon ? 'A NOITE É SUA' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
             </h2>
             <p className="mt-2 font-term text-xl text-bone-200">
-              {KIND_TITLE[result.kind]} O Comendador entrega a chave do boteco.
+              {KIND_TITLE[result.kind]} {secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}
             </p>
+            {state.challenge && <p className="mt-1 font-pixel text-[8px] text-amber-300">DESAFIO CONCLUÍDO: {challengeOf(state.challenge)?.name.toUpperCase()}</p>}
             <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[10px] text-[#9fe08a]">
               <span>PRÊMIO FINAL</span>
               <CoinCount value={`${prizeShown}`} className="chalk-coins text-[14px]" size={18} />
             </div>
             <RunStats state={state} />
-            <div className="mt-5 grid gap-2">
-              <button type="button" data-tone="brass" className="btn-pixel" onClick={onRestart}>
-                NOVO JOGO
-              </button>
-              <button type="button" className="btn-pixel" onClick={onMenu}>
-                MENU
-              </button>
-            </div>
+            <RunEndBoard runCaps={state.stats.caps ?? 0} onRetry={onRestart} onMenu={onMenu} />
           </>
         )}
 

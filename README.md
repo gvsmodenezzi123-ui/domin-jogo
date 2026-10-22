@@ -86,6 +86,89 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.8.0: Balcão de Maletas, Conta do Boteco, desafios e o Dono da Noite
+
+### Balcão de Maletas (`CaseCounter.jsx`, `data/maletas.js`, `art/CaseArt.jsx`)
+
+O NOVO JOGO (e o TENTAR DE NOVO do fim de run) abre uma bancada de madeira vista de cima,
+sob a lâmpada, com 5 maletas de partida em pixel art 48x48.
+
+| Maleta | Vantagem | Desvantagem | Como liberar |
+| --- | --- | --- | --- |
+| Clássica | Baralho de osso padrão e $5 | — | Liberada desde o começo |
+| Bicheiro | $15 no bolso e a Moeda Furada na hotbar | Cada rival senta com 1 pedra de grife a mais | Ganhar $60 (somando tudo) numa run |
+| Borracharia | [5\|5] e [3\|6] de Chumbo no baralho | — | Vencer 3 rodadas por tranca (somando as runs) |
+| Trapaceiro | 5 espaços de talismã | Loja do Valtinho 20% mais cara | Comprar 4 talismãs diferentes numa run |
+| Seca | Prêmio das mesas em dobro ($16 de base) | Só 1 compra do dorme por turno | Vencer um chefe sem comprar do dorme |
+
+- **Trancada:** a maleta fica fechada, com corrente e cadeado. Tocar mostra a meta (e o
+  progresso, quando ela soma).
+- **Liberada:** a maleta abre no veludo. Na primeira vez as correntes caem.
+- **Escolha das peças:** tocar numa maleta liberada abre embaixo PEÇAS BRANCAS (normal) e
+  PEÇAS PRETAS (difícil, com cadeado até zerar a campanha), e o INICIAR RUN.
+- **Peças Pretas:** derrotar o Comendador nas Peças Brancas mostra "VOCÊ DESBLOQUEOU: PEÇAS
+  PRETAS (MODO DIFÍCIL)" e grava `buxaria_black_tiles_unlocked = true`. Quem tinha a Maleta
+  Preta do 0.6.3 já vem com elas liberadas.
+
+### A Conta do Boteco (`RunEndBoard.jsx`, `engine/meta.js`)
+
+- **Tampinhas Douradas** (`buxaria_gold_caps`): +1 por rival comum, +3 por chefe, +5 por
+  zerar, +10 por concluir um desafio. Elas vão para o aparelho a cada mesa vencida e nunca se
+  perdem ao morrer.
+- **No fim de toda run**, perdida ou vencida, abre a lousa: o resumo, as tampinhas da run, o
+  saldo e as 4 melhorias permanentes.
+
+| Melhoria | Custo | Efeito |
+| --- | --- | --- |
+| Copo Americano | 5 | +$2 no começo de toda run |
+| Amizade com o Valtinho | 8 | 1º reembaralhar de cada loja de graça |
+| Fiado de Rua | 12 | 1º passe voluntário da run de graça (o botão mostra FIADO) |
+| Bolso Fundo | 15 | +1 espaço de talismã |
+
+TENTAR DE NOVO leva direto ao Balcão, com as melhorias valendo.
+
+### Desafios (`ChallengesModal.jsx`, JOGAR → DESAFIOS)
+
+| Desafio | Regra | Como liberar | Moldura |
+| --- | --- | --- | --- |
+| Só no Osso | Lojas e Mercados Negros fechados; só a Clássica, sem talismã nem pedra de grife | Zerar com a Clássica | Osso |
+| Mesa Bêbada | A cada 3 turnos as duas pontas mudam de número ao acaso (a ponta trocada balança) | Zerar com o Bicheiro | Bêbada |
+| Tudo ou Nada | Você e os rivais com 1 coração em toda mesa | Zerar nas Peças Pretas | Sangue |
+
+- **Como jogar:** JOGAR abre o Balcão com o desafio valendo, e você escolhe a maleta e as
+  peças.
+- **Recompensa:** concluir dá 10 tampinhas e a moldura. Equipada, a moldura enfeita a borda da
+  sua mão na mesa.
+
+### O Dono da Noite (nó 19 secreto: `SecretBoss.jsx`, `art/SecretBossArt.jsx`)
+
+- **Gatilho:** vencer o Comendador com 3 ou mais Necróticos na hotbar. O final não vem.
+- **Revelação:** as luzes apagam, rola um trovão sintetizado (`sound.playThunder()`) e a luz
+  volta vermelho-sangue piscando, abaixo de 3 vezes por segundo. Com "menos movimento", o
+  vermelho fica parado.
+- **O rival:** retrato 48x48 com olhos dourados e anéis de caveira; 9 corações (10 nas Peças
+  Pretas); mesa de veludo negro com runas a giz rubro.
+- **Noite Eterna:** imune a batida comum e a dano direto. Só batida de bucha ou vitória por
+  tranca tiram coração dele.
+- **Final:** vencer encerra a run com o final da noite (+3 do chefe e +5 da campanha).
+- **Zerar conta no Comendador:** as Peças Pretas, os desafios e o Rei da Sinuca já valem ali,
+  mesmo que a noite continue.
+
+### Limpeza e desempenho
+
+- **Arquivos removidos:** os retratos 16x16 antigos que o jogo não desenhava mais
+  (`components/sprites.js`, `data/portraits.js` e os campos `faces`/`palette` dos rivais), a
+  tela das duas maletas soltas (`CaseSelect.jsx`, `HardUnlockModal.jsx`) e a chave antiga da
+  Maleta Preta em `progress.js`.
+- **CSS:** saíram 56 regras de telas que não existem mais (mapa linear, loja antiga, título
+  antigo) e 5 animações órfãs (o CSS caiu ~500 linhas).
+- **Exports:** saíram os que nada usava.
+- **Hooks:** ficaram fora dos arquivos de componente (react-refresh).
+- **Efeito dos eventos:** o App não refaz o efeito a cada mudança de estado; ele lê o estado
+  mais recente por ref.
+- **Armazenamento:** `engine/storage.js` junta o acesso ao localStorage de conquistas e meta.
+- **O que não mudou:** animações, luz da lâmpada, fumaça e fades.
+
 ## Patch 0.7.0: conquistas, 20 talismãs novos e o dorme no canto da mesa
 
 ### Conquistas (`engine/achievements.js`)

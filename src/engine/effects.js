@@ -3,6 +3,8 @@
  * das relíquias e peças aprimoradas (src/data/). Todas são puras.
  */
 
+import { RIVALS } from '../data/rivals.js';
+
 export const MAX_EVENTS = 40;
 
 /** Registra um evento com `seq` crescente (a UI transforma em som, banner, fala). */
@@ -39,6 +41,10 @@ export function loseCoins(state, who, amount, source) {
 /** Dano direto, fora da contagem da rodada (Rubi, Dedal, Anel, painel DEV). */
 export function directDamage(state, who, amount, reason) {
   if (amount <= 0 || state.hearts[who] <= 0) return state;
+  // O Dono da Noite (Noite Eterna): dano direto não pega nele (só o painel DEV)
+  if (who === 'tioZe' && reason !== 'dev' && RIVALS[state.rivalId]?.mechanics?.noiteEterna) {
+    return proc(state, { source: 'rival', id: state.rivalId, text: 'NOITE ETERNA: NADA ME TOCA', tone: 'enemy', owner: 'tioZe' });
+  }
   const hearts = { ...state.hearts, [who]: Math.max(0, state.hearts[who] - amount) };
   const next = emit({ ...state, hearts }, { type: 'heartLost', who, amount, reason, direct: true });
   return hearts[who] === 0 ? cheatDeath(next, who) : next;

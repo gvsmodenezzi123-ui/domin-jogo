@@ -4,10 +4,11 @@ import { RELIC_SLOTS, getRelic } from '../data/relics.js';
 import RelicIcon from './RelicIcon.jsx';
 
 /**
- * 4 slots de talismã. A mesma barra serve para você (acima do leque), para o
+ * Slots de talismã (4; a Maleta do Trapaceiro e o Bolso Fundo dão mais). A mesma barra serve para você (acima do leque), para o
  * rival (abaixo do retrato dele, 2x2) e para a loja (modo venda).
  *
  * relics:  ids equipados, na ordem dos slots
+ * slots:   quantas vagas mostrar (padrão 4)
  * flashes: { [id]: seq } — o slot pisca quando o talismã dispara
  * spent:   ids já usados nesta rodada (Borracha, Relógio): ficam apagados
  * ready:   ids prontos para usar (Relógio): brilham
@@ -18,8 +19,9 @@ import RelicIcon from './RelicIcon.jsx';
  */
 function Hotbar({
   relics,
+  slots = RELIC_SLOTS,
   size = 30,
-  cols = RELIC_SLOTS,
+  cols = slots,
   flashes = {},
   spent = [],
   ready = [],
@@ -38,7 +40,7 @@ function Hotbar({
       role="group"
       aria-label={label}
     >
-      {Array.from({ length: RELIC_SLOTS }, (_, i) => {
+      {Array.from({ length: Math.max(slots, relics.length) }, (_, i) => {
         const relic = getRelic(relics[i]);
         if (!relic) {
           return (

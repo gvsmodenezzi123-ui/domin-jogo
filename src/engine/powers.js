@@ -23,6 +23,7 @@ import {
   makeTile,
   pipSum,
 } from './dominoLogic.js';
+import { fiadoAvailable, maxDrawsFor } from './loadout.js';
 
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
@@ -210,7 +211,7 @@ export function trancaDamageFor(state) {
   return [...relicsOf(state, 'player'), ...relicsOf(state, 'tioZe')].reduce((dmg, relic) => Math.max(dmg, relic.trancaDamage ?? 0), 0);
 }
 
-/** A próxima compra de `seat` neste turno (escada grátis → $3 → coração). */
+/** A próxima compra de `seat` neste turno (escada grátis → $3 → coração; Maleta Seca: só 1). */
 export function drawAvailabilityFor(state, seat) {
   return getDrawAvailability({
     drawsThisTurn: state.drawsThisTurn,
@@ -218,23 +219,31 @@ export function drawAvailabilityFor(state, seat) {
     coins: state.coins[seat],
     hearts: state.hearts[seat],
     heartCost: heartDrawCostFor(state, seat),
+    maxDraws: maxDrawsFor(state, seat),
   });
 }
 
-/** Quanto custa o passe estratégico de `seat` ($3; Moeda Furada: $1). */
+/** Quanto custa o passe estratégico de `seat` ($3; Moeda Furada: $1; Fiado de Rua: o 1º da run de graça). */
 export function passFeeFor(state, seat = 'player') {
+  if (seat === 'player' && fiadoAvailable(state)) return 0;
   return relicsOf(state, seat).reduce((fee, relic) => Math.min(fee, relic.passFee ?? PASS_FEE), PASS_FEE);
 }
 
-/** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`). */
+/** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`); `fiado` marca o passe na conta. */
 export function passAvailabilityFor(state, seat = 'player') {
-  return getPassAvailability({
+  const rule = getPassAvailability({
     hasPlay: hasPlayFor(state, seat),
     drawsThisTurn: state.drawsThisTurn,
     boneyardCount: state.boneyard.length,
     coins: state.coins[seat],
     fee: passFeeFor(state, seat),
   });
+  return isStrategicPass(state, seat) && seat === 'player' && fiadoAvailable(state) ? { ...rule, fiado: true } : rule;
+}
+
+/** Passe estratégico: dava para jogar e ainda não comprou no turno (é o que custa $3). */
+export function isStrategicPass(state, seat) {
+  return state.drawsThisTurn === 0 && hasPlayFor(state, seat);
 }
 
 /** Ajuste na soma da tranca por lado (Balança de Açougue: −10). */
@@ -312,6 +321,8 @@ export function endMarksFor(state) {
   for (const side of state.fx.frozen.player) marks[side] = 'blocked';
   // curinga do Cristal e do Relógio de Parede do Bar
   for (const side of rulesFor(state, 'player', { frozen: false }).wildSides ?? []) marks[side] = marks[side] === 'blocked' ? 'blocked' : 'wild';
+  // Mesa Bêbada: ponta com o número trocado
+  for (const side of Object.keys(state.board.drunk ?? {})) marks[side] = marks[side] ?? 'drunk';
   return marks;
 }
 

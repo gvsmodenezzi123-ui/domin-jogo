@@ -173,7 +173,7 @@ describe('Patch 0.7.0: gatilhos pelos eventos do jogo', () => {
   });
 
   it('Rei da Sinuca Branca: 2 campanhas vencidas na Maleta Branca (a Preta não conta)', () => {
-    const win = (mode) => [ev('duelStart'), ev('duelEnd', { winner: 'player', runWon: true, boss: true, mode })];
+    const win = (mode) => [ev('duelStart'), ev('duelEnd', { winner: 'player', runWon: true, finalBoss: true, boss: true, mode })];
     trackAchievements(win('normal'), st({ rivalId: 'comendador' }));
     trackAchievements(win('hard'), st({ rivalId: 'comendador', mode: 'hard' }));
     expect(loadAchievementProgress().normal_mode_clears).toBe(1);

@@ -1,4 +1,4 @@
-// Sequência da Maleta Preta destrancando (Patch 0.6.3). Fora de CaseSelect.jsx para o
+// Sequência de uma maleta destrancando no Balcão (Patch 0.6.3). Fora de CaseSelect.jsx para o
 // arquivo do componente exportar só componentes (react-refresh).
 import { useEffect, useState } from 'react';
 import { sound } from '../engine/audioSynth.js';
@@ -10,7 +10,7 @@ const UNLOCK_AT = 450;
 const OPEN_AT = 1250;
 
 /**
- * Sequência da Maleta Preta destrancando: 'locked' → 'unlocking' (o cadeado abre e as
+ * Sequência de uma maleta destrancando no Balcão: 'locked' → 'unlocking' (o cadeado abre e as
  * correntes caem, com o som seco da corrente) → 'open'. Com `play` falso fica no `rest`.
  */
 export function useUnlockSequence(play, rest = 'locked') {

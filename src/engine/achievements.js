@@ -8,14 +8,31 @@
  *   achievement_<id> = 'true'          a conquista saiu
  *   relic_unlocked_<relicId> = 'true'  o talismã dela já pode sair na loja/no beco
  *   buxaria:ach_tio_ze      vitórias sobre o Tio Zé (somando todas as runs)
- *   buxaria:ach_clears      campanhas vencidas na Maleta Branca
+ *   buxaria:ach_clears      campanhas vencidas nas Peças Brancas
  *   buxaria:ach_commons     talismãs comuns básicos que você já equipou
  *   buxaria:ach_shops       lojas onde você comprou nesta run ({ seed, nodes })
- * "Apagar tudo" não mexe nisso, igual à Maleta Preta. Sem storage, vale só na sessão.
+ * "Apagar tudo" não mexe nisso, igual às Peças Pretas. Sem storage, vale só na sessão.
+ *
+ * Patch 0.8.0: o mesmo acompanhamento libera as maletas do Balcão e os desafios
+ * (engine/meta.js guarda): Bicheiro ($60 numa run), Borracharia (3 trancas vencidas),
+ * Trapaceiro (4 talismãs numa run), Seca (chefe sem comprar do dorme); Só no Osso,
+ * Mesa Bêbada e Tudo ou Nada ao zerar com a Clássica, o Bicheiro e as Peças Pretas.
  */
 
 import { BASIC_COMMON_IDS, RELICS } from '../data/relics.js';
-import { loadHardUnlocked } from './progress.js';
+import {
+  addGoldCaps,
+  addRunRelic,
+  addTrancaWin,
+  completeChallenge,
+  isBlackTilesUnlocked,
+  resetRunRelics,
+  unlockChallenge,
+  unlockMaleta,
+} from './meta.js';
+import { ACHIEVEMENT_EVENT, announce, readJson, readRaw, writeJson, writeRaw } from './storage.js';
+
+export { ACHIEVEMENT_EVENT };
 
 // ---------------------------------------------------------------------------
 // As 10 conquistas
@@ -103,48 +120,8 @@ export const ACHIEVEMENTS = Object.freeze(Object.fromEntries(list.map((a) => [a.
 export const ACHIEVEMENT_IDS = Object.freeze(list.map((a) => a.id));
 /** Conquista que libera cada talismã: { moedaFurada: ACHIEVEMENTS.fregues_ze, ... } */
 export const ACHIEVEMENT_BY_RELIC = Object.freeze(Object.fromEntries(list.map((a) => [a.relic, ACHIEVEMENTS[a.id]])));
-export const ACHIEVEMENT_EVENT = 'buxaria-achievement';
-
 /** Chefes de região que contam para a Mesa Limpa. */
 const REGION_BOSSES = ['arlindo', 'beto'];
-
-// ---------------------------------------------------------------------------
-// Storage (com reserva em memória)
-// ---------------------------------------------------------------------------
-
-const memory = new Map();
-
-function readRaw(key) {
-  try {
-    const value = globalThis.localStorage?.getItem(key);
-    if (value !== null && value !== undefined) return value;
-  } catch {
-    /* sem storage */
-  }
-  return memory.has(key) ? memory.get(key) : null;
-}
-
-function writeRaw(key, value) {
-  if (value === null) memory.delete(key);
-  else memory.set(key, value);
-  try {
-    if (value === null) globalThis.localStorage?.removeItem(key);
-    else globalThis.localStorage?.setItem(key, value);
-  } catch {
-    /* sem storage: vale só nesta sessão */
-  }
-}
-
-function readJson(key, fallback) {
-  try {
-    const raw = readRaw(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-const writeJson = (key, value) => writeRaw(key, value === null ? null : JSON.stringify(value));
 
 const KEYS = {
   achievement: (id) => `achievement_${id}`,
@@ -176,21 +153,17 @@ export function loadAchievementProgress() {
 function normalClears() {
   const stored = readJson(KEYS.clears, null);
   if (Number.isFinite(stored)) return stored;
-  // quem já zerou a Maleta Branca antes do 0.7.0 tem a Maleta Preta aberta: conta 1
-  return loadHardUnlocked() ? 1 : 0;
+  // quem já zerou a campanha normal antes do 0.7.0 tem as Peças Pretas abertas: conta 1
+  return isBlackTilesUnlocked() ? 1 : 0;
 }
 
 // ---------------------------------------------------------------------------
 // Desbloqueio
 // ---------------------------------------------------------------------------
 
-function announce(achievement) {
+function announceAchievement(achievement) {
   const relic = RELICS[achievement.relic];
-  const detail = { id: achievement.id, title: achievement.title, relicId: achievement.relic, relicName: relic?.name ?? achievement.relic, icon: relic?.art ?? achievement.relic };
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-    window.dispatchEvent(new CustomEvent(ACHIEVEMENT_EVENT, { detail }));
-  }
-  return detail;
+  return announce({ id: achievement.id, kind: 'achievement', title: achievement.title, relicId: achievement.relic, relicName: relic?.name ?? achievement.relic, icon: relic?.art ?? achievement.relic });
 }
 
 /** Libera na marra (DEV ou quando a meta já foi conferida): grava, avisa e devolve o aviso. */
@@ -199,7 +172,7 @@ export function unlockAchievement(id) {
   if (!achievement || isAchievementUnlocked(id)) return null;
   writeRaw(KEYS.achievement(id), 'true');
   writeRaw(KEYS.relic(achievement.relic), 'true');
-  return announce(achievement);
+  return announceAchievement(achievement);
 }
 
 /**
@@ -235,11 +208,6 @@ const freshSession = () => ({ match: null, heartTile: null, lastDouble: false })
 
 let session = freshSession();
 
-/** Testes: começa do zero sem tocar no storage. */
-export function resetAchievementTracker() {
-  session = freshSession();
-}
-
 const seatOf = (ev) => ev.by ?? ev.who ?? null;
 
 function trackCommons(state) {
@@ -266,20 +234,33 @@ function onDuelEnd(ev, state) {
   const match = session.match;
   session.match = null;
   if (ev.winner !== 'player') return won;
+  // Tampinhas Douradas: vão para o aparelho na hora (nunca se perdem ao morrer)
+  if (ev.caps > 0) addGoldCaps(ev.caps);
   const rivalId = state?.rivalId ?? null;
   if (rivalId === 'tioZe') {
     const defeats = readJson(KEYS.tioZe, 0) + 1;
     writeJson(KEYS.tioZe, defeats);
     if (checkAchievement('fregues_ze', { tio_ze_defeats: defeats })) won.push('fregues_ze');
   }
-  if (ev.runWon && (ev.mode ?? state?.mode) !== 'hard') {
-    const clears = normalClears() + 1;
-    writeJson(KEYS.clears, clears);
-    if (checkAchievement('rei_sinuca', { normal_mode_clears: clears })) won.push('rei_sinuca');
+  // zerar = derrotar o Comendador (com o boss secreto, o final convencional fica para depois)
+  if (ev.finalBoss) {
+    const mode = ev.mode ?? state?.mode;
+    if (mode !== 'hard') {
+      const clears = normalClears() + 1;
+      writeJson(KEYS.clears, clears);
+      if (checkAchievement('rei_sinuca', { normal_mode_clears: clears })) won.push('rei_sinuca');
+    }
+    const maleta = state?.maleta ?? 'classica';
+    if (maleta === 'classica') unlockChallenge('soNoOsso');
+    if (maleta === 'bicheiro') unlockChallenge('mesaBebada');
+    if (mode === 'hard') unlockChallenge('tudoOuNada');
+    if (state?.challenge) completeChallenge(state.challenge);
   }
   if (!match) return won;
   if (ev.boss && REGION_BOSSES.includes(rivalId) && checkAchievement('mesa_limpa', { flawless_boss_win: !match.hurt })) won.push('mesa_limpa');
   if (checkAchievement('mao_fechada', { won_match_with_zero_draws: match.draws === 0 })) won.push('mao_fechada');
+  // Maleta Seca: chefe vencido sem nenhuma compra do dorme
+  if (ev.boss && match.draws === 0) unlockMaleta('seca');
   return won;
 }
 
@@ -288,6 +269,8 @@ function onRoundEnd(ev) {
   const result = ev.result ?? {};
   if (result.winner === 'player') {
     const handCount = ev.handCounts?.player;
+    // Maleta da Borracharia: 3 rodadas vencidas por tranca, somando as runs
+    if (result.kind === 'tranca' && addTrancaWin() >= 3) unlockMaleta('borracharia');
     if (result.kind === 'tranca' && checkAchievement('cirurgia_tranca', { locked_win_with_one_tile: handCount === 1 })) won.push('cirurgia_tranca');
     if (result.reason === 'batida' && session.lastDouble && checkAchievement('milagre_boteco', { double_win_with_one_life: ev.hearts?.player === 1 })) won.push('milagre_boteco');
   }
@@ -307,6 +290,7 @@ export function trackAchievements(events, state) {
     switch (ev.type) {
       case 'runStart':
         writeJson(KEYS.shops, { seed: state?.seed ?? null, nodes: [] });
+        resetRunRelics(state?.seed ?? null);
         session = freshSession();
         break;
       case 'duelStart':
@@ -360,11 +344,18 @@ export function trackAchievements(events, state) {
         break;
       case 'shopBuy':
         if (trackShop(state)) won.push('boca_balcao');
+        // Maleta do Trapaceiro: 4 talismãs diferentes comprados na mesma run
+        if (ev.kind === 'relic' && addRunRelic(state?.seed ?? null, ev.id) >= 4) unlockMaleta('trapaceiro');
+        break;
+      case 'marketBuy':
+        if (addRunRelic(state?.seed ?? null, ev.id) >= 4) unlockMaleta('trapaceiro');
         break;
       default:
         break;
     }
   }
   won.push(...trackCommons(state));
+  // Maleta do Bicheiro: $60 ganhos (somando tudo) na mesma run
+  if ((state?.stats?.coinsEarned ?? 0) >= 60) unlockMaleta('bicheiro');
   return won;
 }

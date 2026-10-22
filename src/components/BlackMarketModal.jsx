@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getRarity } from '../data/rarities.js';
-import { RELIC_SLOTS, getRelic } from '../data/relics.js';
+import { getRelic } from '../data/relics.js';
+import { relicSlotsFor } from '../engine/loadout.js';
 import { marketBuyBlock } from '../engine/blackMarket.js';
 import { regionOfState } from '../engine/campaignMap.js';
 import { haptic } from '../engine/progress.js';
@@ -151,9 +152,9 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
           </ul>
           <div key={`pouch-${alert}`} className={`bm-pouch ${alert ? 'animate-hotbar-full' : ''}`} aria-label="Seus talismãs">
             <span className="bm-pouch-label">
-              BOLSA {state.relics.player.length}/{RELIC_SLOTS}
+              BOLSA {state.relics.player.length}/{relicSlotsFor(state)}
             </span>
-            {Array.from({ length: RELIC_SLOTS }, (_, i) => {
+            {Array.from({ length: relicSlotsFor(state) }, (_, i) => {
               const relic = getRelic(state.relics.player[i]);
               if (!relic) return <span key={`empty-${i}`} className="bm-niche bm-niche-empty" aria-hidden="true" />;
               return (

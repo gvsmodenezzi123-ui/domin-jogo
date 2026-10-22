@@ -243,20 +243,14 @@ describe('partida → mapa → loja (caminho opcional) → próximo rival', () =
 });
 
 describe('rivais', () => {
-  it('18 rivais com retrato 16x16 em 4 humores, na ordem da campanha', () => {
-    expect(RIVAL_IDS).toHaveLength(18);
-    expect(RIVAL_IDS).toEqual(REGIONS.flatMap((r) => r.nodes));
-    expect(BOSS_IDS).toEqual(['arlindo', 'beto', 'comendador']);
+  it('18 rivais na ordem da campanha, mais o Dono da Noite (nó 19 secreto, fora do sorteio)', () => {
+    expect(RIVAL_IDS).toHaveLength(19);
+    expect(RIVAL_IDS.filter((id) => !RIVALS[id].secret)).toEqual(REGIONS.flatMap((r) => r.nodes));
+    expect(RIVAL_IDS.filter((id) => RIVALS[id].secret)).toEqual(['donoDaNoite']);
+    expect(BOSS_IDS).toEqual(['arlindo', 'beto', 'comendador', 'donoDaNoite']);
     for (const id of RIVAL_IDS) {
       const rival = RIVALS[id];
-      for (const mood of ['idle', 'thinking', 'smug', 'hurt']) {
-        const rows = rival.faces[mood];
-        expect(rows, `${id}.${mood}`).toHaveLength(16);
-        for (const row of rows) {
-          expect(row, `${id}.${mood}: ${row}`).toHaveLength(16);
-          for (const ch of row) if (ch !== '.') expect(rival.palette[ch], `${id}: cor '${ch}'`).toBeTruthy();
-        }
-      }
+      expect(rival.art, id).toBe(id);
       for (const relic of rival.relics) expect(RELICS[relic]).toBeTruthy();
       expect(rival.reflexMs, id).toBeGreaterThanOrEqual(600);
     }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { TIO_ZE_REFLEX_MS, buildTioZeView, decideTioZeAction } from '../../ai/tioZeAI.js';
-import { TIO_ZE_FACES } from '../../components/sprites.js';
 import { FULL_SET, makeTile } from '../dominoLogic.js';
 import { bonusFloat, deriveTioZeSpeech } from '../gameFeedback.js';
 import { createInitialState, gameReducer } from '../gameReducer.js';
@@ -139,11 +138,3 @@ describe('Tio Zé', () => {
   });
 });
 
-describe('sprites', () => {
-  it('os rostos de reserva do Tio Zé são 16x16', () => {
-    for (const face of Object.values(TIO_ZE_FACES)) {
-      expect(face).toHaveLength(16);
-      face.forEach((row) => expect(row).toHaveLength(16));
-    }
-  });
-});

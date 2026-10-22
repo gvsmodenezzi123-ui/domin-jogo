@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
 import AchievementToast from './components/AchievementToast.jsx';
 import BlackMarketModal from './components/BlackMarketModal.jsx';
+import BlackTilesModal from './components/BlackTilesModal.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
 import CoinEventModal from './components/CoinEventModal.jsx';
 import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
 import FloatingTexts from './components/FloatingTexts.jsx';
-import HardUnlockModal from './components/HardUnlockModal.jsx';
 import InfoBalloon from './components/InfoBalloon.jsx';
 import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
 import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
+import SecretBoss from './components/SecretBoss.jsx';
 import ScreenVeil from './components/ScreenTransition.jsx';
 import { useSceneTransition } from './components/useSceneTransition.js';
 import Shop from './components/Shop.jsx';
@@ -29,7 +30,7 @@ import { TileSkinContext } from './components/tileSkin.js';
 import { BOSS_MUSIC, REGIONS } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
-import { getRival, rivalOf } from './data/rivals.js';
+import { SECRET_BOSS, getRival, rivalFor, rivalOf } from './data/rivals.js';
 import { modeOf } from './data/difficulty.js';
 import {
   ACHIEVEMENT_EVENT,
@@ -53,6 +54,17 @@ import {
 import { bonusFloat, buildPlayerHint, deriveHurtKey, deriveTioZeMood, deriveTioZeSpeech } from './engine/gameFeedback.js';
 import { foreseenRivalTile } from './engine/foresight.js';
 import { createInitialState, gameReducer } from './engine/gameReducer.js';
+import { relicSlotsFor } from './engine/loadout.js';
+import {
+  addGoldCaps,
+  isBlackTilesUnlocked,
+  loadEquippedFrame,
+  loadUpgrades,
+  resetMeta,
+  saveBlackTilesUnlocked,
+  subscribeMeta,
+  unlockAllMeta,
+} from './engine/meta.js';
 import {
   canUndo,
   canUseCanivete,
@@ -70,11 +82,9 @@ import {
   discover,
   haptic,
   loadCollection,
-  loadHardUnlocked,
   loadRunSave,
   loadSettings,
   resetProgress,
-  saveHardUnlocked,
   saveSettings,
   writeRunSave,
 } from './engine/progress.js';
@@ -363,10 +373,14 @@ export default function App() {
   const pendingPlay = useRef(null);
   // o livro é gravado direto no storage durante a run; a tela do menu lê quando você volta
   const bookRef = useRef(collection);
-  // o rival no modo da run (a Maleta Preta muda corações, baralho e talismãs dele)
+  // o rival no modo da run (as Peças Pretas mudam corações, baralho e talismãs dele)
   const rival = rivalOf(state);
-  // Patch 0.6.3: Maleta Preta liberada? E a tela inicial deve abrir direto nas maletas?
-  const [hardUnlocked, setHardUnlocked] = useState(loadHardUnlocked);
+  // Patch 0.8.0: Peças Pretas liberadas (no aparelho) e a moldura equipada; `blackSeen` segura
+  // a tela de recompensa até você tocar em continuar
+  const blackUnlocked = useSyncExternalStore(subscribeMeta, isBlackTilesUnlocked, () => false);
+  const frame = useSyncExternalStore(subscribeMeta, loadEquippedFrame, () => null);
+  const [blackSeen, setBlackSeen] = useState(isBlackTilesUnlocked);
+  // a tela inicial abre direto no Balcão de Maletas? ({ challenge } ou false)
   const [titlePick, setTitlePick] = useState(false);
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
   const { stage: veilStage, go: cutTo } = useSceneTransition();
@@ -488,6 +502,12 @@ export default function App() {
     [pushFloat],
   );
 
+  // o estado mais recente para quem roda depois dos eventos (sem refazer o efeito a cada mudança)
+  const latestState = useRef(state);
+  useEffect(() => {
+    latestState.current = state;
+  });
+
   // Efeitos colaterais dos eventos novos.
   useEffect(() => {
     const fresh = state.events.filter((e) => e.seq > processedSeq.current);
@@ -529,9 +549,10 @@ export default function App() {
       }
     }
     // Patch 0.7.0: as conquistas conferem as metas nos eventos novos (ao vencer o Tio Zé,
-    // ao jogar a 3ª pedra paga com coração, ao vencer a tranca com 1 pedra...)
-    trackAchievements(fresh, state);
-  }, [state, pushFloat, stagePlay]);
+    // ao jogar a 3ª pedra paga com coração, ao vencer a tranca com 1 pedra...); no 0.8.0
+    // também as tampinhas, as maletas e os desafios
+    trackAchievements(fresh, latestState.current);
+  }, [state.events, state.lastPlay, state.phase, pushFloat, stagePlay]);
 
   // Save: no mapa, na loja e no beco (ao vencer o nó e depois do Seu Tião, volta no mapa);
   // some quando a run acaba.
@@ -542,11 +563,12 @@ export default function App() {
     else if (state.phase === 'gameOver' || state.phase === 'runWon') clearRunSave();
   }, [state]);
 
-  // Patch 0.6.3: zerou a Maleta Branca com a Preta ainda trancada → tela de recompensa antes
-  // do final, e o desbloqueio vai para o aparelho na hora (buxaria_hard_mode_unlocked = true)
-  const celebrate = state.phase === 'runWon' && state.mode !== 'hard' && !hardUnlocked;
+  // Patch 0.8.0: derrotou o Comendador nas Peças Brancas com as Pretas ainda trancadas → tela
+  // de recompensa antes do final (ou da revelação do Dono da Noite), e o desbloqueio vai
+  // para o aparelho na hora (buxaria_black_tiles_unlocked = true)
+  const celebrate = (state.phase === 'runWon' || state.phase === 'secretReveal') && state.mode !== 'hard' && !blackSeen;
   useEffect(() => {
-    if (celebrate) saveHardUnlocked(true);
+    if (celebrate) saveBlackTilesUnlocked(true);
   }, [celebrate]);
 
   // Livro de Boteco: tudo que passa pela mesa fica registrado.
@@ -756,8 +778,8 @@ export default function App() {
     clearTableAnim();
   };
 
-  /** NOVO JOGO depois de escolher a maleta ('normal' = Branca, 'hard' = Preta). */
-  const newGame = (mode = 'normal') => {
+  /** INICIAR RUN no Balcão: a maleta, as peças (Brancas/Pretas), o desafio e as melhorias compradas. */
+  const newGame = ({ maleta = 'classica', mode = 'normal', challenge = null } = {}) => {
     wakeAudio();
     sound.playClick();
     cutTo(() => {
@@ -765,11 +787,11 @@ export default function App() {
       clearRunSave();
       setSave(null);
       setTitlePick(false);
-      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id, unlocks: loadUnlockedRelics() });
+      dispatch({ type: 'NEW_RUN', seed: newSeed(), mode: modeOf(mode).id, maleta, challenge, perks: loadUpgrades(), unlocks: loadUnlockedRelics() });
     });
   };
 
-  /** NOVO JOGO no fim da run: volta para a mesa das maletas. */
+  /** TENTAR DE NOVO no fim da run: direto para o Balcão de Maletas, com os bônus novos. */
   const restartRun = () => {
     sound.playClick();
     cutTo(() => {
@@ -777,7 +799,16 @@ export default function App() {
       dispatch({ type: 'RETURN_TO_TITLE' });
       setSave(loadRunSave());
       setCollection(bookRef.current);
-      setTitlePick(true);
+      setTitlePick({ challenge: null });
+    });
+  };
+
+  /** O Dono da Noite: SENTAR À MESA abre a partida do nó 19, com corte de cena. */
+  const sitWithDono = () => {
+    sound.playClick();
+    cutTo(() => {
+      resetTable();
+      dispatch({ type: 'START_SECRET', deck: newDeck() });
     });
   };
 
@@ -791,7 +822,7 @@ export default function App() {
     sound.playClick();
     cutTo(() => {
       resetTable();
-      dispatch({ type: 'LOAD_RUN', save: saved, unlocks: loadUnlockedRelics() });
+      dispatch({ type: 'LOAD_RUN', save: saved, perks: loadUpgrades(), unlocks: loadUnlockedRelics() });
     });
   };
 
@@ -891,11 +922,11 @@ export default function App() {
   const titleSecretTap = useTripleTap(unlockDev);
   const gameSecretTap = useTripleTap(openDevFromGame);
 
-  // painel DEV: tranca ou libera a Maleta Preta (para testar a tela das maletas)
-  const toggleHard = () => {
-    const next = !hardUnlocked;
-    saveHardUnlocked(next);
-    setHardUnlocked(next);
+  // painel DEV: tranca ou libera as Peças Pretas (para testar o Balcão)
+  const toggleBlack = () => {
+    const next = !blackUnlocked;
+    saveBlackTilesUnlocked(next);
+    setBlackSeen(next);
   };
 
   const devAction = (action) => {
@@ -910,6 +941,19 @@ export default function App() {
       dispatch({ type: 'UNLOCK_RELICS', ids: [], reset: true });
       return;
     }
+    // meta-progressão (Patch 0.8.0): tampinhas, maletas e desafios
+    if (action.op === 'capsAdd') {
+      addGoldCaps(10);
+      return;
+    }
+    if (action.op === 'metaUnlockAll') {
+      unlockAllMeta();
+      return;
+    }
+    if (action.op === 'metaReset') {
+      resetMeta();
+      return;
+    }
     setSelectedId(null);
     // trocar de rival recomeça a partida: precisa de um baralho novo
     dispatch(action.op === 'setRival' ? { ...action, deck: newDeck() } : action);
@@ -921,8 +965,12 @@ export default function App() {
       clearFloats();
       clearTableAnim();
     }
+    if (action.op === 'secretReveal') {
+      clearFloats();
+      clearTableAnim();
+    }
     // tranca forçada, vitória e os atalhos de cena abrem outra tela: fecha o painel para ver
-    if (['forceTranca', 'winMatch', 'setRival', 'openStop'].includes(action.op)) setDevOpen(false);
+    if (['forceTranca', 'winMatch', 'setRival', 'openStop', 'secretReveal'].includes(action.op)) setDevOpen(false);
   };
 
   // o corte de cena e o aviso de conquista vão em todas as telas
@@ -932,7 +980,7 @@ export default function App() {
       <AchievementToast toast={toasts[0] ?? null} onDone={toastDone} />
     </>
   );
-  // Maleta Preta: as pedras comuns da partida viram ébano com pips brancos
+  // Peças Pretas: as pedras comuns da partida viram ébano com pips brancos
   const tileSkin = state.phase !== 'title' ? modeOf(state.mode).skin : 'bone';
 
   if (state.phase === 'title') {
@@ -942,7 +990,7 @@ export default function App() {
         <TitleScreen
           key={titlePick ? 'maletas' : 'menu'}
           save={save}
-          hardUnlocked={hardUnlocked}
+          blackUnlocked={blackUnlocked}
           startPicking={titlePick}
           onNewGame={newGame}
           onContinue={continueRun}
@@ -963,7 +1011,7 @@ export default function App() {
   // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
   const sceneChip = ['shop', 'blackMarket', 'coinEvent'].includes(state.phase);
   const devPanel = devOpen && (
-    <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} hardUnlocked={hardUnlocked} onToggleHard={toggleHard} />
+    <DevPanel state={state} onAction={devAction} onClose={() => setDevOpen(false)} blackUnlocked={blackUnlocked} onToggleBlack={toggleBlack} />
   );
   // no mapa fica ao lado do menu; na loja, em cima do botão de voltar (o saldo mora no topo)
   const devChip = devUnlocked && (
@@ -1084,7 +1132,7 @@ export default function App() {
         roundKey={`${state.run.match}:${state.round}`}
         playableSides={selectedSides}
         onPlaySide={handlePlaySide}
-        dimmed={roundFinished && !tableAnim}
+        dimmed={(roundFinished || state.phase === 'secretReveal') && !tableAnim}
         previewDouble={Boolean(selectedTile && !discardMode && selectedTile.a === selectedTile.b)}
         frameRef={tableRef}
         endMarks={endMarks}
@@ -1122,6 +1170,8 @@ export default function App() {
         onSkipDiscard={caniveteMode ? handleCancelCanivete : handleSkipDiscard}
         onSecretTap={gameSecretTap}
         relics={state.relics.player}
+        relicSlots={relicSlotsFor(state)}
+        frame={frame}
         relicFlashes={relicFlashes.player}
         spentRelics={spentRelics}
         canUndo={undoReady}
@@ -1158,13 +1208,16 @@ export default function App() {
       )}
 
       {celebrate && !tableAnim && (
-        <HardUnlockModal
+        <BlackTilesModal
+          continueLabel={state.phase === 'secretReveal' ? 'CONTINUAR' : 'VER O FINAL'}
           onContinue={() => {
             sound.playClick();
-            setHardUnlocked(true);
+            setBlackSeen(true);
           }}
         />
       )}
+
+      {state.phase === 'secretReveal' && !tableAnim && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
 
       {menuOpen && (
         <PauseMenu

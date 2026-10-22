@@ -1,11 +1,11 @@
 /**
- * Maletas de dominó (Patch 0.6.3): o modo da run.
+ * Dificuldade da run (Patch 0.6.3; no 0.8.0 virou a escolha das peças no Balcão de Maletas).
  *
- *   normal  Maleta Branca: a caminhada tradicional de boteco. Sempre liberada.
- *   hard    Maleta Preta (Dominó Preto): o submundo não perdoa. Rivais com pedras de
- *           grife e talismãs desde a Região 1, chefes mais duros (data/rivals.js,
- *           HARD_LOADOUTS), e você começa com 4 corações e $3. Liberada ao derrotar o
- *           Comendador Moreira no modo normal (engine/progress.js guarda a chave).
+ *   normal  Peças Brancas: a caminhada tradicional de boteco. Sempre liberada.
+ *   hard    Peças Pretas: o submundo não perdoa. Rivais com pedras de grife e talismãs
+ *           desde a Região 1, chefes mais duros (data/rivals.js, HARD_LOADOUTS), as suas
+ *           pedras comuns ficam pretas com pips brancos e você começa com 4 corações e $3.
+ *           Liberada ao derrotar o Comendador Moreira nas Peças Brancas (engine/meta.js).
  *
  * O resto não muda entre os modos: prêmio das mesas, loja, Mercado Negro, regras do dominó.
  */
@@ -15,9 +15,9 @@ import { MAX_HEARTS, STARTING_COINS } from '../engine/dominoLogic.js';
 export const MODES = Object.freeze({
   normal: Object.freeze({
     id: 'normal',
-    name: 'MALETA BRANCA',
+    name: 'PEÇAS BRANCAS',
     short: 'NORMAL',
-    tag: 'MODO CLÁSSICO',
+    tag: 'MODO NORMAL',
     description: 'A caminhada tradicional de boteco. Dificuldade padrão, adversários aprendizes e ritmo clássico.',
     maxHearts: MAX_HEARTS,
     startCoins: STARTING_COINS,
@@ -25,23 +25,21 @@ export const MODES = Object.freeze({
   }),
   hard: Object.freeze({
     id: 'hard',
-    name: 'MALETA PRETA',
+    name: 'PEÇAS PRETAS',
     short: 'DIFÍCIL',
-    tag: 'MODO DIFÍCIL · SUBMUNDO',
-    description: 'O submundo não perdoa. Adversários afiados, builds pesadas desde a Região 1 e chefes implacáveis.',
+    tag: 'MODO DIFÍCIL',
+    description: 'Rivais com mais pedras de grife e talismãs; as suas pedras comuns ficam pretas com pips brancos.',
     maxHearts: 4,
     startCoins: 3,
     skin: 'onyx',
   }),
 });
 
-export const MODE_IDS = Object.freeze(Object.keys(MODES));
-
 /** O modo da run (o que não for 'hard' é normal). */
 export const modeOf = (mode) => MODES[mode] ?? MODES.normal;
 
-/** Corações máximos do jogador na run deste estado. */
-export const playerMaxHearts = (state) => modeOf(state?.mode).maxHearts;
+/** Corações máximos do jogador na run deste estado (desafio Tudo ou Nada: 1). */
+export const playerMaxHearts = (state) => (state?.challenge === 'tudoOuNada' ? 1 : modeOf(state?.mode).maxHearts);
 
-/** Aviso da Maleta Preta trancada. */
-export const HARD_LOCKED_TEXT = 'TRANCADO! DERROTE O COMENDADOR MOREIRA NO MODO NORMAL PARA DESBLOQUEAR.';
+/** Aviso das Peças Pretas trancadas. */
+export const BLACK_LOCKED_TEXT = 'TRANCADO! DERROTE O COMENDADOR MOREIRA NAS PEÇAS BRANCAS PARA LIBERAR AS PEÇAS PRETAS.';

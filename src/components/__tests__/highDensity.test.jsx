@@ -15,7 +15,7 @@ describe('sprites de alta densidade', () => {
     }
   });
 
-  it('os 40 talismãs e os 18 rivais têm arte 40x40 própria', () => {
+  it('os 40 talismãs e os 19 rivais têm arte própria (40x40; o Dono da Noite em 48x48)', () => {
     const relicArt = new Set();
     for (const relic of Object.values(RELICS)) {
       expect(RELIC_ART[relic.art], relic.id).toBeTruthy();
@@ -26,11 +26,12 @@ describe('sprites de alta densidade', () => {
     for (const rival of Object.values(RIVALS)) {
       expect(RIVAL_ART[rival.art], rival.id).toBeTruthy();
       rivalArt.add(RIVAL_ART[rival.art]);
-      // todo retrato desenha os 4 humores e a boca falando, em 40x40
+      // todo retrato desenha os 4 humores e a boca falando, em 40x40 (o secreto em 48x48)
+      const grid = rival.secret ? 48 : 40;
       for (const mood of ['idle', 'thinking', 'smug', 'hurt']) {
         const Art = RIVAL_ART[rival.art];
         const html = renderToStaticMarkup(<Art className="w-12 h-12" mood={mood} isSpeaking={mood === 'idle'} />);
-        expect(html, `${rival.id}.${mood}`).toContain('viewBox="0 0 40 40"');
+        expect(html, `${rival.id}.${mood}`).toContain(`viewBox="0 0 ${grid} ${grid}"`);
       }
     }
     expect(rivalArt.size).toBe(Object.keys(RIVALS).length);

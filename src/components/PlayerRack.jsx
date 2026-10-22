@@ -65,6 +65,7 @@ function passButtonText(rule) {
   if (!rule) return 'PASSAR A VEZ';
   if (rule.reason === 'coins') return `SALDO INSUFICIENTE ($${rule.cost ?? 3})`;
   if (rule.reason === 'mustDraw') return 'PASSAR A VEZ: COMPRE ANTES';
+  if (rule.fiado) return 'PASSAR A VEZ (FIADO: DE GRAÇA)';
   return rule.cost > 0 ? `PASSAR A VEZ ($${rule.cost})` : 'PASSAR A VEZ';
 }
 
@@ -81,6 +82,7 @@ function PassLabel({ rule }) {
     <>
       <span className="block">PASSAR</span>
       <span className="block">A VEZ{rule?.cost > 0 ? ` ($${rule.cost})` : ''}</span>
+      {rule?.fiado && <span className="pass-note block text-brass-300">FIADO</span>}
       {rule?.reason === 'mustDraw' && <span className="pass-note block text-bone-200">COMPRE ANTES</span>}
     </>
   );
@@ -122,6 +124,7 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
  */
 const RelicRow = memo(function RelicRow({
   relics,
+  relicSlots,
   relicFlashes,
   spentRelics,
   canUndo,
@@ -140,6 +143,7 @@ const RelicRow = memo(function RelicRow({
     <div className="flex h-[34px] items-center gap-2 px-3 pt-1">
       <Hotbar
         relics={relics}
+        slots={relicSlots}
         size={30}
         flashes={relicFlashes}
         spent={spentRelics}
@@ -398,6 +402,8 @@ function PlayerRack({
   onSkipDiscard,
   onSecretTap,
   relics = NONE,
+  relicSlots,
+  frame = null,
   relicFlashes,
   spentRelics,
   canUndo = false,
@@ -415,7 +421,7 @@ function PlayerRack({
 }) {
   return (
     <section
-      className={`player-hand relative z-20 shrink-0 ${isTurn ? 'player-hand-active' : ''}`}
+      className={`player-hand relative z-20 shrink-0 ${isTurn ? 'player-hand-active' : ''} ${frame ? `player-frame player-frame-${frame}` : ''}`}
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 10px)' }}
       aria-label="Sua mão"
     >
@@ -423,6 +429,7 @@ function PlayerRack({
 
       <RelicRow
         relics={relics}
+        relicSlots={relicSlots}
         relicFlashes={relicFlashes}
         spentRelics={spentRelics}
         canUndo={canUndo}

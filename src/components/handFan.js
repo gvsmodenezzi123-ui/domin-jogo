@@ -1,6 +1,3 @@
-/** Leque do rival: pedras ~27% menores, arco mais fechado (ele segura do outro lado da mesa). */
-export const RIVAL_FAN = Object.freeze({ baseUnit: 32, minUnit: 20, angle: 13, drop: 7 });
-
 /**
  * Leque da mão: cada pedra recebe posição x, inclinação e descida em arco.
  * Com 7 pedras: 0°, ±8°, ±14°, ±20° (centro reto, pontas mais inclinadas e baixas).

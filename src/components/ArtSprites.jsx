@@ -55,3 +55,7 @@ export {
   TrophyIcon,
   TrucoMarcadoIcon,
 } from './art/RelicArt070.jsx';
+
+// Patch 0.8.0: O Dono da Noite (nó 19 secreto)
+export { DonoDaNoiteAvatar } from './art/SecretBossArt.jsx';
+export { BottleCapIcon } from './art/MetaArt.jsx';

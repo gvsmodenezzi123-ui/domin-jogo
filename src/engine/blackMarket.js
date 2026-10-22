@@ -4,9 +4,10 @@
  * não sorteia outra. Puro.
  */
 
-import { NECROTIC_IDS, RELICS, RELIC_SLOTS, isRelicAvailable } from '../data/relics.js';
+import { NECROTIC_IDS, RELICS, isRelicAvailable } from '../data/relics.js';
 import { mixSeed } from './campaignMap.js';
 import { createSeededRng } from './dominoLogic.js';
+import { relicSlotsFor } from './loadout.js';
 
 /** Quantos Necróticos o Corvo mostra por visita. */
 export const MARKET_OFFERS = 3;
@@ -27,7 +28,7 @@ export function buildMarket(state) {
 /** Por que não dá para comprar agora (ou null se dá). */
 export function marketBuyBlock(state, offer) {
   if (!offer || offer.sold) return 'sold';
-  if (state.relics.player.length >= RELIC_SLOTS) return 'full';
+  if (state.relics.player.length >= relicSlotsFor(state)) return 'full';
   if (state.coins.player < offer.price) return 'coins';
   return null;
 }

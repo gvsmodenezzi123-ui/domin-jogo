@@ -12,6 +12,9 @@ import {
   mixSeed,
 } from '../engine/campaignMap.js';
 import { rivalBlurb, rivalRules } from '../engine/rivalInfo.js';
+import { relicSlotsFor } from '../engine/loadout.js';
+import { maletaOf } from '../data/maletas.js';
+import { challengeOf } from '../data/meta.js';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
@@ -159,10 +162,10 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
 });
 
 /** Texto e botão do rodapé para o nó escolhido. */
-function NodeDetail({ node, status, known, farRegion, mode, onEnter }) {
+function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEnter }) {
   const unknownLine = farRegion ? 'Ainda não chegou nessa região.' : 'Só aparece quando o caminho até aqui abrir.';
   const fight = node.type === 'combat' || node.type === 'boss';
-  // na Maleta Preta o rodapé mostra o baralho, os talismãs e os corações do modo difícil
+  // nas Peças Pretas o rodapé mostra o baralho, os talismãs e os corações do modo difícil
   const rival = fight ? rivalFor(node.rivalId, mode) : null;
   const open = status === 'open';
   let art;
@@ -187,14 +190,14 @@ function NodeDetail({ node, status, known, farRegion, mode, onEnter }) {
     art = <ValtinhoSprite className="h-12 w-12 shrink-0" />;
     title = 'LOJA DO VALTINHO';
     line = 'Talismãs e pedras de grife. Desvio sem luta.';
-    notes = ['O balcão de sempre: compre, venda a 50% e reembaralhe a vitrine.'];
-    action = 'ENTRAR NA LOJA';
+    notes = closed ? ['Só no Osso: a loja está de portas fechadas. Você passa reto.'] : ['O balcão de sempre: compre, venda a 50% e reembaralhe a vitrine.'];
+    action = closed ? 'PASSAR RETO (FECHADA)' : 'ENTRAR NA LOJA';
   } else if (node.type === 'black') {
     art = <CorvoSprite className="h-12 w-12 shrink-0" />;
     title = 'MERCADO NEGRO';
     line = 'O Corvo da Madrugada, no beco escuro.';
-    notes = ['Só talismãs Necróticos, de $18 a $26. Fortes, e cobram o preço deles.'];
-    action = 'ENTRAR NO BECO';
+    notes = closed ? ['Só no Osso: o beco está vazio esta noite. Você passa reto.'] : ['Só talismãs Necróticos, de $18 a $26. Fortes, e cobram o preço deles.'];
+    action = closed ? 'PASSAR RETO (FECHADO)' : 'ENTRAR NO BECO';
   } else {
     art = <TiaoMoedasSprite className="h-12 w-12 shrink-0" />;
     title = 'SEU TIÃO DAS MOEDAS';
@@ -282,7 +285,9 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="font-pixel text-[7px] text-bone-400">
-              {state.mode === 'hard' && <span className="map-hard-badge">MALETA PRETA · </span>}
+              {state.maleta && state.maleta !== 'classica' && <span className="map-maleta-badge">{maletaOf(state.maleta).short} · </span>}
+              {state.mode === 'hard' && <span className="map-hard-badge">PEÇAS PRETAS · </span>}
+              {state.challenge && <span className="map-challenge-badge">{challengeOf(state.challenge).name.toUpperCase()} · </span>}
               REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
               {open.length > 1 ? ` · ${open.length} CAMINHOS` : ''}
             </p>
@@ -295,7 +300,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
         <div className="mt-2 flex items-center justify-between gap-2">
           <HeartsBar current={state.hearts.player} max={state.maxHearts.player} pixel={2} label={`Você: ${state.hearts.player} de ${state.maxHearts.player} corações`} />
           <CoinCount value={state.coins.player} />
-          <Hotbar relics={state.relics.player} size={24} press={press} label="Seus talismãs" />
+          <Hotbar relics={state.relics.player} slots={relicSlotsFor(state)} size={24} press={press} label="Seus talismãs" />
         </div>
       </header>
 
@@ -353,6 +358,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           known={revealed(status.get(selected.id))}
           farRegion={selected.region > regionId}
           mode={state.mode}
+          closed={state.challenge === 'soNoOsso' && (selected.type === 'shop' || selected.type === 'black')}
           onEnter={onEnter}
         />
         <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">VENCER MESA: +2♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS</p>
