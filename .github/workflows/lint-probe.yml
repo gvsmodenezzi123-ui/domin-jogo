@@ -1,0 +1,17 @@
+name: Lint probe (temporario)
+on:
+  push:
+    branches: [claude/lint-probe]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint . -f json -o eslint.json || true
+      - run: |
+          node -e "const r=require('./eslint.json');let n=0;for(const f of r)for(const m of f.messages){n++;console.log('::warning file='+f.filePath.replace(process.cwd()+'/','')+',line='+m.line+',col='+m.column+'::'+(m.severity===2?'ERRO ':'aviso ')+(m.ruleId||'')+' '+m.message.replace(/\r?\n/g,' '))}console.log('::notice::total '+n)"

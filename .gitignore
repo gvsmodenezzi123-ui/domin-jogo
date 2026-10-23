@@ -4,3 +4,10 @@ dist
 .DS_Store
 coverage
 /android/
+
+# chave de upload da Play: nunca no repositório (README: Publicar na Google Play)
+*.jks
+*.keystore
+!android-extras/debug.keystore
+*.keystore.b64
+*.jks.b64

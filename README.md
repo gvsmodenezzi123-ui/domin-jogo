@@ -1,7 +1,8 @@
-# Buxaria — Patch 0.5.5
+# Buxaria — Versão 1.0
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
-(clima Inscryption / Buckshot Roulette). Feito como PWA para tela vertical de iPhone.
+(clima Inscryption / Buckshot Roulette). Roda como PWA (tela vertical de celular) e como app
+Android (Capacitor), com a build de produção em App Bundle para a Google Play.
 
 ## Rodando
 
@@ -33,10 +34,10 @@ O PWA precisa de HTTPS. Duas opções:
 - Importe o repositório pelo site deles (login com GitHub) e escolha a branch.
 - O Vite é detectado sozinho: build `npm run build`, pasta `dist`.
 
-## APK Android
+## APK Android (teste)
 
-O workflow `.github/workflows/android-apk.yml` roda a cada push em `main` e nesta branch do
-patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
+O workflow `.github/workflows/android-apk.yml` roda a cada push em `main` e nesta branch.
+Ele gera dois APKs de teste com o Capacitor, que embrulha o build do jogo num app:
 
 | APK | App | Painel DEV |
 | --- | --- | --- |
@@ -45,19 +46,96 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 
 - **Onde baixar:** na Release "Buxaria X.Y.Z (APK, build N)" do repositório, ou nos
   artefatos da execução na aba Actions.
-- **Como o app se comporta:** os dois instalam lado a lado. O jogo vai inteiro dentro do APK
-  (abre offline, sem service worker), em tela cheia e em retrato. O botão voltar do Android
-  manda o jogo para o fundo sem fechar a partida.
+- **Como o app se comporta:** os dois instalam lado a lado, e ao lado do app da Play
+  (`com.buxaria.game`). O jogo vai inteiro dentro do APK (abre offline, sem service worker),
+  em tela cheia e em retrato. O botão voltar do Android manda o jogo para o fundo sem fechar a
+  partida.
 - **Painel DEV por build:** `VITE_DEV_PANEL=on|off`. Sem a variável (o site), o painel segue
   escondido até os 3 toques.
-- **Assinatura:** sem segredos, a build de release sai assinada com a chave fixa de
-  `android-extras/debug.keystore`. Ela é a mesma em todo build, então o APK novo instala por
-  cima do antigo e o progresso fica.
-- **Play Store:** crie em Settings → Secrets and variables → Actions os segredos
-  `ANDROID_KEYSTORE_BASE64` (o .jks em base64), `ANDROID_KEYSTORE_PASSWORD` e
-  `ANDROID_KEY_ALIAS`. Com eles o workflow gera a build de release assinada com a sua chave.
-  Na troca de chave, desinstale o APK antigo uma vez.
+- **Assinatura:** sempre a chave fixa e pública de `android-extras/debug.keystore`, a mesma em
+  todo build: o APK novo instala por cima do antigo e o progresso fica. Essa chave nunca vai
+  para a Play.
+- **Mesmo projeto do .aab:** Capacitor 8 (Android 16 / API 36, Java 21), ajustado por
+  `scripts/prepare-android.mjs` (tela cheia, retrato, permissões, versão).
 - **Ícones:** saem de `assets/` (e `assets/dev/` para o DEV) pelo `@capacitor/assets`.
+
+## Publicar na Google Play (App Bundle)
+
+O workflow `.github/workflows/build-android.yml` gera a build de produção oficial: um
+**`app-release.aab` assinado com a sua chave de upload**, pronto para a Play Console.
+
+| | |
+| --- | --- |
+| Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
+| Versão | `versionName` = `package.json` (1.0.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
+| Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
+| Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
+| Painel DEV | fora (`VITE_DEV_PANEL=off`) |
+
+**Quando roda:** à mão (aba Actions → "Android App Bundle (Play Store)" → Run workflow) e a cada
+push na `main`. O GitHub só mostra o botão de rodar à mão para workflows que estão na branch
+principal (`main`).
+
+**O que sai:** o artefato `buxaria-1.0.0-aab-N` com o `app-release.aab`, para baixar na própria
+execução (guardado 90 dias). O resumo da execução mostra o SHA-1 e o SHA-256 da chave de upload.
+
+### 1. Gerar a chave de upload (uma vez, no seu computador)
+
+Precisa do Java instalado (o `keytool` vem com ele; o Android Studio já traz um JDK).
+
+```bash
+keytool -genkeypair -v \
+  -keystore buxaria-upload.jks -storetype PKCS12 \
+  -alias buxaria-upload \
+  -keyalg RSA -keysize 4096 -validity 10950
+```
+
+- `-validity 10950` = 30 anos (a Play pede pelo menos 25).
+- Ele pergunta a senha (escolha uma forte e anote) e seus dados (nome, organização, cidade,
+  estado, país: `BR`). No PKCS12 a senha da chave é a mesma do keystore.
+- **Guarde o `buxaria-upload.jks` e a senha em dois lugares seguros** (gerenciador de senhas e
+  um backup fora do computador). Nunca coloque no repositório: o `.gitignore` já ignora
+  `*.jks`, `*.keystore` e os `.b64`.
+
+### 2. Converter para Base64
+
+```bash
+# Linux
+base64 -w 0 buxaria-upload.jks > buxaria-upload.jks.b64
+# macOS
+base64 -i buxaria-upload.jks -o buxaria-upload.jks.b64
+```
+
+```powershell
+# Windows (PowerShell)
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("buxaria-upload.jks")) | Set-Content -NoNewline buxaria-upload.jks.b64
+```
+
+### 3. Criar os segredos no GitHub
+
+Settings → Secrets and variables → Actions → **New repository secret**:
+
+| Segredo | Valor |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | o conteúdo inteiro de `buxaria-upload.jks.b64` |
+| `ANDROID_KEY_ALIAS` | `buxaria-upload` |
+| `ANDROID_KEYSTORE_PASSWORD` | a senha que você escolheu |
+| `ANDROID_KEY_PASSWORD` | a mesma senha (PKCS12); se ficar vazio, o workflow usa a do keystore |
+
+Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < buxaria-upload.jks.b64`
+(e `gh secret set ANDROID_KEY_ALIAS`, que pergunta o valor). Depois apague o `.b64`.
+
+### 4. Enviar à Play Console
+
+- Rode o workflow, baixe o artefato e envie o `app-release.aab` (Teste interno é o caminho mais
+  rápido para conferir).
+- No primeiro envio, aceite a **Assinatura de apps do Google Play**: o Google guarda a chave
+  final do app, e a sua vira só a chave de upload (se ela se perder, dá para pedir a troca ao
+  suporte da Play).
+- **O pacote `com.buxaria.game` fica fixo para sempre depois do primeiro envio.**
+- Cada envio novo precisa de um `versionCode` maior. Política de Privacidade:
+  `https://gvsmodenezzi123-ui.github.io/domin-jogo/privacy.html`.
 
 ## Regras básicas
 
@@ -85,6 +163,24 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Versão 1.0: pronto para a Google Play
+
+- **App Bundle de produção:** o workflow novo `build-android.yml` gera o `app-release.aab`
+  assinado com a chave de upload (segredos do repositório), para a Play Console. Detalhes, a
+  chave e os segredos em "Publicar na Google Play", mais acima.
+- **Pacote oficial:** `com.buxaria.game` ("Buxaria"). Os APKs de teste continuam
+  `com.buxaria.domino` e `.dev`, assinados com a chave fixa, e instalam ao lado do app da loja.
+- **Android 16 (API 36):** a Play exige esse alvo desde 31/08/2026, então os dois workflows
+  passaram para o Capacitor 8 (JDK 21, Node 22, Android mínimo 7). Bordas: o jogo já usava as
+  margens seguras da tela (`env(safe-area-inset-*)`) e o Capacitor 8 cuida do resto no modo
+  `css`. A trava em retrato vale também em tela grande no Android 16.
+- **Permissões:** só `INTERNET` (o WebView do Capacitor precisa) e `VIBRATE`, que faltava: a
+  opção de vibração do jogo agora funciona no Android. ID de publicidade, estado da rede,
+  câmera, microfone, localização, contatos, armazenamento e notificações são removidos
+  explicitamente, caso alguma biblioteca tente incluir.
+- `scripts/prepare-android.mjs` concentra o ajuste do projeto Android (tela cheia, retrato,
+  permissões, versão) que antes era repetido no workflow.
 
 ## Patch 0.9.7: Política de Privacidade (Google Play e LGPD)
 

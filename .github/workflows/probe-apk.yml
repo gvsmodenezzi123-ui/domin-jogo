@@ -1,0 +1,106 @@
+name: PROBE APK (Capacitor 8)
+
+# Gera dois APKs de TESTE do Buxaria a cada push (Capacitor embrulha o build do jogo num app):
+#   Buxaria      com.buxaria.domino      sem painel DEV
+#   Buxaria DEV  com.buxaria.domino.dev  painel DEV já liberado
+# Os dois instalam lado a lado (e ao lado do app da Play, com.buxaria.game, que sai do
+# workflow build-android.yml em .aab). Ficam na aba Actions (artefatos) e numa Release
+# "Buxaria X.Y.Z (APK, build N)". Versão 1.0: Capacitor 8 (Android 16 / API 36, Java 21), o
+# mesmo projeto do .aab, ajustado por scripts/prepare-android.mjs.
+# Assinatura: sempre a chave fixa e pública de android-extras/debug.keystore (a mesma em todo
+# build: o APK novo instala por cima do antigo e o progresso fica). Ela NUNCA vai para a Play:
+# o envio à loja é o .aab de build-android.yml, assinado com a sua chave de upload.
+on:
+  push:
+    branches: [claude/lint-probe]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: APK ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: jogo
+            label: Buxaria
+            app_id: com.buxaria.domino
+            app_name: Buxaria
+            dev_panel: 'off'
+            assets: assets
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Build do jogo
+        env:
+          VITE_DEV_PANEL: ${{ matrix.dev_panel }}
+          VITE_NATIVE: '1'
+        run: npm run build
+
+      - name: Projeto Android (Capacitor)
+        env:
+          APP_ID: ${{ matrix.app_id }}
+          APP_NAME: ${{ matrix.app_name }}
+        run: |
+          npm install --no-save @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @capacitor/assets@3
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.appId=process.env.APP_ID;c.appName=process.env.APP_NAME;fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+          npx cap add android
+
+      - name: Ícone e tela de abertura
+        run: >-
+          npx capacitor-assets generate --android --assetPath ${{ matrix.assets }}
+          --iconBackgroundColor '#0d0a07' --iconBackgroundColorDark '#0d0a07'
+          --splashBackgroundColor '#0b0907' --splashBackgroundColorDark '#0b0907'
+
+      - name: Tela cheia, retrato, permissões e versão
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          VERSION_CODE=${{ github.run_number }} SIGN_WITH_GRADLE=1 node scripts/prepare-android.mjs
+          npx cap sync android
+
+      - name: Gerar o APK
+        working-directory: android
+        run: |
+          # APK de teste: sempre a chave fixa do repositório, para cada APK novo instalar por cima do
+          # anterior sem perder o progresso. A chave de upload da Play (segredos) é só do .aab.
+          export BUXARIA_KEYSTORE="$GITHUB_WORKSPACE/android-extras/debug.keystore" BUXARIA_KS_PASS=android BUXARIA_KS_ALIAS=androiddebugkey
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$OUT"
+          ls -la "$OUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buxaria-${{ matrix.variant }}
+          path: buxaria-*-${{ matrix.variant }}.apk
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Conferir o APK (aapt2)
+        run: |
+          AAPT=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)aapt2
+          $AAPT dump badging buxaria-*-jogo.apk > badging.txt
+          echo "::warning::$(grep -E "^package:|sdkVersion|targetSdkVersion" badging.txt | tr '\n' ' ')"
+          echo "::warning::PERMISSOES $(grep -E "uses-permission" badging.txt | tr '\n' ' ')"
+

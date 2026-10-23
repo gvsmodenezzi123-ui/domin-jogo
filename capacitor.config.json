@@ -1,10 +1,15 @@
 {
-  "appId": "com.buxaria.domino",
+  "appId": "com.buxaria.game",
   "appName": "Buxaria",
   "webDir": "dist",
   "backgroundColor": "#0b0907",
   "android": {
     "allowMixedContent": false,
     "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css"
+    }
   }
 }

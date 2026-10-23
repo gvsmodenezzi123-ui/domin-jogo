@@ -1,0 +1,133 @@
+name: PROBE App Bundle (chave descartável)
+
+# Build de produção oficial do Buxaria para a Google Play: um .aab (Android App Bundle)
+# assinado com a SUA chave de upload, pronto para enviar na Play Console.
+#
+#   pacote   com.buxaria.game ("Buxaria", capacitor.config.json), sem painel DEV
+#   versão   versionName = package.json; versionCode = número desta execução (ou o informado
+#            ao rodar à mão): a Play exige um versionCode maior a cada envio
+#   alvo     Android 16 (API 36), exigido pela Play para apps novos e atualizações desde
+#            31/08/2026: por isso Capacitor 8, que pede Java 21 (com JDK 17 o build não compila)
+#
+# Assinatura: os segredos do repositório (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64   o arquivo .jks/.keystore em Base64
+#   ANDROID_KEY_ALIAS         o alias da chave
+#   ANDROID_KEYSTORE_PASSWORD a senha do keystore
+#   ANDROID_KEY_PASSWORD      a senha da chave (no PKCS12, o padrão do keytool, é a mesma do
+#                             keystore; se faltar, usa a do keystore)
+# Sem eles o workflow para logo no começo (nunca assina com a chave de teste do repositório).
+# Como gerar a chave: README, seção "Publicar na Google Play".
+on:
+  push:
+    branches: [claude/lint-probe]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-aab-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: App Bundle assinado
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chave descartavel (so para testar o pipeline)
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/t.jks" -storetype PKCS12 -alias probe -keyalg RSA -keysize 4096 -validity 10950 -storepass probepass -keypass probepass -dname "CN=Probe, O=Teste, C=BR"
+          echo "KS_B64=$(base64 -w 0 "$RUNNER_TEMP/t.jks")" >> "$GITHUB_ENV"
+          echo "KS_ALIAS=probe" >> "$GITHUB_ENV"
+          echo "KS_PASS=probepass" >> "$GITHUB_ENV"
+          echo "KEY_PASS_OR_STORE=probepass" >> "$GITHUB_ENV"
+
+      # 1. Checkout
+      - uses: actions/checkout@v5
+
+      # 2. Node e dependências
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # 3. Build web de produção (sem painel DEV, sem service worker: o app roda dos arquivos locais)
+      - name: Build do jogo
+        env:
+          VITE_DEV_PANEL: 'off'
+          VITE_NATIVE: '1'
+        run: npm run build
+
+      # 4. Projeto Android do Capacitor e a sincronização
+      - name: Projeto Android (Capacitor 8)
+        run: |
+          npm install --no-save @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @capacitor/assets@3
+          npx cap add android
+          npx capacitor-assets generate --android --assetPath assets \
+            --iconBackgroundColor '#0d0a07' --iconBackgroundColorDark '#0d0a07' \
+            --splashBackgroundColor '#0b0907' --splashBackgroundColorDark '#0b0907'
+
+      - name: Versão, tela cheia e permissões
+        env:
+          INPUT_CODE: ${{ github.event.inputs.version_code }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          CODE="${INPUT_CODE:-${{ github.run_number }}}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          VERSION_CODE="$CODE" node scripts/prepare-android.mjs
+          npx cap sync android
+
+      # 5. Java (Capacitor 8 / Android Gradle Plugin 8.13 pedem JDK 21)
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      # 6. Bundle de produção
+      - name: Gerar o App Bundle (bundleRelease)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon
+          ls -la app/build/outputs/bundle/release/
+
+      # 7. Assinatura com a chave de upload (segredos)
+      - name: Assinar o .aab
+        run: |
+          KEYSTORE="$RUNNER_TEMP/upload.keystore"
+          echo "$KS_B64" | base64 -d > "$KEYSTORE"
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -keystore "$KEYSTORE" -storepass:env KS_PASS -keypass:env KEY_PASS_OR_STORE "$AAB" "$KS_ALIAS"
+          # a chave de upload é autoassinada (normal na Play): confere a assinatura, não a cadeia
+          jarsigner -verify "$AAB" | tee "$RUNNER_TEMP/verify.txt"
+          grep -q "jar verified" "$RUNNER_TEMP/verify.txt"
+          mkdir -p out
+          cp "$AAB" out/app-release.aab
+          echo "### Buxaria $VERSION (versionCode $VERSION_CODE)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          keytool -printcert -jarfile out/app-release.aab | grep -E "Owner|SHA1:|SHA256:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "Envie o app-release.aab (artefato abaixo) na Play Console. A chave acima é a de upload." >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$KEYSTORE"
+
+      # 8. O .aab assinado para baixar na aba Actions
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buxaria-${{ env.VERSION }}-aab-${{ env.VERSION_CODE }}
+          path: out/app-release.aab
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Conferir o .aab (bundletool)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download -R google/bundletool -p 'bundletool-all-*.jar' -O bundletool.jar
+          java -jar bundletool.jar validate --bundle out/app-release.aab | head -20
+          java -jar bundletool.jar dump manifest --bundle out/app-release.aab > manifest.xml
+          echo "::warning::$(grep -oE 'package="[^"]+"|android:versionCode="[^"]+"|android:versionName="[^"]+"|android:minSdkVersion="[^"]+"|android:targetSdkVersion="[^"]+"' manifest.xml | tr '\n' ' ')"
+          echo "::warning::PERMISSOES $(grep -oE 'uses-permission[^>]*android:name="[^"]+"' manifest.xml | grep -oE '"[^"]+"$' | tr '\n' ' ')"
+          echo "::warning::ORIENTACAO $(grep -oE 'screenOrientation="[^"]+"|PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY' manifest.xml | tr '\n' ' ')"
+          echo "::warning::ASSINATURA $(keytool -printcert -jarfile out/app-release.aab | grep -E 'Owner|SHA256:' | tr '\n' ' ')"
