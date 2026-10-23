@@ -8,7 +8,8 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 /**
- * Buxaria no Android (gerado pelo workflow .github/workflows/android-apk.yml).
+ * Buxaria no Android (scripts/prepare-android.mjs copia este arquivo no projeto que o Capacitor
+ * gera nos workflows android-apk.yml, o APK de teste, e build-android.yml, o .aab da Play).
  * - Tela cheia: esconde as barras do sistema (arrastar da borda mostra por um instante).
  * - Voltar manda o jogo para o fundo em vez de fechar: a partida continua de onde parou.
  */

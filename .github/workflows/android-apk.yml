@@ -1,15 +1,15 @@
 name: APK Android
 
-# Gera dois APKs do Buxaria a cada push (Capacitor embrulha o build do jogo num app):
+# Gera dois APKs de TESTE do Buxaria a cada push (Capacitor embrulha o build do jogo num app):
 #   Buxaria      com.buxaria.domino      sem painel DEV
 #   Buxaria DEV  com.buxaria.domino.dev  painel DEV já liberado
-# Os dois instalam lado a lado. Ficam na aba Actions (artefatos) e numa Release
-# "Buxaria X.Y.Z (APK, build N)".
-# Assinatura (build de release): sem segredos, usa a chave fixa de
-# android-extras/debug.keystore (a mesma em todo build: o APK novo instala por cima do
-# antigo e o progresso fica). Para a Play Store, crie os segredos ANDROID_KEYSTORE_BASE64,
-# ANDROID_KEYSTORE_PASSWORD e ANDROID_KEY_ALIAS (Settings → Secrets and variables →
-# Actions): aí o APK sai assinado com a sua chave.
+# Os dois instalam lado a lado (e ao lado do app da Play, com.buxaria.game, que sai do
+# workflow build-android.yml em .aab). Ficam na aba Actions (artefatos) e numa Release
+# "Buxaria X.Y.Z (APK, build N)". Versão 1.0: Capacitor 8 (Android 16 / API 36, Java 21), o
+# mesmo projeto do .aab, ajustado por scripts/prepare-android.mjs.
+# Assinatura: sempre a chave fixa e pública de android-extras/debug.keystore (a mesma em todo
+# build: o APK novo instala por cima do antigo e o progresso fica). Ela NUNCA vai para a Play:
+# o envio à loja é o .aab de build-android.yml, assinado com a sua chave de upload.
 on:
   push:
     branches: [main, claude/buxaria-patch-0-1]
@@ -50,7 +50,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -68,7 +68,7 @@ jobs:
           APP_ID: ${{ matrix.app_id }}
           APP_NAME: ${{ matrix.app_name }}
         run: |
-          npm install --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets@3
+          npm install --no-save @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @capacitor/assets@3
           node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.appId=process.env.APP_ID;c.appName=process.env.APP_NAME;fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
           npx cap add android
 
@@ -78,54 +78,19 @@ jobs:
           --iconBackgroundColor '#0d0a07' --iconBackgroundColorDark '#0d0a07'
           --splashBackgroundColor '#0b0907' --splashBackgroundColorDark '#0b0907'
 
-      - name: Tela cheia, retrato e versão
-        env:
-          APP_ID: ${{ matrix.app_id }}
+      - name: Tela cheia, retrato, permissões e versão
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          ACTIVITY=$(find android/app/src/main/java -name MainActivity.java | head -1)
-          sed "s/__PACKAGE__/$APP_ID/" android-extras/MainActivity.java > "$ACTIVITY"
-          sed -i 's/android:name=".MainActivity"/android:name=".MainActivity" android:screenOrientation="portrait"/' android/app/src/main/AndroidManifest.xml
-          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
-          grep -n "screenOrientation" android/app/src/main/AndroidManifest.xml
-          grep -n "versionCode\|versionName" android/app/build.gradle
-          cat >> android/app/build.gradle <<'GRADLE'
-
-          // Buxaria: a assinatura vem do workflow (chave fixa do repositório ou a dos segredos)
-          android {
-              signingConfigs {
-                  buxaria {
-                      storeFile file(System.getenv("BUXARIA_KEYSTORE"))
-                      storePassword System.getenv("BUXARIA_KS_PASS")
-                      keyAlias System.getenv("BUXARIA_KS_ALIAS")
-                      keyPassword System.getenv("BUXARIA_KS_PASS")
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.buxaria
-                  }
-              }
-          }
-          GRADLE
+          VERSION_CODE=${{ github.run_number }} SIGN_WITH_GRADLE=1 node scripts/prepare-android.mjs
           npx cap sync android
 
       - name: Gerar o APK
         working-directory: android
-        env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/buxaria.jks"
-            export BUXARIA_KEYSTORE="$RUNNER_TEMP/buxaria.jks" BUXARIA_KS_PASS="$KS_PASS" BUXARIA_KS_ALIAS="$KS_ALIAS"
-            echo "Assinando com a chave dos segredos."
-          else
-            export BUXARIA_KEYSTORE="$GITHUB_WORKSPACE/android-extras/debug.keystore" BUXARIA_KS_PASS=android BUXARIA_KS_ALIAS=androiddebugkey
-            echo "Sem os segredos: assinando com a chave fixa do repositório."
-          fi
+          # APK de teste: sempre a chave fixa do repositório, para cada APK novo instalar por cima do
+          # anterior sem perder o progresso. A chave de upload da Play (segredos) é só do .aab.
+          export BUXARIA_KEYSTORE="$GITHUB_WORKSPACE/android-extras/debug.keystore" BUXARIA_KS_PASS=android BUXARIA_KS_ALIAS=androiddebugkey
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
           OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"

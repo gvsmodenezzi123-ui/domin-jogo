@@ -21,7 +21,7 @@ export function runSummaryText({ state, stats, won, rivalName, version = '' }) {
   const algoz = biggestRivalNameOf(stats);
   const region = currentNode(state)?.region ?? 1;
   const lines = [
-    `BUXARIA${version ? ` · Patch ${version}` : ''}`,
+    `BUXARIA${version ? ` · Versão ${version}` : ''}`,
     outcomeTitleOf(won, rivalName),
     `Semente: ${seedLabelOf(state) ?? '—'} · ${modeOf(state.mode).name} · ${maletaOf(state.maleta).name}`,
     `Mesas vencidas: ${state.stats?.matchesWon ?? 0} · Região ${region}/${REGIONS.length}`,
