@@ -103,8 +103,11 @@ describe('Patch 0.9.0: chefes e Conta do Boteco', () => {
     expect([...BOSS_INTRO_IDS].sort()).toEqual(['arlindo', 'beto', 'comendador']);
   });
 
-  it('cada melhoria da Conta do Boteco ficou pelo menos 4 tampinhas mais cara', () => {
-    const before = { copoAmericano: 5, valtinho: 8, fiado: 12, bolsoFundo: 15 };
-    for (const [id, old] of Object.entries(before)) expect(UPGRADES[id].cost).toBeGreaterThanOrEqual(old + 4);
+  it('Conta do Boteco (Patch 0.9.6): 1 tampinha cada; o Bolso Fundo (5º espaço) custa 2', () => {
+    expect(UPGRADES.copoAmericano.cost).toBe(1);
+    expect(UPGRADES.valtinho.cost).toBe(1);
+    expect(UPGRADES.fiado.cost).toBe(1);
+    expect(UPGRADES.bolsoFundo.cost).toBe(2);
+    expect(UPGRADES.bolsoFundo.extraSlots).toBe(1);
   });
 });

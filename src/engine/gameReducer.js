@@ -24,7 +24,7 @@ import { buildTioZeView, decideTioZeAction } from '../ai/tioZeAI.js';
 import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, getRelic, markUsed } from '../data/relics.js';
 import { DEFAULT_MALETA, MALETAS, maletaOf } from '../data/maletas.js';
-import { CAPS_PER_BOSS, CAPS_PER_CHALLENGE, CAPS_PER_CLEAR, CAPS_PER_RIVAL, CHALLENGES, DRUNK_EVERY, UPGRADES } from '../data/meta.js';
+import { CAPS_PER_RUN_WON, CHALLENGES, DRUNK_EVERY, UPGRADES } from '../data/meta.js';
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
 import { FIRST_RIVAL, RIVALS, SECRET_BOSS, TUTOR_ID, getRival, rivalFor, rivalOf } from '../data/rivals.js';
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
@@ -330,9 +330,8 @@ function endMatch(state, winner) {
     const runWon = secretWon || (finalBoss && !secret);
     // Maleta Seca: o prêmio vem em dobro
     const prize = (MATCH_PRIZE + rival.prizeBonus) * maletaOf(state.maleta).prizeMultiplier;
-    // Tampinhas Douradas: +1 rival, +3 chefe, +5 por zerar, +10 por concluir o desafio
-    const caps =
-      (boss ? CAPS_PER_BOSS : CAPS_PER_RIVAL) + (runWon ? CAPS_PER_CLEAR : 0) + (finalBoss && state.challenge ? CAPS_PER_CHALLENGE : 0);
+    // Tampinhas Douradas (Patch 0.9.6): só 1 por run, e só quando ela é vencida
+    const caps = runWon ? CAPS_PER_RUN_WON : 0;
     const max = playerMaxHearts(state);
     // Peças Prateadas: cada mesa (chefe também) devolve só 1 coração
     const perTable = modeOf(state.mode).healPerTable;

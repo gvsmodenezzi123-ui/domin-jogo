@@ -163,7 +163,7 @@ export function unlockChallenge(id) {
   return true;
 }
 
-/** Marca o desafio como concluído (a moldura sai junto; as 10 tampinhas vêm no prêmio da mesa). */
+/** Marca o desafio como concluído (a moldura sai junto; a tampinha é a da run vencida, Patch 0.9.6). */
 export function completeChallenge(id) {
   const challenge = CHALLENGES[id];
   const current = loadChallenges();
@@ -173,7 +173,7 @@ export function completeChallenge(id) {
     done: CHALLENGE_IDS.filter((c) => c === id || current.done.includes(c)),
   });
   changed();
-  announce({ id: `frame:${id}`, kind: 'frame', kicker: 'DESAFIO CONCLUÍDO!', title: challenge.name, line: `${challenge.frameName} liberada · +10 tampinhas` });
+  announce({ id: `frame:${id}`, kind: 'frame', kicker: 'DESAFIO CONCLUÍDO!', title: challenge.name, line: `${challenge.frameName} liberada` });
   return true;
 }
 

@@ -108,20 +108,21 @@ describe('Patch 0.8.0: maletas', () => {
 });
 
 describe('Patch 0.8.0: Conta do Boteco', () => {
-  it('Tampinhas: +1 rival comum, +3 chefe; somam na run', () => {
+  it('Tampinhas (Patch 0.9.6): mesa comum e chefe de região não dão nenhuma', () => {
     const common = win(duel({ rivalId: 'tonho' }));
-    expect(lastOf(common, 'duelEnd').caps).toBe(1);
-    expect(common.stats.caps).toBe(1);
+    expect(lastOf(common, 'duelEnd').caps).toBe(0);
+    expect(common.stats.caps).toBe(0);
     const boss = win(duel({ rivalId: 'arlindo' }));
-    expect(lastOf(boss, 'duelEnd').caps).toBe(3);
+    expect(lastOf(boss, 'duelEnd').caps).toBe(0);
   });
 
-  it('Zerar: +3 do chefe e +5 da campanha (+10 com desafio)', () => {
+  it('Zerar a campanha: 1 tampinha só (com desafio também)', () => {
     const s = win(duel({ rivalId: 'comendador' }));
     expect(s.phase).toBe('runWon');
-    expect(lastOf(s, 'duelEnd')).toMatchObject({ caps: 8, finalBoss: true, runWon: true });
+    expect(lastOf(s, 'duelEnd')).toMatchObject({ caps: 1, finalBoss: true, runWon: true });
+    expect(s.stats.caps).toBe(1);
     const c = win(duel({ rivalId: 'comendador', challenge: 'mesaBebada' }));
-    expect(lastOf(c, 'duelEnd').caps).toBe(18);
+    expect(lastOf(c, 'duelEnd').caps).toBe(1);
   });
 
   it('melhorias: compra com tampinhas, sem saldo não compra, não compra duas vezes', () => {
@@ -208,7 +209,7 @@ describe('Patch 0.8.0: O Dono da Noite (nó 19)', () => {
     s = { ...s, relics: { ...s.relics, player: necro } };
     s = win(s);
     expect(s.phase).toBe('secretReveal');
-    expect(lastOf(s, 'duelEnd')).toMatchObject({ finalBoss: true, secret: true, runWon: false, caps: 3 });
+    expect(lastOf(s, 'duelEnd')).toMatchObject({ finalBoss: true, secret: true, runWon: false, caps: 0 });
     // com 2 não acontece
     let two = duel({ rivalId: 'comendador' });
     two = win({ ...two, relics: { ...two.relics, player: necro.slice(0, 2) } });
@@ -236,13 +237,13 @@ describe('Patch 0.8.0: O Dono da Noite (nó 19)', () => {
     expect(directDamage(setup(t(4, 4)), 'tioZe', 1, 'dev').hearts.tioZe).toBe(8);
   });
 
-  it('vencer o Dono encerra a run com o final secreto (+3 chefe, +5 campanha)', () => {
+  it('vencer o Dono encerra a run com o final secreto (a tampinha da run vencida)', () => {
     let s = duel({ rivalId: 'comendador' });
     s = win({ ...s, relics: { ...s.relics, player: necro } });
     s = win(act(s, 'START_SECRET', { deck: FULL_SET.slice() }));
     expect(s.phase).toBe('runWon');
-    expect(lastOf(s, 'duelEnd')).toMatchObject({ secretWon: true, runWon: true, finalBoss: false, caps: 8 });
-    expect(s.stats.caps).toBe(11);
+    expect(lastOf(s, 'duelEnd')).toMatchObject({ secretWon: true, runWon: true, finalBoss: false, caps: 1 });
+    expect(s.stats.caps).toBe(1);
   });
 });
 

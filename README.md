@@ -86,6 +86,16 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.6: tampinhas mais raras, Conta do Boteco mais barata
+
+- **Tampinhas Douradas:** agora só **1 por run, e só se a run for vencida** (derrotar o
+  Comendador, ou O Dono da Noite no final secreto). Mesa comum, chefe de região e desafio não dão
+  mais tampinha; perder a run não dá nenhuma.
+- **A Conta do Boteco:** cada melhoria custa **1 tampinha** (Copo Americano, Amizade com o
+  Valtinho, Fiado de Rua); o **Bolso Fundo**, que abre o 5º espaço de talismã, custa **2**.
+- Desafios: o prêmio é a moldura (a tampinha é a da run vencida). As tampinhas que já estavam no
+  aparelho continuam lá.
+
 ## Patch 0.9.5: a partida de treino com o Vô Juca
 
 ### O professor (`data/rivals.js` → `TUTOR`, `components/art/TutorArt.jsx`)
@@ -441,18 +451,18 @@ sob a lâmpada, com 5 maletas de partida em pixel art 48x48.
 
 ### A Conta do Boteco (`RunEndBoard.jsx`, `engine/meta.js`)
 
-- **Tampinhas Douradas** (`buxaria_gold_caps`): +1 por rival comum, +3 por chefe, +5 por
-  zerar, +10 por concluir um desafio. Elas vão para o aparelho a cada mesa vencida e nunca se
-  perdem ao morrer.
+- **Tampinhas Douradas** (`buxaria_gold_caps`): desde o 0.9.6, **1 por run, e só vencendo**
+  (zerar a campanha, ou vencer O Dono da Noite). Mesa comum, chefe de região e desafio não dão
+  mais. A tampinha vai para o aparelho na hora da vitória.
 - **No fim de toda run**, perdida ou vencida, abre a lousa: o resumo, as tampinhas da run, o
   saldo e as 4 melhorias permanentes.
 
 | Melhoria | Custo | Efeito |
 | --- | --- | --- |
-| Copo Americano | 10 | +$2 no começo de toda run |
-| Amizade com o Valtinho | 14 | 1º reembaralhar de cada loja de graça |
-| Fiado de Rua | 18 | 1º passe voluntário da run de graça (o botão mostra FIADO) |
-| Bolso Fundo | 22 | +1 espaço de talismã |
+| Copo Americano | 1 | +$2 no começo de toda run |
+| Amizade com o Valtinho | 1 | 1º reembaralhar de cada loja de graça |
+| Fiado de Rua | 1 | 1º passe voluntário da run de graça (o botão mostra FIADO) |
+| Bolso Fundo | 2 | +1 espaço de talismã (o 5º) |
 
 TENTAR DE NOVO leva direto ao Balcão, com as melhorias valendo.
 
@@ -466,7 +476,7 @@ TENTAR DE NOVO leva direto ao Balcão, com as melhorias valendo.
 
 - **Como jogar:** JOGAR abre o Balcão com o desafio valendo, e você escolhe a maleta e as
   peças.
-- **Recompensa:** concluir dá 10 tampinhas e a moldura. Equipada, a moldura enfeita a borda da
+- **Recompensa:** concluir dá a moldura (e a tampinha da run vencida). Equipada, a moldura enfeita a borda da
   sua mão na mesa.
 
 ### O Dono da Noite (nó 19 secreto: `SecretBoss.jsx`, `art/SecretBossArt.jsx`)

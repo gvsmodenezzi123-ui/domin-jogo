@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { CHALLENGES, CHALLENGE_IDS, CAPS_PER_CHALLENGE } from '../data/meta.js';
+import { CHALLENGES, CHALLENGE_IDS } from '../data/meta.js';
 import { loadChallenges, loadEquippedFrame, saveEquippedFrame, subscribeMeta } from '../engine/meta.js';
-import { BottleCapIcon } from './ArtSprites.jsx';
 import PagedBlocks from './PagedBlocks.jsx';
 
 const challengesKey = () => {
@@ -44,7 +43,7 @@ export default function ChallengesModal({ onPlay }) {
                 <>
                   <p className="mt-0.5 font-term text-[16px] leading-[1.05] text-bone-200">{challenge.rule}</p>
                   <p className="mt-1 flex items-center gap-1 font-pixel text-[7px] text-amber-300">
-                    PRÊMIO: <BottleCapIcon className="h-3 w-3" /> {CAPS_PER_CHALLENGE} + {challenge.frameName.toUpperCase()}
+                    PRÊMIO: {challenge.frameName.toUpperCase()}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button type="button" data-tone="play" className="btn-pixel btn-mini" onClick={() => onPlay(id)}>

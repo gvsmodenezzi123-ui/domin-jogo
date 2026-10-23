@@ -1,47 +1,45 @@
 /**
  * Meta-progressão (Patch 0.8.0): o que fica de uma run para a outra.
  *
- *   Tampinhas Douradas  moeda permanente: +1 por rival comum vencido, +3 por chefe,
- *                       +5 por zerar a campanha, +10 por concluir um desafio
+ *   Tampinhas Douradas  moeda permanente. Patch 0.9.6: só 1 por run, e só vencendo (zerar a
+ *                       campanha, ou vencer O Dono da Noite); mesa, chefe e desafio não dão mais
  *   A Conta do Boteco   4 melhorias permanentes, compradas com tampinhas na lousa do
- *                       fim de cada run (RunEndBoard.jsx). Patch 0.9.0: preços subiram
- *                       (10, 14, 18 e 22; eram 5, 8, 12 e 15)
+ *                       fim de cada run (RunEndBoard.jsx). Patch 0.9.6: 1 tampinha cada; o
+ *                       Bolso Fundo (o 5º espaço de talismã) custa 2
  *   Desafios            regras extremas liberadas por metas (ChallengesModal.jsx)
  *
  * O estado gravado no aparelho fica em engine/meta.js.
  */
 
-export const CAPS_PER_RIVAL = 1;
-export const CAPS_PER_BOSS = 3;
-export const CAPS_PER_CLEAR = 5;
-export const CAPS_PER_CHALLENGE = 10;
+/** Tampinhas por run vencida (perder não dá nenhuma). */
+export const CAPS_PER_RUN_WON = 1;
 
 export const UPGRADES = Object.freeze({
   copoAmericano: Object.freeze({
     id: 'copoAmericano',
     name: 'Copo Americano',
-    cost: 10,
+    cost: 1,
     description: 'Toda run começa com +$2 no bolso.',
     startCoins: 2,
   }),
   valtinho: Object.freeze({
     id: 'valtinho',
     name: 'Amizade com o Valtinho',
-    cost: 14,
+    cost: 1,
     description: 'O 1º reembaralhar de cada Loja do Valtinho é de graça.',
     firstRerollFree: true,
   }),
   fiado: Object.freeze({
     id: 'fiado',
     name: 'Fiado de Rua',
-    cost: 18,
+    cost: 1,
     description: 'O 1º passe voluntário da run sai de graça.',
     freePass: true,
   }),
   bolsoFundo: Object.freeze({
     id: 'bolsoFundo',
     name: 'Bolso Fundo',
-    cost: 22,
+    cost: 2,
     description: '1 espaço a mais de talismã na hotbar, em toda run.',
     extraSlots: 1,
   }),
