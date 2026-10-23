@@ -104,11 +104,13 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
         <button type="button" onClick={onSecretTap} className="font-pixel text-[10px] text-bone-50 text-shadow-pixel" aria-label="Você">
           VOCÊ
         </button>
-        <HeartsBar current={hearts} max={maxHearts} pixel={2} label={`Você: ${hearts} de ${maxHearts} corações`} />
+        <span data-tut="hearts">
+          <HeartsBar current={hearts} max={maxHearts} pixel={2} label={`Você: ${hearts} de ${maxHearts} corações`} />
+        </span>
       </div>
       <div className="flex items-center gap-3">
         {sum !== null && (
-          <span className={`font-pixel text-[9px] ${sumIsFive ? 'text-brass-300' : 'text-bone-300'}`} aria-label={`Soma das pontas: ${sum}`}>
+          <span data-tut="sum" className={`font-pixel text-[9px] ${sumIsFive ? 'text-brass-300' : 'text-bone-300'}`} aria-label={`Soma das pontas: ${sum}`}>
             Σ{sum}
           </span>
         )}
@@ -257,7 +259,7 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
   const { unit, spots } = computeFan(hand.length, width);
   const active = isTurn || discardMode;
   return (
-    <div ref={areaRef} className="relative mx-1" style={{ height: FAN_HEIGHT }}>
+    <div ref={areaRef} data-tut="hand" className="relative mx-1" style={{ height: FAN_HEIGHT }}>
       {hand.map((tile, i) => {
         const spot = spots[i];
         if (!spot) return null;
@@ -322,7 +324,7 @@ const ActionBar = memo(function ActionBar({
         </div>
       ) : (
         <div className="grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
-          <button type="button" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
+          <button type="button" data-tut="draw" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
             <span>COMPRAR</span>
             <span className="text-[8px] text-bone-200">
               <DrawCost draw={draw} />
@@ -333,7 +335,7 @@ const ActionBar = memo(function ActionBar({
           <div className="flex gap-2">
             {selectedSides.length > 0 ? (
               selectedSides.map((side) => (
-                <button key={side} type="button" data-tone="play" className="btn-pixel flex-1" onClick={() => onPlay(side)}>
+                <button key={side} type="button" data-tone="play" data-tut-side={side} className="btn-pixel flex-1" onClick={() => onPlay(side)}>
                   {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
                 </button>
               ))
@@ -347,6 +349,7 @@ const ActionBar = memo(function ActionBar({
           <button
             type="button"
             data-tone="blood"
+            data-tut="pass"
             className="btn-pixel flex flex-col items-center justify-center"
             disabled={!canPass}
             onClick={onPass}

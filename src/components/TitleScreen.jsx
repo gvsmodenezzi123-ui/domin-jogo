@@ -114,7 +114,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.4</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · PATCH 0.9.5</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -123,7 +123,7 @@ function Credits() {
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">NA MESA</span>
-        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas. E dizem que, para quem carrega almas demais, a noite tem mais uma mesa.
+        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite. Quem ensina os novatos é o Vô Juca. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas. E dizem que, para quem carrega almas demais, a noite tem mais uma mesa.
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">SOM</span>
@@ -160,6 +160,8 @@ export default function TitleScreen({
   blackUnlocked = false,
   silverUnlocked = false,
   startPicking = false,
+  tutorialPending = false,
+  onTutorial,
 }) {
   const [modal, setModal] = useState(null);
   const [choosing, setChoosing] = useState(Boolean(startPicking));
@@ -188,6 +190,14 @@ export default function TitleScreen({
     onTap?.();
     setPicking({ challenge: null });
   };
+  // Patch 0.9.5: o 1º NOVO JOGO senta direto na mesa de treino do Vô Juca (o Balcão vem depois)
+  const newGame = tutorialPending && onTutorial ? () => onTutorial({ replay: false }) : openCases;
+  const replayTutorial = onTutorial
+    ? () => {
+        setModal(null);
+        onTutorial({ replay: true });
+      }
+    : null;
   const playChallenge = (challenge) => {
     onTap?.();
     setModal(null);
@@ -248,7 +258,7 @@ export default function TitleScreen({
           {choosing && (
             <PlayChoices
               save={save}
-              onNewGame={openCases}
+              onNewGame={newGame}
               onContinue={onContinue}
               onChallenges={() => open('challenges')}
               hasChallenges={metaKey.split('|')[1] !== ''}
@@ -267,14 +277,14 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            PATCH 0.9.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            PATCH 0.9.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>
 
       {modal === 'options' && (
         <MenuModal id="options-title" title="OPÇÕES" onClose={close}>
-          <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} />
+          <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} />
         </MenuModal>
       )}
       {modal === 'book' && (

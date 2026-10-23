@@ -718,7 +718,38 @@ export const SECRET_BOSS = 'donoDaNoite';
 export const FIRST_RIVAL = 'tioZe';
 export const BOSS_IDS = Object.freeze(RIVAL_IDS.filter((id) => RIVALS[id].boss));
 
-export const getRival = (id) => RIVALS[id] ?? RIVALS.tioZe;
+/**
+ * Patch 0.9.5: Vô Juca, o Professor do Boteco. Senta só na partida de treino (data/tutorial.js):
+ * fica fora da galeria, da teia, do Livro de Boteco e das conquistas. Joga o que o roteiro manda.
+ */
+export const TUTOR_ID = 'voJuca';
+export const TUTOR = Object.freeze({
+  id: TUTOR_ID,
+  art: 'voJuca',
+  name: 'Vô Juca',
+  title: 'O Professor do Boteco',
+  region: 1,
+  boss: false,
+  rarity: 'comum',
+  hearts: 3,
+  coins: 5,
+  relics: [],
+  deck: {},
+  mechanics: {},
+  style: DEFAULT_STYLE,
+  reflexMs: 900,
+  prizeBonus: 0,
+  felt: { light: '#2f5a3c', mid: '#234a30', dark: '#183522' },
+  decor: ['chalk'],
+  lines: Object.freeze({
+    intro: ['Senta aí, que eu te ensino.'],
+    play: ['Olha só.', 'Assim, ó.'],
+    winRound: ['Viu como é?'],
+    loseRound: ['Ai! Aprendeu rápido.'],
+  }),
+});
+
+export const getRival = (id) => RIVALS[id] ?? (id === TUTOR_ID ? TUTOR : RIVALS.tioZe);
 
 // ---------------------------------------------------------------------------
 // IA adaptativa por região (Patch 0.6.1)
@@ -945,7 +976,7 @@ export const INFERNO_RIVALS = Object.freeze(
 
 /** O rival `id` no modo da run (normal, 'hard' ou 'inferno'). */
 export const rivalFor = (id, mode = 'normal') =>
-  (mode === 'inferno' ? INFERNO_RIVALS[id] : mode === 'hard' ? HARD_RIVALS[id] : RIVALS[id]) ?? RIVALS.tioZe;
+  (mode === 'inferno' ? INFERNO_RIVALS[id] : mode === 'hard' ? HARD_RIVALS[id] : RIVALS[id]) ?? (id === TUTOR_ID ? TUTOR : RIVALS.tioZe);
 
 /** O rival da mesa deste estado, no modo da run. */
 export const rivalOf = (state) => rivalFor(state.rivalId, state.mode);

@@ -233,6 +233,10 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
           <button type="button" data-tone="blood" className="btn-pixel btn-mini mt-2 w-full" onClick={() => dev('secretReveal')}>
             REVELAR O DONO DA NOITE (NÓ 19)
           </button>
+          {/* Patch 0.9.5: o próximo NOVO JOGO senta com o Vô Juca de novo */}
+          <button type="button" data-tone="brass" className="btn-pixel btn-mini mt-2 w-full" onClick={() => onAction({ op: 'tutorialAgain' })}>
+            TREINO DO VÔ JUCA NO PRÓXIMO NOVO JOGO
+          </button>
         </section>
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-ach">

@@ -99,6 +99,7 @@ const VOICE_PROFILES = {
   valtinho: { baseFreq: 118, mod: 42, type: 'triangle', speed: 72 }, // atendente da Loja Clandestina, com o palito na boca
   corvo: { baseFreq: 72, mod: 18, type: 'sawtooth', speed: 105 }, // Corvo da Madrugada: sussurro grave no escuro do beco
   seuTiao: { baseFreq: 150, mod: 55, type: 'triangle', speed: 90 }, // Seu Tião das Moedas: velho risonho, sem pressa
+  voJuca: { baseFreq: 132, mod: 38, type: 'triangle', speed: 34 }, // Vô Juca (tutorial): vozinha de vô, fala ligeiro pra aula não arrastar
 };
 
 /** ids do jogo → perfis acima. */

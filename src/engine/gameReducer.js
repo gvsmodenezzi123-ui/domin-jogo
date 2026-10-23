@@ -26,7 +26,7 @@ import { RELICS, getRelic, markUsed } from '../data/relics.js';
 import { DEFAULT_MALETA, MALETAS, maletaOf } from '../data/maletas.js';
 import { CAPS_PER_BOSS, CAPS_PER_CHALLENGE, CAPS_PER_CLEAR, CAPS_PER_RIVAL, CHALLENGES, DRUNK_EVERY, UPGRADES } from '../data/meta.js';
 import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
-import { FIRST_RIVAL, RIVALS, SECRET_BOSS, getRival, rivalFor, rivalOf } from '../data/rivals.js';
+import { FIRST_RIVAL, RIVALS, SECRET_BOSS, TUTOR_ID, getRival, rivalFor, rivalOf } from '../data/rivals.js';
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
 import { normalizeSeed, seedNumberOf } from './seedEngine.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
@@ -34,6 +34,8 @@ import { MAP_VERSION, availableNodes, campaignOf, coinReward, currentNode, mixSe
 import { resolveEncounter, encounterOptionBlock } from './encounters.js';
 import { RADIO_FIVE_BONUS, WET_BONUS_POINTS, tableModIs, tableModifierOf } from '../data/tableModifiers.js';
 import { encounterOf } from '../data/encounters.js';
+import { TUTORIAL_STEPS } from '../data/tutorial.js';
+import { tutorialDeal, tutorialStepOf } from './tutorial.js';
 import {
   DAMAGE,
   MAX_HEARTS,
@@ -172,6 +174,8 @@ export function createInitialState() {
     coinEvent: null, // prêmio do Seu Tião das Moedas
     encounter: null, // Patch 0.9.4: evento de dilema do nó [?] ({ id, node, choice, outcome })
     tableMod: null, // Patch 0.9.4: regra de mesa da partida atual (data/tableModifiers.js)
+    // Patch 0.9.5: partida de treino com o Vô Juca ({ step, replay } ou null; data/tutorial.js)
+    tutorial: null,
     fx: createRoundFx(),
     pending: null,
     seed: null,
@@ -188,8 +192,9 @@ const tone = (seat) => (seat === 'player' ? 'player' : 'enemy');
 // Partida e rodada
 // ---------------------------------------------------------------------------
 
-function startRound(state, deck) {
-  const { hands, boneyard } = dealFromDeck(deck);
+function startRound(state, deck, dealt = null) {
+  // `dealt` (Patch 0.9.5): mãos e dorme já prontos (as rodadas encenadas do treino)
+  const { hands, boneyard } = dealt ?? dealFromDeck(deck);
   let next = {
     ...state,
     phase: 'playing',
@@ -308,6 +313,11 @@ function startSecret(state, { deck }) {
  * o mapa abre os próximos caminhos; o chefe final encerra a run); se foi você, a run acaba.
  */
 function endMatch(state, winner) {
+  // Patch 0.9.5: a partida de treino acaba sem prêmio, tampinha, save nem mapa (o roteiro segue)
+  if (state.tutorial) {
+    const next = { ...state, phase: 'roundOver', duelWinner: winner, nextStarter: null, pending: null };
+    return emit(next, { type: 'duelEnd', winner, tutorial: true });
+  }
   if (winner === 'player') {
     const node = currentNode(state);
     const rival = rivalOf(state);
@@ -1240,6 +1250,104 @@ function loadRun(state, action) {
 }
 
 // ---------------------------------------------------------------------------
+// Partida de treino (Patch 0.9.5, data/tutorial.js)
+// ---------------------------------------------------------------------------
+
+/**
+ * Senta com o Vô Juca: estado zerado (nada da run, nada do save), 5 corações seus, 3 dele, e
+ * a rodada 1 com as mãos do roteiro. A teia, a semente e a carreira não são tocadas.
+ */
+function startTutorial(state, action) {
+  const tutor = getRival(TUTOR_ID);
+  let next = {
+    ...createInitialState(),
+    rivalId: TUTOR_ID,
+    hearts: bySeat(MAX_HEARTS, tutor.hearts),
+    maxHearts: bySeat(MAX_HEARTS, tutor.hearts),
+    coins: bySeat(STARTING_COINS, tutor.coins),
+    tutorial: { step: 0, replay: Boolean(action.replay) },
+    unlocks: state.unlocks,
+    seq: state.seq,
+    events: state.events,
+  };
+  next = emit(next, { type: 'duelStart', rivalId: TUTOR_ID, match: 0, tableMod: null, tutorial: true });
+  return startRound(next, null, tutorialDeal(1));
+}
+
+/** Próximo passo do roteiro, com o que acontece ao chegar nele (o presente, a rodada 2). */
+function advanceTutorial(state) {
+  const step = state.tutorial.step + 1;
+  let next = { ...state, tutorial: { ...state.tutorial, step } };
+  const enter = TUTORIAL_STEPS[step]?.enter;
+  if (enter?.grant && getRelic(enter.grant) && !next.relics.player.includes(enter.grant)) {
+    next = { ...next, relics: { ...next.relics, player: [...next.relics.player, enter.grant] } };
+    next = proc(next, { source: 'relic', id: enter.grant, text: `${RELICS[enter.grant].name.toUpperCase()}!`, tone: 'player', owner: 'player' });
+  }
+  if (enter?.round && next.phase === 'roundOver') next = startRound(next, null, tutorialDeal(enter.round));
+  return next;
+}
+
+/** A jogada valeu (o estado mudou)? Então o roteiro anda. */
+const tutorialMoved = (before, after) => (after === before ? before : advanceTutorial(after));
+
+/** Ações que, no treino, só passam se forem exatamente o que o passo espera. */
+const TUTORIAL_GATED = new Set([
+  'PLAY',
+  'DRAW',
+  'DRAW_PICK',
+  'PASS',
+  'DISCARD',
+  'SKIP_DISCARD',
+  'UNDO',
+  'TIO_ZE_ACT',
+  'USE_CANIVETE',
+  'CANIVETE_PICK',
+  'CANCEL_CANIVETE',
+  'NEXT_ROUND',
+  'OPEN_MAP',
+  'ENTER_NODE',
+  'CHOOSE_NODE',
+  'START_SECRET',
+  'DEV',
+]);
+
+function tutorialAction(state, action) {
+  const expect = tutorialStepOf(state)?.expect;
+  if (!expect) return state;
+  switch (action.type) {
+    case 'PLAY':
+      if (action.actor !== 'player' || expect.type !== 'play' || action.tileId !== expect.tile || action.side !== expect.side) return state;
+      return tutorialMoved(state, playTile(state, action));
+    case 'DRAW':
+      if (action.actor !== 'player' || expect.type !== 'draw') return state;
+      return tutorialMoved(state, drawTile(state, action));
+    case 'PASS':
+      if (action.actor !== 'player' || expect.type !== 'pass') return state;
+      return tutorialMoved(state, passTurn(state, action));
+    case 'TIO_ZE_ACT': {
+      // o Vô Juca joga o que está no roteiro (nunca a IA)
+      if (expect.type !== 'rival' || !canAct(state, 'tioZe')) return state;
+      const { action: move } = expect;
+      const acted =
+        move.type === 'PLAY'
+          ? playTile(state, { ...move, actor: 'tioZe' })
+          : move.type === 'DRAW'
+            ? drawTile(state, { actor: 'tioZe' })
+            : passTurn(state, { actor: 'tioZe' });
+      return tutorialMoved(state, acted);
+    }
+    default:
+      return state;
+  }
+}
+
+/** Tocar no balão: passa o passo que só espera o toque. */
+function tutorialNext(state) {
+  if (tutorialStepOf(state)?.expect.type !== 'tap') return state;
+  return advanceTutorial(state);
+}
+
+// ---------------------------------------------------------------------------
 // Painel DEV (src/components/DevPanel.jsx)
 // ---------------------------------------------------------------------------
 
@@ -1370,7 +1478,13 @@ function devAction(state, action) {
 }
 
 export function gameReducer(state, action) {
+  // Patch 0.9.5: no treino, a mesa só aceita o que o roteiro pede
+  if (state.tutorial && TUTORIAL_GATED.has(action.type)) return tutorialAction(state, action);
   switch (action.type) {
+    case 'START_TUTORIAL':
+      return startTutorial(state, action);
+    case 'TUTORIAL_NEXT':
+      return tutorialNext(state);
     case 'NEW_RUN':
       return newRun(state, action);
     case 'LOAD_RUN':

@@ -59,3 +59,5 @@ export {
 // Patch 0.8.0: O Dono da Noite (nó 19 secreto)
 export { DonoDaNoiteAvatar } from './art/SecretBossArt.jsx';
 export { BottleCapIcon } from './art/MetaArt.jsx';
+// Patch 0.9.5: Vô Juca, o Professor do Boteco (partida de treino)
+export { VoJucaAvatar } from './art/TutorArt.jsx';

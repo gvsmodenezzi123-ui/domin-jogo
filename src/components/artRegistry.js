@@ -28,6 +28,8 @@ export const RIVAL_ART = pick({
   comendador: Art.ComendadorAvatar,
   // Patch 0.8.0: nó 19 secreto (48x48)
   donoDaNoite: Art.DonoDaNoiteAvatar,
+  // Patch 0.9.5: o professor da partida de treino
+  voJuca: Art.VoJucaAvatar,
 });
 
 /** `art` dos talismãs → ícone 40x40. */

@@ -29,7 +29,7 @@ function Slider({ id, label, value, onChange }) {
  * OPÇÕES: volume dos efeitos e da música, vibração, animações e resetar o progresso
  * (apaga a run salva e o Livro de Boteco; pede confirmação).
  */
-export default function OptionsPanel({ settings, onChange, onResetProgress }) {
+export default function OptionsPanel({ settings, onChange, onResetProgress, onTutorial }) {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
   const set = (patch) => onChange({ ...settings, ...patch });
@@ -55,6 +55,12 @@ export default function OptionsPanel({ settings, onChange, onResetProgress }) {
       >
         ANIMAÇÕES: {settings.reducedMotion ? 'REDUZIDAS' : 'COMPLETAS'}
       </button>
+      {/* Patch 0.9.5: rever a partida de treino (só na tela inicial) */}
+      {onTutorial && (
+        <button type="button" className="btn-pixel w-full" onClick={onTutorial}>
+          REVER O TREINO (VÔ JUCA)
+        </button>
+      )}
       {onResetProgress && (
         <div className="options-danger px-3 py-2.5">
           <p className="font-pixel text-[8px] leading-relaxed text-bone-300">RESETAR PROGRESSO</p>

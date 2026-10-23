@@ -16,6 +16,7 @@ import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
 import SecretBoss from './components/SecretBoss.jsx';
 import TilesUnlockModal from './components/TilesUnlockModal.jsx';
+import { CoachBox, TutorialCard, TutorialFocus } from './components/TutorialCoach.jsx';
 import ScreenVeil from './components/ScreenTransition.jsx';
 import { useSceneTransition } from './components/useSceneTransition.js';
 import Shop from './components/Shop.jsx';
@@ -32,7 +33,8 @@ import { TileSkinContext } from './components/tileSkin.js';
 import { BOSS_INTRO_IDS, REGIONS, bossMusicOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
-import { SECRET_BOSS, getRival, rivalFor, rivalOf } from './data/rivals.js';
+import { SECRET_BOSS, TUTOR, getRival, rivalFor, rivalOf } from './data/rivals.js';
+import { TUTORIAL_STEPS } from './data/tutorial.js';
 import { modeOf } from './data/difficulty.js';
 import {
   ACHIEVEMENT_EVENT,
@@ -95,6 +97,7 @@ import {
   writeRunSave,
 } from './engine/progress.js';
 import { snapshotRun } from './engine/save.js';
+import { markTutorialDone, markTutorialPending, needsTutorial, tutorialStepOf } from './engine/tutorial.js';
 import { sellPriceFor } from './engine/shop.js';
 
 // Patch 0.9.2: as pedras de cada rodada saem da semente da run (engine/seedEngine.js), numa
@@ -371,6 +374,27 @@ function inspectInfo(payload, state, rival) {
   return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
 }
 
+/** Onde o anel da aula fica (Patch 0.9.5): no passo de jogar, a pedra e depois o botão da ponta certa. */
+const FOCUS_SELECTORS = {
+  hearts: '[data-tut="hearts"]',
+  hand: '[data-tut="hand"]',
+  sum: '[data-tut="sum"]',
+  coins: '[data-coin-target="player"]',
+  draw: '[data-tut="draw"]',
+  pass: '[data-tut="pass"]',
+  boneyard: '.boneyard-pile',
+};
+
+function tutorialFocusOf(step, selectedId) {
+  if (!step || step.card) return null;
+  const { expect, focus } = step;
+  if (expect.type === 'play') return selectedId === expect.tile ? `[data-tut-side="${expect.side}"]` : `[data-hand-tile="${expect.tile}"]`;
+  if (!focus) return null;
+  if (focus.startsWith('tile:')) return `[data-hand-tile="${focus.slice(5)}"]`;
+  if (focus.startsWith('relic:')) return `[data-relic-slot="player:${focus.slice(6)}"]`;
+  return FOCUS_SELECTORS[focus] ?? null;
+}
+
 /** Tudo que está à vista agora e entra no Livro de Boteco. */
 function seenNow(state) {
   const tiles = new Set(Object.values(state.decks.player));
@@ -436,6 +460,15 @@ export default function App() {
   // Patch 0.7.0: fila dos avisos de conquista (um por vez, no alto da tela)
   const [toasts, setToasts] = useState([]);
   const toastDone = useCallback((key) => setToasts((queue) => queue.filter((t) => t.key !== key)), []);
+  // Patch 0.9.5: partida de treino. `tutorialPending`: o NOVO JOGO abre o treino (1ª vez);
+  // `coachReady`: o passo cuja fala já terminou (a vez do Vô Juca só sai depois dela);
+  // `nudge`: a bronca da ponta errada ({ key, step, text })
+  const [tutorialPending, setTutorialPending] = useState(needsTutorial);
+  const [coachReady, setCoachReady] = useState(-1);
+  const [nudge, setNudge] = useState(null);
+  const tutorialStep = tutorialStepOf(state);
+  const tutorialIndex = state.tutorial?.step ?? -1;
+  const tutorialExpect = tutorialStep?.expect ?? null;
 
   // Conquista nova (engine/achievements.js dispara `buxaria-achievement`): mostra o aviso
   // na hora, em qualquer tela, e o talismã dela já entra no sorteio da loja e do beco.
@@ -463,7 +496,7 @@ export default function App() {
 
   // Camada de tensão da trilha: alguém na mesa com 1 ou 2 corações.
   const tense =
-    (state.phase === 'playing' || state.phase === 'roundOver') && Math.min(state.hearts.player, state.hearts.tioZe) <= 2;
+    !state.tutorial && (state.phase === 'playing' || state.phase === 'roundOver') && Math.min(state.hearts.player, state.hearts.tioZe) <= 2;
   useEffect(() => sound.setTension(tense), [tense]);
 
   const clearTableAnim = useCallback(() => {
@@ -486,10 +519,12 @@ export default function App() {
   // Ele espera com o menu ou o painel DEV abertos, enquanto você decide
   // (escolha do Barbante, descarte do Giz), enquanto a jogada anterior dele está em cena e
   // durante a entrada do chefe.
+  // No treino (Patch 0.9.5), o Vô Juca só joga no passo dele e depois de terminar a fala.
+  const tutorialHold = Boolean(state.tutorial) && (tutorialExpect?.type !== 'rival' || coachReady !== tutorialIndex);
   useEffect(() => {
-    if (menuOpen || devOpen || tableAnim || showBossIntro || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
+    if (menuOpen || devOpen || tableAnim || showBossIntro || tutorialHold || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch, rivalOf(state).reflexMs);
-  }, [state, menuOpen, devOpen, tableAnim, showBossIntro]);
+  }, [state, menuOpen, devOpen, tableAnim, showBossIntro, tutorialHold]);
 
   // Turno sem saída (3 compras sem encaixe): o banner fica na mesa e o passe vai sozinho para o rival.
   const forcedPassArmed = state.phase === 'playing' && state.pending?.type === 'forcedPass';
@@ -610,6 +645,8 @@ export default function App() {
     // também as tampinhas, as maletas e os desafios
     // Patch 0.9.1: a carreira (Caderno de Fiado) soma os mesmos eventos; vem antes das
     // conquistas para o ponto de partida das tampinhas ainda não ter as desta mesa
+    // Patch 0.9.5: a partida de treino não conta (carreira, lousa, conquistas)
+    if (latestState.current.tutorial) return;
     trackStatsEvents(fresh, latestState.current);
     // Patch 0.9.2: os números desta tentativa (lousa do fim)
     trackRunStatsEvents(fresh, latestState.current);
@@ -641,7 +678,8 @@ export default function App() {
 
   // Livro de Boteco: tudo que passa pela mesa fica registrado.
   useEffect(() => {
-    if (state.phase === 'title') return;
+    // o treino com o Vô Juca não entra no livro
+    if (state.phase === 'title' || state.tutorial) return;
     bookRef.current = discover(bookRef.current, seenNow(state));
   }, [state]);
 
@@ -697,8 +735,11 @@ export default function App() {
     // bucha já é bucha: o Canivete só serve nas outras
     if (caniveteMode) return new Set(hand.filter((t) => t.a !== t.b).map((t) => t.id));
     if (!isPlayerTurn) return new Set();
-    return new Set(getPlayableMoves(hand, state.board, requiredTileId, playerRules).map((m) => m.tile.id));
-  }, [discardMode, caniveteMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules]);
+    const moves = getPlayableMoves(hand, state.board, requiredTileId, playerRules).map((m) => m.tile.id);
+    // no treino só acende a pedra que o passo pede
+    if (tutorialExpect) return new Set(tutorialExpect.type === 'play' ? moves.filter((id) => id === tutorialExpect.tile) : []);
+    return new Set(moves);
+  }, [discardMode, caniveteMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules, tutorialExpect]);
 
   const selectedTile =
     isPlayerTurn || pickMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
@@ -707,16 +748,17 @@ export default function App() {
   // a escada de compra do jogador (o Pacto do Coveiro deixa a 3ª compra mais cara)
   const draw = useStableValue(drawAvailabilityFor(state, 'player'));
   const boardOpen = Boolean(state.board.root);
-  const canDraw = isPlayerTurn && boardOpen && draw.allowed;
+  const canDraw = isPlayerTurn && boardOpen && draw.allowed && (!tutorialExpect || tutorialExpect.type === 'draw');
   // Patch 0.5.4: sem jogada a 1ª compra é obrigatória; podendo jogar, o passe custa $3
   const passRule = useStableValue(isPlayerTurn && boardOpen ? passAvailabilityFor(state, 'player') : null);
-  const canPass = Boolean(passRule?.allowed);
+  const canPass = Boolean(passRule?.allowed) && (!tutorialExpect || tutorialExpect.type === 'pass');
   const forcedPass = playing && state.pending?.type === 'forcedPass';
   const undoReady = canUndo(state) && !tableAnim;
   const caniveteReady = isPlayerTurn && canUseCanivete(state);
 
   const speechNow = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
-  const speech = useStableValue(speechNow);
+  // no treino quem fala é a caixa da aula
+  const speech = useStableValue(state.tutorial ? null : speechNow);
   const flashesNow = useMemo(() => deriveRelicFlashes(state.events), [state.events]);
   const relicFlashes = useStableValue(flashesNow);
   const mood = deriveTioZeMood(state);
@@ -733,7 +775,7 @@ export default function App() {
   const knownKey = playing ? knownPlayerTiles(state).map((t) => t.id).join(',') : null;
   const knownIds = useMemo(() => (knownKey === null ? null : new Set(knownKey ? knownKey.split(',') : [])), [knownKey]);
 
-  const hint = buildPlayerHint({
+  const gameHint = buildPlayerHint({
     state,
     isPlayerTurn,
     selectedTile,
@@ -743,6 +785,8 @@ export default function App() {
     rules: playerRules,
     rivalName: rival.name,
   });
+  // no treino a instrução mora na caixa da aula
+  const hint = tutorialStep ? '' : gameHint;
 
   const play = useCallback((tileId, side) => {
     // mede a pedra no leque antes de ela sair da mão: o voo começa dali
@@ -776,7 +820,15 @@ export default function App() {
   });
 
   const handlePlaySide = useStableHandler((side) => {
-    if (selectedTile && !discardMode) play(selectedTile.id, side);
+    if (!selectedTile || discardMode) return;
+    // treino: a ponta errada não joga; o Vô Juca corrige
+    if (tutorialExpect?.type === 'play' && side !== tutorialExpect.side) {
+      sound.playNoMoves();
+      haptic([30, 40, 30]);
+      setNudge((cur) => ({ key: (cur?.key ?? 0) + 1, step: tutorialIndex, text: tutorialStep.nudge ?? 'Na outra ponta!' }));
+      return;
+    }
+    play(selectedTile.id, side);
   });
 
   const handleDraw = useStableHandler(() => {
@@ -944,6 +996,39 @@ export default function App() {
     });
   };
 
+  /**
+   * Patch 0.9.5: a partida de treino com o Vô Juca (o 1º NOVO JOGO, ou REVER O TREINO nas
+   * Opções: `replay`). Começando de verdade, o save antigo some como no NOVO JOGO.
+   */
+  const startTutorial = ({ replay = false } = {}) => {
+    wakeAudio();
+    sound.playClick();
+    cutTo(() => {
+      resetTable();
+      if (!replay) {
+        clearRunSave();
+        setSave(null);
+      }
+      setTitlePick(false);
+      setCoachReady(-1);
+      setNudge(null);
+      dispatch({ type: 'START_TUTORIAL', replay });
+    });
+  };
+
+  /** Fim (ou PULAR) do treino: da 1ª vez, a run começa no mapa (Clássica, Peças Brancas); revendo, volta ao menu. */
+  const finishTutorial = () => {
+    markTutorialDone();
+    setTutorialPending(false);
+    if (state.tutorial?.replay) backToMenu();
+    else newGame({ maleta: 'classica', mode: 'normal' });
+  };
+
+  const tutorialNext = () => {
+    sound.playClick();
+    dispatch({ type: 'TUTORIAL_NEXT' });
+  };
+
   const openMenu = useStableHandler(() => {
     sound.playClick();
     setMenuOpen(true);
@@ -1032,6 +1117,12 @@ export default function App() {
       resetMeta();
       return;
     }
+    // Patch 0.9.5: o próximo NOVO JOGO abre a partida de treino de novo
+    if (action.op === 'tutorialAgain') {
+      markTutorialPending();
+      setTutorialPending(true);
+      return;
+    }
     setSelectedId(null);
     // trocar de rival recomeça a partida: precisa de um baralho novo
     dispatch(action.op === 'setRival' ? { ...action, deck: dealDeck(state, `dev:${action.rivalId}:${state.seq}`) } : action);
@@ -1072,6 +1163,8 @@ export default function App() {
           silverUnlocked={silverUnlocked}
           startPicking={titlePick}
           onNewGame={newGame}
+          tutorialPending={tutorialPending}
+          onTutorial={startTutorial}
           onContinue={continueRun}
           settings={settings}
           onSettings={changeSettings}
@@ -1233,6 +1326,7 @@ export default function App() {
         roundKey={`${state.run.match}:${state.round}`}
         press={press}
       />
+      {state.tutorial && <div className="tut-spacer shrink-0" aria-hidden="true" />}
 
       <TableBoard
         board={state.board}
@@ -1303,7 +1397,7 @@ export default function App() {
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
 
-      {roundFinished && !tableAnim && !celebrate && (
+      {roundFinished && !tableAnim && !celebrate && !state.tutorial && (
         <RoundOverlay
           state={state}
           rival={rival}
@@ -1331,6 +1425,39 @@ export default function App() {
 
       {state.phase === 'secretReveal' && !tableAnim && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
 
+      {/* Patch 0.9.5: a aula do Vô Juca por cima da mesa (some com o menu ou o painel DEV abertos) */}
+      {tutorialStep && !menuOpen && !devOpen && (
+        tutorialStep.card ? (
+          <TutorialCard
+            key={tutorialIndex}
+            step={tutorialStep}
+            stepIndex={tutorialIndex}
+            tutor={TUTOR}
+            replay={Boolean(state.tutorial.replay)}
+            onNext={tutorialNext}
+            onFinish={finishTutorial}
+            onSkip={finishTutorial}
+          />
+        ) : (
+          <>
+            <CoachBox
+              key={tutorialIndex}
+              step={tutorialStep}
+              stepIndex={tutorialIndex}
+              total={TUTORIAL_STEPS.length}
+              tutor={TUTOR}
+              hearts={state.hearts.tioZe}
+              maxHearts={state.maxHearts.tioZe}
+              nudge={nudge?.step === tutorialIndex ? nudge : null}
+              onNext={tutorialNext}
+              onReady={setCoachReady}
+              onSkip={finishTutorial}
+            />
+            <TutorialFocus selector={tutorialFocusOf(tutorialStep, selectedTile?.id ?? null)} />
+          </>
+        )
+      )}
+
       {menuOpen && (
         <PauseMenu
           rivalName={rival.name}
@@ -1341,6 +1468,7 @@ export default function App() {
           onQuit={backToMenu}
           settings={settings}
           onSettings={changeSettings}
+          tutorial={state.tutorial ? (state.tutorial.replay ? 'replay' : 'first') : null}
         />
       )}
 

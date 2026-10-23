@@ -86,6 +86,47 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.5: a partida de treino com o Vô Juca
+
+### O professor (`data/rivals.js` → `TUTOR`, `components/art/TutorArt.jsx`)
+- **Vô Juca, o Professor do Boteco:** personagem novo, só do treino. Boina de tweed, óculos
+  redondos, bigode branco, lápis atrás da orelha, gravata borboleta e colete de tricô; retrato
+  40x40 com os 4 humores e a boca que fala, voz própria (rápida, para a aula não arrastar) e
+  feltro verde de sinuca. Fica fora da galeria, da teia, do Livro de Boteco e das conquistas.
+
+### Quando aparece
+- Quem abre o jogo pela primeira vez e toca em **NOVO JOGO** senta direto na mesa do Vô Juca
+  (o Balcão de Maletas fica para as próximas runs). No fim do treino o jogador vai para o
+  **mapa de uma run de verdade** (Maleta Clássica, Peças Brancas, semente sorteada).
+- Quem já jogava antes desta versão (tem carreira, tampinhas, run salva ou Livro de Boteco) não
+  é jogado de volta para o treino: dá para rever nas **Opções → REVER O TREINO**. Revendo, o fim
+  (ou o PULAR) volta para o menu e a run salva não é tocada.
+- **PULAR O TREINO** no cartão de abertura e **PULAR TREINO** na caixa da aula. Sair pelo menu no
+  meio do treino: o próximo NOVO JOGO começa o treino de novo. O painel DEV tem o botão para
+  pedir o treino de novo no próximo NOVO JOGO.
+
+### A aula (`data/tutorial.js`, `engine/tutorial.js`, `components/TutorialCoach.jsx`)
+- Partida toda encenada, em duas rodadas com mãos e dorme fixos (nada sai da semente) e as
+  jogadas do Vô Juca no roteiro. A mesa só aceita a jogada que o passo pede (a pedra certa
+  acende, os outros botões ficam apagados); a ponta errada não joga e ele corrige.
+- **Rodada 1:** quem tem a bucha mais alta abre; encaixar no número da ponta; múltiplo de 5 paga
+  $3 (e paga para ele também); sem pedra que sirva, comprar no dorme (1ª grátis, 2ª $3, 3ª um
+  coração) e quando passar sai de graça ou custa $3; pedra que serve nas duas pontas: escolher o
+  lado que fecha 10; bater com a última pedra (batida simples: 1 coração). Depois ele explica as
+  batidas que doem mais (bucha 2, nas duas pontas 2, cruzada 3) e a tranca.
+- **Intervalo:** de presente, a **Caneca de Chopp** entra na hotbar: para que servem os
+  talismãs, segurar o dedo para ler o efeito, onde se compra.
+- **Rodada 2:** quem bateu abre com a pedra que quiser (abre fechando 5), a bucha com a Caneca
+  dá a vez de novo (o talismã pisca), o combo fecha 10 e a batida de bucha tira os 2 corações
+  que restam. Depois: "daqui pra frente é com você".
+- Na tela: a caixa de fala presa no alto, no lugar do banco do rival (o banco ganha uma faixa a
+  mais para a caixa caber sem cobrir a mesa), com o retrato, os corações dele e a fala digitada
+  letra a letra (tocar completa a frase, vira a página e segue); a letra encolhe sozinha para
+  caber; as pedras citadas viram pedrinhas no texto. Um anel dourado pulsando mostra o que ele
+  está apontando (a pedra, o botão da ponta certa, o COMPRAR, os corações, as moedas, o dorme, o
+  talismã). Cartões no meio da tela na abertura e no fim (COMEÇAR A RUN). Sem scroll.
+- O treino não vale prêmio, tampinha, save, carreira, lousa nem conquista.
+
 ## Patch 0.9.4: regras de mesa, eventos [?] no mapa e a mesa mais leve no iPhone
 
 ### Regras de Mesa (`data/tableModifiers.js`)

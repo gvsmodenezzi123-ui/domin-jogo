@@ -4,7 +4,7 @@
  *  - arquivos (JS/CSS com hash, fontes, ícones): cache primeiro.
  * Troque CACHE_VERSION a cada release para limpar caches antigos.
  */
-const CACHE_VERSION = 'buxaria-v0.9.4';
+const CACHE_VERSION = 'buxaria-v0.9.5';
 const CORE = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
