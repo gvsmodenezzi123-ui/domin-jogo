@@ -9285,3 +9285,59 @@
     font-size: 19px;
   }
 }
+
+/* ---------- Patch 0.9.7: a Política de Privacidade nas Opções ---------- */
+.options-privacy {
+  display: block;
+  width: 100%;
+  padding: 6px 0 2px;
+  font-size: 7px;
+  color: #9a917d;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.privacy-text {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.08;
+  color: #d8cfbb;
+  overflow-wrap: anywhere;
+}
+
+.privacy-item {
+  position: relative;
+  padding-left: 14px;
+}
+
+.privacy-item::before {
+  content: '•';
+  position: absolute;
+  left: 2px;
+  color: #d9b56a;
+}
+
+.privacy-heading {
+  padding-top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.5;
+  color: #ffd27a;
+}
+
+.privacy-code {
+  padding: 0 3px;
+  font-family: var(--font-term);
+  color: #ffd27a;
+  background: rgba(255, 210, 122, 0.1);
+  border: 1px solid rgba(255, 210, 122, 0.25);
+  border-radius: 2px;
+}
+
+.privacy-link {
+  color: #ffd27a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}

@@ -86,6 +86,21 @@ patch. Ele gera dois APKs com o Capacitor, que embrulha o build do jogo num app:
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Patch 0.9.7: Política de Privacidade (Google Play e LGPD)
+
+- **Página pública:** `public/privacy.html` (e a mesma em `public/privacidade/`), servida junto
+  do jogo no GitHub Pages: `https://gvsmodenezzi123-ui.github.io/domin-jogo/privacy.html`
+  (também `.../domin-jogo/privacidade/`). Esse é o endereço para o campo da Google Play Console.
+  HTML estático, leve, sem script nem recurso externo, fundo `#121212` e texto `#e0e0e0`.
+- **O texto** mora em `src/data/privacy.js`; `node scripts/privacy-page.mjs` gera as duas páginas
+  a partir dele (o teste confere que página e jogo dizem a mesma coisa, palavra por palavra).
+- **No jogo:** Opções → **POLÍTICA DE PRIVACIDADE** (discreto, no pé), na tela inicial e na
+  pausa. Abre o texto em páginas, sem scroll, com o endereço público no fim e VOLTAR ÀS OPÇÕES.
+- **Service worker:** navegar até outra página do site (a política) não substitui mais o jogo
+  guardado para jogar offline; cada página fica com o próprio endereço no cache.
+- Conferido para a declaração: o jogo não faz nenhuma chamada de rede e o APK só declara a
+  permissão `INTERNET` (normal, concedida sem pedir), que o Capacitor inclui por padrão.
+
 ## Patch 0.9.6: tampinhas mais raras, Conta do Boteco mais barata
 
 - **Tampinhas Douradas:** agora só **1 por run, e só se a run for vencida** (derrotar o

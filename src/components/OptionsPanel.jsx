@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PRIVACY, PRIVACY_EMAIL, PRIVACY_URL } from '../data/privacy.js';
 import PagedBlocks from './PagedBlocks.jsx';
 
 function Slider({ id, label, value, onChange }) {
@@ -24,15 +25,81 @@ function Slider({ id, label, value, onChange }) {
   );
 }
 
+/** Um trecho da política: texto, negrito, código e o e-mail como link. */
+function Rich({ chunks }) {
+  return chunks.map((c, i) => {
+    if (typeof c === 'string') return c;
+    if (c.code) return <code key={i} className="privacy-code">{c.code}</code>;
+    if (c.b === PRIVACY_EMAIL)
+      return (
+        <a key={i} className="privacy-link" href={`mailto:${PRIVACY_EMAIL}`}>
+          {PRIVACY_EMAIL}
+        </a>
+      );
+    return (
+      <strong key={i} className="text-bone-50">
+        {c.b}
+      </strong>
+    );
+  });
+}
+
+/**
+ * Patch 0.9.7: a Política de Privacidade dentro do jogo, em páginas (sem scroll), com o
+ * endereço da versão pública no fim (a mesma da Google Play Console).
+ */
+function PrivacyPolicy({ onBack }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PagedBlocks className="privacy-pages min-h-0 flex-1" gap={8} label="Páginas da Política de Privacidade">
+        <header data-keep>
+          <p className="font-pixel text-[9px] leading-relaxed text-brass-300">{PRIVACY.title.toUpperCase()}</p>
+          <p className="privacy-text text-bone-400">{PRIVACY.updated}</p>
+        </header>
+        <p className="privacy-text">
+          <Rich chunks={PRIVACY.intro} />
+        </p>
+        {PRIVACY.sections.flatMap((section) => [
+          <h3 key={section.title} className="privacy-heading" data-keep>
+            {section.title}
+          </h3>,
+          ...(section.paragraphs ?? []).map((p, i) => (
+            <p key={`${section.title}:p${i}`} className="privacy-text">
+              <Rich chunks={p} />
+            </p>
+          )),
+          ...(section.items ?? []).map((item, i) => (
+            <p key={`${section.title}:i${i}`} className="privacy-text privacy-item">
+              <Rich chunks={item} />
+            </p>
+          )),
+        ])}
+        <p className="privacy-text text-bone-400">
+          Versão pública:{' '}
+          <a className="privacy-link" href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+            {PRIVACY_URL.replace('https://', '')}
+          </a>
+        </p>
+      </PagedBlocks>
+      <button type="button" className="btn-pixel mt-3 w-full shrink-0" onClick={onBack}>
+        VOLTAR ÀS OPÇÕES
+      </button>
+    </div>
+  );
+}
+
 /**
  * Patch 0.9.3: sem scroll; em tela baixa as opções se repartem em páginas (PagedBlocks).
  * OPÇÕES: volume dos efeitos e da música, vibração, animações e resetar o progresso
- * (apaga a run salva e o Livro de Boteco; pede confirmação).
+ * (apaga a run salva e o Livro de Boteco; pede confirmação). Patch 0.9.7: no pé, a Política
+ * de Privacidade (abre no lugar das opções, com VOLTAR).
  */
 export default function OptionsPanel({ settings, onChange, onResetProgress, onTutorial }) {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
   const set = (patch) => onChange({ ...settings, ...patch });
+  if (privacy) return <PrivacyPolicy onBack={() => setPrivacy(false)} />;
   return (
     <PagedBlocks className="min-h-0 flex-1" gap={16} label="Páginas das opções">
       <Slider id="opt-sfx" label="EFEITOS (SFX)" value={settings.sfx} onChange={(sfx) => set({ sfx })} />
@@ -94,6 +161,10 @@ export default function OptionsPanel({ settings, onChange, onResetProgress, onTu
           )}
         </div>
       )}
+      {/* Patch 0.9.7: discreto, no pé das opções */}
+      <button type="button" className="text-action options-privacy font-pixel" onClick={() => setPrivacy(true)}>
+        POLÍTICA DE PRIVACIDADE
+      </button>
     </PagedBlocks>
   );
 }
