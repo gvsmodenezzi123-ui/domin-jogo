@@ -15,6 +15,7 @@ import { isValidSave } from './save.js';
 const RUN_KEY = 'buxaria:run';
 const COLLECTION_KEY = 'buxaria:collection';
 const SETTINGS_KEY = 'buxaria:settings';
+const OPENING_KEY = 'buxaria:opening';
 
 function read(key) {
   try {
@@ -101,6 +102,10 @@ export function saveSettings(settings) {
   write(SETTINGS_KEY, settings);
   haptics.enabled = settings.haptics;
 }
+
+/** Patch 1.1: a abertura já passou inteira uma vez neste aparelho (daí em diante ela tem PULAR). */
+export const openingSeen = () => read(OPENING_KEY) === true;
+export const markOpeningSeen = () => write(OPENING_KEY, true);
 
 /** "Resetar progresso": apaga a run salva e o Livro de Boteco (as opções ficam). */
 export function resetProgress() {

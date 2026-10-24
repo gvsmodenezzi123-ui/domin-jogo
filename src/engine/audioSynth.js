@@ -56,7 +56,7 @@ const MUSIC = { hat: 0, bell: 0.05, snare: 0.1, lead: 0.15, kick: 0.25, harmony:
 
 /**
  * Instantes (s) em que a luz apaga na entrada do Dono, iguais aos degraus do CSS
- * `secret-flicker` (1,5 s): 3 apagadas que voltam e a queimada final (`FLICKER_OUT`),
+ * entrada em pixel art (components/secretPixel.js, 1,5 s): 3 apagadas que voltam e a queimada final (`FLICKER_OUT`),
  * abaixo de 3 piscadas por segundo.
  */
 export const FLICKER_CUTS = [0.14, 0.6, 1.1];
@@ -1695,7 +1695,7 @@ export class SoundEngine {
 
   /**
    * Entrada do Dono (Patch 0.8.2), 1: a luz do boteco falhando. O zumbido da fiação por baixo e
-   * um estalo elétrico em cada apagada (no mesmo tempo das piscadas do CSS `secret-flicker`).
+   * um estalo elétrico em cada apagada (no mesmo tempo das piscadas da entrada, secretPixel.js).
    */
   playLightsFlicker() {
     this.duck();

@@ -6244,9 +6244,9 @@
    sombra preta pisca por cima, 3 apagadas e a queimada final, abaixo de 3 por segundo), dark
    (breu e a vinheta do coração), strobe (estrobo vermelho a ~2 por segundo e o círculo de
    runas se desenhando), eyes (os olhos abrindo no meio do círculo) e reveal (o cartão, com o
-   círculo girando apagado atrás e runas subindo como brasa). "Menos movimento": tudo parado. */
+   círculo girando apagado atrás e runas subindo como brasa). "Menos movimento": tudo parado.
+   Patch 1.1: tudo isso é desenhado em pixel art num canvas (components/secretPixel.js). */
 .secret-scene {
-  --rune: #ffd9c4;
   background: #000;
   color: var(--color-bone-50);
   overflow: hidden;
@@ -6257,339 +6257,8 @@
   background: transparent;
 }
 
-.secret-shade {
-  background: #000;
-  opacity: 0;
-}
-
-.secret-flicker .secret-shade {
-  animation: secret-flicker 1500ms steps(1, end) both;
-}
-
-/* apagadas em 0,14 s, 0,6 s e 1,1 s (engine: FLICKER_CUTS) e a queimada em 1,42 s */
-@keyframes secret-flicker {
-  0% {
-    opacity: 0.16;
-  }
-  9.3% {
-    opacity: 0.94;
-  }
-  20% {
-    opacity: 0.24;
-  }
-  40% {
-    opacity: 0.96;
-  }
-  47% {
-    opacity: 0.32;
-  }
-  73.3% {
-    opacity: 0.97;
-  }
-  80% {
-    opacity: 0.46;
-  }
-  94.7%,
-  100% {
-    opacity: 1;
-  }
-}
-
-.secret-flash {
-  opacity: 0;
-}
-
-/* breu: só uma vinheta vermelha bem escura pulsando com o coração */
-.secret-scene.secret-dark .secret-flash {
-  background: radial-gradient(ellipse at 50% 50%, transparent 38%, rgba(110, 0, 8, 0.42) 100%);
-  animation: secret-heart 780ms ease-out 2 both;
-}
-
-@keyframes secret-heart {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  22% {
-    opacity: 0.3;
-  }
-  32% {
-    opacity: 0.85;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-.secret-scene.secret-strobe .secret-flash {
-  background: radial-gradient(ellipse at 50% 40%, rgba(200, 16, 24, 0.9), rgba(60, 0, 6, 0.92) 70%);
-  animation: secret-strobe 450ms steps(1, end) infinite;
-}
-
-@keyframes secret-strobe {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.05;
-  }
-}
-
-.secret-scene.secret-eyes {
-  --rune: #ff3b2f;
-}
-
-.secret-scene.secret-eyes .secret-flash {
-  opacity: 1;
-  background: radial-gradient(circle at 50% 50%, rgba(160, 10, 20, 0.34), transparent 55%);
-  animation: secret-breathe 1.6s ease-in-out infinite;
-}
-
-.secret-scene.secret-reveal {
-  --rune: #c8261d;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 38%, rgba(140, 8, 18, 0.55), transparent 70%),
-    #050203;
-}
-
-.secret-scene.secret-reveal .secret-flash {
-  opacity: 1;
-  background: radial-gradient(ellipse 70% 50% at 50% 35%, rgba(200, 16, 24, 0.22), transparent 70%);
-  animation: secret-breathe 2.8s ease-in-out infinite;
-}
-
-@keyframes secret-breathe {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* o círculo de runas (art/RuneArt.jsx) */
-.secret-runes {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(86vw, 360px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  color: var(--rune);
-  transition:
-    opacity 500ms ease,
-    width 700ms ease;
-}
-
-.secret-runes svg {
-  overflow: visible;
-  filter: drop-shadow(0 0 3px rgba(255, 40, 30, 0.95)) drop-shadow(0 0 10px rgba(200, 16, 24, 0.6));
-}
-
-.secret-strobe .secret-runes,
-.secret-eyes .secret-runes {
-  opacity: 1;
-}
-
-.secret-reveal .secret-runes {
-  width: min(112vw, 470px);
-  opacity: 0.32;
-}
-
-.rc-line,
-.rc-dots,
-.rc-glyph {
-  stroke: var(--rune);
-  transition: stroke 400ms ease;
-}
-
-.rc-line {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-
-.rc-dots,
-.rc-glyph,
-.rc-eyes {
-  opacity: 0;
-}
-
-.secret-strobe .rc-line {
-  animation: rc-draw 900ms ease-out both;
-}
-
-.secret-strobe .rc-late {
-  animation-delay: 250ms;
-}
-
-.secret-strobe .rc-later {
-  animation-delay: 480ms;
-}
-
-.secret-strobe .rc-latest {
-  animation-delay: 700ms;
-}
-
-.secret-strobe .rc-dots {
-  animation: rc-fade 500ms ease-out 600ms both;
-}
-
-.secret-strobe .rc-glyph {
-  animation: rc-glyph 340ms ease-out both;
-  animation-delay: calc(700ms + var(--i) * 130ms);
-}
-
-.secret-eyes .rc-line,
-.secret-reveal .rc-line {
-  stroke-dashoffset: 0;
-}
-
-.secret-eyes .rc-dots,
-.secret-eyes .rc-glyph,
-.secret-reveal .rc-dots,
-.secret-reveal .rc-glyph {
-  opacity: 1;
-}
-
-@keyframes rc-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes rc-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes rc-glyph {
-  0% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-    stroke: #fff4ea;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-/* o círculo gira devagar desde que se desenha (mesma animação nas 3 fases: não reinicia) */
-.rc-spin {
-  transform-box: view-box;
-  transform-origin: 100px 100px;
-}
-
-.secret-strobe .rc-spin,
-.secret-eyes .rc-spin,
-.secret-reveal .rc-spin {
-  animation: rc-spin 48s linear infinite;
-}
-
-@keyframes rc-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* os olhos: abrem, piscam uma vez e encaram */
-.secret-eyes .rc-eyes {
-  opacity: 1;
-  filter: drop-shadow(0 0 2px #ffd24a) drop-shadow(0 0 7px rgba(255, 120, 0, 0.85));
-}
-
-.rc-eye {
-  transform-box: view-box;
-}
-
-.secret-eyes .rc-eye {
-  animation: rc-eye-open 1300ms ease-out 150ms both;
-}
-
-@keyframes rc-eye-open {
-  0% {
-    transform: scaleY(0);
-  }
-  32%,
-  58% {
-    transform: scaleY(1);
-  }
-  64% {
-    transform: scaleY(0.12);
-  }
-  70%,
-  100% {
-    transform: scaleY(1);
-  }
-}
-
-/* runas e brasas subindo pelo escuro */
-.secret-drift {
-  opacity: 0;
-  transition: opacity 600ms ease;
-}
-
-.secret-strobe .secret-drift,
-.secret-eyes .secret-drift,
-.secret-reveal .secret-drift {
-  opacity: 1;
-}
-
-.drift-rune,
-.drift-ember {
-  position: absolute;
-  bottom: -24px;
-  display: block;
-  opacity: 0;
-  animation-name: drift-up;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-.drift-rune {
-  width: 16px;
-  height: 16px;
-  color: rgba(255, 70, 50, 0.75);
-  filter: drop-shadow(0 0 3px rgba(255, 30, 20, 0.8));
-}
-
-.drift-ember {
-  width: 3px;
-  height: 3px;
-  background: #ff7a2a;
-  box-shadow: 0 0 5px #ff3b1a;
-}
-
-@keyframes drift-up {
-  0% {
-    transform: translate(0, 0);
-    opacity: 0;
-  }
-  12% {
-    opacity: 0.85;
-  }
-  50% {
-    transform: translate(10px, -52vh);
-  }
-  85% {
-    opacity: 0.45;
-  }
-  100% {
-    transform: translate(-6px, -106vh);
-    opacity: 0;
-  }
+.secret-canvas {
+  image-rendering: pixelated;
 }
 
 .secret-skip {
@@ -6621,27 +6290,8 @@
   }
 }
 
-.reduce-motion .secret-scene .secret-flash {
-  animation: none;
-  opacity: 0.6;
-}
-
-.reduce-motion .secret-scene .secret-shade,
-.reduce-motion .secret-scene .rc-line,
-.reduce-motion .secret-scene .rc-dots,
-.reduce-motion .secret-scene .rc-glyph,
-.reduce-motion .secret-scene .rc-spin,
-.reduce-motion .secret-scene .rc-eye,
 .reduce-motion .secret-card-in {
   animation: none !important;
-}
-
-.reduce-motion .secret-scene .rc-line {
-  stroke-dashoffset: 0;
-}
-
-.reduce-motion .secret-drift {
-  display: none;
 }
 
 .secret-card {
@@ -9340,4 +8990,76 @@
   text-decoration: underline;
   text-underline-offset: 2px;
   overflow-wrap: anywhere;
+}
+
+/* ---------- Abertura: chegando no boteco de madrugada (canvas) ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  background: #000;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 450ms ease-in;
+}
+
+.intro.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.intro-skip {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  padding: 8px 12px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #f4ecd2;
+  background: rgba(11, 9, 7, 0.55);
+  border: 1.5px solid rgba(217, 181, 106, 0.7);
+  border-radius: 2px;
+  opacity: 0;
+  animation: introSkipIn 400ms ease-out 900ms both;
+}
+
+.intro-sound {
+  position: absolute;
+  left: 50%;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  translate: -50% 0;
+  padding: 6px 10px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  white-space: nowrap;
+  color: #f4ecd2;
+  background: rgba(11, 9, 7, 0.6);
+  border: 1px solid rgba(217, 181, 106, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+  animation: introFadeIn 300ms ease-out both;
+}
+
+@keyframes introSkipIn {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes introFadeIn {
+  from {
+    opacity: 0;
+  }
 }

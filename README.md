@@ -1,4 +1,4 @@
-# Buxaria — Versão 1.0
+# Buxaria — Versão 1.1
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Roda como PWA (tela vertical de celular) e como app
@@ -67,7 +67,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 | | |
 | --- | --- |
 | Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
-| Versão | `versionName` = `package.json` (1.0.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Versão | `versionName` = `package.json` (1.1.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
 | Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
 | Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
 | Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
@@ -77,7 +77,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 push na `main`. O GitHub só mostra o botão de rodar à mão para workflows que estão na branch
 principal (`main`).
 
-**O que sai:** o artefato `buxaria-1.0.0-aab-N` com o `app-release.aab`, para baixar na própria
+**O que sai:** o artefato `buxaria-1.1.0-aab-N` com o `app-release.aab`, para baixar na própria
 execução (guardado 90 dias). O resumo da execução mostra o SHA-1 e o SHA-256 da chave de upload.
 
 ### 1. Gerar a chave de upload (uma vez, no seu computador)
@@ -163,6 +163,25 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Versão 1.1: a abertura e o Dono da Noite em pixel art
+
+- **Abertura no jogo:** a cena da rua → boteco → bucha → logo (pixel art, 180x320 ampliado sem
+  suavizar) roda toda vez que o jogo abre. Na primeira vez ela é inteira; daí em diante aparece o
+  **PULAR**. O logo e a lâmpada da abertura pousam exatamente onde estão na tela inicial, e a
+  trilha do menu entra na batida do logo. No Android o som toca sem esperar um toque
+  (`MainActivity`); no navegador, se ele segurar o áudio, a abertura avisa que um toque liga.
+  Código em `src/intro/`.
+- **O Dono da Noite:** a entrada do chefe secreto (luz falhando, breu, estrobo, círculo de runas,
+  olhos, revelação) agora é desenhada em pixel art num canvas (`components/secretPixel.js`), nas
+  mesmas fases e com o mesmo som de antes. Em tela deitada (PC) o pixel continua quadrado.
+- **Varredura de bugs:** robôs jogando milhares de runs e duelos (todos os rivais, modos,
+  maletas, talismãs e pedras de grife) conferindo as regras a cada jogada (28 pedras, corações,
+  moedas, vez), gravar/CONTINUAR no meio das runs, e todas as telas em vários celulares (scroll,
+  botões cortados). Corrigido:
+  - a trilha do menu tocava por baixo da abertura desde o primeiro segundo;
+  - as animações reduzidas (Opções) não valiam para a abertura na hora de abrir o jogo;
+  - a entrada do Dono da Noite esticava o desenho em tela deitada.
 
 ## Versão 1.0: pronto para a Google Play
 

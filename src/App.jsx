@@ -24,6 +24,7 @@ import TableBoard from './components/TableBoard.jsx';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
+import IntroScene from './intro/IntroScene.jsx';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
@@ -92,6 +93,8 @@ import {
   loadCollection,
   loadRunSave,
   loadSettings,
+  markOpeningSeen,
+  openingSeen,
   resetProgress,
   saveSettings,
   writeRunSave,
@@ -109,6 +112,14 @@ const dealDeck = (state, key) => {
 /** Semente da run: sorteia a teia de caminhos, as vitrines e as gorjetas do Seu Tião. */
 /** A semente da run nova: a digitada no Balcão (normalizada) ou uma sorteada. */
 const seedForRun = (typed) => normalizeSeed(typed) ?? generateRandomSeed();
+
+/** Onde a tela inicial tem o logo e a lâmpada: o último quadro da abertura casa com eles. */
+function titleTarget() {
+  const logo = document.querySelector('.title-screen .title-logo-svg');
+  const lamp = document.querySelector('.title-screen .swinging-lamp .lamp-sprite');
+  if (!logo || !lamp) return null;
+  return { logo: logo.getBoundingClientRect(), lamp: lamp.getBoundingClientRect() };
+}
 
 const DEV_KEY = 'buxaria:dev';
 /**
@@ -453,6 +464,13 @@ export default function App() {
   const [silverSeen, setSilverSeen] = useState(isSilverTilesUnlocked);
   // Patch 0.9.0: entrada do chefe já vista nesta partida (chave da partida)
   const [introDone, setIntroDone] = useState(null);
+  // Patch 1.1: a abertura (rua → boteco → bucha → logo) roda toda vez que o jogo abre; na
+  // primeira vez inteira, daí em diante com PULAR
+  const [opening, setOpening] = useState(() => ({ on: true, skippable: openingSeen() }));
+  const openingDone = useCallback(() => {
+    markOpeningSeen();
+    setOpening((o) => ({ ...o, on: false }));
+  }, []);
   // a tela inicial abre direto no Balcão de Maletas? ({ challenge } ou false)
   const [titlePick, setTitlePick] = useState(false);
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
@@ -490,9 +508,11 @@ export default function App() {
 
   // Trilha: Boteco (jazz), Clube da Sinuca (funk) e Submundo/chefes (tensão). Só depois do 1º toque.
   const musicTrack = musicFor(state);
+  // Patch 1.1: durante a abertura o som é dela (a trilha do menu entra na batida do logo)
+  const openingSound = opening.on && state.phase === 'title';
   useEffect(() => {
-    if (sound.ctx) sound.playTrack(musicTrack);
-  }, [musicTrack]);
+    if (sound.ctx && !openingSound) sound.playTrack(musicTrack);
+  }, [musicTrack, openingSound]);
 
   // Camada de tensão da trilha: alguém na mesa com 1 ou 2 corações.
   const tense =
@@ -1175,6 +1195,7 @@ export default function App() {
           devUnlocked={devUnlocked}
         />
       </div>
+      {opening.on && <IntroScene skippable={opening.skippable} onDone={openingDone} measureTarget={titleTarget} />}
       {veil}
       </TileSkinContext.Provider>
     );

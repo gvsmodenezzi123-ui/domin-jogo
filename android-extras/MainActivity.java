@@ -12,11 +12,13 @@ import com.getcapacitor.BridgeActivity;
  * gera nos workflows android-apk.yml, o APK de teste, e build-android.yml, o .aab da Play).
  * - Tela cheia: esconde as barras do sistema (arrastar da borda mostra por um instante).
  * - Voltar manda o jogo para o fundo em vez de fechar: a partida continua de onde parou.
+ * - O som da abertura toca sozinho, sem esperar o primeiro toque na tela.
  */
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);
     hideSystemBars();
     getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
       @Override

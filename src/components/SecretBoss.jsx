@@ -1,42 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SECRET_BOSS } from '../data/rivals.js';
 import { bossMusicOf } from '../data/campaign.js';
 import { sound } from '../engine/audioSynth.js';
 import { haptic } from '../engine/progress.js';
 import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
-import { RuneCircle, RuneGlyph } from './art/RuneArt.jsx';
 import { prefersReducedMotion } from './motion.js';
+import { DARK_AT, EYES_AT, REVEAL_AT, STROBE_AT, createSecretRenderer } from './secretPixel.js';
 
 /**
- * Tempo de cada fase da entrada (ms desde que a cena abre, Patch 0.8.2):
- * flicker  a luz do boteco falha (4 apagadas em 1,5 s, abaixo de 3 piscadas por segundo)
- * dark     breu total, o coração batendo
- * strobe   o trovão, o estrobo vermelho e o círculo de runas se desenhando, runa por runa
- * eyes     o estrobo para; no meio do círculo, dois olhos dourados abrem
- * reveal   o Dono e a regra da mesa, com o círculo girando devagar atrás
+ * Fases da entrada (ms desde que a cena abre, Patch 0.8.2; desenho em pixel art desde o 1.1,
+ * em secretPixel.js): flicker (a luz falha), dark (breu e o coração), strobe (o trovão e o
+ * círculo de runas), eyes (os olhos dourados) e reveal (o Dono e a regra da mesa).
  */
-const DARK_AT = 1500;
-const STROBE_AT = 2400;
-const EYES_AT = 4300;
-const REVEAL_AT = 5700;
 const ORDER = ['flicker', 'dark', 'strobe', 'eyes', 'reveal'];
 /** A trilha dele (Patch 0.9.0) entra junto com a revelação. */
 const DONO_TRACK = bossMusicOf(SECRET_BOSS);
-
-/** Runas e brasas que sobem pelo escuro: [posição %, runa (ou -1 = brasa), duração s, atraso s]. */
-const DRIFT = [
-  [6, 0, 5.2, 0],
-  [15, -1, 3.8, 1.1],
-  [24, 3, 6, 2.2],
-  [33, -1, 4.4, 0.4],
-  [44, 6, 5.6, 1.6],
-  [56, -1, 4, 2.8],
-  [66, 1, 5.4, 0.8],
-  [75, -1, 3.6, 1.9],
-  [84, 5, 6.2, 0.2],
-  [93, -1, 4.2, 2.5],
-];
 
 /**
  * Nó 19 secreto (Patch 0.8.0). Você venceu o Comendador com 3+ Necróticos na hotbar e o
@@ -96,10 +75,30 @@ export default function SecretBoss({ rival, onSit }) {
     return () => timers.forEach(clearTimeout);
   }, []);
 
+  // o desenho: um canvas em pixel art que segue o relógio da cena (pular salta para a revelação)
+  const clock = useRef({ start: 0, jump: null });
+  const canvasRef = useCallback((canvas) => {
+    if (!canvas) return undefined;
+    const r = createSecretRenderer(canvas);
+    const reduced = prefersReducedMotion();
+    clock.current.start = performance.now();
+    let raf = 0;
+    const loop = () => {
+      raf = requestAnimationFrame(loop);
+      const now = performance.now();
+      const { start, jump } = clock.current;
+      const ms = jump != null ? REVEAL_AT + (now - jump) : now - start;
+      r.render(ms, { reduced });
+    };
+    loop();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const intro = stage !== 'reveal';
   const skip = () => {
     if (!intro) return;
     skipped.current = true;
+    clock.current.jump = performance.now();
     sound.hushMusic(0);
     sound.playTrack(DONO_TRACK);
     setStage('reveal');
@@ -113,18 +112,7 @@ export default function SecretBoss({ rival, onSit }) {
       aria-labelledby="secret-title"
       onClick={skip}
     >
-      <div aria-hidden="true" className="secret-shade pointer-events-none absolute inset-0" />
-      <div aria-hidden="true" className="secret-flash pointer-events-none absolute inset-0" />
-      <div aria-hidden="true" className="secret-drift pointer-events-none absolute inset-0 overflow-hidden">
-        {DRIFT.map(([left, glyph, dur, delay]) => (
-          <span key={left} className={glyph < 0 ? 'drift-ember' : 'drift-rune'} style={{ left: `${left}%`, animationDuration: `${dur}s`, animationDelay: `${delay}s` }}>
-            {glyph >= 0 && <RuneGlyph index={glyph} className="h-full w-full" />}
-          </span>
-        ))}
-      </div>
-      <div aria-hidden="true" className="secret-runes pointer-events-none">
-        <RuneCircle className="h-full w-full" />
-      </div>
+      <canvas ref={canvasRef} aria-hidden="true" className="secret-canvas pointer-events-none absolute inset-0 h-full w-full" />
 
       {intro ? (
         <p className="secret-skip font-pixel">TOQUE PARA PULAR</p>
