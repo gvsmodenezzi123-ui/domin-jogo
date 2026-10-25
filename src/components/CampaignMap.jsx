@@ -24,6 +24,7 @@ import { MenuGlyph } from './UiGlyphs.jsx';
 import { CorvoSprite, TiaoMoedasSprite } from './art/NecroticArt.jsx';
 import { ValtinhoSprite } from './art/SceneArt.jsx';
 import { EventPlaqueIcon, TableModIcon } from './art/TableModArt.jsx';
+import { MaletaSprite } from './art/CaseArt.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
 
 /** Altura de cada andar (px), cabeçalho de cada região e folga embaixo. */
@@ -112,15 +113,40 @@ const STATUS_LABEL = { open: 'ABERTO', done: 'JÁ PASSOU', ahead: 'MAIS ADIANTE'
 const revealed = (status) => status === 'open' || status === 'done';
 
 /** Um nó da teia: polaroid do rival (mesa) ou ficha com o NPC (loja, beco, Seu Tião). */
-const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect }) {
+const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect, pvp = null }) {
   const { node } = point;
   const fight = node.type === 'combat' || node.type === 'boss';
   const rival = fight ? getRival(node.rivalId) : null;
-  const mod = tableModifierOf(node.mod);
+  // Patch PvP: no online toda mesa é um duelo contra o outro jogador (sem regra de mesa)
+  const mod = pvp ? null : tableModifierOf(node.mod);
   const label = fight
-    ? `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}${mod ? `, regra da mesa: ${mod.name}` : ''}`
+    ? pvp
+      ? `${node.boss ? 'Mesa de chefe' : 'Duelo'} contra ${pvp.oppName}`
+      : `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}${mod ? `, regra da mesa: ${mod.name}` : ''}`
     : NODE_LABEL[node.type];
   const cls = `web-node web-${status} ${selected ? 'web-selected' : ''}`;
+  const oppHere = pvp?.oppNode === node.id;
+  if (fight && pvp) {
+    const photo = node.boss ? 56 : 40;
+    return (
+      <button
+        type="button"
+        className={`${cls} map-polaroid web-fight pvp-fight ${node.boss ? 'map-node-boss' : ''}`}
+        style={{ left: `${point.x}%`, top: point.y, rotate: `${tilt}deg` }}
+        onClick={() => onSelect(node.id)}
+        aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})${oppHere ? `, ${pvp.oppName} está aqui` : ''}`}
+        aria-pressed={selected}
+      >
+        <span aria-hidden="true" className="polaroid-tape" />
+        <span className="polaroid-photo" style={{ width: photo, height: photo }}>
+          <MaletaSprite id={pvp.oppMaleta} className="h-full w-full" />
+          {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
+        </span>
+        <span className="polaroid-caption font-pixel">{node.boss ? 'CHEFE' : 'DUELO'}</span>
+        {oppHere && <span className="pvp-opp-pin font-pixel">{pvp.oppName.slice(0, 8).toUpperCase()}</span>}
+      </button>
+    );
+  }
   if (fight) {
     const photo = node.boss ? 56 : 40;
     return (
@@ -168,12 +194,13 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
       <span className="web-stop-chip">{STOP_ART[node.type]('web-stop-art')}</span>
       <span className="web-stop-caption font-pixel">{STOP_CAPTION[node.type]}</span>
       {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
+      {oppHere && <span className="pvp-opp-pin font-pixel">{pvp.oppName.slice(0, 8).toUpperCase()}</span>}
     </button>
   );
 });
 
 /** Texto e botão do rodapé para o nó escolhido. */
-function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEnter }) {
+function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEnter, pvp = null }) {
   const unknownLine = farRegion ? 'Ainda não chegou nessa região.' : 'Só aparece quando o caminho até aqui abrir.';
   const fight = node.type === 'combat' || node.type === 'boss';
   // nas Peças Pretas o rodapé mostra o baralho, os talismãs e os corações do modo difícil
@@ -185,7 +212,18 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
   let notes;
   let action;
   let kind = NODE_LABEL[node.type];
-  if (fight) {
+  if (fight && pvp) {
+    kind = node.boss ? 'MESA DE CHEFE' : 'DUELO';
+    art = (
+      <div className="avatar-frame shrink-0 self-start">
+        <MaletaSprite id={pvp.oppMaleta} className="h-[46px] w-[46px]" />
+      </div>
+    );
+    title = `${node.boss ? 'CHEFE · ' : ''}${pvp.oppName.toUpperCase()}`;
+    line = node.boss ? 'Vencer paga +$4 e cura tudo.' : 'Uma rodada valendo corações de verdade.';
+    notes = [`Quem bater ou levar a tranca tira coração do outro.`, `${pvp.oppName}: ${pvp.oppWhere}`];
+    action = node.boss ? 'SENTAR À MESA DE CHEFE' : `SENTAR À MESA · DUELO`;
+  } else if (fight) {
     if (known) kind = node.boss ? 'CHEFE' : 'MESA';
     art = (
       <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
@@ -235,7 +273,7 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
         </div>
       </div>
       {/* Patch 0.9.4: a regra de mesa do confronto, em âmbar */}
-      {fight && tableModifierOf(node.mod) && (
+      {fight && !pvp && tableModifierOf(node.mod) && (
         <div className="map-mod-banner mt-1.5" role="note">
           <TableModIcon icon={tableModifierOf(node.mod).icon} className="map-mod-banner-icon" />
           <div className="min-w-0">
@@ -244,7 +282,7 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
           </div>
         </div>
       )}
-      {notes.length > 0 && !(fight && node.mod) && (
+      {notes.length > 0 && !(fight && node.mod && !pvp) && (
         <ul className="web-notes mt-1.5 grid gap-0.5 font-term text-[15px] leading-[1.05] text-bone-200">
           {notes.map((n, i) => (
             <li key={n} className={i > 0 && fight ? 'text-brass-300' : ''}>
@@ -272,7 +310,12 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
  * de cada mesa só aparece quando o caminho até ela abre (antes disso, "?").
  * Tocar num nó mostra o que tem nele; o botão do rodapé entra no nó escolhido.
  */
-export default function CampaignMap({ state, onEnter, onMenu, press }) {
+/**
+ * `pvp` (Patch PvP): { oppName, oppMaleta, oppNode, oppWhere } — as mesas viram duelos contra
+ * o outro jogador (a polaroid mostra a maleta dele) e o nó onde ele está ganha o nome dele.
+ * `extra`: o que vem logo abaixo do cabeçalho (a faixa do oponente).
+ */
+export default function CampaignMap({ state, onEnter, onMenu, press, pvp = null, extra = null }) {
   const campaign = campaignOf(state);
   const { height, points, regions, edges } = useMemo(() => layoutOf(campaign), [campaign]);
   const { status, open } = useMemo(() => statusesOf(state, campaign), [state, campaign]);
@@ -329,6 +372,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           <CoinCount value={state.coins.player} />
           <Hotbar relics={state.relics.player} slots={relicSlotsFor(state)} size={24} press={press} label="Seus talismãs" />
         </div>
+        {extra}
       </header>
 
       <div ref={scrollRef} className="map-scroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
@@ -373,6 +417,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
               selected={p.node.id === selectedId}
               tilt={(mixSeed(campaign.seed, `tilt-${p.node.id}`) % 7) - 3}
               onSelect={setPicked}
+              pvp={pvp}
             />
           ))}
         </div>
@@ -387,9 +432,12 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
           mode={state.mode}
           closed={state.challenge === 'soNoOsso' && (selected.type === 'shop' || selected.type === 'black')}
           onEnter={onEnter}
+          pvp={pvp}
         />
         <p className="mt-1.5 font-pixel text-[7px] leading-relaxed text-bone-400">
-          {modeOf(state.mode).healPerTable
+          {pvp
+            ? 'VENCER DUELO: +1♥ E $8 · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS'
+            : modeOf(state.mode).healPerTable
             ? `VENCER MESA: +${modeOf(state.mode).healPerTable}♥ (CHEFE TAMBÉM) · LOJA E BECO SÃO OPCIONAIS`
             : `VENCER MESA: +${HEAL_AFTER_NODE}♥ · CHEFE: CURA TUDO · LOJA E BECO SÃO OPCIONAIS`}
         </p>

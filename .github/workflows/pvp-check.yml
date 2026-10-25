@@ -1,0 +1,30 @@
+name: Buxaria Online (testes)
+
+# Branch do modo online (claude/buxaria-pvp): lint, testes e build a cada push. Não publica no
+# GitHub Pages (o site de lá é o do jogo solo; publicar daqui trocaria o site inteiro).
+on:
+  push:
+    branches: [claude/buxaria-pvp]
+  workflow_dispatch:
+
+concurrency:
+  group: pvp-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: PeerJS junto do build
+        run: test -s dist/vendor/peerjs-1.5.4.min.js

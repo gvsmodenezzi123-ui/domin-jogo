@@ -25,6 +25,9 @@ import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/til
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import IntroScene from './intro/IntroScene.jsx';
+import PvpApp from './pvp/PvpApp.jsx';
+import { parseRoomInput } from './pvp/protocol.js';
+import { loadSavedTable } from './pvp/controller.js';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { useLongPress } from './components/useLongPress.js';
@@ -112,6 +115,16 @@ const dealDeck = (state, key) => {
 /** Semente da run: sorteia a teia de caminhos, as vitrines e as gorjetas do Seu Tião. */
 /** A semente da run nova: a digitada no Balcão (normalizada) ou uma sorteada. */
 const seedForRun = (typed) => normalizeSeed(typed) ?? generateRandomSeed();
+
+/** Patch PvP: o link de uma mesa online (?mesa=8B2KQ) abre direto o lobby com o ID preenchido. */
+function linkedRoom() {
+  try {
+    const mesa = new URLSearchParams(window.location.search).get('mesa');
+    return mesa ? parseRoomInput(mesa) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Onde a tela inicial tem o logo e a lâmpada: o último quadro da abertura casa com eles. */
 function titleTarget() {
@@ -473,6 +486,9 @@ export default function App() {
   }, []);
   // a tela inicial abre direto no Balcão de Maletas? ({ challenge } ou false)
   const [titlePick, setTitlePick] = useState(false);
+  // Patch PvP: a mesa online por cima de tudo ({ room } ou null); o solo fica parado na tela inicial
+  // (uma mesa guardada — a página recarregou no meio da partida — também volta direto para ela)
+  const [online, setOnline] = useState(() => (linkedRoom() ? { room: linkedRoom() } : loadSavedTable() ? { room: null } : null));
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
   const { stage: veilStage, go: cutTo } = useSceneTransition();
   // Patch 0.7.0: fila dos avisos de conquista (um por vez, no alto da tela)
@@ -1172,6 +1188,25 @@ export default function App() {
   // Peças Pretas: as pedras comuns da partida viram ébano com pips brancos
   const tileSkin = state.phase !== 'title' ? modeOf(state.mode).skin : 'bone';
 
+  if (online) {
+    return (
+      <>
+        <PvpApp
+          settings={settings}
+          onSettings={changeSettings}
+          muted={muted}
+          onToggleMute={toggleMute}
+          initialRoom={online.room ?? null}
+          onExit={() => {
+            setOnline(null);
+            if (sound.ctx) sound.playTrack(REGIONS[0].music);
+          }}
+        />
+        {veil}
+      </>
+    );
+  }
+
   if (state.phase === 'title') {
     return (
       <TileSkinContext.Provider value={tileSkin}>
@@ -1193,6 +1228,11 @@ export default function App() {
           onSecretTap={titleSecretTap}
           onTap={titleTap}
           devUnlocked={devUnlocked}
+          onOnline={() => {
+            titleTap();
+            setOpening((o) => ({ ...o, on: false }));
+            setOnline({ room: null });
+          }}
         />
       </div>
       {opening.on && <IntroScene skippable={opening.skippable} onDone={openingDone} measureTarget={titleTarget} />}

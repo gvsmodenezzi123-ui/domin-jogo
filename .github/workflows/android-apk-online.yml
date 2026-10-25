@@ -1,0 +1,123 @@
+name: APK Buxaria Online
+
+# Branch do modo online (claude/buxaria-pvp): um APK de TESTE à parte, a cada push:
+#   Buxaria Online  com.buxaria.online  (o jogo solo inteiro + JOGAR ONLINE)
+# Instala ao lado dos APKs do solo (com.buxaria.domino e .dev) e do app da Play. Fica na aba
+# Actions (artefato) e numa Release "Buxaria Online X.Y.Z (APK, build N)". O mesmo projeto do
+# solo: Capacitor 8 (Android 16 / API 36, Java 21), ajustado por scripts/prepare-android.mjs.
+# Assinatura: sempre a chave fixa e pública de android-extras/debug.keystore (a mesma em todo
+# build: o APK novo instala por cima do antigo e o progresso fica). Ela NUNCA vai para a Play:
+# o envio à loja é o .aab de build-android.yml, assinado com a sua chave de upload.
+on:
+  push:
+    branches: [claude/buxaria-pvp]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-online-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: APK ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: online
+            label: Buxaria Online
+            app_id: com.buxaria.online
+            app_name: Buxaria Online
+            dev_panel: 'off'
+            assets: assets
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Build do jogo
+        env:
+          VITE_DEV_PANEL: ${{ matrix.dev_panel }}
+          VITE_NATIVE: '1'
+        run: npm run build
+
+      - name: Projeto Android (Capacitor)
+        env:
+          APP_ID: ${{ matrix.app_id }}
+          APP_NAME: ${{ matrix.app_name }}
+        run: |
+          npm install --no-save @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @capacitor/assets@3
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.appId=process.env.APP_ID;c.appName=process.env.APP_NAME;fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+          npx cap add android
+
+      - name: Ícone e tela de abertura
+        run: >-
+          npx capacitor-assets generate --android --assetPath ${{ matrix.assets }}
+          --iconBackgroundColor '#0d0a07' --iconBackgroundColorDark '#0d0a07'
+          --splashBackgroundColor '#0b0907' --splashBackgroundColorDark '#0b0907'
+
+      - name: Tela cheia, retrato, permissões e versão
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          VERSION_CODE=${{ github.run_number }} SIGN_WITH_GRADLE=1 node scripts/prepare-android.mjs
+          npx cap sync android
+
+      - name: Gerar o APK
+        working-directory: android
+        run: |
+          # APK de teste: sempre a chave fixa do repositório, para cada APK novo instalar por cima do
+          # anterior sem perder o progresso. A chave de upload da Play (segredos) é só do .aab.
+          export BUXARIA_KEYSTORE="$GITHUB_WORKSPACE/android-extras/debug.keystore" BUXARIA_KS_PASS=android BUXARIA_KS_ALIAS=androiddebugkey
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          OUT="../buxaria-$VERSION-${{ matrix.variant }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$OUT"
+          ls -la "$OUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buxaria-${{ matrix.variant }}
+          path: buxaria-*-${{ matrix.variant }}.apk
+          if-no-files-found: error
+
+  release:
+    name: Release do APK online
+    needs: apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: apks
+          merge-multiple: true
+
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="apk-online-v$VERSION-build${{ github.run_number }}"
+          ls -la apks
+          gh release create "$TAG" apks/*.apk \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Buxaria Online $VERSION (APK, build ${{ github.run_number }})" \
+            --notes "Buxaria Online $VERSION (branch ${GITHUB_REF_NAME}, commit ${GITHUB_SHA::7}):
+          - buxaria-$VERSION-online.apk: o jogo com a mesa online (JOGAR ONLINE: sala com ID, P2P pelo PeerJS).
+          Instala ao lado do Buxaria solo. Os dois aparelhos precisam de internet. No Android, permita instalar apps desta fonte quando ele pedir."

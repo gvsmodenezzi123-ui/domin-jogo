@@ -246,7 +246,11 @@ const MODE_SOUND = { normal: () => sound.playClick(), hard: () => sound.playDrea
  * Prateadas mudam a cor do balcão (`mode-hard` / `mode-inferno`): a luz esfria, a sombra
  * fecha e, no inferno, o salão fica vermelho com brasa subindo.
  */
-export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnlocked = false, progress = {}, challenge = null, onStart, onBack }) {
+/**
+ * `pvp` (Patch PvP): o balcão da mesa online — só a maleta (sem dificuldade, sem semente: a
+ * teia vem do anfitrião) e o texto do botão; `{ title, note, start, back }`.
+ */
+export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnlocked = false, progress = {}, challenge = null, onStart, onBack, pvp = null }) {
   const rule = challengeOf(challenge);
   const allowed = (id) => !rule?.maleta || rule.maleta === id;
   const [focus, setFocus] = useState(() => Math.max(0, MALETA_IDS.indexOf(rule?.maleta ?? DEFAULT_MALETA)));
@@ -259,7 +263,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
   const [seed, setSeed] = useState('');
   const modesOpen = { normal: true, hard: blackUnlocked, inferno: silverUnlocked };
   // na primeira vez que uma maleta aparece liberada, as correntes caem
-  const [fresh] = useState(() => unlocked.filter((id) => id !== 'classica' && !seen.includes(id)));
+  // (no online todas vêm abertas: não mexe nas correntes do solo)
+  const [fresh] = useState(() => (pvp ? [] : unlocked.filter((id) => id !== 'classica' && !seen.includes(id))));
 
   useEffect(() => {
     if (fresh.length) markMaletasSeen(fresh);
@@ -345,8 +350,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
       </div>
       <div className="case-scroll">
         <h1 id="counter-title" className="case-title">
-          {rule ? `DESAFIO: ${rule.name.toUpperCase()}` : 'BALCÃO DE MALETAS'}
-          <span>{rule ? rule.rule : 'Arraste para o lado e escolha a sua maleta'}</span>
+          {pvp ? pvp.title : rule ? `DESAFIO: ${rule.name.toUpperCase()}` : 'BALCÃO DE MALETAS'}
+          <span>{pvp ? pvp.note : rule ? rule.rule : 'Arraste para o lado e escolha a sua maleta'}</span>
         </h1>
 
         <CaseCarousel ids={MALETA_IDS} focus={focus} onFocus={focusTo}>
@@ -413,13 +418,14 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
             <p className="counter-card-title">{maleta.name.toUpperCase()}</p>
             <p className="counter-card-sub">{maleta.title}</p>
             <p className="counter-buff">+ {maleta.buff}</p>
-            {maleta.debuff && <p className="counter-debuff">− {maleta.debuff}</p>}
-            <DifficultyPick mode={mode} unlocked={modesOpen} onChange={chooseMode} />
+            {maleta.debuff && <p className="counter-debuff">− {pvp?.debuff?.[maleta.id] ?? maleta.debuff}</p>}
+            {!pvp && <DifficultyPick mode={mode} unlocked={modesOpen} onChange={chooseMode} />}
             {warn.n > 0 && (
               <p key={warn.n} className="case-warn animate-shop-alert" role="alert">
                 {warn.text}
               </p>
             )}
+            {!pvp && (
             <label className="seed-field">
               <span className="seed-field-label">SEMENTE (OPCIONAL)</span>
               <input
@@ -440,19 +446,20 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
                 {normalizeSeed(seed) ? `A run sai igual para quem usar ${normalizeSeed(seed)}.` : 'Cole uma semente para repetir uma run.'}
               </span>
             </label>
+            )}
             <button
               type="button"
               data-tone={mode === 'normal' ? 'play' : 'blood'}
               className="btn-pixel counter-start"
               onClick={() => onStart({ maleta: selected, mode, challenge, seed })}
             >
-              INICIAR
+              {pvp ? pvp.start : 'INICIAR'}
             </button>
           </div>
         )}
 
         <button type="button" className="text-action case-back" onClick={onBack}>
-          VOLTAR
+          {pvp?.back ?? 'VOLTAR'}
         </button>
       </div>
     </div>

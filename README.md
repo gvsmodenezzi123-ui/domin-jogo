@@ -164,6 +164,51 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Buxaria Online (branch `claude/buxaria-pvp`)
+
+Versão paralela com a **mesa online**: um contra um entre duas pessoas de verdade, numa sala
+privada com ID. O jogo solo continua igual (o modo online entra pelo **JOGAR ONLINE**, no menu
+JOGAR) e o código novo mora em `src/pvp/`.
+
+- **Rede P2P (PeerJS / WebRTC DataChannel):** a partida passa direto de um aparelho para o
+  outro; o servidor público e gratuito do PeerJS só apresenta os dois. O PeerJS 1.5.4 vem junto
+  do jogo (`public/vendor/`, compilado do código-fonte oficial, licenças ao lado) e é carregado
+  só quando alguém abre a mesa online; se faltar, o jogo tenta o CDN da mesma versão.
+- **Lobby (`LobbyView.jsx`):** CRIAR MESA CLANDESTINA gera o ID (`MESA-` + 5 letras e números
+  legíveis, sem 0/O/1/I/L), mostra "Esperando oponente sentar à mesa..." e o COPIAR LINK/ID; o
+  link `?mesa=XXXXX` abre o lobby já preenchido. SENTAR EM UMA MESA tem o campo com máscara e o
+  PUXAR CADEIRA (CONECTAR). No canto, o indicador: verde sincronizado (com o ping), vermelho
+  conexão perdida.
+- **Mensagens (JSON, conferidas antes de usar, `protocol.js`):** `HANDSHAKE` (nome, maleta,
+  baralho inicial), `PLAY_TILE`, `PASS_TURN`, `BUY_TILE`, `SHOP_FINISH`, `ROUND_RESULT`, mais
+  as de controle (`HELLO`, `RUN_START`, `STATUS`, `DUEL_READY`, `DUEL_STATE`, `PING`/`PONG`,
+  `SYNC`, `GAME_OVER`...). Quem criou a mesa roda as regras do duelo (o mesmo reducer do solo)
+  e manda o estado; quem entrou manda as jogadas e vê o espelho, com a mão do outro e o dorme
+  escondidos.
+- **A teia espelhada:** a semente vem de quem criou a mesa, então o mapa é o mesmo para os
+  dois; cada um escolhe o caminho e faz loja, Mercado Negro e eventos [?] no próprio ritmo. Sair
+  da loja ou do beco é o **PRONTO PARA O DUELO** (o outro fica sabendo).
+- **Duelos de verdade:** toda mesa (comum ou chefe) é contra o outro jogador; não existe IA. O
+  topo mostra o nome, a maleta, os corações e os talismãs reais dele. Quem chega primeiro numa
+  mesa espera o outro chegar na dele. Cada mesa vale uma rodada: quem bater ou vencer na tranca
+  tira coração do outro (as regras de dano do solo). Vencer paga $8 ($16 na Maleta Seca) e +1♥;
+  na mesa de chefe, +$4 e cura tudo; quem perde leva $3.
+- **Fim da noite:** quem termina a teia espera e joga as mesas que o outro ainda tem; com os
+  dois no fim, a mesa final vale até alguém zerar. O sobrevivente é **O Dono da Noite**.
+- **Cronômetro e quedas:** 30 s por jogada (esgotou, o jogo joga sozinho). Se alguém fecha a
+  aba ou cai a conexão, aparece a contagem de 60 s; sem volta, W.O. para quem ficou. Recarregar
+  a página no meio da partida volta para a mesma mesa.
+- **Equilíbrio:** 7 corações para cada um, Peças Brancas, sem as melhorias da Conta do Boteco,
+  todas as maletas e talismãs liberados, menos os que só fazem sentido contra a IA (Relógio
+  Quebrado, Óculos Fundo de Garrafa e Dedo de Cadáver Amarrado). Barbante, Giz e Canivete valem
+  para os dois lados; a Maleta do Bicheiro dá 1 pedra de grife a mais para o adversário.
+- **APK:** o workflow `android-apk-online.yml` gera o **Buxaria Online** (`com.buxaria.online`)
+  a cada push nesta branch, numa Release "Buxaria Online X.Y.Z (APK, build N)"; instala ao lado
+  do solo. O `pvp-check.yml` roda lint, testes e build. Esta branch não publica no GitHub Pages
+  (o site de lá continua o do solo).
+- **Testes:** `src/pvp/__tests__/` (protocolo, espelho, duelo, partidas inteiras entre dois
+  robôs numa rede de mentira, queda e volta, W.O., página recarregada, cronômetro).
+
 ## Versão 1.1: a abertura e o Dono da Noite em pixel art
 
 - **Abertura no jogo:** a cena da rua → boteco → bucha → logo (pixel art, 180x320 ampliado sem

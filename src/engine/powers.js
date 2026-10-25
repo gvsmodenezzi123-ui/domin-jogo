@@ -153,9 +153,9 @@ export function relicExtraTurn(state, seat, ctx) {
   return relicsOf(state, seat).find((r) => r.extraTurn?.(state, full))?.id ?? null;
 }
 
-/** Quantas pedras você vê ao comprar (Barbante Mágico: 3). Rivais compram normal. */
+/** Quantas pedras você vê ao comprar (Barbante Mágico: 3). Rivais compram normal (no online, os dois lados escolhem). */
 export function drawOptionsFor(state, seat) {
-  if (seat !== 'player') return 1;
+  if (seat !== 'player' && !state.pvp) return 1;
   return Math.max(1, ...relicsOf(state, seat).map((r) => r.drawOptions ?? 1));
 }
 
@@ -263,15 +263,16 @@ export function trancaSumOffsets(state) {
   return offset;
 }
 
-/** O Canivete Suíço pode ser aberto agora (sua vez, 1x por partida)? */
-export function canUseCanivete(state) {
+/** O Canivete Suíço pode ser aberto agora (sua vez, 1x por partida; no online, 1x para cada lado)? */
+export function canUseCanivete(state, seat = 'player') {
+  const used = state.pvp ? Boolean(state.matchFx?.caniveteBy?.[seat]) : Boolean(state.matchFx?.caniveteUsed);
   return (
     state.phase === 'playing' &&
-    state.turn === 'player' &&
+    state.turn === seat &&
     !state.pending &&
-    hasRelic(state, 'player', 'canivete') &&
-    !state.matchFx?.caniveteUsed &&
-    state.hands.player.length > 0
+    hasRelic(state, seat, 'canivete') &&
+    !used &&
+    state.hands[seat].length > 0
   );
 }
 
@@ -279,13 +280,13 @@ export function canUseCanivete(state) {
  * A sua vez acabou sem saída: comprou, nada encaixa e não dá para comprar de novo.
  * O Relógio Quebrado pronto ainda é uma saída (desfazer a jogada do rival).
  */
-export function playerTurnExhausted(state) {
-  if (state.phase !== 'playing' || state.turn !== 'player' || state.pending || !state.board.root) return false;
-  if (canUndo(state)) return false;
+export function playerTurnExhausted(state, seat = 'player') {
+  if (state.phase !== 'playing' || state.turn !== seat || state.pending || !state.board.root) return false;
+  if (seat === 'player' && canUndo(state)) return false;
   return isTurnExhausted({
-    hasPlay: hasPlayFor(state, 'player'),
+    hasPlay: hasPlayFor(state, seat),
     drawsThisTurn: state.drawsThisTurn,
-    drawAllowed: drawAvailabilityFor(state, 'player').allowed,
+    drawAllowed: drawAvailabilityFor(state, seat).allowed,
   });
 }
 

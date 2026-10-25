@@ -22,8 +22,12 @@ export function relicSlotsFor(state) {
   return Math.min(MAX_RELIC_SLOTS, RELIC_SLOTS + maletaOf(state?.maleta).extraSlots + perks);
 }
 
-/** Compras do dorme por turno (Maleta Seca: 1; o rival segue com 3). */
-export const maxDrawsFor = (state, seat) => (seat === 'player' ? maletaOf(state?.maleta).maxDraws : DRAW_LADDER.length);
+/** Compras do dorme por turno (Maleta Seca: 1; o rival segue com 3; no online, a maleta de cada lado). */
+export function maxDrawsFor(state, seat) {
+  const pvpMaleta = state?.pvp?.maletas?.[seat];
+  if (pvpMaleta) return maletaOf(pvpMaleta).maxDraws;
+  return seat === 'player' ? maletaOf(state?.maleta).maxDraws : DRAW_LADDER.length;
+}
 
 /** Fiado de Rua: o 1º passe voluntário da run ainda está na conta? */
 export const fiadoAvailable = (state) => hasPerk(state, 'fiado') && !state?.run?.fiadoUsed;
