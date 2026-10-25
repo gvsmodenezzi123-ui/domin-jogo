@@ -23,7 +23,10 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm run lint
+      - name: Lint (cada problema vira uma anotação do run)
+        run: |
+          npx eslint . -f json -o eslint.json || true
+          node -e "const r=require('./eslint.json');let e=0;for(const f of r)for(const m of f.messages){if(m.severity===2)e++;console.log('::'+(m.severity===2?'error':'warning')+' file='+f.filePath.replace(process.cwd()+'/','')+',line='+m.line+',col='+m.column+'::'+(m.ruleId||'')+' '+m.message.replace(/\r?\n/g,' '))}console.log(e+' erro(s)');process.exit(e?1:0)"
       - run: npm test
       - run: npm run build
       - name: PeerJS junto do build
