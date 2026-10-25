@@ -54,6 +54,8 @@ export default function IntroScene({ skippable = false, onDone, measureTarget })
       let leavingShown = false;
       let pausedAt = null;
       let audioOn = false;
+      // PULAR tocado: o som da cena não entra mais (nem se o toque destravar o áudio agora)
+      let skipped = false;
       let stops = [];
       let musicTimer = 0;
       let hintTimer = 0;
@@ -94,7 +96,7 @@ export default function IntroScene({ skippable = false, onDone, measureTarget })
       };
 
       const startAudio = () => {
-        if (audioOn || disposed || finished || sound.isMuted || !renderer || sceneStart == null) return;
+        if (audioOn || skipped || disposed || finished || sound.isMuted || !renderer || sceneStart == null) return;
         const ctx = sound.ctx;
         if (!ctx || ctx.state !== 'running' || !sound.master) return;
         const now = sceneTime();
@@ -143,6 +145,7 @@ export default function IntroScene({ skippable = false, onDone, measureTarget })
 
       api.current.skip = () => {
         if (finished) return;
+        skipped = true;
         stopAudio();
         titleMusic(false);
         setLeaving(true);

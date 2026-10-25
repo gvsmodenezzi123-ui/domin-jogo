@@ -70,7 +70,9 @@ export function scheduleIntroSound({ ctx, out, t0, from = 0, until = Infinity, s
   verbIn.connect(verb).connect(master);
   const noise = noiseBuffer(ctx);
 
-  const T = (s) => t0 + s;
+  // entrando atrasado (o toque destravou o áudio no meio da cena), o começo já passou: o que
+  // era antes de agora vai para o instante 0 do contexto (tempo negativo o Web Audio recusa)
+  const T = (s) => Math.max(0, t0 + s);
   const alive = (start, end) => end > from && start <= until;
   const panner = (p) => {
     if (!p || typeof ctx.createStereoPanner !== 'function') return null;
@@ -381,7 +383,8 @@ export function scheduleRadio({ ctx, out, t0, from = 0, music = 0.4 }) {
   hp.frequency.value = 160;
   const level = ctx.createGain();
   engine.master.connect(hp).connect(radio).connect(level).connect(out);
-  const T = (s) => t0 + s;
+  const R = (s) => t0 + s;
+  const T = (s) => Math.max(0, R(s)); // a automação de antes de agora fica no instante 0
   const B = BEATS;
   const v = Math.max(SILENT, music * 1.3);
   radio.frequency.setValueAtTime(520, T(0));
@@ -396,9 +399,10 @@ export function scheduleRadio({ ctx, out, t0, from = 0, music = 0.4 }) {
   level.gain.setValueAtTime(v * 0.5, T(B.slam - 0.01));
   level.gain.linearRampToValueAtTime(0, T(B.slam + 0.02));
   const track = TRACKS[INTRO_TRACK];
-  let at = T(0);
-  for (let step = 0; at < T(B.slam + 0.05); step += 1) {
-    if (at >= T(from) - 0.02) engine.scheduleStep(track, step, at, 1);
+  // as notas contam do começo de verdade da cena (só as de agora em diante entram)
+  let at = R(0);
+  for (let step = 0; at < R(B.slam + 0.05); step += 1) {
+    if (at >= R(from) - 0.02 && at >= 0) engine.scheduleStep(track, step, at, 1);
     at += stepDuration(track, step, 1);
   }
   return () => {
