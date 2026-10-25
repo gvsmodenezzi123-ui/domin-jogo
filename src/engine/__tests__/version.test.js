@@ -49,12 +49,12 @@ function fakeProject(appId) {
 const node = globalThis.process;
 const run = (dir, env) => spawnSync(node.execPath, ['scripts/prepare-android.mjs'], { cwd: dir, env: { ...node.env, ...env }, encoding: 'utf8' });
 
-describe('Versão 1.2: build de produção do Android', () => {
-  it('versão 1.2.0 e o pacote oficial no Capacitor', () => {
-    expect(JSON.parse(read('package.json')).version).toBe('1.2.0');
+describe('Versão 1.3: build de produção do Android', () => {
+  it('versão 1.3.0 e o pacote oficial no Capacitor', () => {
+    expect(JSON.parse(read('package.json')).version).toBe('1.3.0');
     const cap = JSON.parse(read('capacitor.config.json'));
     expect(cap).toMatchObject({ appId: 'com.buxaria.game', appName: 'Buxaria', webDir: 'dist' });
-    expect(read('public/sw.js')).toContain("'buxaria-v1.2.0'");
+    expect(read('public/sw.js')).toContain("'buxaria-v1.3.0'");
   });
 
   it('o workflow do App Bundle: manual e na main, bundleRelease, assinatura pelos 4 segredos, .aab no Actions', () => {
@@ -98,7 +98,7 @@ describe('Versão 1.2: build de produção do Android', () => {
       expect(manifest).toContain('PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY');
       const gradle = readFileSync(join(dir, 'android/app/build.gradle'), 'utf8');
       expect(gradle).toContain('versionCode = 42');
-      expect(gradle).toContain('versionName = "1.2.0"');
+      expect(gradle).toContain('versionName = "1.3.0"');
       expect(gradle).not.toContain('signingConfigs');
       const activity = readFileSync(join(dir, 'android/app/src/main/java/com/buxaria/game/MainActivity.java'), 'utf8');
       expect(activity.startsWith('package com.buxaria.game;')).toBe(true);

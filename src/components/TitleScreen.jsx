@@ -120,7 +120,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.2</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.3</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -285,7 +285,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 1.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO 1.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

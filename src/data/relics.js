@@ -1010,8 +1010,10 @@ export const isRelicAvailable = (id, unlocks = []) => Boolean(RELICS[id]) && (!R
 /**
  * Patch PvP: talismãs que só fazem sentido contra a IA (desfazer a jogada dela, prever a
  * próxima pedra dela, ela comprando até encaixar) não saem na loja nem no beco do online.
+ * Versão 1.3: nem a Carteira Recheada (+1 de dano a cada $15): com as moedas da mesa online
+ * ($50 a $300) ela virava uma batida que zera o outro de uma vez.
  */
-export const PVP_BANNED_RELICS = Object.freeze(['relogio', 'oculosFundo', 'dedoCadaver']);
+export const PVP_BANNED_RELICS = Object.freeze(['relogio', 'oculosFundo', 'dedoCadaver', 'carteira']);
 /** O talismã pode sair na vitrine desta run (no online, fora os da IA)? */
 export const isRelicOffered = (id, state) => isRelicAvailable(id, state?.unlocks) && !(state?.pvp && PVP_BANNED_RELICS.includes(id));
 

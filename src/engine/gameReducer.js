@@ -87,6 +87,7 @@ import {
 } from './powers.js';
 import { MAX_RELIC_SLOTS, challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
 import { isValidSave } from './save.js';
+import { DEFAULT_ROOM, ROOM_RARITY_CHANCES } from '../data/pvpRoom.js';
 import { buildShop, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
 
 export const SEATS = Object.freeze(['player', 'tioZe']);
@@ -1195,8 +1196,9 @@ function newRun(state, action) {
   const seedCode = normalizeSeed(action.seedCode);
   const sized = { maleta: maletaId, perks };
   const relics = bare ? [] : [...maleta.relics, ...(action.relics ?? [])].filter((id, i, all) => getRelic(id) && all.indexOf(id) === i).slice(0, relicSlotsFor(sized));
-  // Patch PvP: a run do online tem o próprio número de corações (src/pvp/ladder.js)
+  // Patch PvP: a run do online tem os corações e as moedas da mesa (src/data/pvpRoom.js)
   const pvpHearts = action.pvp && Number.isInteger(action.maxHearts) ? Math.max(1, Math.min(9, action.maxHearts)) : null;
+  const pvpCoins = action.pvp && Number.isInteger(action.coins) ? Math.max(0, Math.min(9999, action.coins)) : null;
   const maxHearts = challenge === 'tudoOuNada' ? 1 : (pvpHearts ?? mode.maxHearts);
   const fresh = {
     ...base,
@@ -1209,7 +1211,7 @@ function newRun(state, action) {
     perks,
     hearts: { ...base.hearts, player: maxHearts },
     maxHearts: { ...base.maxHearts, player: maxHearts },
-    coins: { ...base.coins, player: startCoinsFor(mode.startCoins, maletaId, perks) },
+    coins: { ...base.coins, player: pvpCoins ?? startCoinsFor(mode.startCoins, maletaId, perks) },
     relics: bySeat(relics, []),
     decks: bySeat(bare ? {} : { ...maleta.playerDeck, ...(action.playerDeck ?? {}) }, {}),
     seed: Number.isFinite(action.seed) ? action.seed >>> 0 : seedCode ? seedNumberOf(seedCode) : null,
@@ -1217,8 +1219,9 @@ function newRun(state, action) {
     unlocks: (action.unlocks ?? state.unlocks ?? []).filter((id) => RELICS[id]),
     seq: state.seq,
     events: state.events,
-    // Patch PvP: a run de uma pessoa no online (as mesas viram duelos contra o outro jogador)
-    ...(action.pvp ? { pvp: { run: true } } : {}),
+    // Patch PvP: a run de uma pessoa no online (Loja → Mercado Negro → o duelo contra o outro
+    // jogador); `rarity`: a raridade dos talismãs da loja que a mesa escolheu
+    ...(action.pvp ? { pvp: { run: true, rarity: ROOM_RARITY_CHANCES[action.rarity] ? action.rarity : DEFAULT_ROOM.rarity } } : {}),
   };
   return emit(fresh, { type: 'runStart', mode: mode.id, maleta: maletaId, challenge, pvp: Boolean(action.pvp) });
 }
@@ -1271,31 +1274,14 @@ function startPvpDuel(state, { deck, seats, final = false }) {
 }
 
 /**
- * O resultado de um duelo online volta para a run de quem jogou: o nó (se houver) fica
- * concluído; corações, moedas, talismãs e baralho saem da mesa, já com o prêmio e a cura
- * do vencedor (src/pvp/duelHost.js). Zerou: fim da run.
+ * Versão 1.3: as paradas da rota online (a Loja do Valtinho e o Mercado Negro), uma depois da
+ * outra, sem teia; sair delas volta para o "mapa" (que o online não mostra) e a próxima abre.
  */
-function pvpDuelResult(state, { nodeId = null, hearts, coins, relics, deck, won = false }) {
-  if (!state.pvp || state.phase !== 'map') return state;
-  const node = nodeId && availableNodes(state).includes(nodeId) ? campaignOf(state).byId.get(nodeId) : null;
-  let run = { ...state.run, match: state.run.match + 1 };
-  if (node) {
-    const path = run.path.at(-1) === node.id ? run.path : [...run.path.filter((p) => p !== node.id), node.id];
-    run = { ...run, node: node.id, path, cleared: run.cleared.includes(node.id) ? run.cleared : [...run.cleared, node.id] };
-  }
-  const max = state.maxHearts.player;
-  const left = clampInt(hearts, 0, max, state.hearts.player);
-  const next = {
-    ...state,
-    phase: left <= 0 ? 'gameOver' : 'map',
-    run,
-    hearts: { ...state.hearts, player: left },
-    coins: { ...state.coins, player: clampInt(coins, 0, 99999, state.coins.player) },
-    relics: Array.isArray(relics) ? { ...state.relics, player: relics.filter((id, i, all) => RELICS[id] && all.indexOf(id) === i) } : state.relics,
-    decks: deck && typeof deck === 'object' ? { ...state.decks, player: pvpSeat({ deck }).deck } : state.decks,
-    stats: { ...state.stats, matchesWon: state.stats.matchesWon + (won ? 1 : 0) },
-  };
-  return emit(next, { type: 'pvpDuelResult', node: node?.id ?? null, won: Boolean(won), hearts: left });
+function pvpOpenStop(state, { kind }) {
+  if (!state.pvp?.run || state.phase !== 'map') return state;
+  if (kind === 'shop') return emit({ ...state, phase: 'shop', shop: buildShop(state, 0) }, { type: 'shopOpen', pvp: true });
+  if (kind === 'black') return emit({ ...state, phase: 'blackMarket', market: buildMarket(state) }, { type: 'marketOpen', pvp: true });
+  return state;
 }
 
 /** CONTINUAR: volta para o mapa (ou para a loja / o mercado) exatamente como o save guardou. */
@@ -1629,11 +1615,11 @@ export function gameReducer(state, action) {
       return caniveteTransform(state, action);
     case 'CANCEL_CANIVETE':
       return cancelCanivete(state, action);
-    // Patch PvP (src/pvp): o duelo entre duas pessoas e o resultado dele na run de cada uma
+    // Patch PvP (src/pvp): o duelo entre duas pessoas e as paradas da rota online
     case 'PVP_START_DUEL':
       return startPvpDuel(state, action);
-    case 'PVP_DUEL_RESULT':
-      return pvpDuelResult(state, action);
+    case 'PVP_OPEN_STOP':
+      return pvpOpenStop(state, action);
     case 'UNLOCK_RELICS':
       return unlockRelics(state, action);
     case 'START_SECRET':

@@ -3,12 +3,13 @@ import { RELICS } from '../../data/relics.js';
 import { createInitialState, gameReducer } from '../../engine/gameReducer.js';
 import { buildShop } from '../../engine/shop.js';
 import { buildMarket } from '../../engine/blackMarket.js';
-import { actorOf, applyIntent, autoIntent, buildDuel, profileOf, rewardFor, roundOutcome, runResultFor } from '../duelHost.js';
-import { PVP_HEARTS, pvpNewRun, statusOf } from '../ladder.js';
+import { DEFAULT_ROOM, ROOM_RARITY_CHANCES, describeRoom, isRoom, sanitizeRoom } from '../../data/pvpRoom.js';
+import { actorOf, applyIntent, autoIntent, buildDuel, profileOf, roundOutcome } from '../duelHost.js';
+import { pvpNewRun, statusOf } from '../ladder.js';
 import { mirrorState, mirrorText, redactFor, tileCount } from '../mirror.js';
 import { MSG, ROOM_ALPHABET, formatRoomId, generateRoomCode, makeMessage, maskRoomInput, parseRoomInput, peerIdOf, validateMessage } from '../protocol.js';
 
-const run = (maleta = 'classica', seed = 5) => gameReducer(createInitialState(), pvpNewRun({ seed, seedCode: 'BUX-PVP', maleta }));
+const run = (maleta = 'classica', seed = 5, room = DEFAULT_ROOM) => gameReducer(createInitialState(), pvpNewRun({ seed, seedCode: 'BUX-PVP', maleta, room }));
 
 function duel({ host = profileOf(run('classica')), guest = profileOf(run('borracharia')), duelId = 1, final = false } = {}) {
   return buildDuel({ host, guest, seed: 99, duelId, final });
@@ -45,26 +46,76 @@ describe('Patch PvP: mensagens JSON', () => {
       makeMessage(MSG.BUY_TILE, { duelId: 1, count: 2 }),
       makeMessage(MSG.SHOP_FINISH, { newTalismans: ['dedal'], newCoins: 12 }),
       makeMessage(MSG.ROUND_RESULT, { duelId: 1, winnerId: 'a', damage: 2, heartsLeft: { a: 5, b: 3 } }),
+      makeMessage(MSG.RUN_START, { seed: 9, seedCode: 'BUX-1', room: DEFAULT_ROOM }),
+      makeMessage(MSG.HELLO, { id: 'a', name: 'Ana', version: 2, rejoin: false, room: DEFAULT_ROOM }),
     ];
     for (const msg of ok) expect(validateMessage(msg), msg.type).toBe(true);
     expect(validateMessage(makeMessage(MSG.PLAY_TILE, { duelId: 1, tile: { id: '3-5' }, targetEnd: 'left' }))).toBe(false);
     expect(validateMessage(makeMessage(MSG.PASS_TURN, { duelId: 1 }))).toBe(false);
     expect(validateMessage({ type: 'HACK', v: 1, payload: {} })).toBe(false);
+    // a configuração da mesa só passa inteira e com valores que existem
+    expect(validateMessage(makeMessage(MSG.RUN_START, { seed: 9, room: { ...DEFAULT_ROOM, coins: 99999 } }))).toBe(false);
+    expect(validateMessage(makeMessage(MSG.RUN_START, { seed: 9 }))).toBe(false);
+    // versão diferente: o HELLO e o aviso de mesa recusada passam (para os dois saberem); o resto não
+    expect(validateMessage({ type: MSG.ROOM_FULL, v: 1, payload: { reason: 'version' } })).toBe(true);
+    expect(validateMessage({ type: MSG.PASS_TURN, v: 1, payload: { duelId: 1, paid: true } })).toBe(false);
     expect(validateMessage(null)).toBe(false);
     // tudo é JSON puro (vai pelo DataChannel)
     for (const msg of ok) expect(JSON.parse(JSON.stringify(msg))).toEqual(msg);
   });
 });
 
-describe('Patch PvP: a run do online e a mesa', () => {
-  it('a run começa com 7 corações, sem melhorias, com todos os talismãs liberados e a marca pvp', () => {
+describe('Patch PvP: a configuração da mesa e a rota', () => {
+  it('padrão: $100, 5 corações, todas as raridades, 30 s; valores fora da lista voltam ao padrão', () => {
+    expect(DEFAULT_ROOM).toEqual({ coins: 100, hearts: 5, rarity: 'todas', turn: 30 });
+    expect(sanitizeRoom({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15 })).toEqual({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15 });
+    expect(sanitizeRoom({ coins: 7, hearts: 'x', rarity: 'ouro' })).toEqual(DEFAULT_ROOM);
+    expect(isRoom(DEFAULT_ROOM)).toBe(true);
+    expect(isRoom({ ...DEFAULT_ROOM, turn: 31 })).toBe(false);
+    expect(describeRoom(DEFAULT_ROOM)).toBe('$100 · 5♥ · TALISMÃS: TODAS · 30 S POR JOGADA');
+  });
+
+  it('a run começa com as moedas e os corações da mesa, sem melhorias, todos os talismãs liberados', () => {
     const r = run('bicheiro');
-    expect(r.pvp).toEqual({ run: true });
-    expect(r.hearts.player).toBe(PVP_HEARTS);
-    expect(r.maxHearts.player).toBe(PVP_HEARTS);
+    expect(r.pvp).toEqual({ run: true, rarity: 'todas' });
+    expect(r.coins.player).toBe(100);
+    expect(r.hearts.player).toBe(5);
+    expect(r.maxHearts.player).toBe(5);
     expect(r.perks).toEqual([]);
     expect(r.relics.player).toContain('moedaFurada');
-    expect(statusOf(r)).toMatchObject({ where: 'map', hearts: 7, maleta: 'bicheiro' });
+    expect(statusOf(r)).toMatchObject({ where: 'shop', hearts: 5, coins: 100, maleta: 'bicheiro' });
+    const big = run('classica', 5, { coins: 300, hearts: 9, rarity: 'raros', turn: 60 });
+    expect(big.coins.player).toBe(300);
+    expect(big.maxHearts.player).toBe(9);
+  });
+
+  it('a rota abre a loja e o Mercado Negro direto (só no online)', () => {
+    const r = run();
+    const shop = gameReducer(r, { type: 'PVP_OPEN_STOP', kind: 'shop' });
+    expect(shop.phase).toBe('shop');
+    expect(shop.shop.relics).toHaveLength(3);
+    const back = gameReducer(shop, { type: 'LEAVE_SHOP' });
+    expect(back.phase).toBe('map');
+    const market = gameReducer(back, { type: 'PVP_OPEN_STOP', kind: 'black' });
+    expect(market.phase).toBe('blackMarket');
+    expect(market.market.offers.length).toBeGreaterThan(0);
+    // fora do online (e fora do "mapa") o reducer ignora
+    const solo = gameReducer(createInitialState(), { type: 'NEW_RUN', seed: 1, mode: 'normal', maleta: 'classica' });
+    expect(gameReducer(solo, { type: 'PVP_OPEN_STOP', kind: 'shop' })).toBe(solo);
+    expect(gameReducer(shop, { type: 'PVP_OPEN_STOP', kind: 'black' })).toBe(shop);
+  });
+
+  it('a raridade da mesa manda nos talismãs da loja (as vitrines saem iguais para os dois)', () => {
+    const rarityOf = (id) => RELICS[id].rarity;
+    for (const rarity of ['comuns', 'raros', 'lendarios']) {
+      const allowed = Object.entries(ROOM_RARITY_CHANCES[rarity]).filter(([, w]) => w > 0).map(([k]) => k);
+      for (let seed = 1; seed < 25; seed += 1) {
+        const r = run('classica', seed, { ...DEFAULT_ROOM, rarity });
+        for (let n = 0; n < 3; n += 1) for (const o of buildShop(r, n).relics) expect(allowed, `${rarity}/${o.id}`).toContain(rarityOf(o.id));
+      }
+    }
+    // mesma semente, mesma vitrine nos dois aparelhos
+    expect(buildShop(run('classica', 8), 0)).toEqual(buildShop(run('bicheiro', 8), 0));
   });
 
   it('loja e beco do online não vendem os talismãs que só servem contra a IA', () => {
@@ -74,18 +125,21 @@ describe('Patch PvP: a run do online e a mesa', () => {
         const offers = buildShop(r, n).relics.map((o) => o.id);
         expect(offers).not.toContain('relogio');
         expect(offers).not.toContain('oculosFundo');
+        expect(offers).not.toContain('carteira'); // com as moedas da mesa ela zerava o outro numa batida
       }
       expect(buildMarket(r).offers.map((o) => o.id)).not.toContain('dedoCadaver');
     }
   });
+});
 
+describe('Patch PvP: a mesa', () => {
   it('cada cadeira senta com o perfil da própria run (corações, moedas, talismãs, baralho, maleta)', () => {
     const host = { ...profileOf(run('seca')), hearts: 4, coins: 17, relics: ['dedal'] };
-    const guest = { ...profileOf(run('borracharia')), hearts: 6 };
+    const guest = { ...profileOf(run('borracharia')), hearts: 3 };
     const s = duel({ host, guest });
     expect(s.phase).toBe('playing');
     expect(s.pvp.maletas).toEqual({ player: 'seca', tioZe: 'borracharia' });
-    expect(s.hearts).toEqual({ player: 4, tioZe: 6 });
+    expect(s.hearts).toEqual({ player: 4, tioZe: 3 });
     expect(s.coins.player).toBe(17);
     expect(s.relics.player).toEqual(['dedal']);
     expect(s.decks.tioZe).toMatchObject({ '5-5': 'chumbo', '3-6': 'chumbo' });
@@ -109,7 +163,7 @@ describe('Patch PvP: a run do online e a mesa', () => {
     expect(['roundOver', 'matchWon', 'gameOver']).toContain(s.phase);
     const out = roundOutcome(s);
     expect(out).toBeTruthy();
-    if (out.winner) expect(out.hearts[out.loser]).toBeLessThan(out.loser === 'player' ? 7 : 7);
+    if (out.winner) expect(out.hearts[out.loser]).toBeLessThan(s.maxHearts[out.loser]);
   });
 
   it('o passe e a compra custam igual para as duas cadeiras', () => {
@@ -163,30 +217,5 @@ describe('Patch PvP: o espelho do convidado', () => {
     expect(JSON.stringify(g)).not.toContain(JSON.stringify(s.boneyard[0]));
     const over = { ...s, phase: 'roundOver' };
     expect(redactFor(over, 'tioZe')).toBe(over);
-  });
-});
-
-describe('Patch PvP: o resultado volta para a run', () => {
-  it('quem vence leva o prêmio e +1♥ (chefe: cura tudo); quem perde leva $3', () => {
-    expect(rewardFor({ won: true, maleta: 'classica' })).toEqual({ coins: 8, heal: 1 });
-    expect(rewardFor({ won: true, maleta: 'seca' }).coins).toBe(16);
-    expect(rewardFor({ won: true, boss: true, maleta: 'classica' }).coins).toBe(12);
-    expect(rewardFor({ won: false, maleta: 'seca' })).toEqual({ coins: 3, heal: 0 });
-  });
-
-  it('PVP_DUEL_RESULT conclui o nó, aplica corações e moedas e só vale na run do online', () => {
-    const r = run();
-    const node = r.run.node ?? 'r1-f1-l0';
-    const entry = gameReducer(r, { type: 'PVP_DUEL_RESULT', nodeId: node, hearts: 6, coins: 20, relics: [], deck: {}, won: true });
-    const available = entry.run.cleared.length ? entry : r;
-    expect(available.phase).toBe('map');
-    const view = { ...duel(), phase: 'roundOver', roundResult: { winner: 'player', loser: 'tioZe', damage: 1, kind: 'normal' }, hearts: { player: 5, tioZe: 3 }, coins: { player: 9, tioZe: 2 } };
-    const action = runResultFor(view, { nodeId: null, maleta: 'classica' });
-    expect(action).toMatchObject({ type: 'PVP_DUEL_RESULT', won: true, hearts: 6, coins: 17 });
-    const dead = gameReducer(r, { ...action, hearts: 0 });
-    expect(dead.phase).toBe('gameOver');
-    // fora do online o reducer ignora
-    const solo = gameReducer(createInitialState(), { type: 'NEW_RUN', seed: 1, mode: 'normal', maleta: 'classica' });
-    expect(gameReducer(solo, action)).toBe(solo);
   });
 });

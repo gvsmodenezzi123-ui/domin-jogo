@@ -15,6 +15,7 @@
 import { rerollCost } from '../data/campaign.js';
 import { mixSeed, regionOfState } from './campaignMap.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
+import { ROOM_RARITY_CHANCES } from '../data/pvpRoom.js';
 import { RARITIES } from '../data/rarities.js';
 import { RELICS, RELIC_IDS, isRelicOffered } from '../data/relics.js';
 import { FULL_SET, createSeededRng } from './dominoLogic.js';
@@ -82,7 +83,11 @@ function pickWeighted(pool, weightOf, count, rng) {
 /** Monta a vitrine da loja (raridade conforme a região do nó). Necróticos nunca: só no Mercado Negro. */
 export function buildShop(state, rerolls = 0) {
   const rng = shopRng(state, rerolls);
-  const chances = regionOfState(state).rarity;
+  // Versão 1.3: na mesa online a raridade dos talismãs é a que a mesa escolheu (as pedras de
+  // grife seguem a mistura completa); no solo, a da região do nó
+  const roomChances = state.pvp?.run ? ROOM_RARITY_CHANCES[state.pvp.rarity] : null;
+  const chances = roomChances ?? regionOfState(state).rarity;
+  const tileChances = roomChances ? ROOM_RARITY_CHANCES.todas : chances;
   const owned = new Set(state.relics.player);
   // talismãs trancados por conquista só entram depois de liberados (Patch 0.7.0)
   const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicOffered(id, state));
@@ -97,7 +102,7 @@ export function buildShop(state, rerolls = 0) {
   const plainIds = FULL_SET.map((t) => t.id).filter((id) => !state.decks.player[id]);
   const tileIds = pickWeighted(plainIds, () => 1, SHOP_TILE_OFFERS, rng);
   const tiles = tileIds.map((tileId) => {
-    const [enhancement] = pickByRarity(ENHANCEMENT_IDS, (e) => ENHANCEMENTS[e].rarity, chances, 1, rng);
+    const [enhancement] = pickByRarity(ENHANCEMENT_IDS, (e) => ENHANCEMENTS[e].rarity, tileChances, 1, rng);
     return { tileId, enhancement, price: shopPrice(state, ENHANCEMENTS[enhancement].price), sold: false };
   });
 

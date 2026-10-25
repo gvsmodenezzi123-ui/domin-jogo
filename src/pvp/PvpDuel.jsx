@@ -52,7 +52,7 @@ function inspectInfo(payload, oppName) {
  * corações e talismãs de verdade, o cronômetro de 30 s da jogada e nenhuma IA.
  * `duel.view` é a mesa vista daqui (você é sempre a cadeira 'player').
  */
-export default function PvpDuel({ duel, me, opp, relicSlots, link, ping, muted, onToggleMute, onIntent, onMenu, onBackToMap, onNextRound, frame = null }) {
+export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onToggleMute, onIntent, onMenu, onNextRound, onFinish, frame = null }) {
   const view = duel.view;
   const [selectedId, setSelectedId] = useState(null);
   const [tableAnim, setTableAnim] = useState(null);
@@ -323,10 +323,10 @@ export default function PvpDuel({ duel, me, opp, relicSlots, link, ping, muted, 
           <div className={`pvp-clock ${clockMine ? 'pvp-clock-mine' : ''} ${urgent ? 'pvp-clock-urgent' : ''}`} data-turn-clock role="timer" aria-live="off">
             <span className="pvp-clock-who">{clockMine ? 'SUA VEZ' : `VEZ DE ${opp.name.toUpperCase()}`}</span>
             {secondsLeft != null && <span className="pvp-clock-sec">{secondsLeft}s</span>}
-            {secondsLeft != null && <span className="pvp-clock-bar" style={{ '--left': Math.min(1, secondsLeft / 30) }} aria-hidden="true" />}
+            {secondsLeft != null && <span className="pvp-clock-bar" style={{ '--left': Math.min(1, secondsLeft / ((duel.clock?.totalMs ?? 30000) / 1000)) }} aria-hidden="true" />}
           </div>
         )}
-        {duel.final && <p className="pvp-final-tag">MESA FINAL · ATÉ ALGUÉM ZERAR</p>}
+        <p className="pvp-final-tag">DUELO · ATÉ ALGUÉM ZERAR</p>
         <TableBoard
           board={view.board}
           roundKey={roundKey}
@@ -403,7 +403,7 @@ export default function PvpDuel({ duel, me, opp, relicSlots, link, ping, muted, 
         />
       )}
       {duel.result && !tableAnim && (
-        <PvpRoundResult view={view} result={duel.result} final={duel.final} nextSent={duel.nextSent} me={me} opp={opp} onBackToMap={onBackToMap} onNextRound={onNextRound} />
+        <PvpRoundResult view={view} result={duel.result} nextSent={duel.nextSent} opp={opp} onNextRound={onNextRound} onFinish={onFinish} />
       )}
       <InfoBalloon info={balloon} />
     </div>

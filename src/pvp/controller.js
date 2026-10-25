@@ -1,15 +1,15 @@
 /**
  * Patch PvP: o "meio de campo" entre a sessão de rede (session.js) e a run de cada pessoa (o
- * reducer do jogo): começa a run quando a teia chega, transforma a escolha de uma mesa em
- * DUEL_READY, leva o resultado do duelo de volta para a run, conta onde você está para o
- * outro (STATUS), fecha o baralho na saída da loja (SHOP_FINISH) e guarda tudo no aparelho
- * para voltar depois de recarregar a página. Sem React: a tela assina e lê o snapshot.
+ * reducer do jogo). Versão 1.3: a rota é Loja → Mercado Negro → Duelo. Quando a mesa começa,
+ * a run nasce com as moedas e os corações da configuração e já entra na loja; sair dela abre
+ * o Mercado Negro; sair do beco fecha o baralho (SHOP_FINISH) e manda o DUEL_READY. Também
+ * conta onde você está para o outro (STATUS) e guarda tudo no aparelho para voltar depois de
+ * recarregar a página. Sem React: a tela assina e lê o snapshot.
  */
 
-import { nodeOf } from '../engine/campaignMap.js';
 import { createInitialState, gameReducer } from '../engine/gameReducer.js';
-import { profileOf, runResultFor } from './duelHost.js';
-import { initialDeckOf, isDuelNode, pvpNewRun, runFinished, statusOf } from './ladder.js';
+import { profileOf } from './duelHost.js';
+import { initialDeckOf, pvpNewRun, statusOf } from './ladder.js';
 
 export const SAVE_KEY = 'buxaria:pvp:save';
 /** Depois disso a mesa guardada já não vale (a outra pessoa foi embora faz tempo). */
@@ -21,7 +21,8 @@ export function loadSavedTable(storage = globalThis.localStorage, now = Date.now
     const raw = storage?.getItem(SAVE_KEY);
     if (!raw) return null;
     const save = JSON.parse(raw);
-    if (!save || save.v !== 1 || !save.session || now - (save.savedAt ?? 0) > SAVE_MAX_AGE_MS) return null;
+    // v2 = versão 1.3 (a rota curta); uma mesa guardada da rota antiga não volta
+    if (!save || save.v !== 2 || !save.session || now - (save.savedAt ?? 0) > SAVE_MAX_AGE_MS) return null;
     if (save.session.s?.stage === 'over') return null;
     return save;
   } catch {
@@ -52,11 +53,9 @@ export function createController({ session, restore = null, storage = globalThis
   const listeners = new Set();
   let s = {
     run: restore?.run ?? createInitialState(),
-    waitingAt: restore?.waitingAt ?? null,
-    readyKind: restore?.readyKind ?? null,
-    duelsPlayed: restore?.duelsPlayed ?? 0,
-    boss: restore?.boss ?? false,
-    shopEntry: restore?.shopEntry ?? null, // talismãs ao entrar na loja/beco (o SHOP_FINISH conta só os novos)
+    // a parada da rota: 'shop' → 'market' → 'duel' (baralho fechado)
+    step: restore?.step ?? 'shop',
+    startRelics: restore?.startRelics ?? null, // os talismãs da maleta (o SHOP_FINISH conta só os comprados)
   };
   let snapshot = Object.freeze({ ...s, net: session.getSnapshot() });
 
@@ -76,36 +75,25 @@ export function createController({ session, restore = null, storage = globalThis
       const run = { ...s.run, events: [] };
       storage.setItem(
         SAVE_KEY,
-        JSON.stringify({ v: 1, savedAt: now(), role: net.role, code: net.code, oppName: net.opp?.name ?? null, session: session.snapshot(), run, waitingAt: s.waitingAt, readyKind: s.readyKind, duelsPlayed: s.duelsPlayed, boss: s.boss, shopEntry: s.shopEntry }),
+        JSON.stringify({ v: 2, savedAt: now(), role: net.role, code: net.code, oppName: net.opp?.name ?? null, session: session.snapshot(), run, step: s.step, startRelics: s.startRelics }),
       );
     } catch {
       /* sem espaço / sem storage: a mesa só não volta depois de recarregar */
     }
   }
 
-  const setRun = (run) => {
-    const entering = (run.phase === 'shop' || run.phase === 'blackMarket') && run.phase !== s.run.phase;
-    s = { ...s, run, shopEntry: entering ? [...s.run.relics.player] : s.shopEntry };
-  };
+  const open = (run, kind) => gameReducer(run, { type: 'PVP_OPEN_STOP', kind });
 
   /** Reage a qualquer mudança (da rede ou daqui): a run anda sozinha onde precisa. */
   function sync() {
     const net = session.getSnapshot();
-    if (net.stage === 'run' || net.stage === 'over') {
-      // a teia chegou: a run começa (com a maleta que você escolheu)
-      if (s.run.phase === 'title' && net.seed != null && net.myHandshake) {
-        setRun(gameReducer(s.run, pvpNewRun({ seed: net.seed, seedCode: net.seedCode, maleta: net.myHandshake.suitcase })));
-      }
+    if ((net.stage === 'run' || net.stage === 'over') && s.run.phase === 'title' && net.seed != null && net.myHandshake) {
+      // a mesa começou: a run nasce com a configuração da mesa e já entra na loja
+      const fresh = gameReducer(s.run, pvpNewRun({ seed: net.seed, seedCode: net.seedCode, maleta: net.myHandshake.suitcase, room: net.room }));
+      s = { ...s, run: open(fresh, 'shop'), step: 'shop', startRelics: [...fresh.relics.player] };
     }
     if (net.stage === 'run' && s.run.phase !== 'title') {
-      // zerou fora da mesa (um imprevisto): o outro vence
-      if (s.run.phase === 'gameOver' && !net.duel) session.defeat('hearts');
-      // terminou a teia: espera "no fim da noite" (as mesas do outro são contra você)
-      else if (!net.duel && !s.readyKind && runFinished(s.run)) {
-        s = { ...s, readyKind: 'done', waitingAt: null, boss: false };
-        session.readyForDuel({ node: null, kind: 'done', profile: profileOf(s.run) });
-      }
-      session.reportStatus(statusOf(s.run, { waitingAt: s.waitingAt, inDuel: Boolean(net.duel) }));
+      session.reportStatus(statusOf(s.run, { step: s.step, inDuel: Boolean(net.duel) }));
     }
     save();
     emit();
@@ -133,62 +121,37 @@ export function createController({ session, restore = null, storage = globalThis
       session.chooseMaleta(maleta, initialDeckOf(maleta));
     },
 
-    /** Ação comum da run (compras, eventos, sair do Seu Tião...). */
+    /** Compras e vendas da loja e do beco (as ações de sempre da run). */
     dispatch(action) {
-      if (action.type === 'CHOOSE_NODE' || action.type === 'ENTER_NODE') return api.enterNode(action.nodeId);
       const next = gameReducer(s.run, action);
       if (next === s.run) return false;
-      setRun(next);
+      s = { ...s, run: next };
       sync();
       return true;
     },
 
-    /** Entrou num nó do mapa: mesa vira duelo (DUEL_READY); o resto é a run de sempre. */
-    enterNode(nodeId) {
-      const net = session.getSnapshot();
-      if (net.stage !== 'run' || s.run.phase !== 'map' || s.readyKind) return false;
-      const node = nodeOf(s.run, nodeId);
-      if (!node) return false;
-      if (isDuelNode(node)) {
-        const kind = node.type === 'boss' ? 'boss' : 'combat';
-        s = { ...s, waitingAt: nodeId, readyKind: kind, boss: kind === 'boss' };
-        session.readyForDuel({ node: nodeId, kind, profile: profileOf(s.run) });
+    /**
+     * Sai da parada atual: da loja vai para o Mercado Negro; do beco, o baralho fecha
+     * (SHOP_FINISH com os talismãs comprados) e vem o DUEL_READY.
+     */
+    leaveStop() {
+      const run = s.run;
+      if (run.phase === 'shop') {
+        s = { ...s, run: open(gameReducer(run, { type: 'LEAVE_SHOP' }), 'black'), step: 'market' };
         sync();
         return true;
       }
-      const next = gameReducer(s.run, { type: 'CHOOSE_NODE', nodeId });
-      if (next === s.run) return false;
-      setRun(next);
-      sync();
-      return true;
+      if (run.phase === 'blackMarket') {
+        const left = gameReducer(run, { type: 'LEAVE_MARKET' });
+        const bought = left.relics.player.filter((id) => !(s.startRelics ?? []).includes(id));
+        s = { ...s, run: left, step: 'duel' };
+        session.shopFinished(bought, left.coins.player);
+        session.readyForDuel({ node: null, kind: 'done', profile: profileOf(left) });
+        sync();
+        return true;
+      }
+      return false;
     },
-
-    /** PRONTO PARA O DUELO: sai da loja (ou do beco) e conta para o outro o que entrou no baralho. */
-    leaveShop(boughtBefore = s.shopEntry) {
-      const run = s.run;
-      const type = run.phase === 'shop' ? 'LEAVE_SHOP' : run.phase === 'blackMarket' ? 'LEAVE_MARKET' : null;
-      if (!type) return false;
-      const fresh = run.relics.player.filter((id) => !(boughtBefore ?? []).includes(id));
-      session.shopFinished(fresh, run.coins.player);
-      setRun(gameReducer(run, { type }));
-      sync();
-      return true;
-    },
-
-    /** VOLTAR À TEIA: o resultado do duelo entra na run (uma vez só) e a mesa fecha. */
-    finishDuel() {
-      const duel = session.getSnapshot().duel;
-      if (!duel?.result || duel.result.matchOver || duel.final) return false;
-      const action = runResultFor(duel.view, { nodeId: s.waitingAt, boss: s.boss, maleta: s.run.maleta });
-      setRun(gameReducer(s.run, action));
-      s = { ...s, waitingAt: null, readyKind: null, boss: false, duelsPlayed: s.duelsPlayed + 1 };
-      session.closeDuel();
-      sync();
-      return true;
-    },
-
-    /** Para a tela do duelo: a mesa é de chefe? */
-    isBossTable: () => s.boss,
 
     destroy() {
       unsubscribe();

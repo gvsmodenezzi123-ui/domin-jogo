@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import BlackMarketModal from '../components/BlackMarketModal.jsx';
-import CampaignMap from '../components/CampaignMap.jsx';
 import CaseCounter from '../components/CaseCounter.jsx';
-import CoinEventModal from '../components/CoinEventModal.jsx';
-import EncounterModal from '../components/EncounterModal.jsx';
 import InfoBalloon from '../components/InfoBalloon.jsx';
 import ScreenVeil from '../components/ScreenTransition.jsx';
 import Shop from '../components/Shop.jsx';
@@ -12,9 +9,9 @@ import { useLongPress } from '../components/useLongPress.js';
 import { BOSS_TRACKS, REGIONS } from '../data/campaign.js';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { MALETA_IDS } from '../data/maletas.js';
+import { describeRoom } from '../data/pvpRoom.js';
 import { getRelic } from '../data/relics.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from '../engine/audioSynth.js';
-import { mapRegionId, regionIdOf } from '../engine/campaignMap.js';
 import { relicSlotsFor } from '../engine/loadout.js';
 import { loadEquippedFrame } from '../engine/meta.js';
 import { sellPriceFor } from '../engine/shop.js';
@@ -22,7 +19,6 @@ import { clearSavedTable, createController, loadSavedTable, recentSavedTable } f
 import { whereText } from './ladder.js';
 import LobbyView from './LobbyView.jsx';
 import NetBadge from './NetBadge.jsx';
-import OpponentStrip from './OpponentStrip.jsx';
 import PvpDuel from './PvpDuel.jsx';
 import { DisconnectOverlay, PvpEnd, PvpMaletaWait, PvpMenu, PvpToast, PvpWaiting } from './PvpScreens.jsx';
 import { cleanName, generateRoomCode, parseRoomInput } from './protocol.js';
@@ -82,28 +78,26 @@ function inspectInfo(payload, run) {
   return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
 }
 
-/** Faixa da trilha: a da região no mapa e na mesa, a da loja, a do beco; a mesa final é a do chefe. */
+/** Faixa da trilha: a da loja, a do beco e, no duelo, a do chefe. */
 function musicOf(view) {
   if (!view) return REGIONS[0].music;
-  if (view.duel?.final) return BOSS_TRACKS.comendador;
-  if (view.duel) return REGIONS[Math.max(0, regionIdOf(view.run) - 1)]?.music ?? REGIONS[0].music;
+  if (view.duel) return BOSS_TRACKS.comendador;
   const run = view.run;
   if (run.phase === 'shop') return SHOP_MUSIC;
-  if (run.phase === 'blackMarket' || run.phase === 'encounter') return MARKET_MUSIC;
-  if (run.phase === 'map' || run.phase === 'coinEvent') return REGIONS[Math.max(0, mapRegionId(run) - 1)]?.music ?? REGIONS[0].music;
+  if (run.phase === 'blackMarket') return MARKET_MUSIC;
   return REGIONS[0].music;
 }
 
 /**
- * Patch PvP: o modo online inteiro (abre pelo JOGAR ONLINE da tela inicial). Lobby → maletas →
- * a teia de cada um → os duelos de verdade → O Dono da Noite. A rede mora em session.js; a
- * ponte com a run, em controller.js; aqui só as telas.
+ * Patch PvP: o modo online inteiro (abre pelo JOGAR ONLINE da tela inicial). Versão 1.3:
+ * lobby (quem cria configura a mesa) → maletas → Loja → Mercado Negro → o duelo → O Dono da
+ * Noite. A rede mora em session.js; a ponte com a run, em controller.js; aqui só as telas.
  */
-/** A mesa (rede + ponte com a run), ainda sem ligar: quem liga é o efeito da tela. */
-function makeTable(me, role, code, restore = null) {
+/** A mesa (rede + ponte com a run), ainda sem ligar: quem liga é o efeito da tela. `room`: a configuração (só quem cria). */
+function makeTable(me, role, code, restore = null, room = null) {
   const clean = cleanName(me.name) || 'Jogador';
   const transport = createPeerTransport({ role, code, keepId: Boolean(restore) });
-  const session = createSession({ role, code, me: { id: me.id, name: clean }, transport, restore: restore?.session ?? null, online: () => navigator.onLine !== false });
+  const session = createSession({ role, code, me: { id: me.id, name: clean }, transport, restore: restore?.session ?? null, online: () => navigator.onLine !== false, room });
   return createController({ session, restore });
 }
 
@@ -118,6 +112,8 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
   const [notice, setNotice] = useState(null);
   const [inspect, setInspect] = useState(null);
   const [joinError, setJoinError] = useState(null);
+  // o duelo acabou: a última rodada fica na mesa até tocar em FIM DA NOITE (a mesa nova zera)
+  const [endSeen, setEndSeen] = useState(null);
   const { stage: veilStage, go: cutTo } = useSceneTransition();
 
   // liga a mesa nova (uma vez: o controller ignora o segundo pedido)
@@ -176,15 +172,15 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     saveMe(next);
   };
 
-  const begin = (role, code, restore = null) => {
+  const begin = (role, code, restore = null, room = null) => {
     sound.init();
     setJoinError(null);
-    setCtl(makeTable(me, role, code, restore));
+    setCtl(makeTable(me, role, code, restore, room));
   };
 
-  const create = () => {
+  const create = (room) => {
     tap();
-    begin('host', generateRoomCode(deviceRandom));
+    begin('host', generateRoomCode(deviceRandom), null, room);
   };
   const join = (typed) => {
     tap();
@@ -296,7 +292,38 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
 
   const opp = { name: net.opp?.name ?? 'Oponente', maleta: net.oppHandshake?.suitcase ?? net.oppStatus?.maleta ?? 'classica' };
 
+  // --- duelo (e a última rodada, antes do fim da noite) ---------------------------------
+  const lastRound = net.stage === 'over' && net.over?.reason === 'hearts' && net.duel?.result?.matchOver && endSeen !== net.code;
+  const duelScreen = net.duel && (
+    <div className="app-shell h-full">
+      <PvpDuel
+        key={net.duel.id}
+        duel={net.duel}
+        opp={opp}
+        relicSlots={relicSlotsFor(run)}
+        link={net.link}
+        ping={net.ping}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        onIntent={(intent) => ctl.session.duelIntent(intent)}
+        onMenu={openMenu}
+        onNextRound={() => {
+          tap();
+          ctl.session.nextRound();
+        }}
+        onFinish={() => {
+          tap();
+          cutTo(() => setEndSeen(net.code));
+        }}
+        frame={frame}
+      />
+      {overlays}
+    </div>
+  );
+  if (net.duel && net.stage !== 'over') return duelScreen;
+
   // --- fim da noite ----------------------------------------------------------
+  if (lastRound) return duelScreen;
   if (net.stage === 'over') {
     const shownRun = net.duel?.view ? { ...run, hearts: { player: net.duel.view.hearts.player }, maxHearts: { player: net.duel.view.maxHearts.player } } : run;
     return (
@@ -306,7 +333,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
           me={net.me}
           opp={opp}
           run={shownRun.phase === 'title' ? { ...shownRun, maleta: net.myHandshake?.suitcase ?? 'classica' } : shownRun}
-          duels={net.duelCount}
+          rounds={net.duel?.view?.round ?? 0}
           onLobby={() => {
             tap();
             clearSavedTable();
@@ -339,7 +366,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
             onBack={openMenu}
             pvp={{
               title: `MESA ONLINE · CONTRA ${opp.name.toUpperCase()}`,
-              note: 'Escolha a sua maleta. No online todas estão abertas.',
+              note: `Escolha a sua maleta (todas abertas). Mesa: ${describeRoom(net.room)}.`,
               start: 'ESTA É A MINHA MALETA',
               back: 'MENU DA MESA',
               debuff: { bicheiro: 'O adversário senta com 1 pedra de grife a mais contra você.' },
@@ -352,87 +379,33 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     }
     return (
       <div className="app-shell h-full">
-        <PvpMaletaWait opp={net.opp} myMaleta={net.myHandshake.suitcase} link={net.link} ping={net.ping} onMenu={openMenu} />
+        <PvpMaletaWait opp={net.opp} myMaleta={net.myHandshake.suitcase} room={net.room} link={net.link} ping={net.ping} onMenu={openMenu} />
         {overlays}
       </div>
     );
   }
 
-  // --- duelo -------------------------------------------------------------------
-  if (net.duel) {
+  // --- baralho fechado: esperando o outro sair do Mercado Negro ----------------------------
+  if (view.step === 'duel') {
     return (
       <div className="app-shell h-full">
-        <PvpDuel
-          key={net.duel.id}
-          duel={net.duel}
-          me={{ name: net.me.name, maleta: run.maleta, boss: view.boss }}
-          opp={opp}
-          relicSlots={relicSlotsFor(run)}
-          link={net.link}
-          ping={net.ping}
-          muted={muted}
-          onToggleMute={onToggleMute}
-          onIntent={(intent) => ctl.session.duelIntent(intent)}
-          onMenu={openMenu}
-          onBackToMap={() => {
-            cutTo(() => ctl.finishDuel());
-          }}
-          onNextRound={() => {
-            tap();
-            ctl.session.nextRound();
-          }}
-          frame={frame}
-        />
+        <PvpWaiting run={run} opp={opp} oppStatus={net.oppStatus} link={net.link} ping={net.ping} press={press} onMenu={openMenu} />
         {overlays}
       </div>
     );
   }
 
-  // --- mesa reservada (esperando o outro chegar numa mesa) ------------------------
-  if (view.readyKind) {
-    return (
-      <div className="app-shell h-full">
-        <PvpWaiting kind={view.readyKind} run={run} opp={opp} oppStatus={net.oppStatus} link={net.link} ping={net.ping} press={press} onMenu={openMenu} />
-        {overlays}
-      </div>
-    );
-  }
-
-  const strip = <OpponentStrip name={opp.name} maleta={opp.maleta} status={net.oppStatus} press={press} compact />;
   const act = (action) => {
     tap();
     ctl.dispatch(action);
   };
-  const leaveTo = (type) => () => {
+  const leaveStop = () => {
     tap();
-    cutTo(() => ctl.dispatch({ type }));
+    cutTo(() => ctl.leaveStop());
   };
-  const leaveShop = () => {
-    tap();
-    cutTo(() => ctl.leaveShop());
-  };
+  const oppNow = `${opp.name.toUpperCase()}: ${whereText(net.oppStatus).toUpperCase()}`;
 
-  if (run.phase === 'map') {
-    return (
-      <div className="app-shell h-full">
-        <CampaignMap
-          key={run.run.node ?? 'start'}
-          state={run}
-          onEnter={(nodeId) => {
-            tap();
-            cutTo(() => ctl.enterNode(nodeId));
-          }}
-          onMenu={openMenu}
-          press={press}
-          pvp={{ oppName: opp.name, oppMaleta: opp.maleta, oppNode: net.oppStatus?.node ?? null, oppWhere: whereText(net.oppStatus) }}
-          extra={strip}
-        />
-        {badge}
-        {overlays}
-      </div>
-    );
-  }
-
+  // --- 1ª parada: a Loja do Valtinho -------------------------------------------------
   if (run.phase === 'shop') {
     return (
       <div className="app-shell h-full">
@@ -443,9 +416,9 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
           onBuyTile={(index) => act({ type: 'SHOP_BUY_TILE', index })}
           onSell={(id) => act({ type: 'SHOP_SELL_RELIC', id })}
           onReroll={() => act({ type: 'SHOP_REROLL' })}
-          onLeave={leaveShop}
-          leaveTitle="PRONTO PARA O DUELO →"
-          leaveNote={`FECHA O BARALHO · ${opp.name.toUpperCase()} FICA SABENDO`}
+          onLeave={leaveStop}
+          leaveTitle="SEGUIR PARA O MERCADO NEGRO →"
+          leaveNote={`DEPOIS, O DUELO · ${oppNow}`}
         />
         {badge}
         {overlays}
@@ -453,40 +426,21 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     );
   }
 
+  // --- 2ª parada: o Mercado Negro ------------------------------------------------------
   if (run.phase === 'blackMarket') {
     return (
       <div className="app-shell h-full">
-        <BlackMarketModal state={run} press={press} onBuy={(index) => act({ type: 'MARKET_BUY', index })} onLeave={leaveShop} leaveTitle="PRONTO PARA O DUELO →" leaveNote="SAIR DO BECO COM O BARALHO FECHADO" />
+        <BlackMarketModal state={run} press={press} onBuy={(index) => act({ type: 'MARKET_BUY', index })} onLeave={leaveStop} leaveTitle="PRONTO PARA O DUELO →" leaveNote={`FECHA O BARALHO · ${oppNow}`} />
         {badge}
         {overlays}
       </div>
     );
   }
 
-  if (run.phase === 'coinEvent') {
-    return (
-      <div className="app-shell h-full">
-        <CoinEventModal state={run} onLeave={leaveTo('LEAVE_EVENT')} />
-        {badge}
-        {overlays}
-      </div>
-    );
-  }
-
-  if (run.phase === 'encounter') {
-    return (
-      <div className="app-shell h-full">
-        <EncounterModal state={run} onChoose={(choice) => act({ type: 'ENCOUNTER_CHOOSE', choice })} onLeave={leaveTo('LEAVE_ENCOUNTER')} />
-        {badge}
-        {overlays}
-      </div>
-    );
-  }
-
-  // zerou fora da mesa: a sessão já avisou o outro (o fim aparece no próximo quadro)
+  // entre uma parada e outra (um quadro só)
   return (
     <div className="app-shell h-full">
-      <PvpMaletaWait opp={net.opp} myMaleta={run.maleta} link={net.link} ping={net.ping} onMenu={openMenu} />
+      <PvpMaletaWait opp={net.opp} myMaleta={run.maleta} room={net.room} link={net.link} ping={net.ping} onMenu={openMenu} />
       {overlays}
     </div>
   );

@@ -1,4 +1,4 @@
-# Buxaria — Versão 1.2
+# Buxaria — Versão 1.3
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Roda como PWA (tela vertical de celular) e como app
@@ -67,7 +67,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 | | |
 | --- | --- |
 | Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
-| Versão | `versionName` = `package.json` (1.2.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Versão | `versionName` = `package.json` (1.3.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
 | Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
 | Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
 | Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
@@ -77,7 +77,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 push na `main`. O GitHub só mostra o botão de rodar à mão para workflows que estão na branch
 principal (`main`).
 
-**O que sai:** o artefato `buxaria-1.2.0-aab-N` com o `app-release.aab`, para baixar na própria
+**O que sai:** o artefato `buxaria-1.3.0-aab-N` com o `app-release.aab`, para baixar na própria
 execução (guardado 90 dias). O resumo da execução mostra o SHA-1 e o SHA-256 da chave de upload.
 
 ### 1. Gerar a chave de upload (uma vez, no seu computador)
@@ -164,7 +164,35 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Versão 1.3: a mesa online rápida (Loja → Mercado Negro → Duelo)
+
+A partida online ficou curta: em vez da teia inteira, uma rota de três paradas, igual para os
+dois e cada um no seu ritmo.
+
+1. **Loja do Valtinho:** a run já começa nela, com as moedas da mesa. As vitrines saem iguais
+   nos dois aparelhos (a semente é de quem criou a mesa). SEGUIR PARA O MERCADO NEGRO.
+2. **Mercado Negro:** os Necróticos. PRONTO PARA O DUELO fecha o baralho (o outro fica sabendo).
+3. **Duelo:** quando os dois fecham o baralho. Vale até alguém zerar; quem vencer é **O Dono da
+   Noite** e a partida acaba. A última rodada fica na mesa até o FIM DA NOITE.
+
+- **Configurar a mesa (só quem cria, na hora de criar):** CRIAR MESA CLANDESTINA abre o painel e
+  ABRIR A MESA gera o ID. Moedas de cada um ($50 · **$100** · $150 · $200 · $300), corações no
+  duelo (3 · **5** · 7 · 9), talismãs na loja (**todas** as raridades · só comuns · raros e acima
+  · lendários e acima) e tempo por jogada (15 · **30** · 45 · 60 s). Em negrito, o padrão; a
+  última escolha fica guardada no aparelho. Quem entra vê a configuração no Balcão de Maletas,
+  antes de escolher. Código: `src/data/pvpRoom.js`.
+- **Talismãs:** a Carteira Recheada também saiu do online (com $100 na mão ela dava +6 de dano
+  por batida e zerava o outro de uma vez), junto com os que só servem contra a IA.
+- **Protocolo 2:** o HELLO de quem criou leva a configuração e o RUN_START também. Versões
+  diferentes não se misturam: os dois lados recebem o aviso para atualizar. Mesas guardadas da
+  rota antiga não voltam.
+- O mapa do solo voltou a ser só do solo (a teia não tem mais nada do online).
+
 ## Versão 1.2: a mesa online (um contra um, sala privada)
+
+(Histórico: na 1.3, acima, a teia espelhada, as mesas de uma rodada, o prêmio por mesa e os 7
+corações deram lugar à rota curta e à configuração da mesa. A rede, o lobby, as mensagens, o
+cronômetro, as quedas e a política de privacidade seguem como descrito aqui.)
 
 O modo online entrou no jogo principal: **JOGAR → JOGAR ONLINE**, duas pessoas de verdade numa
 sala privada com ID. Funciona no site (GitHub Pages) e no APK, e um joga com o outro. O jogo solo

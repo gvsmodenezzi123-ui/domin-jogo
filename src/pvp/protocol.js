@@ -4,12 +4,12 @@
  * confere o formato de cada um antes de o jogo usar e cuida do ID da sala.
  *
  * Mensagens principais (as do pedido, mais as de controle):
- *   HELLO         { id, name, version, rejoin }         quem é você (ao conectar e ao voltar)
+ *   HELLO         { id, name, version, rejoin, room? }  quem é você (o anfitrião manda a configuração da mesa)
  *   HANDSHAKE     { name, suitcase, initialDeck }       maleta escolhida e o baralho inicial
- *   RUN_START     { seed, seedCode }                    (anfitrião) a teia é a mesma para os dois
+ *   RUN_START     { seed, seedCode, room }              (anfitrião) a rota começa, igual para os dois
  *   STATUS        { where, node, ... }                  onde você está, corações, moedas, talismãs
- *   SHOP_FINISH   { newTalismans, newCoins }            PRONTO PARA O DUELO: o baralho fechou
- *   DUEL_READY    { node, kind, profile }               chegou numa mesa (ou no fim da teia)
+ *   SHOP_FINISH   { newTalismans, newCoins }            PRONTO PARA O DUELO: saiu do Mercado Negro
+ *   DUEL_READY    { node, kind, profile }               baralho fechado: pronto para o duelo
  *   DUEL_START    { duelId, final, state, clock }       (anfitrião) a mesa começou
  *   PLAY_TILE     { duelId, tile, targetEnd, updatedDeck }
  *   PASS_TURN     { duelId, paid }
@@ -26,7 +26,10 @@
  *   ROOM_FULL     {}                                    a mesa já tem dois
  */
 
-export const PROTOCOL_VERSION = 1;
+/** 2 = versão 1.3 (rota Loja → Mercado Negro → Duelo e a configuração da mesa). */
+import { isRoom } from '../data/pvpRoom.js';
+
+export const PROTOCOL_VERSION = 2;
 
 export const MSG = Object.freeze({
   HELLO: 'HELLO',
@@ -119,14 +122,14 @@ const isStrList = (x, max = 12) => Array.isArray(x) && x.length <= max && x.ever
 const isDeck = (d) => isObj(d) && Object.keys(d).length <= 28 && Object.values(d).every((e) => isStr(e, 20));
 const optStr = (x, max) => x == null || isStr(x, max);
 const isDuelId = (x) => isInt(x) && x >= 0;
-const isClock = (c) => c == null || (isObj(c) && (c.actor == null || c.actor === 'player' || c.actor === 'tioZe') && (c.msLeft == null || isNum(c.msLeft)));
+const isClock = (c) => c == null || (isObj(c) && (c.actor == null || c.actor === 'player' || c.actor === 'tioZe') && (c.msLeft == null || isNum(c.msLeft)) && (c.totalMs == null || isNum(c.totalMs)));
 const isState = (s) => isObj(s) && isStr(s.phase, 20) && isObj(s.hands) && isObj(s.board) && Array.isArray(s.boneyard);
 const isProfile = (p) => isObj(p) && isInt(p.hearts) && isInt(p.maxHearts) && isInt(p.coins) && isStrList(p.relics, 8) && isDeck(p.deck ?? {}) && optStr(p.maleta, 20);
 
 const CHECKS = {
-  HELLO: (p) => isStr(p.id, 64) && isStr(p.name, 40) && isInt(p.version),
+  HELLO: (p) => isStr(p.id, 64) && isStr(p.name, 40) && isInt(p.version) && (p.room == null || isRoom(p.room)),
   HANDSHAKE: (p) => isStr(p.name, 40) && isStr(p.suitcase, 20) && isDeck(p.initialDeck ?? {}),
-  RUN_START: (p) => isInt(p.seed) && optStr(p.seedCode, 24),
+  RUN_START: (p) => isInt(p.seed) && optStr(p.seedCode, 24) && isRoom(p.room),
   STATUS: (p) => isStr(p.where, 20) && optStr(p.node, 40) && isInt(p.hearts) && isInt(p.maxHearts) && isInt(p.coins) && isStrList(p.relics, 8),
   SHOP_FINISH: (p) => isStrList(p.newTalismans, 8) && isInt(p.newCoins),
   DUEL_READY: (p) => optStr(p.node, 40) && (p.kind === 'combat' || p.kind === 'boss' || p.kind === 'done') && isProfile(p.profile),
@@ -150,7 +153,8 @@ const CHECKS = {
 /** A mensagem chegou inteira e no formato certo? (o resto é ignorado) */
 export function validateMessage(msg) {
   if (!isObj(msg) || !TYPES.has(msg.type) || !isObj(msg.payload)) return false;
-  if (msg.v !== PROTOCOL_VERSION) return msg.type === MSG.HELLO; // versões diferentes: só o HELLO passa (para avisar)
+  // versões diferentes: só o HELLO e o aviso de mesa recusada passam (os dois lados ficam sabendo)
+  if (msg.v !== PROTOCOL_VERSION) return msg.type === MSG.HELLO || msg.type === MSG.ROOM_FULL;
   try {
     return CHECKS[msg.type](msg.payload) === true;
   } catch {

@@ -4,7 +4,7 @@
  * quem entrou senta na 'tioZe' e manda as jogadas dele pela rede (src/pvp/session.js).
  *
  * Também mora aqui o que os dois lados calculam igual: o perfil que cada run leva para a
- * mesa, a jogada automática do cronômetro e o prêmio do duelo.
+ * mesa e a jogada automática do cronômetro.
  */
 
 import { maletaOf } from '../data/maletas.js';
@@ -14,18 +14,10 @@ import { FULL_SET, createSeededRng, getPlayableMoves, pipSum, shuffle } from '..
 import { createInitialState, gameReducer } from '../engine/gameReducer.js';
 import { drawAvailabilityFor, requiredOpeningFor, rulesFor } from '../engine/powers.js';
 
-/** Tempo máximo de cada jogada (o cronômetro da mesa). */
-export const TURN_MS = 30000;
 /** O aviso "SEM JOGADAS DISPONÍVEIS" fica na mesa antes do passe forçado. */
 export const NO_MOVES_MS = 1600;
 /** Testamento Rasgado: a rodada volta do zero depois desta pausa. */
 export const REPLAY_MS = 2600;
-
-/**
- * Prêmio do duelo: quem vence leva $8 ($16 na Maleta Seca) e +1♥; na mesa de chefe, +$4 e
- * cura tudo; quem perde (ou empata) leva $3 para não sair de mãos vazias.
- */
-export const PVP_PRIZE = Object.freeze({ win: 8, heal: 1, boss: 4, consolation: 3 });
 
 /** O que a run de uma pessoa leva para a mesa. */
 export function profileOf(run, maleta = run?.maleta) {
@@ -59,8 +51,8 @@ function withBicheiroDebuff(deck, foeMaleta, seed, key) {
 }
 
 /**
- * A mesa nova: `host` senta na cadeira 'player', `guest` na 'tioZe'. `final`: os dois já
- * terminaram a teia e a mesa só acaba quando alguém zerar.
+ * A mesa nova: `host` senta na cadeira 'player', `guest` na 'tioZe'. `final`: a mesa só acaba
+ * quando alguém zerar (a rota online tem um duelo só, sempre final).
  */
 export function buildDuel({ host, guest, seed, duelId, final = false }) {
   const seats = {
@@ -139,36 +131,5 @@ export function roundOutcome(state) {
     matchOver,
     replay: !matchOver && result.kind === 'testamento',
     hearts: { ...state.hearts },
-  };
-}
-
-/** Prêmio e cura de quem venceu (ou perdeu) o duelo, pela maleta e pelo tipo do nó. */
-export function rewardFor({ won, draw = false, boss = false, maleta }) {
-  if (draw) return { coins: PVP_PRIZE.consolation, heal: 0 };
-  if (!won) return { coins: PVP_PRIZE.consolation, heal: 0 };
-  const base = PVP_PRIZE.win * maletaOf(maleta).prizeMultiplier;
-  return { coins: base + (boss ? PVP_PRIZE.boss : 0), heal: boss ? 99 : PVP_PRIZE.heal };
-}
-
-/**
- * O que volta para a run de quem jogou (a ação PVP_DUEL_RESULT), a partir da mesa vista da
- * própria cadeira ('player' na tela de cada um).
- */
-export function runResultFor(view, { nodeId = null, boss = false, maleta }) {
-  const outcome = roundOutcome(view);
-  const won = outcome?.winner === 'player';
-  const draw = !outcome?.winner;
-  const reward = rewardFor({ won, draw, boss, maleta });
-  const max = view.maxHearts.player;
-  const hearts = view.hearts.player <= 0 ? 0 : Math.min(max, view.hearts.player + reward.heal);
-  return {
-    type: 'PVP_DUEL_RESULT',
-    nodeId,
-    won,
-    hearts,
-    coins: view.coins.player + reward.coins,
-    relics: [...view.relics.player],
-    deck: { ...view.decks.player },
-    reward,
   };
 }

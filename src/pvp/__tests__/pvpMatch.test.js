@@ -4,10 +4,10 @@ import { makeMatch } from './kit.js';
 const summary = (m) => {
   const h = m.host.getSnapshot();
   const g = m.guest.getSnapshot();
-  return { host: h.over, guest: g.over, tables: [h.duelCount, g.duelCount], duels: m.bots.host.duelsPlayed, guestDuels: m.bots.guest.duelsPlayed, issues: m.issues.slice(0, 5), errors: [...m.bots.host.errors, ...m.bots.guest.errors] };
+  return { host: h.over, guest: g.over, tables: [h.duelCount, g.duelCount], steps: [m.bots.host.routeStep, m.bots.guest.routeStep], issues: m.issues.slice(0, 5), errors: [...m.bots.host.errors, ...m.bots.guest.errors] };
 };
 
-describe('Patch PvP: partidas inteiras entre dois robôs (rede de mentira)', () => {
+describe('Patch PvP: partidas inteiras entre dois robôs (rede de mentira): Loja → Mercado Negro → Duelo', () => {
   const cases = [
     { seed: 3, hostMaleta: 'classica', guestMaleta: 'classica' },
     { seed: 11, hostMaleta: 'bicheiro', guestMaleta: 'seca' },
@@ -28,9 +28,9 @@ describe('Patch PvP: partidas inteiras entre dois robôs (rede de mentira)', () 
       expect(s.host.winnerId).toBe(s.guest.winnerId);
       expect(['id-anfitriao', 'id-convidado']).toContain(s.host.winnerId);
       expect(s.host.reason).toBe('hearts');
-      expect(s.duels).toBeGreaterThan(0);
-      // o fim da noite mostra o mesmo número de mesas nos dois aparelhos
-      expect(s.tables[1]).toBe(s.tables[0]);
+      // a rota: os dois passaram na loja e no beco e jogaram um duelo só
+      expect(s.steps).toEqual(['duel', 'duel']);
+      expect(s.tables).toEqual([1, 1]);
     });
   }
 });

@@ -1,10 +1,7 @@
-import { useEffect } from 'react';
-import CoinCount from '../components/CoinCount.jsx';
 import DominoTile from '../components/DominoTile.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import { getRelic } from '../data/relics.js';
 import { DAMAGE, handSum } from '../engine/dominoLogic.js';
-import { rewardFor } from './duelHost.js';
 
 const KIND_TITLE = {
   normal: 'BATIDA!',
@@ -21,9 +18,6 @@ const TRANCA_REASON = {
   passes: 'Os dois passaram seguido.',
   bloqueio: 'Ninguém encaixa e o dorme secou.',
 };
-
-/** Depois de um duelo comum, a teia volta sozinha (ou no botão). */
-const AUTO_BACK_MS = 12000;
 
 function subtitleFor(result, oppName) {
   const mine = result.winner === 'player';
@@ -53,30 +47,22 @@ function MiniHand({ tiles, label, points }) {
 }
 
 /**
- * Patch PvP: o fim de uma rodada online. Mostra quem bateu (ou levou a tranca), o dano nos
- * corações de verdade, as duas mãos e o prêmio que vai para a run; num duelo comum, VOLTAR À
- * TEIA (sozinho depois de 12 s); na mesa final, PRÓXIMA RODADA (os dois precisam tocar).
+ * Patch PvP: o fim de uma rodada do duelo online. Mostra quem bateu (ou levou a tranca), o
+ * dano nos corações de verdade e as duas mãos. O duelo vale até alguém zerar: PRÓXIMA RODADA
+ * (os dois precisam tocar); na última, FIM DA NOITE.
  */
-export default function PvpRoundResult({ view, result, final, nextSent, opp, onBackToMap, onNextRound, me }) {
+export default function PvpRoundResult({ view, result, nextSent, opp, onNextRound, onFinish }) {
   const rr = view.roundResult ?? {};
   const won = rr.winner === 'player';
   const tie = !rr.winner;
   const damage = rr.damage || 0;
   const name = opp.name.toUpperCase();
-  const reward = rewardFor({ won, draw: tie, boss: me.boss, maleta: me.maleta });
-  const showBack = !final && !result.matchOver;
-
-  useEffect(() => {
-    if (!showBack) return undefined;
-    const timer = setTimeout(onBackToMap, AUTO_BACK_MS);
-    return () => clearTimeout(timer);
-  }, [showBack, onBackToMap]);
 
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="pvp-round-title">
       <div className={`${won ? 'chalkboard' : 'overlay-card'} round-card pvp-round-card max-h-[94%] w-full max-w-[360px] overflow-hidden px-4 py-5 text-center`}>
         <p className={`font-pixel text-[9px] ${won ? 'chalk-dim' : 'text-bone-400'}`}>
-          {final ? `MESA FINAL · RODADA ${view.round}` : `DUELO · ${me.boss ? 'MESA DE CHEFE' : 'MESA DA TEIA'}`}
+          {`DUELO · RODADA ${view.round}`}
         </p>
         <h2 id="pvp-round-title" className={`mt-2 font-pixel text-[18px] leading-snug text-shadow-pixel ${won ? 'chalk-text' : tie ? 'text-bone-100' : 'text-blood-400'}`}>
           {KIND_TITLE[rr.kind] ?? 'FIM DA RODADA'}
@@ -103,30 +89,17 @@ export default function PvpRoundResult({ view, result, final, nextSent, opp, onB
           <HeartsBar current={view.hearts.tioZe} max={view.maxHearts.tioZe} pixel={2} label={`Corações de ${opp.name}`} />
         </div>
 
-        {showBack && (
-          <div className={`mt-2 flex items-center justify-center gap-2 font-pixel text-[9px] ${won ? 'chalk-text' : 'text-bone-200'}`}>
-            <span>{won ? 'PRÊMIO' : 'CONSOLO'}</span>
-            <CoinCount value={reward.coins} className="text-[11px]" size={14} />
-            {won && <span className="text-[#ff8c7a]">{me.boss ? 'CURA COMPLETA' : `+${reward.heal}♥`}</span>}
-          </div>
-        )}
-
-        {final ? (
+        {result.matchOver ? (
+          <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onFinish}>
+            FIM DA NOITE →
+          </button>
+        ) : (
           <>
             <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onNextRound} disabled={nextSent}>
               {nextSent ? `ESPERANDO ${name}...` : 'PRÓXIMA RODADA'}
             </button>
-            <p className="mt-2 font-term text-sm text-bone-400">A mesa final só acaba quando alguém zerar.</p>
+            <p className="mt-2 font-term text-sm text-bone-400">O duelo só acaba quando alguém zerar.</p>
           </>
-        ) : (
-          showBack && (
-            <>
-              <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onBackToMap}>
-                VOLTAR À TEIA
-              </button>
-              <div className="loading-bar mt-2" style={{ animationDuration: `${AUTO_BACK_MS}ms` }} aria-hidden="true" />
-            </>
-          )
         )}
         <p className="mt-2 font-term text-sm text-bone-400">
           Dano: batida {DAMAGE.normal} · bucha {DAMAGE.bucha} · duas pontas {DAMAGE.duasPontas} · cruzada {DAMAGE.cruzada} · tranca {DAMAGE.tranca}

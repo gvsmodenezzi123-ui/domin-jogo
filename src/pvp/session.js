@@ -15,7 +15,8 @@
 import { proc } from '../engine/effects.js';
 import { gameReducer } from '../engine/gameReducer.js';
 import { generateRandomSeed, seedNumberOf } from '../engine/seedEngine.js';
-import { NO_MOVES_MS, REPLAY_MS, TURN_MS, actorOf, applyIntent, autoIntent, buildDuel, duelDeck, roundOutcome } from './duelHost.js';
+import { DEFAULT_ROOM, isRoom, sanitizeRoom } from '../data/pvpRoom.js';
+import { NO_MOVES_MS, REPLAY_MS, actorOf, applyIntent, autoIntent, buildDuel, duelDeck, roundOutcome } from './duelHost.js';
 import { mirrorState, redactFor } from './mirror.js';
 import { MSG, PROTOCOL_VERSION, makeMessage, validateMessage } from './protocol.js';
 
@@ -50,8 +51,9 @@ const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /**
  * `role` 'host' (criou a mesa) ou 'guest' (entrou). `me` = { id, name }. `transport` segue a
  * interface de transport.js. `restore`: um `snapshot()` antigo (a página recarregou).
+ * `room`: a configuração da mesa (só quem cria escolhe; quem entra recebe no HELLO).
  */
-export function createSession({ role, code, me, transport, clock = realClock, restore = null, online = () => true }) {
+export function createSession({ role, code, me, transport, clock = realClock, restore = null, online = () => true, room = null }) {
   const listeners = new Set();
   const noticeListeners = new Set();
   const timers = { ping: null, grace: null, retry: null, turn: null, next: null };
@@ -70,12 +72,13 @@ export function createSession({ role, code, me, transport, clock = realClock, re
     oppHandshake: null,
     seed: null,
     seedCode: null,
+    room: role === 'host' ? sanitizeRoom(room ?? DEFAULT_ROOM) : null,
     myStatus: null,
     oppStatus: null,
     oppShop: null,
     myReady: null,
     oppReady: null,
-    duel: null, // { id, final, view, clock: { actor, deadline }, result, awaiting, nextSent }
+    duel: null, // { id, final, view, clock: { actor, deadline, totalMs }, result, awaiting, nextSent }
     over: null, // { winnerId, reason, self }
     error: null,
     duelCount: 0,
@@ -86,6 +89,8 @@ export function createSession({ role, code, me, transport, clock = realClock, re
   let activeConn = null;
   let lastHeard = 0;
   let destroyed = false;
+  /** O tempo de cada jogada (a mesa escolheu 15 a 60 s). */
+  const turnMs = () => sanitizeRoom(s.room ?? DEFAULT_ROOM).turn * 1000;
 
   if (restore && restore.role === role && restore.code === code) {
     s = { ...s, ...restore.s, link: 'idle', ping: null, lostAt: null, graceEndsAt: null };
@@ -178,9 +183,10 @@ export function createSession({ role, code, me, transport, clock = realClock, re
   // -------------------------------------------------------------------------
 
   const clockOf = () => {
-    if (!hostDuel || !hostDuel.actor) return { actor: null, msLeft: null };
-    return { actor: hostDuel.actor, msLeft: Math.max(0, hostDuel.deadline - clock.now()) };
+    if (!hostDuel || !hostDuel.actor) return { actor: null, msLeft: null, totalMs: turnMs() };
+    return { actor: hostDuel.actor, msLeft: Math.max(0, hostDuel.deadline - clock.now()), totalMs: turnMs() };
   };
+
 
   /** Atualiza a tela do anfitrião e manda o espelho escondido para o convidado. */
   function publishDuel(kind = MSG.DUEL_STATE) {
@@ -191,7 +197,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
         id: hostDuel.id,
         final: hostDuel.final,
         view,
-        clock: { actor: c.actor, deadline: c.actor ? clock.now() + c.msLeft : null },
+        clock: { actor: c.actor, deadline: c.actor ? clock.now() + c.msLeft : null, totalMs: c.totalMs },
         result: s.duel?.id === hostDuel.id ? s.duel.result : null,
         awaiting: false,
         nextSent: s.duel?.id === hostDuel.id ? s.duel.nextSent : false,
@@ -214,7 +220,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
   function duelChanged() {
     const actor = actorOf(hostDuel.state);
     hostDuel.actor = actor;
-    hostDuel.deadline = actor ? clock.now() + TURN_MS : null;
+    hostDuel.deadline = actor ? clock.now() + turnMs() : null;
     publishDuel();
     const outcome = roundOutcome(hostDuel.state);
     if (outcome) roundEnded(outcome);
@@ -276,13 +282,14 @@ export function createSession({ role, code, me, transport, clock = realClock, re
     if (role !== 'host' || s.stage !== 'run' || !s.myReady || !s.oppReady) return;
     if (hostDuel && !hostDuel.done) return;
     const id = s.duelCount + 1;
-    const final = s.myReady.kind === 'done' && s.oppReady.kind === 'done';
+    // a rota online tem um duelo só: vale até alguém zerar
+    const final = true;
     const state = buildDuel({ host: s.myReady.profile, guest: s.oppReady.profile, seed: s.seed, duelId: id, final });
     hostDuel = { id, final, state, actor: null, deadline: null, done: false, nextReady: { me: false, opp: false }, nodes: { me: s.myReady, opp: s.oppReady } };
     set({ duelCount: id, myReady: null, oppReady: null, duel: null });
     const actor = actorOf(state);
     hostDuel.actor = actor;
-    hostDuel.deadline = actor ? clock.now() + TURN_MS : null;
+    hostDuel.deadline = actor ? clock.now() + turnMs() : null;
     publishDuel(MSG.DUEL_START);
     scheduleTurn();
   }
@@ -316,7 +323,9 @@ export function createSession({ role, code, me, transport, clock = realClock, re
   // -------------------------------------------------------------------------
 
   function sendHello() {
-    send(MSG.HELLO, { id: s.me.id, name: s.me.name, version: PROTOCOL_VERSION, rejoin: s.stage !== 'lobby', code });
+    // quem criou a mesa já manda a configuração dela (o outro vê antes de escolher a maleta)
+    const hello = { id: s.me.id, name: s.me.name, version: PROTOCOL_VERSION, rejoin: s.stage !== 'lobby', code };
+    send(MSG.HELLO, role === 'host' ? { ...hello, room: s.room } : hello);
   }
 
   function syncPayload() {
@@ -324,6 +333,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
       stage: s.stage,
       seed: s.seed,
       seedCode: s.seedCode,
+      room: s.room,
       handshake: s.myHandshake,
       status: s.myStatus,
       haveReady: Boolean(s.oppReady),
@@ -349,7 +359,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
         id: p.duelId,
         final: Boolean(p.final),
         view,
-        clock: { actor, deadline: actor && p.clock.msLeft != null ? clock.now() + p.clock.msLeft : null },
+        clock: { actor, deadline: actor && p.clock.msLeft != null ? clock.now() + p.clock.msLeft : null, totalMs: p.clock?.totalMs ?? turnMs() },
         result: playing ? null : keepResult && same ? s.duel.result : (p.result ?? (same ? s.duel.result : null)),
         awaiting: false,
         nextSent: playing ? false : same ? s.duel.nextSent : false,
@@ -379,14 +389,14 @@ export function createSession({ role, code, me, transport, clock = realClock, re
       if (s.over) send(MSG.GAME_OVER, s.over);
       else if (hostDuel && !hostDuel.done && hostDuel.actor) {
         // quem volta ganha os 30 s da jogada de novo
-        hostDuel.deadline = clock.now() + TURN_MS;
+        hostDuel.deadline = clock.now() + turnMs();
         publishDuel();
         scheduleTurn();
       }
       return;
     }
-    // convidado: o anfitrião respondeu
-    set({ opp: { id: p.id, name: p.name } });
+    // convidado: o anfitrião respondeu (com a configuração da mesa)
+    set({ opp: { id: p.id, name: p.name }, ...(isRoom(p.room) ? { room: p.room } : {}) });
     if (s.stage === 'lobby') set({ stage: 'maletas' });
     if (s.myHandshake) send(MSG.HANDSHAKE, s.myHandshake);
     if (s.myStatus) send(MSG.STATUS, s.myStatus);
@@ -419,7 +429,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
         if (role === 'host') maybeStartRun();
         break;
       case MSG.RUN_START:
-        if (role === 'guest' && s.stage !== 'over') set({ stage: 'run', seed: p.seed, seedCode: p.seedCode ?? null });
+        if (role === 'guest' && s.stage !== 'over') set({ stage: 'run', seed: p.seed, seedCode: p.seedCode ?? null, room: isRoom(p.room) ? p.room : s.room });
         break;
       case MSG.STATUS:
         set({ oppStatus: p });
@@ -488,6 +498,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
       patch.seed = p.seed;
       patch.seedCode = p.seedCode ?? null;
     }
+    if (isRoom(p.room)) patch.room = p.room;
     if (p.handshake) patch.oppHandshake = p.handshake;
     if (p.status) patch.oppStatus = p.status;
     set(patch);
@@ -504,7 +515,7 @@ export function createSession({ role, code, me, transport, clock = realClock, re
     const seedCode = generateRandomSeed();
     const seed = seedNumberOf(seedCode);
     set({ stage: 'run', seed, seedCode });
-    send(MSG.RUN_START, { seed, seedCode });
+    send(MSG.RUN_START, { seed, seedCode, room: s.room });
   }
 
   // -------------------------------------------------------------------------

@@ -49,16 +49,22 @@ describe('Patch PvP: queda de conexão, W.O. e volta para a mesa', () => {
     expect(g).toMatchObject({ winnerId: 'id-anfitriao', reason: 'wo', self: true });
   });
 
-  it('o convidado recarrega a página no meio da run e volta para a mesma mesa', () => {
+  it('o convidado recarrega a página no Mercado Negro e volta para a mesma mesa', () => {
     const m = makeMatch({ seed: 45 });
     let reloaded = false;
+    // o convidado demora no beco (para dar tempo de recarregar lá dentro)
+    m.bots.guest.step = ((orig) =>
+      function slow() {
+        if (!reloaded && m.bots.guest.run.phase === 'blackMarket') return;
+        orig();
+      })(m.bots.guest.step);
     m.run(undefined, 50, {
       during: () => {
-        if (reloaded || m.bots.guest.duelsPlayed < 1 || inDuel(m)) return;
+        if (reloaded || m.bots.guest.run.phase !== 'blackMarket') return;
         reloaded = true;
         // o que a página guardou (controller.js grava isso no aparelho)
         const ctl = m.bots.guest.ctl.getSnapshot();
-        const saved = { run: ctl.run, waitingAt: ctl.waitingAt, readyKind: ctl.readyKind, duelsPlayed: ctl.duelsPlayed, boss: ctl.boss };
+        const saved = { run: ctl.run, step: ctl.step, startRelics: ctl.startRelics };
         const snap = JSON.parse(JSON.stringify(m.guest.snapshot()));
         m.bots.guest.ctl.destroy();
         m.guest.destroy();
@@ -85,7 +91,7 @@ describe('Patch PvP: queda de conexão, W.O. e volta para a mesa', () => {
         if (reloaded || !inDuel(m)) return;
         reloaded = true;
         const ctl = m.bots.host.ctl.getSnapshot();
-        const saved = { run: ctl.run, waitingAt: ctl.waitingAt, readyKind: ctl.readyKind, duelsPlayed: ctl.duelsPlayed, boss: ctl.boss };
+        const saved = { run: ctl.run, step: ctl.step, startRelics: ctl.startRelics };
         const snap = JSON.parse(JSON.stringify(m.host.snapshot()));
         m.bots.host.ctl.destroy();
         m.host.destroy();
@@ -127,7 +133,7 @@ describe('Patch PvP: queda de conexão, W.O. e volta para a mesa', () => {
     let quit = false;
     m.run(undefined, 50, {
       during: () => {
-        if (!quit && m.bots.host.duelsPlayed >= 1) {
+        if (!quit && m.bots.host.routeStep === 'duel') {
           quit = true;
           m.guest.quit();
         }
@@ -136,4 +142,29 @@ describe('Patch PvP: queda de conexão, W.O. e volta para a mesa', () => {
     expect(m.host.getSnapshot().over).toMatchObject({ winnerId: 'id-anfitriao', reason: 'quit' });
     expect(m.guest.getSnapshot().over).toMatchObject({ winnerId: 'id-anfitriao', reason: 'quit', self: true });
   });
+
+  it('a configuração de quem criou vale para os dois (moedas, corações, raridade, tempo)', () => {
+    const room = { coins: 300, hearts: 3, rarity: 'lendarios', turn: 15 };
+    const m = makeMatch({ seed: 81, room });
+    let clockTotal = null;
+    let guestStart = null;
+    // a loja do convidado antes de ele comprar qualquer coisa
+    m.bots.guest.step = ((orig) =>
+      function look() {
+        const run = m.bots.guest.run;
+        if (!guestStart && run.phase === 'shop') guestStart = { coins: run.coins.player, max: run.maxHearts.player, rarity: run.pvp.rarity };
+        orig();
+      })(m.bots.guest.step);
+    m.run(undefined, 50, {
+      during: () => {
+        const g = m.guest.getSnapshot();
+        if (g.duel?.clock?.totalMs) clockTotal = g.duel.clock.totalMs;
+      },
+    });
+    expect(m.guest.getSnapshot().room).toEqual(room);
+    expect(guestStart).toEqual({ coins: 300, max: 3, rarity: 'lendarios' });
+    expect(clockTotal).toBe(15000);
+    expect(m.host.getSnapshot().over?.reason).toBe('hearts');
+  });
 });
+

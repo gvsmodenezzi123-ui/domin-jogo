@@ -4,33 +4,29 @@ import OptionsPanel from '../components/OptionsPanel.jsx';
 import { HeartsBar } from '../components/PixelHeart.jsx';
 import { MaletaSprite } from '../components/art/CaseArt.jsx';
 import { maletaOf } from '../data/maletas.js';
+import { describeRoom } from '../data/pvpRoom.js';
 import NetBadge from './NetBadge.jsx';
 import OpponentStrip from './OpponentStrip.jsx';
 import { formatRoomId } from './protocol.js';
 import { useSecondsLeft } from './useNow.js';
 
 /**
- * Patch PvP: a mesa reservada — você chegou num duelo (ou no fim da teia) e espera o outro
- * chegar na mesa dele. Mostra onde ele está e os corações dos dois.
+ * Patch PvP (versão 1.3): o seu baralho fechou e você espera o outro sair do Mercado Negro.
+ * Mostra onde ele está, os corações e os talismãs dele.
  */
-export function PvpWaiting({ kind, run, opp, oppStatus, link, ping, press, onMenu }) {
-  const done = kind === 'done';
+export function PvpWaiting({ run, opp, oppStatus, link, ping, press, onMenu }) {
   return (
     <main className="pvp-wait fixed inset-0 z-[55] flex flex-col items-center px-5 text-center" role="main" aria-label="Mesa reservada">
       <LampRig part="light" lamp={60} cord={26} beamWidth={360} className="z-[1]" />
       <LampRig part="body" lamp={60} cord={26} beamWidth={360} className="z-[2]" />
       <NetBadge link={link} ping={ping} />
       <div className="pvp-wait-inner relative z-[3] flex w-full max-w-[360px] flex-1 flex-col items-center">
-        <p className="pvp-kicker">{done ? 'FIM DA TEIA' : kind === 'boss' ? 'MESA DE CHEFE RESERVADA' : 'MESA RESERVADA'}</p>
+        <p className="pvp-kicker">BARALHO FECHADO</p>
         <h1 className="pvp-wait-title">
-          {done ? 'Você chegou no fim da noite.' : `Esperando ${opp.name} sentar à mesa`}
+          {`Esperando ${opp.name} fechar o baralho`}
           <span className="thinking-dots" aria-hidden="true" />
         </h1>
-        <p className="pvp-wait-note">
-          {done
-            ? `${opp.name} ainda sobe a teia. Cada mesa que ele achar é um duelo contra você. Os dois no fim: mesa final, até alguém zerar.`
-            : 'O duelo começa quando ele também chegar numa mesa. Lojas e beco ele faz no tempo dele.'}
-        </p>
+        <p className="pvp-wait-note">O duelo começa quando ele sair do Mercado Negro. Vale até alguém zerar: quem vencer é O Dono da Noite.</p>
         <div className="pvp-wait-cases" aria-hidden="true">
           <MaletaSprite id={run.maleta} className="h-14 w-14" />
           <span className="pvp-wait-x">×</span>
@@ -50,7 +46,7 @@ export function PvpWaiting({ kind, run, opp, oppStatus, link, ping, press, onMen
 }
 
 /** Patch PvP: esperando o outro escolher a maleta (ou o anfitrião mandar a teia). */
-export function PvpMaletaWait({ opp, myMaleta, link, ping, onMenu }) {
+export function PvpMaletaWait({ opp, myMaleta, room = null, link, ping, onMenu }) {
   return (
     <main className="pvp-wait fixed inset-0 z-[55] flex flex-col items-center px-5 text-center" role="main" aria-label="Esperando a maleta do oponente">
       <LampRig part="light" lamp={60} cord={26} beamWidth={360} className="z-[1]" />
@@ -65,7 +61,8 @@ export function PvpMaletaWait({ opp, myMaleta, link, ping, onMenu }) {
         <div className="pvp-wait-cases" aria-hidden="true">
           <MaletaSprite id={myMaleta} open className="h-16 w-16" />
         </div>
-        <p className="pvp-wait-note">A sua: {maletaOf(myMaleta).name}. A teia sai igual para os dois assim que ele escolher.</p>
+        <p className="pvp-wait-note">A sua: {maletaOf(myMaleta).name}. A rota (Loja, Mercado Negro e o duelo) começa para os dois assim que ele escolher.</p>
+        {room && <p className="pvp-room-rules">{describeRoom(room)}</p>}
         <button type="button" className="text-action pvp-back mt-auto" onClick={onMenu}>
           MENU DA MESA
         </button>
@@ -170,7 +167,7 @@ const REASON = {
 };
 
 /** Patch PvP: o fim da noite online — o sobrevivente é O Dono da Noite. */
-export function PvpEnd({ over, me, opp, run, duels, onLobby, onMenu }) {
+export function PvpEnd({ over, me, opp, run, rounds = 0, onLobby, onMenu }) {
   const mine = over.winnerId === me.id;
   const oppName = opp?.name ?? 'O oponente';
   const why = (REASON[over.reason] ?? REASON.hearts)(mine, oppName);
@@ -179,7 +176,7 @@ export function PvpEnd({ over, me, opp, run, duels, onLobby, onMenu }) {
       <LampRig part="light" lamp={60} cord={26} beamWidth={380} className="z-[1]" />
       <LampRig part="body" lamp={60} cord={26} beamWidth={380} className="z-[2]" />
       <div className="relative z-[3] flex w-full max-w-[360px] flex-1 flex-col items-center">
-        <p className="pvp-kicker">FIM DA NOITE · {duels} {duels === 1 ? 'DUELO' : 'DUELOS'}</p>
+        <p className="pvp-kicker">FIM DA NOITE{rounds > 0 ? ` · ${rounds} ${rounds === 1 ? 'RODADA' : 'RODADAS'}` : ''}</p>
         <div className="pvp-end-case" aria-hidden="true">
           <MaletaSprite id={mine ? run.maleta : (opp?.maleta ?? 'classica')} open className="h-20 w-20" />
         </div>

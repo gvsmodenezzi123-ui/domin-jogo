@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import LampRig from '../components/LampRig.jsx';
 import { PRIVACY_URL } from '../data/privacy.js';
+import { DEFAULT_ROOM, RARITY_LABEL, ROOM_OPTIONS, describeRoom, sanitizeRoom } from '../data/pvpRoom.js';
 import NetBadge from './NetBadge.jsx';
 import { webrtcAvailable } from './peerLoader.js';
 import { ROOM_LENGTH, ROOM_PREFIX, formatRoomId, maskRoomInput } from './protocol.js';
@@ -18,13 +19,77 @@ const ERRORS = {
   'browser-incompatible': 'Esta página não deixa fazer conexão direta entre aparelhos (WebRTC). Abra o Buxaria pelo site ou pelo app.',
 };
 
+const ROOM_KEY = 'buxaria:pvp:room';
+
+/** A última configuração que você usou para criar mesa (fica no aparelho). */
+function loadRoom() {
+  try {
+    return sanitizeRoom(JSON.parse(window.localStorage.getItem(ROOM_KEY) ?? 'null') ?? DEFAULT_ROOM);
+  } catch {
+    return { ...DEFAULT_ROOM };
+  }
+}
+function saveRoom(room) {
+  try {
+    window.localStorage.setItem(ROOM_KEY, JSON.stringify(room));
+  } catch {
+    /* sem storage */
+  }
+}
+
+/** Os itens da configuração da mesa: rótulo e como cada escolha aparece no botão. */
+const SETUP_ROWS = [
+  { key: 'coins', label: 'MOEDAS DE CADA UM', show: (v) => `$${v}` },
+  { key: 'hearts', label: 'CORAÇÕES NO DUELO', show: (v) => `${v}♥` },
+  { key: 'rarity', label: 'TALISMÃS NA LOJA', show: (v) => RARITY_LABEL[v] },
+  { key: 'turn', label: 'TEMPO POR JOGADA', show: (v) => `${v}S` },
+];
+
+/**
+ * Versão 1.3: a configuração da mesa, antes de abrir (só quem cria escolhe; vale para os dois).
+ */
+function RoomSetup({ room, onChange, onOpen, onBack, nameOk }) {
+  return (
+    <div className="pvp-room-card pvp-setup" role="group" aria-label="Configurar a mesa">
+      <span className="pvp-field-label">CONFIGURAR A MESA</span>
+      {SETUP_ROWS.map((row) => (
+        <div key={row.key} className="pvp-setup-row">
+          <span className="pvp-setup-label">{row.label}</span>
+          <div className="pvp-seg" role="radiogroup" aria-label={row.label}>
+            {ROOM_OPTIONS[row.key].map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={room[row.key] === v}
+                className={`pvp-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
+                onClick={() => onChange({ ...room, [row.key]: v })}
+              >
+                {row.show(v)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="pvp-hint">Rota: Loja → Mercado Negro → Duelo. Quem vencer o duelo é O Dono da Noite.</p>
+      <button type="button" data-tone="play" className="btn-pixel pvp-btn" disabled={!nameOk} onClick={onOpen}>
+        ABRIR A MESA
+      </button>
+      <button type="button" className="text-action pvp-setup-back" onClick={onBack}>
+        VOLTAR
+      </button>
+    </div>
+  );
+}
+
 /** O site do jogo (o mesmo GitHub Pages da política de privacidade). */
 const SITE_URL = PRIVACY_URL.replace(/privacy\.html$/, '');
 
 /**
  * Patch PvP: a entrada da mesa online, antes do Balcão de Maletas.
- *   CRIAR MESA CLANDESTINA → gera o ID ("MESA-8B2KQ"), mostra "Esperando oponente sentar à
- *   mesa..." e o COPIAR LINK/ID; SENTAR EM UMA MESA → o campo com máscara e o PUXAR CADEIRA.
+ *   CRIAR MESA CLANDESTINA → a configuração da mesa (moedas, corações, raridade dos talismãs,
+ *   tempo por jogada) → ABRIR A MESA gera o ID ("MESA-8B2KQ"), mostra "Esperando oponente
+ *   sentar à mesa..." e o COPIAR LINK/ID; SENTAR EM UMA MESA → o campo com máscara e o PUXAR CADEIRA.
  * O indicador de conexão fica no canto.
  */
 export default function LobbyView({ name, onName, snap = null, code = null, initialJoin = '', saved = null, onCreate, onJoin, onRejoin, onCancel, onBack, onTap }) {
@@ -32,6 +97,9 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
   const [copied, setCopied] = useState(false);
   // prévia em iframe isolado (ex.: um artifact) bloqueia o WebRTC: avisa antes de tentar
   const [direct] = useState(webrtcAvailable);
+  // CRIAR MESA CLANDESTINA abre a configuração; ABRIR A MESA cria de verdade
+  const [setup, setSetup] = useState(false);
+  const [room, setRoom] = useState(loadRoom);
   const busy = Boolean(snap);
   const hosting = snap?.role === 'host';
   const error = snap?.error ? (ERRORS[snap.error] ?? ERRORS.network) : null;
@@ -54,7 +122,7 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
       <div className="pvp-lobby-inner relative z-[3] flex w-full max-w-[360px] flex-1 flex-col">
         <h1 className="pvp-title">
           MESA ONLINE
-          <span>Um contra um, de verdade. A teia é a mesma para os dois; cada um escolhe o caminho.</span>
+          <span>Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.</span>
         </h1>
 
         <label className="pvp-field">
@@ -82,7 +150,27 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
           </div>
         )}
 
-        {!busy && direct && (
+        {!busy && direct && setup && (
+          <RoomSetup
+            room={room}
+            nameOk={nameOk}
+            onChange={(next) => {
+              onTap?.();
+              setRoom(next);
+            }}
+            onOpen={() => {
+              saveRoom(room);
+              setSetup(false);
+              onCreate(room);
+            }}
+            onBack={() => {
+              onTap?.();
+              setSetup(false);
+            }}
+          />
+        )}
+
+        {!busy && direct && !setup && (
           <>
             {saved && (
               <button type="button" data-tone="brass" className="btn-pixel pvp-btn" onClick={onRejoin}>
@@ -90,7 +178,16 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
                 <span className="pvp-btn-note">{saved.oppName ? `A partida com ${saved.oppName} continua` : 'A mesa continua'}</span>
               </button>
             )}
-            <button type="button" data-tone="play" className="btn-pixel pvp-btn" disabled={!nameOk} onClick={onCreate}>
+            <button
+              type="button"
+              data-tone="play"
+              className="btn-pixel pvp-btn"
+              disabled={!nameOk}
+              onClick={() => {
+                onTap?.();
+                setSetup(true);
+              }}
+            >
               CRIAR MESA CLANDESTINA
             </button>
             <p className="pvp-or" aria-hidden="true">
@@ -136,6 +233,7 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
               {snap.link === 'connecting' ? 'Abrindo a mesa' : 'Esperando oponente sentar à mesa'}
               <span className="thinking-dots" aria-hidden="true" />
             </p>
+            {snap.room && <p className="pvp-room-rules">{describeRoom(snap.room)}</p>}
             <button type="button" data-tone="brass" className="btn-pixel pvp-btn" onClick={copy}>
               {copied ? 'COPIADO!' : 'COPIAR LINK/ID'}
             </button>
@@ -163,7 +261,7 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
         )}
 
         <div className="mt-auto flex flex-col items-center gap-1 pb-1">
-          {busy ? (
+          {setup && !busy ? null : busy ? (
             <button type="button" className="text-action pvp-back" onClick={onCancel}>
               {error ? 'TENTAR DE NOVO' : 'CANCELAR'}
             </button>

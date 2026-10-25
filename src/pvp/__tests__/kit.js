@@ -1,5 +1,4 @@
 // Ferramentas dos testes do online: relógio de mentira, dois jogadores-robô e as conferências.
-import { availableNodes } from '../../engine/campaignMap.js';
 import { createSeededRng } from '../../engine/dominoLogic.js';
 import { createController } from '../controller.js';
 import { actorOf, autoIntent } from '../duelHost.js';
@@ -41,9 +40,9 @@ export function fakeClock(start = 1_000_000) {
 }
 
 /**
- * Um jogador-robô (pela mesma "ponte" que a tela usa, controller.js): escolhe a maleta, sobe a
- * teia sorteando os caminhos, compra alguma coisa na loja, senta nas mesas, joga com a jogada
- * automática e volta para a teia.
+ * Um jogador-robô (pela mesma "ponte" que a tela usa, controller.js): escolhe a maleta, compra
+ * alguma coisa na loja e no Mercado Negro, fecha o baralho e joga o duelo com a jogada
+ * automática (e toca em PRÓXIMA RODADA).
  */
 export function makeBot({ session, maleta, seed = 1, shopping = true, restore = null }) {
   const rng = createSeededRng(seed);
@@ -55,8 +54,9 @@ export function makeBot({ session, maleta, seed = 1, shopping = true, restore = 
     get run() {
       return ctl.getSnapshot().run;
     },
-    get duelsPlayed() {
-      return ctl.getSnapshot().duelsPlayed;
+    /** Em que parada da rota o robô está ('shop' · 'market' · 'duel'). */
+    get routeStep() {
+      return ctl.getSnapshot().step;
     },
     step() {
       const snap = ctl.getSnapshot();
@@ -70,50 +70,32 @@ export function makeBot({ session, maleta, seed = 1, shopping = true, restore = 
       const duel = net.duel;
       if (duel) {
         if (duel.result) {
-          if (duel.final && !duel.result.matchOver) {
-            if (!duel.nextSent) session.nextRound();
-          } else if (!duel.result.matchOver) ctl.finishDuel();
+          if (!duel.result.matchOver && !duel.nextSent) session.nextRound();
           return;
         }
         if (actorOf(duel.view) === 'player' && !duel.awaiting) session.duelIntent(autoIntent(duel.view, 'player'));
         return;
       }
-      if (snap.readyKind) return;
       const run = snap.run;
-      if (run.phase === 'map') {
-        const open = availableNodes(run);
-        if (!open.length) return;
-        const id = open[Math.floor(rng() * open.length)];
-        if (!ctl.enterNode(id)) bot.errors.push(`nó recusado ${id}`);
-        return;
-      }
       if (run.phase === 'shop') {
-        const before = [...run.relics.player];
         if (shopping) {
-          const i = run.shop.relics.findIndex((o) => !o.sold && o.price <= run.coins.player);
-          if (i >= 0) ctl.dispatch({ type: 'SHOP_BUY_RELIC', index: i });
+          // gasta: talismãs enquanto couber, uma pedra de grife às vezes
+          for (let n = 0; n < 6; n += 1) {
+            const now = ctl.getSnapshot().run;
+            const i = now.shop.relics.findIndex((o) => !o.sold && o.price <= now.coins.player);
+            if (i < 0 || !ctl.dispatch({ type: 'SHOP_BUY_RELIC', index: i })) break;
+          }
           const now = ctl.getSnapshot().run;
           const t = now.shop.tiles.findIndex((o) => !o.sold && o.price <= now.coins.player);
           if (t >= 0 && rng() < 0.5) ctl.dispatch({ type: 'SHOP_BUY_TILE', index: t });
         }
-        ctl.leaveShop(before);
+        if (!ctl.leaveStop()) bot.errors.push('não saiu da loja');
         return;
       }
       if (run.phase === 'blackMarket') {
-        const before = [...run.relics.player];
         const i = shopping ? run.market.offers.findIndex((o) => !o.sold && o.price <= run.coins.player) : -1;
         if (i >= 0) ctl.dispatch({ type: 'MARKET_BUY', index: i });
-        ctl.leaveShop(before);
-        return;
-      }
-      if (run.phase === 'coinEvent') {
-        ctl.dispatch({ type: 'LEAVE_EVENT' });
-        return;
-      }
-      if (run.phase === 'encounter') {
-        if (!run.encounter.choice) {
-          if (!ctl.dispatch({ type: 'ENCOUNTER_CHOOSE', choice: 'b' }) && !ctl.dispatch({ type: 'ENCOUNTER_CHOOSE', choice: 'a' })) ctl.dispatch({ type: 'LEAVE_ENCOUNTER' });
-        } else ctl.dispatch({ type: 'LEAVE_ENCOUNTER' });
+        if (!ctl.leaveStop()) bot.errors.push('não saiu do beco');
       }
     },
   };
@@ -121,10 +103,10 @@ export function makeBot({ session, maleta, seed = 1, shopping = true, restore = 
 }
 
 /** Duas sessões ligadas pela rede de mentira, cada uma com o seu robô. */
-export function makeMatch({ seed = 7, hostMaleta = 'classica', guestMaleta = 'bicheiro', delay = 25, shopping = true } = {}) {
+export function makeMatch({ seed = 7, hostMaleta = 'classica', guestMaleta = 'bicheiro', delay = 25, shopping = true, room = undefined } = {}) {
   const clock = fakeClock();
   const net = createLoopbackNetwork({ clock, delay });
-  const host = createSession({ role: 'host', code: 'TESTE', me: { id: 'id-anfitriao', name: 'Ana' }, transport: net.transport('host'), clock });
+  const host = createSession({ role: 'host', code: 'TESTE', me: { id: 'id-anfitriao', name: 'Ana' }, transport: net.transport('host'), clock, room });
   const guest = createSession({ role: 'guest', code: 'TESTE', me: { id: 'id-convidado', name: 'Bento' }, transport: net.transport('guest'), clock });
   const bots = { host: makeBot({ session: host, maleta: hostMaleta, seed, shopping }), guest: makeBot({ session: guest, maleta: guestMaleta, seed: seed + 101, shopping }) };
   host.start();
