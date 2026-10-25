@@ -69,7 +69,7 @@ function Corvo() {
  * Ele abre o sobretudo e mostra 3 talismãs Necróticos ($18 a $26) no forro. Ele não compra
  * nada seu: aqui só se paga. Segurar um talismã mostra o efeito (e o preço que ele cobra).
  */
-export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
+export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTitle = 'SAIR DO BECO →', leaveNote = 'VOLTAR AO MAPA' }) {
   // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
   const [fitOuter, fitInner, fitStyle] = useFitScale();
   const [complaint, setComplaint] = useState(null);
@@ -181,9 +181,9 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press }) {
             <span className="shop-nail shop-nail-tr" aria-hidden="true" />
             <span className="shop-nail shop-nail-bl" aria-hidden="true" />
             <span className="shop-nail shop-nail-br" aria-hidden="true" />
-            <span className="shop-plank-title">SAIR DO BECO →</span>
+            <span className="shop-plank-title">{leaveTitle}</span>
             <span className="shop-plank-next">
-              <span>VOLTAR AO MAPA</span>
+              <span>{leaveNote}</span>
             </span>
           </button>
         </footer>

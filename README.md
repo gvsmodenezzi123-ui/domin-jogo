@@ -1,4 +1,4 @@
-# Buxaria — Versão 1.1
+# Buxaria — Versão 1.2
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Roda como PWA (tela vertical de celular) e como app
@@ -67,7 +67,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 | | |
 | --- | --- |
 | Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
-| Versão | `versionName` = `package.json` (1.1.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Versão | `versionName` = `package.json` (1.2.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
 | Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
 | Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
 | Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
@@ -77,7 +77,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 push na `main`. O GitHub só mostra o botão de rodar à mão para workflows que estão na branch
 principal (`main`).
 
-**O que sai:** o artefato `buxaria-1.1.0-aab-N` com o `app-release.aab`, para baixar na própria
+**O que sai:** o artefato `buxaria-1.2.0-aab-N` com o `app-release.aab`, para baixar na própria
 execução (guardado 90 dias). O resumo da execução mostra o SHA-1 e o SHA-256 da chave de upload.
 
 ### 1. Gerar a chave de upload (uma vez, no seu computador)
@@ -163,6 +163,57 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Versão 1.2: a mesa online (um contra um, sala privada)
+
+O modo online entrou no jogo principal: **JOGAR → JOGAR ONLINE**, duas pessoas de verdade numa
+sala privada com ID. Funciona no site (GitHub Pages) e no APK, e um joga com o outro. O jogo solo
+continua igual e o código novo mora em `src/pvp/`.
+
+- **Rede P2P (PeerJS / WebRTC DataChannel):** a partida passa direto de um aparelho para o
+  outro; o servidor público e gratuito do PeerJS (0.peerjs.com) só apresenta os dois. O PeerJS
+  1.5.4 vem junto do jogo (`public/vendor/`, compilado do código-fonte oficial, licenças ao lado)
+  e só carrega quando alguém abre a mesa online. Páginas que bloqueiam conexão direta (prévias em
+  iframe isolado, como um artifact) mostram o aviso e o endereço do site.
+- **Lobby (`LobbyView.jsx`):** CRIAR MESA CLANDESTINA gera o ID (`MESA-` + 5 letras e números
+  legíveis, sem 0/O/1/I/L), mostra "Esperando oponente sentar à mesa..." e o COPIAR LINK/ID; no
+  site, o link `.../domin-jogo/?mesa=XXXXX` abre o lobby já preenchido (no APK vai só o ID).
+  SENTAR EM UMA MESA tem o campo com máscara e o PUXAR CADEIRA (CONECTAR). No canto, o
+  indicador: verde sincronizado (com o ping), vermelho conexão perdida.
+- **Mensagens (JSON, conferidas antes de usar, `protocol.js`):** `HANDSHAKE` (nome, maleta,
+  baralho inicial), `PLAY_TILE`, `PASS_TURN`, `BUY_TILE`, `SHOP_FINISH`, `ROUND_RESULT`, mais
+  as de controle (`HELLO`, `RUN_START`, `STATUS`, `DUEL_READY`, `DUEL_STATE`, `PING`/`PONG`,
+  `SYNC`, `GAME_OVER`...). Quem criou a mesa roda as regras do duelo (o mesmo reducer do solo)
+  e manda o estado; quem entrou manda as jogadas e vê o espelho, com a mão do outro e o dorme
+  escondidos. Versões diferentes do protocolo não se misturam (o lobby avisa para atualizar).
+- **A teia espelhada:** a semente vem de quem criou a mesa, então o mapa é o mesmo para os
+  dois; cada um escolhe o caminho e faz loja, Mercado Negro e eventos [?] no próprio ritmo. Sair
+  da loja ou do beco é o **PRONTO PARA O DUELO** (o outro fica sabendo).
+- **Duelos de verdade:** toda mesa (comum ou chefe) é contra o outro jogador; não existe IA. O
+  topo mostra o nome, a maleta, os corações e os talismãs reais dele. Quem chega primeiro numa
+  mesa espera o outro chegar na dele. Cada mesa vale uma rodada: quem bater ou vencer na tranca
+  tira coração do outro (as regras de dano do solo). Vencer paga $8 ($16 na Maleta Seca) e +1♥;
+  na mesa de chefe, +$4 e cura tudo; quem perde leva $3.
+- **Fim da noite:** quem termina a teia espera e joga as mesas que o outro ainda tem; com os
+  dois no fim, a mesa final vale até alguém zerar. O sobrevivente é **O Dono da Noite**.
+- **Cronômetro e quedas:** 30 s por jogada (esgotou, o jogo joga sozinho). Se alguém fecha a
+  aba ou cai a conexão, aparece a contagem de 60 s; sem volta, W.O. para quem ficou. Recarregar
+  a página no meio da partida volta para a mesma mesa (o jogo abre direto nela, sem a abertura).
+- **Equilíbrio:** 7 corações para cada um, Peças Brancas, sem as melhorias da Conta do Boteco,
+  todas as maletas e talismãs liberados, menos os que só fazem sentido contra a IA (Relógio
+  Quebrado, Óculos Fundo de Garrafa e Dedo de Cadáver Amarrado). Barbante, Giz e Canivete valem
+  para os dois lados; a Maleta do Bicheiro dá 1 pedra de grife a mais para o adversário.
+- **Separado do solo:** a mesa online não mexe no save da run, nas conquistas, no Caderno de
+  Fiado nem nas maletas liberadas; ela guarda só o apelido e a mesa em andamento
+  (`buxaria:pvp:*`).
+- **Política de Privacidade:** novo item 3, "Mesa Online (opcional)": o que viaja entre os dois
+  aparelhos, o servidor do PeerJS e o endereço IP (páginas regeneradas com
+  `node scripts/privacy-page.mjs`). Ao enviar para a Play, revise a Segurança dos dados na
+  Play Console com isso.
+- **Correção da abertura:** tocar na tela no meio da abertura (para ligar o som) dava erro e a
+  cena ficava muda; o PULAR não deixa mais o som da cena voltar.
+- **Testes:** `src/pvp/__tests__/` (protocolo, espelho, duelo, partidas inteiras entre dois
+  robôs numa rede de mentira, queda e volta, W.O., página recarregada, cronômetro).
 
 ## Versão 1.1: a abertura e o Dono da Noite em pixel art
 

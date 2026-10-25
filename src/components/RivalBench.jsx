@@ -38,6 +38,7 @@ function RivalBench({
   handRef,
   roundKey,
   press,
+  avatar = null,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
   // boca do retrato abre e fecha enquanto a fala aparece no balão
@@ -52,7 +53,7 @@ function RivalBench({
         <div className="absolute left-0 top-0 flex h-24 w-40 flex-shrink-0 gap-1.5 pl-2 pt-2">
           <div className="flex w-[60px] shrink-0 flex-col items-center">
             <div className={`avatar-frame relative ${isTurn ? 'avatar-frame-active' : ''}`} data-rival-avatar>
-              <RivalAvatar rival={rival} mood={mood} size={48} hurtKey={hurtKey} speaking={mouthOpen} />
+              {avatar ?? <RivalAvatar rival={rival} mood={mood} size={48} hurtKey={hurtKey} speaking={mouthOpen} />}
             </div>
             <span className={`rival-status font-pixel ${thinking ? 'rival-status-on' : ''}`} role="status" aria-live="polite">
               {thinking ? <span className="thinking-dots">PENSANDO</span> : status}

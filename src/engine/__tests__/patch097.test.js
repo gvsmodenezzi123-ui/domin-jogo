@@ -50,7 +50,10 @@ describe('Patch 0.9.7: Política de Privacidade', () => {
 
   it('o endereço público é o da página no GitHub Pages do jogo, e o e-mail de suporte é o certo', () => {
     expect(PRIVACY_URL).toMatch(/^https:\/\/[a-z0-9-]+\.github\.io\/domin-jogo\/privacy\.html$/);
-    expect(PRIVACY.sections).toHaveLength(6);
+    expect(PRIVACY.sections).toHaveLength(7);
+    // versão 1.2: a mesa online (o que sai do aparelho e o servidor do PeerJS) está explicada
+    expect(PRIVACY.sections[2].title).toBe('3. Mesa Online (opcional)');
+    expect(PRIVACY.sections[2].items.map(plainOf).join(' ')).toContain('0.peerjs.com');
     expect(PRIVACY_EMAIL).toBe('gabrielmodenezzi10@gmail.com');
   });
 

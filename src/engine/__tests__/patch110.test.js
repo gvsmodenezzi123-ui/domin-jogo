@@ -47,7 +47,9 @@ describe('Patch 1.1: abertura no jogo', () => {
   it('a trilha do menu espera a abertura (entra na batida do logo, não embaixo da rua)', () => {
     const app = read('src/App.jsx');
     expect(app).toContain("const openingSound = opening.on && state.phase === 'title';");
-    expect(app).toContain('if (sound.ctx && !openingSound) sound.playTrack(musicTrack);');
+    expect(app).toContain('if (sound.ctx && !openingSound && !onlineOn) sound.playTrack(musicTrack);');
+    // abrindo direto numa mesa online (link ?mesa= ou mesa guardada), a abertura não entra
+    expect(app).toContain('on: !startsOnline()');
     // as animações reduzidas valem antes da abertura montar
     expect(read('src/main.jsx')).toContain('applyReducedMotion(loadSettings().reducedMotion);');
   });

@@ -83,12 +83,12 @@
 
     <section>
       <h2>1. Coleta de Informações Pessoais</h2>
-      <p>O jogo <strong>Buxaria</strong> NÃO coleta, não armazena, não transmite e não compartilha nenhum dado pessoal identificável dos seus usuários (como nome, endereço, e-mail, telefone, localização geográfica, fotos ou contatos).</p>
+      <p>O jogo <strong>Buxaria</strong> NÃO coleta, não armazena e não compartilha nenhum dado pessoal identificável dos seus usuários (como nome, endereço, e-mail, telefone, localização geográfica, fotos ou contatos). O único conteúdo que sai do aparelho é o que o próprio jogador envia ao outro jogador na mesa online, opcional, descrita no item 3.</p>
     </section>
 
     <section>
       <h2>2. Armazenamento Local de Dados (Local Storage / Cache)</h2>
-      <p>O jogo funciona inteiramente de forma local e offline no dispositivo do usuário:</p>
+      <p>Fora da mesa online (item 3), o jogo funciona inteiramente de forma local e offline no dispositivo do usuário:</p>
       <ul>
         <li>Informações de progresso de jogo, conquistas, maletas desbloqueadas, moedas, talismãs, estatísticas de carreira e opções de configuração são salvas exclusivamente na memória local do seu aparelho (<code>localStorage</code> ou arquivos locais do aplicativo).</li>
         <li>Esses dados pertencem unicamente ao jogador e não são enviados para nenhum servidor externo. Ao desinstalar o jogo ou limpar o cache do aplicativo, esses dados locais podem ser permanentemente excluídos.</li>
@@ -96,27 +96,39 @@
     </section>
 
     <section>
-      <h2>3. Permissões de Dispositivo</h2>
-      <p>O aplicativo <strong>Buxaria</strong> não solicita acesso a permissões invasivas do sistema operacional, como câmera, microfone, agenda de contatos ou localização em segundo plano. Ele utiliza apenas recursos operacionais básicos para execução local de áudio, renderização gráfica e resposta tátil/vibração.</p>
+      <h2>3. Mesa Online (opcional)</h2>
+      <p>O modo <strong>JOGAR ONLINE</strong> só é usado se o jogador escolher entrar ou criar uma mesa. Nesse caso:</p>
+      <ul>
+        <li>O seu aparelho se conecta diretamente ao aparelho do outro jogador (WebRTC). Entre os dois viaja apenas o que a partida precisa: o apelido que você digitou, a maleta escolhida, as jogadas, os corações, as moedas e os talismãs da partida.</li>
+        <li>Para os dois aparelhos se encontrarem, o jogo usa o servidor público e gratuito do <strong>PeerJS</strong> (0.peerjs.com), mantido pelo projeto PeerJS. Ele recebe o ID da mesa e os dados técnicos da conexão, como o endereço IP. Quando a ligação direta não é possível, a partida pode passar por um servidor de retransmissão do mesmo projeto. O desenvolvedor não opera esses servidores e não recebe nem guarda nenhum desses dados.</li>
+        <li>Como em toda conexão direta, o outro jogador também recebe o endereço IP do seu aparelho. Use a mesa online com pessoas de sua confiança.</li>
+        <li>O apelido e a mesa em andamento ficam salvos só no seu aparelho (<code>localStorage</code>), para você voltar à partida se a página recarregar.</li>
+      </ul>
     </section>
 
     <section>
-      <h2>4. Anúncios e Serviços de Terceiros</h2>
+      <h2>4. Permissões de Dispositivo</h2>
+      <p>O aplicativo <strong>Buxaria</strong> não solicita acesso a permissões invasivas do sistema operacional, como câmera, microfone, agenda de contatos ou localização em segundo plano. Ele utiliza apenas recursos operacionais básicos para execução local de áudio, renderização gráfica e resposta tátil/vibração, além do acesso à internet, usado somente pela mesa online.</p>
+    </section>
+
+    <section>
+      <h2>5. Anúncios e Serviços de Terceiros</h2>
       <p>O <strong>Buxaria</strong> é um aplicativo premium pago:</p>
       <ul>
         <li>Não contém redes de anúncios de terceiros (sem AdMob, Unity Ads ou similares).</li>
         <li>Não utiliza ferramentas externas de rastreamento de comportamento, analytics ou telemetria invasiva.</li>
+        <li>O único serviço de terceiros é o servidor de conexão do PeerJS, usado só pela mesa online (item 3).</li>
         <li>As transações financeiras de aquisição do jogo são processadas de forma exclusiva e direta pelos serviços de pagamento da própria Google Play Store, sob os termos de segurança da Google. O desenvolvedor não tem acesso aos seus dados de cartão de crédito ou dados bancários.</li>
       </ul>
     </section>
 
     <section>
-      <h2>5. Privacidade de Crianças e Menores</h2>
+      <h2>6. Privacidade de Crianças e Menores</h2>
       <p>Em conformidade com as diretrizes internacionais (como COPPA e GDPR) e nacionais (LGPD), o jogo não coleta conscientemente qualquer dado de crianças ou adolescentes.</p>
     </section>
 
     <section>
-      <h2>6. Contato com o Desenvolvedor</h2>
+      <h2>7. Contato com o Desenvolvedor</h2>
       <p>Em caso de dúvidas, esclarecimentos técnicos ou solicitações referentes a esta Política de Privacidade, entre em contato pelo e-mail de suporte:</p>
       <p><strong><a href="mailto:gabrielmodenezzi10@gmail.com">gabrielmodenezzi10@gmail.com</a></strong></p>
     </section>

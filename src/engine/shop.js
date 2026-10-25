@@ -16,7 +16,7 @@ import { rerollCost } from '../data/campaign.js';
 import { mixSeed, regionOfState } from './campaignMap.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { RARITIES } from '../data/rarities.js';
-import { RELICS, RELIC_IDS, isRelicAvailable } from '../data/relics.js';
+import { RELICS, RELIC_IDS, isRelicOffered } from '../data/relics.js';
 import { FULL_SET, createSeededRng } from './dominoLogic.js';
 import { hasPerk, relicSlotsFor, shopPrice } from './loadout.js';
 
@@ -85,7 +85,7 @@ export function buildShop(state, rerolls = 0) {
   const chances = regionOfState(state).rarity;
   const owned = new Set(state.relics.player);
   // talismãs trancados por conquista só entram depois de liberados (Patch 0.7.0)
-  const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicAvailable(id, state.unlocks));
+  const relicPool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicOffered(id, state));
   // Maleta do Trapaceiro: tudo aqui custa 20% a mais
   const relics = pickByRarity(relicPool, (id) => RELICS[id].rarity, chances, SHOP_RELIC_OFFERS, rng).map((id) => ({
     id,

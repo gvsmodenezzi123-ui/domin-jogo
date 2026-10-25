@@ -49,6 +49,8 @@ const K = '#0b0705';
 
 const hasSix = (tile) => tile.a === 6 || tile.b === 6;
 const mine = (owner) => owner === 'player';
+/** No online (Patch PvP) as duas cadeiras são gente: o que era só "seu" vale para os dois lados. */
+const human = (state, owner) => mine(owner) || Boolean(state.pvp);
 const relicProc = (state, owner, id, text) =>
   proc(state, { source: 'relic', id, text, tone: mine(owner) ? 'player' : 'enemy', owner });
 
@@ -108,6 +110,12 @@ function rigSixes(state, { owner, foe }) {
 
 /** Giz de Sinuca: você escolhe o descarte; um rival descarta a pedra mais pesada na hora. */
 function chalkDiscard(state, { owner }) {
+  if (state.pvp) {
+    // online: cada um escolhe o seu descarte; se o outro já está escolhendo, este espera a vez
+    const ask = { type: 'discard', owner };
+    const next = state.pending ? { ...state, pendingNext: ask } : { ...state, pending: ask };
+    return relicProc(next, owner, 'giz', 'GIZ: DESCARTE 1 PEDRA');
+  }
   if (mine(owner)) return relicProc({ ...state, pending: { type: 'discard' } }, owner, 'giz', 'GIZ: DESCARTE 1 PEDRA');
   const hand = state.hands[owner];
   const heaviest = hand.slice().sort((x, y) => pipSum(y) - pipSum(x))[0];
@@ -382,7 +390,7 @@ export const RELICS = Object.freeze({
     description: 'Mostra exatamente qual pedra o rival acabou de comprar.',
     reveal: { lastDraw: true },
     onFoeMiss(state, { owner, kind, tileId }) {
-      if (!mine(owner) || kind !== 'draw' || !tileId) return state;
+      if (!human(state, owner) || kind !== 'draw' || !tileId) return state;
       const [a, b] = tileId.split('-');
       return proc(state, { source: 'relic', id: 'espelho', text: `ESPELHO: ELE COMPROU ${a}|${b}`, tone: 'info', owner });
     },
@@ -778,7 +786,7 @@ export const RELICS = Object.freeze({
     lockedBy: 'limite_sangue',
     description: 'A sua 1ª compra do dorme na rodada mostra qual é a próxima pedra do topo.',
     onDraw(state, { owner }) {
-      if (!mine(owner) || isUsed(state, owner, 'fosforo') || !state.boneyard.length) return state;
+      if (!human(state, owner) || isUsed(state, owner, 'fosforo') || !state.boneyard.length) return state;
       const [top] = state.boneyard;
       return relicProc(markUsed(state, owner, 'fosforo'), owner, 'fosforo', `FÓSFORO: A PRÓXIMA É [${top.a}|${top.b}]`);
     },
@@ -844,7 +852,7 @@ export const RELICS = Object.freeze({
     price: 7,
     description: 'Se o rival passar 2 vezes seguidas, uma pedra da mão dele fica à mostra até o fim da rodada.',
     onFoeMiss(state, { owner, foe, kind }) {
-      if (!mine(owner) || kind !== 'pass' || (state.fx.passes?.[foe] ?? 0) < 2) return state;
+      if (!human(state, owner) || kind !== 'pass' || (state.fx.passes?.[foe] ?? 0) < 2) return state;
       const shown = new Set(state.fx.revealed ?? []);
       const hidden = state.hands[foe].filter((t) => !shown.has(t.id));
       if (!hidden.length) return state;
@@ -998,6 +1006,14 @@ export const LOCKED_RELIC_IDS = Object.freeze(RELIC_IDS.filter((id) => RELICS[id
 
 /** O talismã pode sair na loja/no beco? (`unlocks`: ids liberados por conquista) */
 export const isRelicAvailable = (id, unlocks = []) => Boolean(RELICS[id]) && (!RELICS[id].lockedBy || unlocks.includes(id));
+
+/**
+ * Patch PvP: talismãs que só fazem sentido contra a IA (desfazer a jogada dela, prever a
+ * próxima pedra dela, ela comprando até encaixar) não saem na loja nem no beco do online.
+ */
+export const PVP_BANNED_RELICS = Object.freeze(['relogio', 'oculosFundo', 'dedoCadaver']);
+/** O talismã pode sair na vitrine desta run (no online, fora os da IA)? */
+export const isRelicOffered = (id, state) => isRelicAvailable(id, state?.unlocks) && !(state?.pvp && PVP_BANNED_RELICS.includes(id));
 
 /** Os talismãs comuns "básicos" (sem trava de conquista) da conquista Colecionador de Esquina. */
 export const BASIC_COMMON_IDS = Object.freeze(RELIC_IDS.filter((id) => RELICS[id].rarity === 'comum' && !RELICS[id].lockedBy));

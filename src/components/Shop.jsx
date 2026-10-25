@@ -108,7 +108,7 @@ function Valtinho() {
  * Segurar qualquer mercadoria mostra o efeito. Desde o Patch 0.6.1 a loja é um caminho
  * opcional da teia: sair dela volta para o mapa, que mostra as próximas bifurcações.
  */
-export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press }) {
+export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press, leaveTitle = 'VOLTAR AO MAPA →', leaveNote = null }) {
   // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
   const [fitOuter, fitInner, fitStyle] = useFitScale();
   const [sellId, setSellId] = useState(null);
@@ -342,9 +342,9 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
             <span className="shop-nail shop-nail-tr" aria-hidden="true" />
             <span className="shop-nail shop-nail-bl" aria-hidden="true" />
             <span className="shop-nail shop-nail-br" aria-hidden="true" />
-            <span className="shop-plank-title">VOLTAR AO MAPA →</span>
+            <span className="shop-plank-title">{leaveTitle}</span>
             <span className="shop-plank-next">
-              <span>{exits > 1 ? `${exits} CAMINHOS SEGUEM DAQUI` : 'A TRILHA SEGUE PARA CIMA'}</span>
+              <span>{leaveNote ?? (exits > 1 ? `${exits} CAMINHOS SEGUEM DAQUI` : 'A TRILHA SEGUE PARA CIMA')}</span>
             </span>
           </button>
         </footer>

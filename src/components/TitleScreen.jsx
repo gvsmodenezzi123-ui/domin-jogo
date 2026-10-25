@@ -54,7 +54,7 @@ function metaSnapshot() {
  * salva, apagado se não), NOVO JOGO, DESAFIOS (Patch 0.8.0) e VOLTAR. Com run salva, o
  * NOVO JOGO pede confirmação ali mesmo, também em texto.
  */
-function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges, onBack, onTap }) {
+function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges, onBack, onTap, onOnline }) {
   const [confirm, setConfirm] = useState(false);
   const summary = save ? saveSummary(save) : null;
   if (confirm) {
@@ -99,6 +99,12 @@ function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges,
       >
         NOVO JOGO
       </button>
+      {/* Patch PvP: a mesa online (sala privada com ID) */}
+      {onOnline && (
+        <button type="button" className="text-action title-choice title-choice-online" onClick={onOnline}>
+          JOGAR ONLINE
+        </button>
+      )}
       <button type="button" className={`text-action title-choice ${hasChallenges ? '' : 'title-choice-dim'}`} onClick={onChallenges}>
         DESAFIOS
       </button>
@@ -114,7 +120,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.1</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.2</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -162,6 +168,7 @@ export default function TitleScreen({
   startPicking = false,
   tutorialPending = false,
   onTutorial,
+  onOnline = null,
 }) {
   const [modal, setModal] = useState(null);
   const [choosing, setChoosing] = useState(Boolean(startPicking));
@@ -264,6 +271,7 @@ export default function TitleScreen({
               hasChallenges={metaKey.split('|')[1] !== ''}
               onBack={back}
               onTap={onTap}
+              onOnline={onOnline}
             />
           )}
         </div>
@@ -277,7 +285,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 1.1{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO 1.2{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

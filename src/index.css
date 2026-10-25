@@ -9063,3 +9063,497 @@
     opacity: 0;
   }
 }
+
+/* ===========================================================================
+   Patch PvP: a mesa online (src/pvp/)
+   =========================================================================== */
+
+.title-choice-online {
+  color: #9fe0b8;
+  text-shadow:
+    0 2px 0 #0f3a22,
+    0 0 12px rgba(120, 230, 170, 0.35);
+}
+
+/* indicador de conexão no canto: verde sincronizado, âmbar esperando, vermelho caiu */
+.net-badge {
+  position: fixed;
+  z-index: 66;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 6px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  letter-spacing: 0.06em;
+  color: #e9dcb4;
+  background: rgba(8, 6, 4, 0.78);
+  border: 1px solid rgba(240, 204, 120, 0.22);
+  pointer-events: none;
+}
+.net-top-right {
+  top: max(env(safe-area-inset-top), 8px);
+  right: 8px;
+}
+/* no mapa e na loja o canto de cima é do menu e do saldo: o selo fica embaixo, à esquerda */
+.net-map {
+  left: 8px;
+  bottom: calc(max(env(safe-area-inset-bottom), 6px) + 2px);
+}
+/* na mesa, entre o retrato do outro e a mão dele */
+.net-duel {
+  top: calc(max(env(safe-area-inset-top), 4px) + 86px);
+  left: 8px;
+}
+.net-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+.net-ok .net-dot {
+  color: #5fe38a;
+}
+.net-wait .net-dot {
+  color: #f2b84b;
+  animation: netBlink 1s steps(2, end) infinite;
+}
+.net-down {
+  border-color: rgba(224, 83, 63, 0.6);
+  color: #ffb3a6;
+}
+.net-down .net-dot {
+  color: #ff4b38;
+  animation: netBlink 0.6s steps(2, end) infinite;
+}
+@keyframes netBlink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.reduce-motion .net-dot {
+  animation: none !important;
+}
+
+/* --- lobby -------------------------------------------------------------- */
+.pvp-lobby,
+.pvp-wait,
+.pvp-end {
+  color: var(--color-bone-50);
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 22%, rgba(120, 230, 170, 0.08), transparent 70%),
+    radial-gradient(ellipse 90% 70% at 50% 30%, #18261c 0%, #0b0a07 62%, #050403 100%);
+  padding-top: max(env(safe-area-inset-top), 8px);
+  padding-bottom: max(env(safe-area-inset-bottom), 10px);
+  overflow: hidden;
+}
+.pvp-lobby-inner,
+.pvp-wait-inner {
+  padding-top: 92px;
+  gap: 10px;
+  min-height: 0;
+}
+.pvp-title {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  line-height: 1.3;
+  color: #f4ecd2;
+  text-shadow:
+    0 2px 0 #3a1d08,
+    0 0 16px rgba(120, 230, 170, 0.3);
+}
+.pvp-title span {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(233, 220, 180, 0.7);
+  text-shadow: none;
+}
+.pvp-field {
+  display: block;
+  text-align: left;
+}
+.pvp-field-label {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  color: #d9a946;
+}
+.pvp-input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-term);
+  font-size: 21px;
+  letter-spacing: 0.06em;
+  color: #f4ecd2;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(240, 204, 120, 0.3);
+  border-radius: 0;
+  outline: none;
+}
+.pvp-input::placeholder {
+  color: rgba(244, 236, 210, 0.3);
+}
+.pvp-input:focus {
+  border-color: #f2b84b;
+  box-shadow: 0 0 0 2px rgba(242, 184, 75, 0.2);
+}
+.pvp-input:disabled {
+  opacity: 0.6;
+}
+.pvp-btn {
+  width: 100%;
+  font-size: 10px;
+}
+.pvp-btn-note {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-term);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.pvp-or {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(233, 220, 180, 0.45);
+}
+.pvp-join {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.pvp-room-input {
+  display: flex;
+  align-items: stretch;
+}
+.pvp-room-prefix {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 0 4px 0 8px;
+  font-family: var(--font-term);
+  font-size: 21px;
+  letter-spacing: 0.06em;
+  color: #9fe0b8;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(240, 204, 120, 0.3);
+  border-right: 0;
+}
+.pvp-input-room {
+  padding-left: 0;
+  border-left: 0;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.pvp-room-card {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 12px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px dashed rgba(159, 224, 184, 0.35);
+}
+.pvp-room-id {
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  color: #9fe0b8;
+  text-shadow:
+    0 2px 0 #0f3a22,
+    0 0 14px rgba(120, 230, 170, 0.45);
+  user-select: all;
+}
+.pvp-status {
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1;
+  color: #e9dcb4;
+}
+.pvp-hint {
+  font-family: var(--font-term);
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(233, 220, 180, 0.55);
+}
+.pvp-site-link {
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1.1;
+  color: #ffd27a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.pvp-error {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+  color: #ff8c7a;
+}
+.pvp-error-float {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(max(env(safe-area-inset-bottom), 10px) + 34px);
+  z-index: 60;
+  text-align: center;
+}
+.pvp-back {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 220, 180, 0.62);
+  padding: 8px 12px;
+}
+
+/* --- o oponente (mapa, loja, mesa reservada) ------------------------------- */
+.pvp-opp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 7px;
+  text-align: left;
+  background: rgba(10, 30, 20, 0.55);
+  border: 1px solid rgba(159, 224, 184, 0.28);
+}
+.pvp-opp-compact {
+  margin-top: 6px;
+  padding: 3px 6px;
+}
+.pvp-opp-case {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.pvp-opp-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.2;
+  color: #9fe0b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pvp-opp-maleta {
+  color: rgba(233, 220, 180, 0.5);
+}
+.pvp-opp-where {
+  font-family: var(--font-term);
+  font-size: 15px;
+  line-height: 1;
+  color: #e9dcb4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pvp-opp-stats {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  flex-shrink: 0;
+}
+.pvp-opp-pin {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  translate: -50% 0;
+  padding: 1px 4px;
+  font-size: 5px;
+  letter-spacing: 0.04em;
+  color: #0b1a10;
+  background: #9fe0b8;
+  border: 1px solid #0b1a10;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+}
+.pvp-fight .polaroid-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c2a20;
+}
+
+/* --- mesa reservada / maletas ---------------------------------------------- */
+.pvp-kicker {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: #d9a946;
+}
+.pvp-wait-title {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #3a1d08;
+}
+.pvp-wait-note {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+  color: rgba(233, 220, 180, 0.72);
+}
+.pvp-wait-cases {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+}
+.pvp-wait-x {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #ff8c7a;
+}
+.pvp-wait-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- o duelo ----------------------------------------------------------------- */
+.pvp-clock {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 3px 8px 5px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  color: #e9dcb4;
+  background: rgba(8, 6, 4, 0.8);
+  border: 1px solid rgba(240, 204, 120, 0.25);
+  pointer-events: none;
+}
+.pvp-clock-mine {
+  color: #ffd36b;
+  border-color: rgba(255, 211, 107, 0.6);
+}
+.pvp-clock-sec {
+  font-size: 9px;
+}
+.pvp-clock-bar {
+  grid-column: 1 / -1;
+  height: 2px;
+  margin-top: 3px;
+  background: linear-gradient(90deg, currentColor calc(var(--left) * 100%), rgba(255, 255, 255, 0.12) 0);
+}
+.pvp-clock-urgent {
+  color: #ff8c7a;
+  border-color: rgba(224, 83, 63, 0.7);
+  animation: netBlink 0.5s steps(2, end) infinite;
+}
+.reduce-motion .pvp-clock-urgent {
+  animation: none;
+}
+.pvp-final-tag {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 25;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  letter-spacing: 0.1em;
+  color: #ff8c7a;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* --- conexão perdida (60 s) ------------------------------------------------------ */
+.pvp-countdown {
+  font-size: 26px;
+  color: #ff8c7a;
+  text-shadow: 0 3px 0 #3a0b06;
+}
+
+/* --- fim da noite ------------------------------------------------------------------ */
+.pvp-end {
+  padding-top: calc(max(env(safe-area-inset-top), 8px) + 92px);
+}
+.pvp-end-win {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 30%, rgba(255, 200, 90, 0.16), transparent 70%),
+    radial-gradient(ellipse 90% 70% at 50% 30%, #2a1f0c 0%, #0d0905 62%, #050403 100%);
+}
+.pvp-end-lose {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 30%, rgba(224, 83, 63, 0.14), transparent 70%),
+    radial-gradient(ellipse 90% 70% at 50% 30%, #240c0a 0%, #0d0605 62%, #050303 100%);
+}
+.pvp-end-case {
+  margin: 14px 0 10px;
+}
+.pvp-end-title {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  line-height: 1.4;
+  color: #ffd36b;
+  text-shadow:
+    0 2px 0 #5a3a08,
+    0 0 16px rgba(255, 200, 90, 0.45);
+}
+.pvp-end-lose .pvp-end-title {
+  color: #ff8c7a;
+  text-shadow: 0 2px 0 #3a0b06;
+}
+.pvp-end-why {
+  margin-top: 8px;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1.05;
+  color: #e9dcb4;
+}
+
+/* --- avisos rápidos ------------------------------------------------------------------ */
+.pvp-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(max(env(safe-area-inset-top), 8px) + 40px);
+  translate: -50% 0;
+  z-index: 85;
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 6px 10px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+  text-align: center;
+  color: #0b1a10;
+  background: #9fe0b8;
+  border: 2px solid #0b1a10;
+  box-shadow: 0 4px 0 #000;
+  pointer-events: none;
+  animation: introFadeIn 200ms ease-out both;
+}
+
+/* celular baixinho: o lobby aperta */
+@media (max-height: 700px) {
+  .pvp-lobby-inner,
+  .pvp-wait-inner {
+    padding-top: 64px;
+    gap: 7px;
+  }
+  .pvp-title {
+    font-size: 13px;
+  }
+  .pvp-title span {
+    font-size: 15px;
+  }
+  .pvp-room-id {
+    font-size: 17px;
+  }
+}

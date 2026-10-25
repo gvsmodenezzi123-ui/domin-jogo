@@ -85,7 +85,7 @@ import {
   trancaSumOffsets,
   trancaTileValues,
 } from './powers.js';
-import { challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
+import { MAX_RELIC_SLOTS, challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
 import { isValidSave } from './save.js';
 import { buildShop, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
 
@@ -778,7 +778,9 @@ function drawTile(state, { actor }) {
   const options = Math.min(drawOptionsFor(state, actor), state.boneyard.length);
   if (options >= 2) {
     const picks = state.boneyard.slice(0, options).map((t) => dressTile(state, actor, t));
-    next = { ...next, boneyard: state.boneyard.slice(options), pending: { type: 'drawChoice', options: picks, cost } };
+    // online (Patch PvP): a escolha é de quem comprou (`owner`)
+    const choice = state.pvp ? { type: 'drawChoice', options: picks, cost, owner: actor } : { type: 'drawChoice', options: picks, cost };
+    next = { ...next, boneyard: state.boneyard.slice(options), pending: choice };
     next = heartCost(emit(next, { type: 'drawPeek', by: actor, count: options, cost }));
     next = afterMiss(next, actor, { kind: 'draw', tileId: null });
     next = runRelicHook(next, actor, 'onDraw', { tileId: null, cost });
@@ -793,23 +795,26 @@ function drawTile(state, { actor }) {
   next = runRelicHook(next, actor, 'onDraw', { tileId: tile.id, cost });
   const knockout = checkKnockout(next);
   if (knockout) return knockout;
-  return checkTranca(next) ?? armForcedPass(next);
+  return checkTranca(next) ?? armForcedPass(next, state.pvp ? actor : 'player');
 }
 
-function pickDrawn(state, { tileId }) {
+function pickDrawn(state, { tileId, actor }) {
   const pending = state.pending;
   if (state.phase !== 'playing' || pending?.type !== 'drawChoice') return state;
+  // online: só quem comprou escolhe
+  const owner = pending.owner ?? 'player';
+  if (state.pvp && actor && actor !== owner) return state;
   const chosen = pending.options.find((t) => t.id === tileId);
   if (!chosen) return state;
   const back = pending.options.filter((t) => t.id !== tileId);
   let next = {
     ...state,
     pending: null,
-    hands: { ...state.hands, player: [...state.hands.player, chosen] },
+    hands: { ...state.hands, [owner]: [...state.hands[owner], chosen] },
     boneyard: [...state.boneyard, ...plainTiles(back)], // as outras voltam para o fundo do dorme
   };
-  next = emit(next, { type: 'drawTile', by: 'player', tileId: chosen.id, cost: pending.cost, picked: true });
-  return checkTranca(next) ?? armForcedPass(next);
+  next = emit(next, { type: 'drawTile', by: owner, tileId: chosen.id, cost: pending.cost, picked: true });
+  return checkTranca(next) ?? armForcedPass(next, owner);
 }
 
 /**
@@ -817,9 +822,11 @@ function pickDrawn(state, { tileId }) {
  * trava as ações e avisa "SEM JOGADAS DISPONÍVEIS"; a tela mostra o banner, toca
  * o som de passe e só então manda o PASS forçado (`pending.type === 'forcedPass'`).
  */
-function armForcedPass(state) {
-  if (!playerTurnExhausted(state)) return state;
-  return emit({ ...state, pending: { type: 'forcedPass' } }, { type: 'noMoves', by: 'player', draws: state.drawsThisTurn });
+function armForcedPass(state, seat = 'player') {
+  if (!playerTurnExhausted(state, seat)) return state;
+  // online: o passe forçado também vale para a outra cadeira (`owner`)
+  const pending = state.pvp ? { type: 'forcedPass', owner: seat } : { type: 'forcedPass' };
+  return emit({ ...state, pending }, { type: 'noMoves', by: seat, draws: state.drawsThisTurn });
 }
 
 /**
@@ -828,13 +835,15 @@ function armForcedPass(state) {
  * depois de comprar, é de graça. O passe forçado (turno sem saída) não custa nada.
  */
 function passTurn(state, { actor, intent }) {
-  const forced = actor === 'player' && state.phase === 'playing' && state.turn === 'player' && state.pending?.type === 'forcedPass';
+  // online: as duas cadeiras seguem a mesma regra do passe (e do passe forçado)
+  const ruled = actor === 'player' || Boolean(state.pvp);
+  const forced = ruled && state.phase === 'playing' && state.turn === actor && state.pending?.type === 'forcedPass' && (state.pending.owner ?? 'player') === actor;
   if (!forced && (!canAct(state, actor) || !state.board.root)) return state;
-  const rule = actor === 'player' && !forced ? passAvailabilityFor(state, 'player') : { allowed: true, cost: 0 };
+  const rule = ruled && !forced ? passAvailabilityFor(state, actor) : { allowed: true, cost: 0 };
   if (!rule.allowed) return state;
   const consecutivePasses = state.consecutivePasses + 1;
   // Fiado de Rua: o 1º passe estratégico da run vai para a conta
-  const fiado = Boolean(rule.fiado) && isStrategicPass(state, 'player');
+  const fiado = actor === 'player' && Boolean(rule.fiado) && isStrategicPass(state, 'player');
   let next = {
     ...state,
     pending: forced ? null : state.pending,
@@ -864,56 +873,71 @@ function passTurn(state, { actor, intent }) {
   return endTurn(next, actor);
 }
 
+/** Resolve a escolha pendente; no online, a do outro lado (Giz dos dois) entra em seguida. */
+function settlePending(state) {
+  const { pendingNext, ...rest } = state;
+  return { ...rest, pending: pendingNext ?? null };
+}
+
 /** Giz de Sinuca: a pedra escolhida vai para o fundo do dorme. */
-function discardTile(state, { tileId }) {
+function discardTile(state, { tileId, actor }) {
   if (state.phase !== 'playing' || state.pending?.type !== 'discard') return state;
-  const hand = state.hands.player;
+  const owner = state.pending.owner ?? 'player';
+  if (state.pvp && actor && actor !== owner) return state;
+  const hand = state.hands[owner];
   const tile = hand.find((t) => t.id === tileId);
   if (!tile || hand.length < 2) return state;
   const next = {
-    ...state,
-    pending: null,
-    hands: { ...state.hands, player: hand.filter((t) => t.id !== tileId) },
+    ...settlePending(state),
+    hands: { ...state.hands, [owner]: hand.filter((t) => t.id !== tileId) },
     boneyard: [...state.boneyard, ...plainTiles([tile])],
   };
-  return emit(next, { type: 'discard', by: 'player', tileId });
+  return emit(next, { type: 'discard', by: owner, tileId });
 }
 
-function skipDiscard(state) {
+function skipDiscard(state, { actor } = {}) {
   if (state.pending?.type !== 'discard') return state;
-  return { ...state, pending: null };
+  if (state.pvp && actor && actor !== (state.pending.owner ?? 'player')) return state;
+  return settlePending(state);
 }
 
-/** Canivete Suíço: abre a escolha da pedra que vai virar bucha (1x por partida). */
-function openCanivete(state) {
-  if (!canUseCanivete(state)) return state;
-  return { ...state, pending: { type: 'canivete' } };
+/** Canivete Suíço: abre a escolha da pedra que vai virar bucha (1x por partida; no online, de quem pediu). */
+function openCanivete(state, { actor } = {}) {
+  const seat = state.pvp ? (actor ?? 'player') : 'player';
+  if (!canUseCanivete(state, seat)) return state;
+  return { ...state, pending: state.pvp ? { type: 'canivete', owner: seat } : { type: 'canivete' } };
 }
 
 /** Canivete Suíço: a pedra escolhida vira a bucha do número maior dela (uma cópia, como no painel DEV). */
-function caniveteTransform(state, { tileId }) {
+function caniveteTransform(state, { tileId, actor }) {
   if (state.phase !== 'playing' || state.pending?.type !== 'canivete') return state;
-  const hand = state.hands.player;
+  const owner = state.pending.owner ?? 'player';
+  if (state.pvp && actor && actor !== owner) return state;
+  const hand = state.hands[owner];
   const tile = hand.find((t) => t.id === tileId);
   if (!tile) return state;
   const v = Math.max(tile.a, tile.b);
-  const taken = new Set([...boardTilesInOrder(state.board), ...hand, ...state.hands.tioZe, ...state.boneyard].map((t) => t.id));
+  const taken = new Set([...boardTilesInOrder(state.board), ...state.hands.player, ...state.hands.tioZe, ...state.boneyard].map((t) => t.id));
   let n = 1;
   while (taken.has(`${canonicalId(v, v)}#c${n}`)) n += 1;
   const double = { id: `${canonicalId(v, v)}#c${n}`, a: v, b: v };
+  const used = state.pvp
+    ? { ...state.matchFx, caniveteBy: { ...state.matchFx?.caniveteBy, [owner]: true } }
+    : { ...state.matchFx, caniveteUsed: true };
   let next = {
     ...state,
     pending: null,
     openingTileId: state.openingTileId === tileId ? null : state.openingTileId,
-    hands: { ...state.hands, player: hand.map((t) => (t.id === tileId ? double : t)) },
-    matchFx: { ...state.matchFx, caniveteUsed: true },
+    hands: { ...state.hands, [owner]: hand.map((t) => (t.id === tileId ? double : t)) },
+    matchFx: used,
   };
-  next = emit(next, { type: 'canivete', from: tileId, to: double.id });
-  return proc(next, { source: 'relic', id: 'canivete', text: `CANIVETE: [${tile.a}|${tile.b}] VIROU [${v}|${v}]`, tone: 'player', owner: 'player' });
+  next = emit(next, { type: 'canivete', from: tileId, to: double.id, by: owner });
+  return proc(next, { source: 'relic', id: 'canivete', text: `CANIVETE: [${tile.a}|${tile.b}] VIROU [${v}|${v}]`, tone: tone(owner), owner });
 }
 
-function cancelCanivete(state) {
+function cancelCanivete(state, { actor } = {}) {
   if (state.pending?.type !== 'canivete') return state;
+  if (state.pvp && actor && actor !== (state.pending.owner ?? 'player')) return state;
   return { ...state, pending: null };
 }
 
@@ -1171,7 +1195,9 @@ function newRun(state, action) {
   const seedCode = normalizeSeed(action.seedCode);
   const sized = { maleta: maletaId, perks };
   const relics = bare ? [] : [...maleta.relics, ...(action.relics ?? [])].filter((id, i, all) => getRelic(id) && all.indexOf(id) === i).slice(0, relicSlotsFor(sized));
-  const maxHearts = challenge === 'tudoOuNada' ? 1 : mode.maxHearts;
+  // Patch PvP: a run do online tem o próprio número de corações (src/pvp/ladder.js)
+  const pvpHearts = action.pvp && Number.isInteger(action.maxHearts) ? Math.max(1, Math.min(9, action.maxHearts)) : null;
+  const maxHearts = challenge === 'tudoOuNada' ? 1 : (pvpHearts ?? mode.maxHearts);
   const fresh = {
     ...base,
     phase: 'map',
@@ -1191,8 +1217,85 @@ function newRun(state, action) {
     unlocks: (action.unlocks ?? state.unlocks ?? []).filter((id) => RELICS[id]),
     seq: state.seq,
     events: state.events,
+    // Patch PvP: a run de uma pessoa no online (as mesas viram duelos contra o outro jogador)
+    ...(action.pvp ? { pvp: { run: true } } : {}),
   };
-  return emit(fresh, { type: 'runStart', mode: mode.id, maleta: maletaId, challenge });
+  return emit(fresh, { type: 'runStart', mode: mode.id, maleta: maletaId, challenge, pvp: Boolean(action.pvp) });
+}
+
+// ---------------------------------------------------------------------------
+// Patch PvP: duelo entre duas pessoas (src/pvp/). Quem hospeda a mesa senta na cadeira
+// 'player' e roda este reducer; quem entrou fica com a cadeira 'tioZe' e vê o espelho.
+// ---------------------------------------------------------------------------
+
+const clampInt = (n, lo, hi, fallback) => (Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : fallback);
+const TILE_IDS = new Set(FULL_SET.map((t) => t.id));
+
+/** Uma cadeira do duelo a partir do perfil que a run da pessoa mandou (sanitizado). */
+function pvpSeat(profile = {}) {
+  const maxHearts = clampInt(profile.maxHearts, 1, 9, MAX_HEARTS);
+  return {
+    maxHearts,
+    hearts: clampInt(profile.hearts, 1, maxHearts, maxHearts),
+    coins: clampInt(profile.coins, 0, 99999, 0),
+    relics: (Array.isArray(profile.relics) ? profile.relics : []).filter((id, i, all) => RELICS[id] && all.indexOf(id) === i).slice(0, MAX_RELIC_SLOTS),
+    deck: Object.fromEntries(Object.entries(profile.deck ?? {}).filter(([id, e]) => TILE_IDS.has(id) && ENHANCEMENT_IDS.includes(e))),
+    maleta: MALETAS[profile.maleta] ? profile.maleta : DEFAULT_MALETA,
+  };
+}
+
+/**
+ * Mesa neutra: sem regra de mesa, sem mecânica de rival (a cadeira é a do Tio Zé, que não
+ * tem nenhuma), sem melhorias nem desafio. Cada lado senta com os corações, as moedas, os
+ * talismãs, o baralho e a maleta da run dele. `final`: a mesa vale até alguém zerar.
+ */
+function startPvpDuel(state, { deck, seats, final = false }) {
+  if (!Array.isArray(deck) || !seats?.player || !seats?.tioZe) return state;
+  const a = pvpSeat(seats.player);
+  const b = pvpSeat(seats.tioZe);
+  let next = {
+    ...createInitialState(),
+    mode: 'normal',
+    rivalId: FIRST_RIVAL,
+    pvp: { maletas: bySeat(a.maleta, b.maleta), final: Boolean(final) },
+    hearts: bySeat(a.hearts, b.hearts),
+    maxHearts: bySeat(a.maxHearts, b.maxHearts),
+    coins: bySeat(a.coins, b.coins),
+    relics: bySeat(a.relics, b.relics),
+    decks: bySeat(a.deck, b.deck),
+    seq: Number.isFinite(state.seq) ? state.seq : 0,
+    events: [],
+  };
+  next = emit(next, { type: 'duelStart', rivalId: FIRST_RIVAL, match: 0, pvp: true, final: Boolean(final) });
+  return startRound(next, deck);
+}
+
+/**
+ * O resultado de um duelo online volta para a run de quem jogou: o nó (se houver) fica
+ * concluído; corações, moedas, talismãs e baralho saem da mesa, já com o prêmio e a cura
+ * do vencedor (src/pvp/duelHost.js). Zerou: fim da run.
+ */
+function pvpDuelResult(state, { nodeId = null, hearts, coins, relics, deck, won = false }) {
+  if (!state.pvp || state.phase !== 'map') return state;
+  const node = nodeId && availableNodes(state).includes(nodeId) ? campaignOf(state).byId.get(nodeId) : null;
+  let run = { ...state.run, match: state.run.match + 1 };
+  if (node) {
+    const path = run.path.at(-1) === node.id ? run.path : [...run.path.filter((p) => p !== node.id), node.id];
+    run = { ...run, node: node.id, path, cleared: run.cleared.includes(node.id) ? run.cleared : [...run.cleared, node.id] };
+  }
+  const max = state.maxHearts.player;
+  const left = clampInt(hearts, 0, max, state.hearts.player);
+  const next = {
+    ...state,
+    phase: left <= 0 ? 'gameOver' : 'map',
+    run,
+    hearts: { ...state.hearts, player: left },
+    coins: { ...state.coins, player: clampInt(coins, 0, 99999, state.coins.player) },
+    relics: Array.isArray(relics) ? { ...state.relics, player: relics.filter((id, i, all) => RELICS[id] && all.indexOf(id) === i) } : state.relics,
+    decks: deck && typeof deck === 'object' ? { ...state.decks, player: pvpSeat({ deck }).deck } : state.decks,
+    stats: { ...state.stats, matchesWon: state.stats.matchesWon + (won ? 1 : 0) },
+  };
+  return emit(next, { type: 'pvpDuelResult', node: node?.id ?? null, won: Boolean(won), hearts: left });
 }
 
 /** CONTINUAR: volta para o mapa (ou para a loja / o mercado) exatamente como o save guardou. */
@@ -1515,17 +1618,22 @@ export function gameReducer(state, action) {
     case 'DISCARD':
       return discardTile(state, action);
     case 'SKIP_DISCARD':
-      return skipDiscard(state);
+      return skipDiscard(state, action);
     case 'UNDO':
       return undoTioZePlay(state);
     case 'TIO_ZE_ACT':
       return tioZeAct(state);
     case 'USE_CANIVETE':
-      return openCanivete(state);
+      return openCanivete(state, action);
     case 'CANIVETE_PICK':
       return caniveteTransform(state, action);
     case 'CANCEL_CANIVETE':
-      return cancelCanivete(state);
+      return cancelCanivete(state, action);
+    // Patch PvP (src/pvp): o duelo entre duas pessoas e o resultado dele na run de cada uma
+    case 'PVP_START_DUEL':
+      return startPvpDuel(state, action);
+    case 'PVP_DUEL_RESULT':
+      return pvpDuelResult(state, action);
     case 'UNLOCK_RELICS':
       return unlockRelics(state, action);
     case 'START_SECRET':
