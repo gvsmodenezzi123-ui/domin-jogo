@@ -483,7 +483,7 @@ export default function App() {
   const openingDone = useCallback(() => {
     markOpeningSeen();
     setOpening((o) => ({ ...o, on: false }));
-  }, []);
+  }, [setOpening]);
   // a tela inicial abre direto no Balcão de Maletas? ({ challenge } ou false)
   const [titlePick, setTitlePick] = useState(false);
   // Patch PvP: a mesa online por cima de tudo ({ room } ou null); o solo fica parado na tela inicial
