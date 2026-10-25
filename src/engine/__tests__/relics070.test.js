@@ -144,7 +144,8 @@ describe('comuns', () => {
     }
     expect(evenHits).toBeGreaterThan(20);
     expect(evenHits).toBeLessThan(80);
-  });
+    // 900 jogadas: no runner do GitHub, com os outros arquivos rodando junto, passa dos 5 s padrão
+  }, 30000);
 
   it('Fósforo Riscado: a 1ª compra da rodada mostra a próxima do topo', () => {
     let s = table({ player: [t(6, 6)], boneyard: [t(0, 0), t(1, 2), t(2, 5)], relics: ['fosforo'], coins: { player: 10 } });
