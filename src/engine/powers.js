@@ -28,9 +28,19 @@ import { HIGH_STAKES_PASS_FEE, SMOKE_DRAW_COINS, tableModIs } from '../data/tabl
 
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 
-export const relicsOf = (state, seat) => (state.relics[seat] ?? []).map(getRelic).filter(Boolean);
+/**
+ * Talismãs de `seat` que valem agora: os da hotbar, menos o que o Valtinho Renegado desligou
+ * nesta partida (versão 1.4: `matchFx.stolen`).
+ */
+export function activeRelicIds(state, seat) {
+  const ids = state.relics?.[seat] ?? [];
+  const stolen = state.matchFx?.stolen?.[seat];
+  return stolen ? ids.filter((id) => id !== stolen) : ids;
+}
 
-export const hasRelic = (state, seat, id) => (state.relics[seat] ?? []).includes(id);
+export const relicsOf = (state, seat) => activeRelicIds(state, seat).map(getRelic).filter(Boolean);
+
+export const hasRelic = (state, seat, id) => activeRelicIds(state, seat).includes(id);
 
 /** Regras próprias do rival da partida (ver `mechanics` em data/rivals.js). */
 export const rivalMechanics = (state) => rivalOf(state).mechanics ?? {};
@@ -83,6 +93,8 @@ export function rulesFor(state, seat, { frozen = true } = {}) {
   else if (rules.wildSides) rules = { ...rules, wildSides: undefined };
   const frozenSides = frozen ? (state.fx?.frozen?.[seat] ?? []) : [];
   if (frozenSides.length) rules = { ...rules, frozenSides };
+  // Taco de Sinuca Lascado (versão 1.4): nesta vez, nada de bucha (passa no fim da vez, como o Chumbo)
+  if (frozen && state.fx?.noDoubles?.[seat]) rules = { ...rules, noDoubles: true };
   // Mesa Desnivelada (Patch 0.9.4): a 1ª pedra de cada ponta deixa par na esquerda e ímpar na direita
   if (tableModIs(state, 'mesaDesnivelada')) rules = { ...rules, tilted: true };
   return rules;
@@ -99,12 +111,22 @@ export function trancaRulesFor(state) {
  */
 export function trancaTileValues(state) {
   const values = {};
+  const mech = rivalMechanics(state);
   for (const seat of ['player', 'tioZe']) {
     const relic = relicsOf(state, seat).find((r) => r.trancaTileValue);
-    const weight = seat === 'tioZe' ? (rivalMechanics(state).trancaWeight ?? 1) : 1;
-    if (!relic && weight === 1) continue;
+    const weight = seat === 'tioZe' ? (mech.trancaWeight ?? 1) : 1;
+    // Nelsinho 71 (versão 1.4): as buchas dele valem menos na contagem
+    const discount = seat === 'tioZe' ? (mech.doubleDiscount ?? 0) : 0;
+    // Obsidiana Vulcânica (versão 1.4): vale o número dela, não os pontos
+    const special = state.hands[seat].some((t) => getEnhancement(t.enhancement)?.trancaValue != null);
+    if (!relic && weight === 1 && !discount && !special) continue;
     const base = relic ? relic.trancaTileValue : pipSum;
-    values[seat] = weight === 1 ? base : (tile) => base(tile) * weight;
+    values[seat] = (tile) => {
+      const fixed = getEnhancement(tile.enhancement)?.trancaValue;
+      if (fixed != null) return fixed;
+      const value = discount && tile.a === tile.b ? Math.max(0, base(tile) - discount) : base(tile);
+      return value * weight;
+    };
   }
   return values;
 }
@@ -140,7 +162,7 @@ export function requiredOpeningFor(state, seat) {
 /** Roda um gancho nos talismãs de `seat`, na ordem dos slots. */
 export function runRelicHook(state, seat, hook, ctx = {}) {
   let next = state;
-  for (const id of state.relics[seat] ?? []) {
+  for (const id of activeRelicIds(state, seat)) {
     const fn = RELICS[id]?.[hook];
     if (typeof fn === 'function') next = fn(next, { ...ctx, owner: seat, foe: other(seat) });
   }
@@ -216,7 +238,7 @@ export function trancaDamageFor(state) {
 
 /** A próxima compra de `seat` neste turno (escada grátis → $3 → coração; Maleta Seca: só 1). */
 export function drawAvailabilityFor(state, seat) {
-  return getDrawAvailability({
+  return freeDrawFor(state, seat, getDrawAvailability({
     drawsThisTurn: state.drawsThisTurn,
     boneyardCount: state.boneyard.length,
     coins: state.coins[seat],
@@ -225,7 +247,24 @@ export function drawAvailabilityFor(state, seat) {
     maxDraws: maxDrawsFor(state, seat),
     // Fumaça Densa (Patch 0.9.4): a compra paga em moedas sobe para $4
     coinCost: tableModIs(state, 'fumacaDensa') ? SMOKE_DRAW_COINS : null,
-  });
+  }));
+}
+
+/**
+ * Versão 1.4: compras pagas que saem de graça. Óleo de Máquina Singer: a 2ª compra do turno
+ * (a dos $3). Bicarbonato de Sódio: a próxima compra paga ($ ou coração), 1x por partida.
+ * A compra grátis vale mesmo sem o dinheiro (ou o coração) que ela custaria. `cost.relic`
+ * diz quem pagou (o reducer gasta o Bicarbonato).
+ */
+function freeDrawFor(state, seat, availability) {
+  const { cost, reason } = availability;
+  if (!cost || cost.type === 'free' || reason === 'empty' || reason === 'limit') return availability;
+  const relics = relicsOf(state, seat);
+  let relic = null;
+  if (cost.type === 'coins' && state.drawsThisTurn === 1 && relics.some((r) => r.freeSecondDraw)) relic = 'oleo';
+  else if (relics.some((r) => r.freePaidDraw) && !state.matchFx?.bicarbUsed?.[seat]) relic = 'bicarbonato';
+  if (!relic) return availability;
+  return { allowed: true, reason: null, cost: { type: 'free', amount: 0, relic } };
 }
 
 /** Quanto custa o passe estratégico de `seat` ($3; Moeda Furada: $1; Fiado de Rua: o 1º da run de graça). */
@@ -233,11 +272,16 @@ export function passFeeFor(state, seat = 'player') {
   if (seat === 'player' && fiadoAvailable(state)) return 0;
   // Aposta Alta (Patch 0.9.4): o passe voluntário custa $5 (a Moeda Furada ainda barateia)
   const base = tableModIs(state, 'apostaAlta') ? HIGH_STAKES_PASS_FEE : PASS_FEE;
-  return relicsOf(state, seat).reduce((fee, relic) => Math.min(fee, relic.passFee ?? base), base);
+  const fee = relicsOf(state, seat).reduce((min, relic) => Math.min(min, relic.passFee ?? base), base);
+  // Juvenal Cobrador (versão 1.4): com mais de $15 no bolso, o passe voluntário sai mais caro
+  const tax = seat === 'player' ? rivalMechanics(state).passTax : null;
+  return tax && state.coins.player > tax.above ? fee + tax.extra : fee;
 }
 
 /** Regra do PASSAR A VEZ do jogador agora (ver `getPassAvailability`); `fiado` marca o passe na conta. */
 export function passAvailabilityFor(state, seat = 'player') {
+  // Sargento Brandão (versão 1.4, Toque de Recolher): com pedra que encaixa, é jogar
+  if (seat === 'player' && rivalMechanics(state).mustPlay && hasPlayFor(state, seat)) return { allowed: false, cost: 0, reason: 'mustPlay' };
   const rule = getPassAvailability({
     hasPlay: hasPlayFor(state, seat),
     drawsThisTurn: state.drawsThisTurn,
@@ -256,8 +300,19 @@ export function isStrategicPass(state, seat) {
 /** Ajuste na soma da tranca por lado (Balança de Açougue: −10). */
 export function trancaSumOffsets(state) {
   const offset = {};
+  const board = boardTilesInOrder(state.board);
   for (const seat of ['player', 'tioZe']) {
-    const total = relicsOf(state, seat).reduce((sum, relic) => sum + (relic.trancaSumOffset ?? 0), 0);
+    // versão 1.4: o ajuste pode depender da rodada (Espátula de Gordura: −3 por pedra comprada)
+    const relics = relicsOf(state, seat).reduce((sum, relic) => {
+      const value = typeof relic.trancaSumOffset === 'function' ? relic.trancaSumOffset(state, seat) : relic.trancaSumOffset;
+      return sum + (value ?? 0);
+    }, 0);
+    // Obsidiana Vulcânica que o dono jogou na mesa: o valor dela entra na soma dele
+    const stones = board.reduce((sum, t) => {
+      const fixed = t.by === seat ? getEnhancement(t.enhancement)?.trancaValue : null;
+      return sum + (fixed ?? 0);
+    }, 0);
+    const total = relics + stones;
     if (total) offset[seat] = total;
   }
   return offset;
@@ -308,7 +363,7 @@ export function revealedTioZeTiles(state) {
       if (drawn) shown.set(drawn.id, drawn);
     }
   }
-  // Cinzeiro Cheio de Bitucas: pedras que ficaram à mostra depois de ele passar seguido
+  // Lanterna do Vigia (antes Cinzeiro Cheio de Bitucas): pedras que ficaram à mostra depois de ele passar seguido
   for (const id of state.fx.revealed ?? []) {
     const tile = hand.find((t) => t.id === id);
     if (tile) shown.set(tile.id, tile);
@@ -334,5 +389,41 @@ export function endMarksFor(state) {
   return marks;
 }
 
-/** Talismãs de `seat` já usados nesta rodada (aparecem apagados na hotbar). */
-export const spentRelicsOf = (state, seat) => state.fx.used[seat];
+/**
+ * Talismãs de `seat` já usados nesta rodada (aparecem apagados na hotbar). Versão 1.4: o que
+ * o Valtinho Renegado desligou na partida também fica apagado.
+ */
+export function spentRelicsOf(state, seat) {
+  const used = state.fx.used[seat];
+  const stolen = state.matchFx?.stolen?.[seat];
+  return stolen && !used.includes(stolen) ? [...used, stolen] : used;
+}
+
+/** Grampo de Cabelo (versão 1.4): dá para esconder uma bucha agora (sua vez, 1x por rodada)? */
+export function canUseGrampo(state, seat = 'player') {
+  const hand = state.hands[seat];
+  return (
+    state.phase === 'playing' &&
+    state.turn === seat &&
+    !state.pending &&
+    Boolean(state.board.root) &&
+    hasRelic(state, seat, 'grampo') &&
+    !isUsed(state, seat, 'grampo') &&
+    hand.length >= 2 &&
+    hand.some((t) => t.a === t.b)
+  );
+}
+
+/**
+ * Lupa de Joalheiro (versão 1.4): quantas pedras com cada número (0 a 6) o rival tem na
+ * mão, ou null sem o talismã. A bucha conta uma vez no número dela.
+ */
+export function rivalNumberCounts(state) {
+  if (!relicsOf(state, 'player').some((r) => r.reveal?.numberCounts)) return null;
+  const counts = [0, 0, 0, 0, 0, 0, 0];
+  for (const t of state.hands.tioZe) {
+    counts[t.a] += 1;
+    if (t.b !== t.a) counts[t.b] += 1;
+  }
+  return counts;
+}

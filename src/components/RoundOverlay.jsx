@@ -13,6 +13,13 @@ import RivalAvatar from './RivalAvatar.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import VictoryModal from './VictoryModal.jsx';
 
+/** Versão 1.4: como acaba a noite, conforme o chefe final que a teia sorteou. */
+const FINAL_LINES = {
+  comendador: 'O Comendador entrega a chave do boteco.',
+  odete: 'A Dona Odete rasga o caderninho. A dívida é dela agora.',
+  valtinhoRenegado: 'O Valtinho Renegado devolve o estoque e some pelos fundos.',
+};
+
 const KIND_TITLE = {
   normal: 'BATIDA!',
   bucha: 'BATIDA DE BUCHA!',
@@ -200,7 +207,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             portrait={<KnockedOut rival={rival} size={64} />}
             kicker={`${modeBadge(state.mode)}${state.stats.matchesWon} MESAS · ${REGIONS.length} REGIÕES`}
             title={secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
-            howItEnded={`${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : 'O Comendador entrega a chave do boteco.'}`}
+            howItEnded={`${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : (FINAL_LINES[rival.id] ?? FINAL_LINES.comendador)}`}
             challengeLine={state.challenge ? `DESAFIO CONCLUÍDO: ${challengeOf(state.challenge)?.name.toUpperCase()}` : null}
             prizeShown={prizeShown}
             onRetry={onRestart}

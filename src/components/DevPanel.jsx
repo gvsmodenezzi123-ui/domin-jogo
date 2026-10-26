@@ -11,6 +11,7 @@ import { RIVALS } from '../data/rivals.js';
 import { ENCOUNTERS, ENCOUNTER_IDS } from '../data/encounters.js';
 import { TABLE_MODIFIERS, TABLE_MODIFIER_IDS } from '../data/tableModifiers.js';
 import DominoTile from './DominoTile.jsx';
+import { ACHIEVEMENT_IDS } from '../engine/achievements.js';
 import RelicIcon from './RelicIcon.jsx';
 
 const PIPS = [0, 1, 2, 3, 4, 5, 6];
@@ -146,12 +147,13 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
               value={state.rivalId}
               onChange={(e) => onAction({ type: 'DEV', op: 'setRival', rivalId: e.target.value })}
             >
+              {/* versão 1.4: os candidatos da teia v3 e os chefes sorteados de cada região */}
               {REGIONS.map((region) => (
                 <optgroup key={region.id} label={`${region.id}. ${region.name}`}>
-                  {region.nodes.map((id, i) => (
+                  {[...region.pool, ...region.bosses].map((id, i) => (
                     <option key={id} value={id}>
                       {i + 1}. {RIVALS[id].name} — {RIVALS[id].title}
-                      {i === region.nodes.length - 1 ? ' (CHEFE)' : ''}
+                      {RIVALS[id].boss ? ' (CHEFE)' : ''}
                     </option>
                   ))}
                 </optgroup>
@@ -241,10 +243,10 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
 
         <section className="dev-section mt-3 pt-3" aria-labelledby="dev-ach">
           <h3 id="dev-ach" className="dev-label">
-            CONQUISTAS · {state.unlocks.length}/10 TALISMÃS LIBERADOS
+            CONQUISTAS · {state.unlocks.length}/{ACHIEVEMENT_IDS.length} TALISMÃS LIBERADOS
           </h3>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <button type="button" data-tone="brass" className="btn-pixel btn-mini" disabled={state.unlocks.length >= 10} onClick={() => onAction({ op: 'achievementNext' })}>
+            <button type="button" data-tone="brass" className="btn-pixel btn-mini" disabled={state.unlocks.length >= ACHIEVEMENT_IDS.length} onClick={() => onAction({ op: 'achievementNext' })}>
               LIBERAR A PRÓXIMA
             </button>
             <button type="button" data-tone="blood" className="btn-pixel btn-mini" onClick={() => onAction({ op: 'achievementReset' })}>

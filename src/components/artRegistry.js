@@ -30,6 +30,17 @@ export const RIVAL_ART = pick({
   donoDaNoite: Art.DonoDaNoiteAvatar,
   // Patch 0.9.5: o professor da partida de treino
   voJuca: Art.VoJucaAvatar,
+  // versão 1.4
+  juvenal: Art.JuvenalAvatar,
+  zeca: Art.ZecaAvatar,
+  genesio: Art.GenesioAvatar,
+  marquinhos: Art.MarquinhosAvatar,
+  nelsinho: Art.NelsinhoAvatar,
+  soro: Art.SoroAvatar,
+  brandao: Art.BrandaoAvatar,
+  geraldo: Art.GeraldoAvatar,
+  odete: Art.OdeteAvatar,
+  valtinhoRenegado: Art.ValtinhoRenegadoAvatar,
 });
 
 /** `art` dos talismãs → ícone 40x40. */
@@ -65,16 +76,36 @@ export const RELIC_ART = pick({
   canivete: Art.CaniveteIcon,
   trucoMarcado: Art.TrucoMarcadoIcon,
   abridorLata: Art.AbridorLataIcon,
-  cinzeiroBitucas: Art.CinzeiroBitucasIcon,
+  // versão 1.4: a Lanterna do Vigia e o Papel Carbono no lugar do 2º cinzeiro e do 2º espelho
+  cinzeiroBitucas: Art.LanternaVigiaIcon,
   notaTres: Art.NotaTresIcon,
   fitaCrepe: Art.FitaCrepeIcon,
-  espelhoBanheiro: Art.EspelhoBanheiroIcon,
+  espelhoBanheiro: Art.PapelCarbonoIcon,
   balancaAcougue: Art.BalancaAcougueIcon,
   relogioParede: Art.RelogioParedeIcon,
   caliceGalo: Art.CaliceGaloIcon,
   dedoCadaver: Art.DedoCadaverIcon,
   testamento: Art.TestamentoIcon,
   dadoOsso: Art.DadoOssoIcon,
+  // versão 1.4
+  pires: Art.PiresIcon,
+  gilete: Art.GileteIcon,
+  bicarbonato: Art.BicarbonatoIcon,
+  cofrinho: Art.CofrinhoIcon,
+  prego: Art.PregoIcon,
+  peCoelho: Art.PeCoelhoIcon,
+  grampo: Art.GrampoIcon,
+  espatula: Art.EspatulaIcon,
+  taco: Art.TacoIcon,
+  oleo: Art.OleoIcon,
+  pacoteTremoco: Art.PacoteTremocoIcon,
+  cadeado: Art.CadeadoIcon,
+  chapaFogao: Art.ChapaFogaoIcon,
+  lupa: Art.LupaIcon,
+  canetaLoterica: Art.CanetaLotericaIcon,
+  trena: Art.TrenaIcon,
+  ampulheta: Art.AmpulhetaIcon,
+  velaPreta: Art.VelaPretaIcon,
 });
 
 /** Ponta acesa do cigarro do Tio Zé, na grade de 40: a fumaça sobe daqui (não sai quando ele está ferido). */

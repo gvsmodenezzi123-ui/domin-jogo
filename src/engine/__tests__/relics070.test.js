@@ -55,7 +55,8 @@ describe('Patch 0.7.0: cadastro dos 20 talismãs novos', () => {
       expect(RELICS[id].art, id).toBe(id);
       expect(RELICS[id].description.length, id).toBeGreaterThan(20);
     }
-    expect(LOCKED_RELIC_IDS.slice().sort()).toEqual(
+    // (versão 1.4: os 18 talismãs novos também são de conquista, ver patch140.test.js)
+    expect(LOCKED_RELIC_IDS.filter((id) => NEW.includes(id)).sort()).toEqual(
       ['moedaFurada', 'tampaGarrafa', 'fosforo', 'trucoMarcado', 'abridorLata', 'notaTres', 'fitaCrepe', 'balancaAcougue', 'caliceGalo', 'dadoOsso'].sort(),
     );
     expect(BASIC_COMMON_IDS).toEqual(['caneca', 'borracha', 'cinzeiro', 'giz', 'palitoDente', 'panoChao', 'radioPilha']);

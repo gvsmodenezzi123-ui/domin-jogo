@@ -38,6 +38,16 @@ export function loseCoins(state, who, amount, source) {
   return emit({ ...state, coins }, { type: 'coins', who, amount: -paid, source });
 }
 
+/**
+ * Versão 1.4: `seat` pegou `count` pedras do dorme nesta rodada (compra, compra forçada do
+ * Rádio, da Falsa Partida...). A Espátula de Gordura conta isso na tranca.
+ */
+export function countBought(state, seat, count = 1) {
+  if (!state.fx || count <= 0) return state;
+  const bought = state.fx.bought ?? {};
+  return { ...state, fx: { ...state.fx, bought: { ...bought, [seat]: (bought[seat] ?? 0) + count } } };
+}
+
 /** Dano direto, fora da contagem da rodada (Rubi, Dedal, Anel, painel DEV). */
 export function directDamage(state, who, amount, reason) {
   if (amount <= 0 || state.hearts[who] <= 0) return state;
@@ -60,6 +70,8 @@ const otherSeat = (seat) => (seat === 'player' ? 'tioZe' : 'player');
 export function cheatDeath(state, who) {
   if (state.hearts[who] > 0) return state;
   if (!(state.relics?.[who] ?? []).includes('falsaPartida')) return state;
+  // desligada pelo Valtinho Renegado (versão 1.4) não salva ninguém
+  if (state.matchFx?.stolen?.[who] === 'falsaPartida') return state;
   const fx = state.matchFx ?? {};
   if (fx.falsaUsed?.[who]) return state;
   const foe = otherSeat(who);
@@ -82,6 +94,7 @@ export function cheatDeath(state, who) {
       hands: { ...next.hands, [foe]: [...next.hands[foe], ...taken] },
     };
     for (const tile of taken) next = emit(next, { type: 'drawTile', by: foe, tileId: tile.id, cost: null, forced: true });
+    next = countBought(next, foe, taken.length);
   } else {
     next = { ...next, matchFx: { ...next.matchFx, forcedDraw: { ...next.matchFx.forcedDraw, [foe]: 2 } } };
   }

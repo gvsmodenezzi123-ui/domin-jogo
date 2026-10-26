@@ -15,6 +15,9 @@
  * Versão 5 (Patch 0.9.4): guarda a versão da teia (`map`: 2 = com eventos [?] e regras de
  * mesa) e as cicatrizes (`scars`: corações máximos perdidos para o Bêbado). Saves 3 e 4 continuam
  * valendo com a teia de antes (map 1), então o CONTINUAR volta exatamente no mesmo mapa.
+ * Versão 6 (versão 1.4): a teia pode ser a 3 (rivais novos e chefes sorteados) e o save guarda
+ * os reembaralhares grátis do Pé de Coelho (`freeRerolls`). Saves 3 a 5 continuam valendo
+ * com a teia deles (1 ou 2).
  */
 
 import { SEED_MAX_LENGTH } from './seedEngine.js';
@@ -23,13 +26,15 @@ import { MALETAS } from '../data/maletas.js';
 import { CHALLENGES } from '../data/meta.js';
 import { RELIC_IDS } from '../data/relics.js';
 import { MAX_RELIC_SLOTS } from './loadout.js';
-import { MAP_VERSION, generateCampaign } from './campaignMap.js';
+import { MAP_VERSIONS, generateCampaign, knownMapVersion } from './campaignMap.js';
 import { ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { FULL_SET, MAX_HEARTS } from './dominoLogic.js';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 /** Versões que o CONTINUAR ainda aceita. */
-const READABLE = [3, 4, 5];
+const READABLE = [3, 4, 5, 6];
+/** Teto dos reembaralhares grátis guardados (Pé de Coelho Sarnento). */
+export const MAX_FREE_REROLLS = 3;
 const RESUMES = ['map', 'shop', 'blackMarket'];
 
 export function snapshotRun(state, resume, savedAt = 0) {
@@ -43,8 +48,9 @@ export function snapshotRun(state, resume, savedAt = 0) {
     fiadoUsed: Boolean(state.run.fiadoUsed),
     seed: state.seed,
     seedCode: state.seedCode ?? null,
-    map: state.run.map === MAP_VERSION ? MAP_VERSION : 1,
+    map: knownMapVersion(state.run.map),
     scars: state.run.scars ?? 0,
+    freeRerolls: state.run.freeRerolls ?? 0,
     node: state.run.node,
     cleared: [...state.run.cleared],
     path: [...state.run.path],
@@ -106,9 +112,10 @@ export function isValidSave(save) {
   // Patch 0.9.2: a semente em texto (saves antigos não têm)
   if (save.seedCode != null && (typeof save.seedCode !== 'string' || save.seedCode.length > SEED_MAX_LENGTH)) return false;
   // Patch 0.9.4: a teia da versão que a run começou (saves antigos: a de antes)
-  if (save.map != null && save.map !== 1 && save.map !== MAP_VERSION) return false;
+  if (save.map != null && !MAP_VERSIONS.includes(save.map)) return false;
   if (save.scars != null && (!isInt(save.scars) || save.scars < 0 || save.scars > 5)) return false;
-  const campaign = generateCampaign(save.seed ?? 0, save.map === MAP_VERSION ? MAP_VERSION : 1);
+  if (save.freeRerolls != null && (!isInt(save.freeRerolls) || save.freeRerolls < 0 || save.freeRerolls > MAX_FREE_REROLLS)) return false;
+  const campaign = generateCampaign(save.seed ?? 0, knownMapVersion(save.map));
   const known = (id) => typeof id === 'string' && campaign.byId.has(id);
   if (save.node !== null && !known(save.node)) return false;
   if (!Array.isArray(save.cleared) || !save.cleared.every(known)) return false;

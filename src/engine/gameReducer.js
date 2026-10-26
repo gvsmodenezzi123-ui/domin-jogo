@@ -25,12 +25,12 @@ import { ENHANCEMENT_IDS, getEnhancement } from '../data/enhancedTiles.js';
 import { RELICS, getRelic, markUsed } from '../data/relics.js';
 import { DEFAULT_MALETA, MALETAS, maletaOf } from '../data/maletas.js';
 import { CAPS_PER_RUN_WON, CHALLENGES, DRUNK_EVERY, UPGRADES } from '../data/meta.js';
-import { FINAL_BOSS, HEAL_AFTER_NODE } from '../data/campaign.js';
+import { FINAL_BOSSES, HEAL_AFTER_NODE } from '../data/campaign.js';
 import { FIRST_RIVAL, RIVALS, SECRET_BOSS, TUTOR_ID, getRival, rivalFor, rivalOf } from '../data/rivals.js';
 import { modeOf, playerMaxHearts } from '../data/difficulty.js';
 import { normalizeSeed, seedNumberOf } from './seedEngine.js';
 import { buildMarket, marketBuyBlock } from './blackMarket.js';
-import { MAP_VERSION, availableNodes, campaignOf, coinReward, currentNode, mixSeed, regionIdOf } from './campaignMap.js';
+import { MAP_VERSION, availableNodes, campaignOf, coinReward, currentNode, knownMapVersion, mixSeed, regionIdOf } from './campaignMap.js';
 import { resolveEncounter, encounterOptionBlock } from './encounters.js';
 import { RADIO_FIVE_BONUS, WET_BONUS_POINTS, tableModIs, tableModifierOf } from '../data/tableModifiers.js';
 import { encounterOf } from '../data/encounters.js';
@@ -59,11 +59,12 @@ import {
   resolveTranca,
   tileId as canonicalId,
 } from './dominoLogic.js';
-import { cheatDeath, directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
+import { cheatDeath, countBought, directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
 import {
   applyBatidaDamage,
   canUndo,
   canUseCanivete,
+  canUseGrampo,
   drawAvailabilityFor,
   hasPlayFor,
   isStrategicPass,
@@ -86,9 +87,9 @@ import {
   trancaTileValues,
 } from './powers.js';
 import { MAX_RELIC_SLOTS, challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
-import { isValidSave } from './save.js';
+import { MAX_FREE_REROLLS, isValidSave } from './save.js';
 import { DEFAULT_ROOM, ROOM_RARITY_CHANCES } from '../data/pvpRoom.js';
-import { buildShop, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
+import { buildShop, freeFirstReroll, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
 
 export const SEATS = Object.freeze(['player', 'tioZe']);
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
@@ -111,6 +112,14 @@ export function createRoundFx() {
     lastDraw: bySeat(null, null), // última pedra comprada (Espelho Retrovisor)
     passes: bySeat(0, 0), // passes seguidos de cada lado (Cinzeiro Cheio de Bitucas)
     revealed: [], // pedras do rival que ficaram à mostra (Cinzeiro Cheio de Bitucas)
+    // versão 1.4
+    bought: bySeat(0, 0), // pedras que cada lado pegou do dorme na rodada (Espátula de Gordura)
+    noDoubles: bySeat(false, false), // sem bucha na próxima vez (Taco de Sinuca Lascado do adversário)
+    chapa: bySeat(false, false), // quem toma dano se comprar/passar em seguida (Chapa de Fogão do adversário)
+    amberNext: bySeat([], []), // pontas que travam para o dono depois da vez do rival (Âmbar Fóssil)
+    raffle: null, // { number, taken }: a aposta da rodada do Genésio da Rifa
+    luxury: 0, // quanto a Mesa de Luxo da Dama Soró já cobrou na rodada
+    interest: null, // { turns, scored, bled }: os juros da Dona Odete
   };
 }
 
@@ -124,6 +133,10 @@ export function createMatchFx() {
     fitaArmed: null,
     caniveteUsed: false, // Canivete Suíço (1x por partida)
     stakesUsed: false, // Aposta Alta (Patch 0.9.4): a 1ª batida da partida já dobrou
+    // versão 1.4
+    bicarbUsed: bySeat(false, false), // Bicarbonato de Sódio (1x por partida)
+    cucoUsed: bySeat(false, false), // Ampulheta Rachada (1x por partida)
+    stolen: bySeat(null, null), // talismã desligado pelo Valtinho Renegado na partida
   };
 }
 
@@ -168,7 +181,8 @@ export function createInitialState() {
     //   fiadoUsed: o passe de graça do Fiado de Rua já foi usado; secret: a noite do Dono começou
     //   Patch 0.9.4: map: versão da teia (2 = com eventos e regras de mesa); scars: corações
     //   máximos perdidos na run (o Bêbado do Fundo do Bar)
-    run: { node: null, cleared: [], path: [], match: 0, history: [], fiadoUsed: false, secret: false, scars: 0 },
+    //   versão 1.4: freeRerolls: reembaralhares grátis guardados (Pé de Coelho Sarnento)
+    run: { node: null, cleared: [], path: [], match: 0, history: [], fiadoUsed: false, secret: false, scars: 0, freeRerolls: 0 },
     matchFx: createMatchFx(), // efeitos que valem a partida inteira
     shop: null,
     market: null, // Mercado Negro do Corvo da Madrugada
@@ -232,6 +246,7 @@ function startRound(state, deck, dealt = null) {
       if (!count) continue;
       const taken = next.boneyard.slice(0, count).map((t) => dressTile(next, seat, t));
       next = { ...next, boneyard: next.boneyard.slice(taken.length), hands: { ...next.hands, [seat]: [...next.hands[seat], ...taken] } };
+      next = countBought(next, seat, taken.length);
     }
     next = { ...next, matchFx: { ...next.matchFx, forcedDraw: null } };
   }
@@ -243,8 +258,27 @@ function startRound(state, deck, dealt = null) {
     starter = opening.starter;
     openingTileId = opening.tileId;
   }
+  const mech = next.pvp || next.tutorial ? {} : rivalMechanics(next);
+  // Zeca Charreteiro (versão 1.4): abre toda rodada com a bucha mais alta dele, se tiver
+  const whip = mech.opensWithBucha ? next.hands.tioZe.filter(isDouble).sort((x, y) => y.a - x.a)[0] : null;
+  if (whip) {
+    starter = 'tioZe';
+    openingTileId = whip.id;
+  }
   next = { ...next, turn: starter, openingTileId };
-  return emit(next, { type: 'roundStart', round: next.round, starter, openingTileId });
+  const handSum = next.hands.player.reduce((sum, t) => sum + t.a + t.b, 0);
+  next = emit(next, { type: 'roundStart', round: next.round, starter, openingTileId, handSum });
+  if (whip) next = proc(next, { source: 'rival', id: next.rivalId, text: `CHICOTE: ELE ABRE COM [${whip.a}|${whip.b}]`, tone: 'enemy', owner: 'tioZe' });
+  // Genésio da Rifa: a aposta da rodada (fixa pela semente)
+  if (mech.raffle) {
+    const number = mixSeed(next.seed ?? 0, `rifa-${next.run.match}-${next.round}`) % 7;
+    next = patchFx(next, { raffle: { number, taken: 0 } });
+    next = emit(next, { type: 'raffle', number });
+    next = proc(next, { source: 'rival', id: next.rivalId, text: `APOSTA CASADA: O NÚMERO É ${number}`, tone: 'enemy', owner: 'tioZe' });
+  }
+  // Dona Odete: a janela dos juros abre com a rodada
+  if (mech.interest) next = patchFx(next, { interest: { turns: 0, scored: false, bled: false } });
+  return next;
 }
 
 /**
@@ -292,7 +326,26 @@ function startMatch(state, rivalId, deck, { advance = true } = {}) {
   next = emit(next, { type: 'duelStart', rivalId: rival.id, match: next.run.match, tableMod: next.tableMod ?? null });
   const mod = tableModifierOf(next.tableMod);
   if (mod) next = proc(next, { source: 'table', id: mod.id, text: `REGRA DA MESA: ${mod.name.toUpperCase()}`, tone: 'info', owner: 'player' });
+  // Valtinho Renegado (versão 1.4, Estoque Roubado): 1 talismã seu, sorteado, fica desligado
+  const owned = next.relics.player;
+  if (rival.mechanics?.stolenStock && owned.length) {
+    const id = owned[mixSeed(next.seed ?? 0, `estoque-${next.run.match}`) % owned.length];
+    next = { ...next, matchFx: { ...next.matchFx, stolen: { player: id, tioZe: null } } };
+    next = emit(next, { type: 'relicStolen', id, by: 'tioZe' });
+    next = proc(next, { source: 'rival', id: rival.id, text: `ESTOQUE ROUBADO: ${RELICS[id].short} DESLIGADO`, tone: 'enemy', owner: 'tioZe' });
+  }
+  next = applyHeartCap(next, 'player');
   return startRound(next, deck);
+}
+
+/** Vela Preta Derretida (versão 1.4): o dono senta com, no máximo, o máximo dele menos N corações. */
+function applyHeartCap(state, seat) {
+  const cap = relicsOf(state, seat).reduce((n, r) => Math.max(n, r.heartCap ?? 0), 0);
+  const ceiling = Math.max(1, state.maxHearts[seat] - cap);
+  if (!cap || state.hearts[seat] <= ceiling) return state;
+  const lost = state.hearts[seat] - ceiling;
+  const next = emit({ ...state, hearts: { ...state.hearts, [seat]: ceiling } }, { type: 'heartLost', who: seat, amount: lost, reason: 'velaPreta', direct: true });
+  return proc(next, { source: 'relic', id: 'velaPreta', text: seat === 'player' ? 'VELA PRETA: UM CORAÇÃO APAGADO' : 'VELA PRETA DELE: UM CORAÇÃO APAGADO', tone: 'info', owner: seat });
 }
 
 /** Quantos Necróticos chamam O Dono da Noite (vencendo o Comendador com eles na hotbar). */
@@ -325,7 +378,8 @@ function endMatch(state, winner) {
     const secretWon = rival.id === SECRET_BOSS;
     const boss = secretWon || (node ? node.boss : rival.boss);
     // o chefe da última região (o Comendador) encerra a campanha
-    const finalBoss = !secretWon && (node ? node.boss && node.region === campaignOf(state).regions.length : rival.id === FINAL_BOSS);
+    // (versão 1.4: na teia v3 o chefe final pode ser o Comendador, a Dona Odete ou o Valtinho Renegado)
+    const finalBoss = !secretWon && (node ? node.boss && node.region === campaignOf(state).regions.length : FINAL_BOSSES.includes(rival.id));
     // Patch 0.8.0: com 3+ Necróticos na hotbar, o final convencional não vem: O Dono da Noite aparece
     const secret = finalBoss && necroticCount(state) >= SECRET_NECROTICS;
     const runWon = secretWon || (finalBoss && !secret);
@@ -394,6 +448,23 @@ function finishRound(state, incoming) {
     const text = result.loser === 'player' ? `TRANCA CADAVÉRICA: −${result.damage}♥ EM VOCÊ` : `TRANCA CADAVÉRICA: −${result.damage}♥ NO RIVAL`;
     next = proc(next, { source: 'relic', id: 'trancaCadaverica', text, tone: result.loser === 'player' ? 'enemy' : 'player', owner: 'player' });
   }
+  // versão 1.4: Trena de Pedreiro (a tranca apertada é do dono) e Cadeado Enferrujado (+1♥)
+  if (result.razor) {
+    const text = result.razor === 'player' ? 'TRENA: TRANCA NO DETALHE, +1♥' : 'TRENA DELE: TRANCA NO DETALHE, +1♥';
+    next = proc(next, { source: 'relic', id: 'trena', text, tone: tone(result.razor), owner: result.razor });
+  }
+  if (result.glass && result.damage > 0) {
+    const text = result.glass === 'player' ? 'CADEADO: +1♥ NO RIVAL' : 'CADEADO DELE: +1♥ EM VOCÊ';
+    next = proc(next, { source: 'relic', id: 'cadeado', text, tone: tone(result.glass), owner: result.glass });
+  }
+  // Pé de Coelho Sarnento: batida tomada vira reembaralhar grátis na próxima loja (até 3)
+  if (result.reason === 'batida' && result.loser === 'player' && !next.pvp && relicsOf(next, 'player').some((r) => r.rerollOnHurt)) {
+    const stored = next.run.freeRerolls ?? 0;
+    if (stored < MAX_FREE_REROLLS) {
+      next = { ...next, run: { ...next.run, freeRerolls: stored + 1 } };
+      next = proc(next, { source: 'relic', id: 'peCoelho', text: `PÉ DE COELHO: +1 REEMBARALHAR (${stored + 1})`, tone: 'player', owner: 'player' });
+    }
+  }
   if (result.winner) {
     // Ouro: bônus por pedra de ouro do vencedor na mão ou na mesa
     for (const tile of enhancedTilesInPlay(next, result.winner)) {
@@ -449,6 +520,8 @@ function rewindRound(state, seat) {
     ...state,
     phase: 'roundOver',
     pending: null,
+    // as pedras da escolha do Barbante (se a rodada parou no meio dela) voltam para o dorme
+    boneyard: returnOptions(state),
     hearts: { ...(state.roundStartHearts ?? state.maxHearts) },
     relics: { ...state.relics, [seat]: state.relics[seat].filter((id) => !burned.includes(id)) },
     roundResult: result,
@@ -485,8 +558,14 @@ function checkKnockout(state) {
     ...state.stats,
     roundsWon: { ...state.stats.roundsWon, [winner]: state.stats.roundsWon[winner] + 1 },
   };
-  const next = emit({ ...state, pending: null, roundResult: result, stats }, { type: 'roundEnd', result });
+  const next = emit({ ...state, pending: null, boneyard: returnOptions(state), roundResult: result, stats }, { type: 'roundEnd', result });
   return endMatch(next, winner);
+}
+
+/** O dorme com as pedras da escolha pendente do Barbante de volta (a rodada acabou no meio dela). */
+function returnOptions(state) {
+  const options = state.pending?.options;
+  return options?.length ? [...state.boneyard, ...plainTiles(options)] : state.boneyard;
 }
 
 function trancaResult(state, reason) {
@@ -495,12 +574,32 @@ function trancaResult(state, reason) {
     reason,
     lastTileId: state.lastPlay?.tileId ?? null,
   };
+  result = razorEdge(state, result);
   // Tranca Cadavérica (de qualquer um dos lados): quem perde a soma toma 3 corações
   const cadaverica = trancaDamageFor(state);
   if (cadaverica && result.winner && result.damage > 0 && cadaverica > result.damage) {
     result = { ...result, damage: cadaverica, baseDamage: result.damage, cadaverica: true };
   }
+  // Cadeado Enferrujado (versão 1.4): a tranca que o dono vence tira 1 coração a mais
+  if (result.winner && result.damage > 0) {
+    const bonus = relicsOf(state, result.winner).reduce((n, r) => n + (r.trancaWinBonus ?? 0), 0);
+    if (bonus) result = { ...result, damage: result.damage + bonus, glass: result.winner };
+  }
   return result;
+}
+
+/**
+ * Trena de Pedreiro (versão 1.4): tranca decidida por até N pontos (empate incluso) fica com
+ * o dono e dá +1 de dano. Com a Trena dos dois lados, uma anula a outra (conta normal).
+ */
+function razorEdge(state, result) {
+  if (!result.sums) return result;
+  const edges = SEATS.map((seat) => ({ seat, edge: relicsOf(state, seat).reduce((n, r) => Math.max(n, r.trancaEdge ?? 0), 0) })).filter((e) => e.edge > 0);
+  if (edges.length !== 1) return result;
+  const [{ seat, edge }] = edges;
+  const foe = other(seat);
+  if (Math.abs(result.sums[seat] - result.sums[foe]) > edge) return result;
+  return { ...result, winner: seat, loser: foe, damage: DAMAGE.tranca + 1, razor: seat };
 }
 
 function checkTranca(state) {
@@ -525,14 +624,44 @@ function canAct(state, actor) {
 /** Passa a vez. O Chumbo que travava quem jogou derrete; quando a SUA vez termina, o Relógio perde a chance. */
 function endTurn(state, from) {
   const turns = (state.fx.turns ?? 0) + 1;
+  const to = other(from);
+  // Âmbar Fóssil (versão 1.4): a vez do rival acabou, agora a ponta trava para o dono
+  const amber = state.fx.amberNext?.[to] ?? [];
+  const frozen = { ...state.fx.frozen, [from]: [] };
+  if (amber.length) frozen[to] = [...new Set([...(frozen[to] ?? []), ...amber])];
   const fx = {
     ...state.fx,
-    frozen: { ...state.fx.frozen, [from]: [] },
+    frozen,
+    amberNext: amber.length ? { ...state.fx.amberNext, [to]: [] } : state.fx.amberNext,
+    // Taco de Sinuca Lascado: a proibição de bucha vale só a vez de quem foi travado
+    noDoubles: state.fx.noDoubles?.[from] ? { ...state.fx.noDoubles, [from]: false } : state.fx.noDoubles,
     undo: from === 'player' ? null : state.fx.undo,
     turns,
   };
-  const next = { ...state, turn: other(from), fx };
+  const next = chargeInterest({ ...state, turn: to, fx }, from);
   return challengeIs(state, 'mesaBebada') && turns % DRUNK_EVERY === 0 ? drunkTable(next) : next;
+}
+
+/**
+ * Dona Odete (versão 1.4, Juros com Sangue): a cada N vezes suas na rodada sem fechar múltiplo
+ * de 5, ela leva $fee; sem dinheiro, 1 coração (nunca o último, no máximo 1 por rodada).
+ */
+function chargeInterest(state, from) {
+  const rule = from === 'player' && !state.pvp ? rivalMechanics(state).interest : null;
+  if (!rule || state.phase !== 'playing') return state;
+  const window = state.fx.interest ?? { turns: 0, scored: false, bled: false };
+  const turns = window.turns + 1;
+  if (turns < rule.every) return patchFx(state, { interest: { ...window, turns } });
+  let next = patchFx(state, { interest: { turns: 0, scored: false, bled: window.bled } });
+  if (window.scored) return next;
+  if (next.coins.player > 0) {
+    const paid = Math.min(rule.fee, next.coins.player);
+    next = gainCoins(loseCoins(next, 'player', paid, 'juros'), 'tioZe', paid, 'juros');
+    return proc(next, { source: 'rival', id: next.rivalId, text: `JUROS DA ODETE: −$${paid}`, tone: 'enemy', owner: 'tioZe' });
+  }
+  if (window.bled || next.hearts.player <= 1) return next;
+  next = patchFx(directDamage(next, 'player', 1, 'juros'), { interest: { turns: 0, scored: false, bled: true } });
+  return proc(next, { source: 'rival', id: next.rivalId, text: 'JUROS DE SANGUE: −1♥', tone: 'enemy', owner: 'tioZe' });
 }
 
 /**
@@ -561,6 +690,19 @@ function afterMiss(state, seat, ctx) {
     passes: ctx.kind === 'pass' ? { ...fx.passes, [seat]: (fx.passes?.[seat] ?? 0) + 1 } : fx.passes,
     lastDraw: ctx.kind === 'draw' && ctx.tileId ? { ...fx.lastDraw, [seat]: ctx.tileId } : fx.lastDraw,
   });
+  // Chapa de Fogão a Lenha (versão 1.4): a bucha do adversário deixou a chapa quente
+  if (next.fx.chapa?.[seat]) {
+    const owner = other(seat);
+    next = markUsed(patchFx(next, { chapa: { ...next.fx.chapa, [seat]: false } }), owner, 'chapaFogao');
+    next = directDamage(next, seat, 1, 'chapaFogao');
+    next = proc(next, {
+      source: 'relic',
+      id: 'chapaFogao',
+      text: owner === 'player' ? 'CHAPA: −1♥ NO RIVAL' : 'CHAPA DELE: −1♥ EM VOCÊ',
+      tone: tone(owner),
+      owner,
+    });
+  }
   if (next.fx.ruby === seat) {
     next = directDamage(patchFx(next, { ruby: null }), seat, 1, 'rubi');
     next = proc(next, {
@@ -616,6 +758,8 @@ function playTile(state, { actor, tileId, side }) {
     misses: { ...fx.misses, [actor]: 0 },
     passes: { ...fx.passes, [actor]: 0 },
     ruby: fx.ruby === actor ? null : fx.ruby, // o alvo do Rubi jogou: desarma
+    // a Chapa de Fogão do adversário também desarma quando o alvo joga
+    chapa: fx.chapa?.[actor] ? { ...fx.chapa, [actor]: false } : fx.chapa,
     wild: fx.wild?.seat === actor ? null : fx.wild, // o curinga do Cristal vale só para a próxima jogada do dono
     undo: actor === 'player' ? null : fx.undo,
   });
@@ -627,6 +771,8 @@ function playTile(state, { actor, tileId, side }) {
     double: isDouble(tile),
     enhancement: tile.enhancement ?? null,
     via: placement.via,
+    // versão 1.4: as pontas depois da jogada (conquista Tacada Torta)
+    ends: getOpenEnds(board),
   });
 
   // Mesa Úmida (Patch 0.9.4): a 1ª pedra SUA na rodada soma +1 na conta (nunca atrapalha)
@@ -638,7 +784,10 @@ function playTile(state, { actor, tileId, side }) {
   const multipleOfFive = plainFive || wetFive;
   if (multipleOfFive) {
     // Rádio Ligado no Máximo: o múltiplo de 5 paga $5 (para os dois lados)
-    const bonus = tableModIs(state, 'radioLigado') ? RADIO_FIVE_BONUS : MULTIPLE_OF_FIVE_BONUS;
+    let bonus = tableModIs(state, 'radioLigado') ? RADIO_FIVE_BONUS : MULTIPLE_OF_FIVE_BONUS;
+    // Marquinhos da Van (versão 1.4, Sem Troco): o seu múltiplo de 5 paga menos
+    const tax = actor === 'player' && !state.pvp ? (rivalMechanics(next).fiveTax ?? 0) : 0;
+    if (tax) bonus = Math.max(0, bonus - tax);
     const coins = { ...next.coins, [actor]: next.coins[actor] + bonus };
     const stats = actor === 'player' ? { ...next.stats, coinsEarned: next.stats.coinsEarned + bonus } : next.stats;
     next = emit({ ...next, coins, stats }, {
@@ -649,6 +798,11 @@ function playTile(state, { actor, tileId, side }) {
       wet: wetFive,
     });
     if (wetFive) next = proc(next, { source: 'table', id: 'mesaUmida', text: `MESA ÚMIDA: +1 NA SOMA (${wetSum})`, tone: 'player', owner: 'player' });
+    if (tax) next = proc(next, { source: 'rival', id: next.rivalId, text: `SEM TROCO: −$${tax}`, tone: 'enemy', owner: 'tioZe' });
+    // Ficha de Sinuca de Plástico (versão 1.4): o adversário leva uma parte do que entrou
+    next = runRelicHook(next, foe, 'onFoeFive', { amount: bonus });
+    // Dona Odete: fechar múltiplo de 5 perdoa os juros desta janela
+    if (actor === 'player' && next.fx.interest) next = patchFx(next, { interest: { ...next.fx.interest, scored: true } });
   }
 
   // Carlinhos Mão Leve: jogada que casa as duas pontas rouba moedas suas
@@ -660,6 +814,9 @@ function playTile(state, { actor, tileId, side }) {
       next = proc(next, { source: 'rival', id: next.rivalId, text: `MÃO LEVE: −$${taken}`, tone: 'enemy', owner: 'tioZe' });
     }
   }
+
+  // versão 1.4: a rifa do Genésio e a Mesa de Luxo da Dama Soró cobram as suas pedras
+  if (actor === 'player') next = rivalTableFees(next, tile);
 
   const ctx = { tile, side, placement, endsAfter: getOpenEnds(board), multipleOfFive };
   const enhancement = getEnhancement(tile.enhancement);
@@ -680,6 +837,9 @@ function playTile(state, { actor, tileId, side }) {
   if (knockout) return knockout;
 
   if (newHand.length === 0) {
+    // Ampulheta Rachada (versão 1.4): a batida do adversário volta, 1x por partida
+    const rewound = cucoRewind(state, actor, tile);
+    if (rewound) return rewound;
     const kind = classifyBatida(tile, endsBefore);
     let base = DAMAGE[kind];
     // Rádio Ligado no Máximo (Patch 0.9.4): a batida de bucha perde o dano dobrado
@@ -748,6 +908,70 @@ function playTile(state, { actor, tileId, side }) {
   return endTurn(next, actor);
 }
 
+/**
+ * Versão 1.4: o que a mesa do rival cobra pelas SUAS pedras. Genésio da Rifa: pedra com o
+ * número apostado custa $fee (até $cap na rodada). Dama Soró: pedra comum (nem bucha nem
+ * grife) custa $fee (até $cap). Sem dinheiro, nada é cobrado.
+ */
+function rivalTableFees(state, tile) {
+  if (state.pvp) return state;
+  const mech = rivalMechanics(state);
+  let next = state;
+  const raffle = next.fx.raffle;
+  if (mech.raffle && raffle && (tile.a === raffle.number || tile.b === raffle.number) && raffle.taken < mech.raffle.cap) {
+    const paid = Math.min(mech.raffle.fee, mech.raffle.cap - raffle.taken, next.coins.player);
+    if (paid > 0) {
+      next = gainCoins(loseCoins(next, 'player', paid, 'rifa'), 'tioZe', paid, 'rifa');
+      next = patchFx(next, { raffle: { ...raffle, taken: raffle.taken + paid } });
+      next = proc(next, { source: 'rival', id: next.rivalId, text: `RIFA DO ${raffle.number}: −$${paid}`, tone: 'enemy', owner: 'tioZe' });
+    }
+  }
+  const lux = mech.luxuryFee;
+  const charged = next.fx.luxury ?? 0;
+  if (lux && !isDouble(tile) && !tile.enhancement && charged < lux.cap) {
+    const paid = Math.min(lux.fee, lux.cap - charged, next.coins.player);
+    if (paid > 0) {
+      next = gainCoins(loseCoins(next, 'player', paid, 'luxo'), 'tioZe', paid, 'luxo');
+      next = patchFx(next, { luxury: charged + paid });
+      next = proc(next, { source: 'rival', id: next.rivalId, text: `MESA DE LUXO: −$${paid}`, tone: 'enemy', owner: 'tioZe' });
+    }
+  }
+  return next;
+}
+
+/**
+ * Ampulheta Rachada (versão 1.4): o adversário de `actor` tem a Ampulheta e ainda não usou
+ * nesta partida. A batida volta: a mesa fica como estava (a pedra continua na mão de quem
+ * bateu), ele compra 2 do dorme e a vez passa para o dono. Devolve null se não for o caso.
+ */
+function cucoRewind(state, actor, tile) {
+  const owner = other(actor);
+  const cuco = relicsOf(state, owner).find((r) => r.rewindBatida);
+  if (!cuco || state.matchFx?.cucoUsed?.[owner]) return null;
+  const taken = state.boneyard.slice(0, 2).map((t) => dressTile(state, actor, t));
+  let next = {
+    ...state,
+    boneyard: state.boneyard.slice(taken.length),
+    hands: { ...state.hands, [actor]: [...state.hands[actor], ...taken] },
+    drawsThisTurn: 0,
+    consecutivePasses: 0,
+    matchFx: { ...state.matchFx, cucoUsed: { ...state.matchFx?.cucoUsed, [owner]: true } },
+  };
+  // a mão de quem bateu mudou: o "antes" guardado pelo Relógio Quebrado não vale mais
+  next = patchFx(next, { undo: null });
+  next = emit(next, { type: 'cuco', by: owner, tileId: tile.id, drawn: taken.length });
+  for (const t of taken) next = emit(next, { type: 'drawTile', by: actor, tileId: t.id, cost: null, forced: true });
+  next = countBought(next, actor, taken.length);
+  next = proc(next, {
+    source: 'relic',
+    id: cuco.id,
+    text: owner === 'player' ? 'AMPULHETA: A BATIDA VOLTOU, ELE COMPRA 2' : 'AMPULHETA DELE: A SUA BATIDA VOLTOU',
+    tone: tone(owner),
+    owner,
+  });
+  return endTurn(next, actor);
+}
+
 function drawTile(state, { actor }) {
   if (!canAct(state, actor) || !state.board.root) return state;
   const availability = drawAvailabilityFor(state, actor);
@@ -759,6 +983,15 @@ function drawTile(state, { actor }) {
     drawsThisTurn: state.drawsThisTurn + 1,
     memory: actor === 'player' ? rememberPlayerMissing(state) : state.memory,
   };
+  next = countBought(next, actor, 1);
+  // versão 1.4: compra paga que saiu de graça (Óleo de Máquina Singer, Bicarbonato de Sódio)
+  if (cost.relic === 'bicarbonato') {
+    next = { ...next, matchFx: { ...next.matchFx, bicarbUsed: { ...next.matchFx?.bicarbUsed, [actor]: true } } };
+    next = proc(next, { source: 'relic', id: 'bicarbonato', text: actor === 'player' ? 'BICARBONATO: COMPRA DE GRAÇA' : 'BICARBONATO DELE: COMPRA DE GRAÇA', tone: tone(actor), owner: actor });
+  }
+  if (cost.relic === 'oleo') {
+    next = proc(next, { source: 'relic', id: 'oleo', text: actor === 'player' ? 'ÓLEO: 2ª COMPRA DE GRAÇA' : 'ÓLEO DELE: 2ª COMPRA DE GRAÇA', tone: tone(actor), owner: actor });
+  }
   if (cost.type === 'coins') {
     next = { ...next, coins: { ...next.coins, [actor]: next.coins[actor] - cost.amount } };
   }
@@ -782,7 +1015,7 @@ function drawTile(state, { actor }) {
     // online (Patch PvP): a escolha é de quem comprou (`owner`)
     const choice = state.pvp ? { type: 'drawChoice', options: picks, cost, owner: actor } : { type: 'drawChoice', options: picks, cost };
     next = { ...next, boneyard: state.boneyard.slice(options), pending: choice };
-    next = heartCost(emit(next, { type: 'drawPeek', by: actor, count: options, cost }));
+    next = heartCost(emit(next, { type: 'drawPeek', by: actor, count: options, cost, n: next.drawsThisTurn }));
     next = afterMiss(next, actor, { kind: 'draw', tileId: null });
     next = runRelicHook(next, actor, 'onDraw', { tileId: null, cost });
     return checkKnockout(next) ?? next;
@@ -791,7 +1024,7 @@ function drawTile(state, { actor }) {
   const [raw, ...boneyard] = state.boneyard;
   const tile = dressTile(state, actor, raw);
   next = { ...next, boneyard, hands: { ...next.hands, [actor]: [...next.hands[actor], tile] } };
-  next = heartCost(emit(next, { type: 'drawTile', by: actor, tileId: tile.id, cost }));
+  next = heartCost(emit(next, { type: 'drawTile', by: actor, tileId: tile.id, cost, n: next.drawsThisTurn }));
   next = afterMiss(next, actor, { kind: 'draw', tileId: tile.id });
   next = runRelicHook(next, actor, 'onDraw', { tileId: tile.id, cost });
   const knockout = checkKnockout(next);
@@ -842,6 +1075,8 @@ function passTurn(state, { actor, intent }) {
   if (!forced && (!canAct(state, actor) || !state.board.root)) return state;
   const rule = ruled && !forced ? passAvailabilityFor(state, actor) : { allowed: true, cost: 0 };
   if (!rule.allowed) return state;
+  // passe de propósito (dava para jogar e não comprou): a conquista Gazuada conta esses
+  const strategic = !forced && isStrategicPass(state, actor);
   const consecutivePasses = state.consecutivePasses + 1;
   // Fiado de Rua: o 1º passe estratégico da run vai para a conta
   const fiado = actor === 'player' && Boolean(rule.fiado) && isStrategicPass(state, 'player');
@@ -861,7 +1096,7 @@ function passTurn(state, { actor, intent }) {
     next = directDamage(next, actor, heartCost, 'dadoOsso');
     next = proc(next, { source: 'relic', id: 'dadoOsso', text: actor === 'player' ? `DADO DE OSSO: PASSAR CUSTOU ${heartCost}♥` : 'DADO DELE: −1♥', tone: tone(other(actor)), owner: actor });
   }
-  next = emit(next, { type: 'pass', by: actor, intent: intent ?? null, cost: rule.cost, forced });
+  next = emit(next, { type: 'pass', by: actor, intent: intent ?? null, cost: rule.cost, forced, strategic });
   next = afterMiss(next, actor, { kind: 'pass' });
   // Cida da Marmita: você passou, ela come e recupera 1 coração
   if (actor === 'player' && rivalMechanics(next).healOnPlayerPass && next.hearts.tioZe < next.maxHearts.tioZe) {
@@ -942,6 +1177,44 @@ function cancelCanivete(state, { actor } = {}) {
   return { ...state, pending: null };
 }
 
+/** Grampo de Cabelo (versão 1.4): abre a escolha da bucha que vai para o fundo do dorme (1x por rodada). */
+function openGrampo(state, { actor } = {}) {
+  const seat = state.pvp ? (actor ?? 'player') : 'player';
+  if (!canUseGrampo(state, seat)) return state;
+  return { ...state, pending: state.pvp ? { type: 'grampo', owner: seat } : { type: 'grampo' } };
+}
+
+/**
+ * Grampo de Cabelo: a bucha escolhida some no fundo do dorme e a vez acaba ali (sem custo e
+ * sem contar como passe: não arma tranca nem os talismãs que reagem a passe).
+ */
+function grampoPick(state, { tileId, actor }) {
+  if (state.phase !== 'playing' || state.pending?.type !== 'grampo') return state;
+  const owner = state.pending.owner ?? 'player';
+  if (state.pvp && actor && actor !== owner) return state;
+  const hand = state.hands[owner];
+  const tile = hand.find((t) => t.id === tileId);
+  if (!tile || !isDouble(tile) || hand.length < 2) return state;
+  let next = {
+    ...state,
+    pending: null,
+    hands: { ...state.hands, [owner]: hand.filter((t) => t.id !== tileId) },
+    boneyard: [...state.boneyard, ...plainTiles([tile])],
+    consecutivePasses: 0,
+    drawsThisTurn: 0,
+  };
+  next = markUsed(next, owner, 'grampo');
+  next = emit(next, { type: 'grampo', by: owner, tileId });
+  next = proc(next, { source: 'relic', id: 'grampo', text: owner === 'player' ? `GRAMPO: [${tile.a}|${tile.b}] SUMIU NO DORME` : 'GRAMPO DELE: UMA BUCHA SUMIU', tone: tone(owner), owner });
+  return checkTranca(next) ?? endTurn(next, owner);
+}
+
+function cancelGrampo(state, { actor } = {}) {
+  if (state.pending?.type !== 'grampo') return state;
+  if (state.pvp && actor && actor !== (state.pending.owner ?? 'player')) return state;
+  return { ...state, pending: null };
+}
+
 /** Conquista nova (engine/achievements.js): o talismã passa a sair na loja e no beco. */
 function unlockRelics(state, { ids, reset = false }) {
   // `reset` (DEV): zera a lista antes (as conquistas foram apagadas)
@@ -991,6 +1264,7 @@ function foeDrawsUntilPlay(state) {
     drawn += 1;
   }
   if (!drawn) return state;
+  next = countBought(next, 'tioZe', drawn);
   return proc(next, { source: 'relic', id: 'dedoCadaver', text: `DEDO DE CADÁVER: ELE COMPROU ${drawn}`, tone: 'player', owner: 'player' });
 }
 
@@ -1056,10 +1330,14 @@ function sellRelic(state, { id }) {
 /** Reembaralhar: $3, $5, $8 e depois $12 por vez na mesma visita. */
 function rerollShop(state) {
   if (state.phase !== 'shop' || state.coins.player < state.shop.rerollCost) return state;
+  // Pé de Coelho Sarnento (versão 1.4): gasta um reembaralhar grátis guardado (o 1º grátis
+  // da Nota de 3 Reais e da Amizade com o Valtinho vem antes e não gasta a ficha)
+  const token = state.shop.rerollCost === 0 && !freeFirstReroll(state, state.shop.rerolls) && (state.run.freeRerolls ?? 0) > 0;
   let next = loseCoins(state, 'player', state.shop.rerollCost, 'reroll');
+  if (token) next = { ...next, run: { ...next.run, freeRerolls: next.run.freeRerolls - 1 } };
   const rerolls = state.shop.rerolls + 1;
   next = { ...next, shop: buildShop(next, rerolls) };
-  return emit(next, { type: 'shopReroll', rerolls });
+  return emit(next, { type: 'shopReroll', rerolls, free: token ? 'peCoelho' : null });
 }
 
 /** Conclui o nó em que você está (loja, mercado ou evento visitado; combate vencido). */
@@ -1204,7 +1482,8 @@ function newRun(state, action) {
     ...base,
     phase: 'map',
     // Patch 0.9.4: teia v2 (eventos e regras de mesa); `map: 1` refaz a teia de antes (testes, simulações)
-    run: { ...base.run, map: action.map === 1 ? 1 : MAP_VERSION },
+    // versão 1.4: teia v3 (rivais novos e chefes sorteados); `map: 2` refaz a teia do 0.9.4
+    run: { ...base.run, map: action.map === 1 || action.map === 2 ? action.map : MAP_VERSION },
     mode: mode.id,
     maleta: maletaId,
     challenge,
@@ -1270,6 +1549,8 @@ function startPvpDuel(state, { deck, seats, final = false }) {
     events: [],
   };
   next = emit(next, { type: 'duelStart', rivalId: FIRST_RIVAL, match: 0, pvp: true, final: Boolean(final) });
+  // Vela Preta Derretida (versão 1.4): o custo vale também na mesa online, para os dois lados
+  for (const seat of SEATS) next = applyHeartCap(next, seat);
   return startRound(next, deck);
 }
 
@@ -1302,8 +1583,9 @@ function loadRun(state, action) {
       history: [...save.history],
       fiadoUsed: Boolean(save.fiadoUsed),
       secret: false,
-      map: save.map === MAP_VERSION ? MAP_VERSION : 1,
+      map: knownMapVersion(save.map),
       scars: Number.isInteger(save.scars) && save.scars > 0 ? save.scars : 0,
+      freeRerolls: Number.isInteger(save.freeRerolls) && save.freeRerolls > 0 ? Math.min(MAX_FREE_REROLLS, save.freeRerolls) : 0,
     },
     maleta: MALETAS[save.maleta] ? save.maleta : DEFAULT_MALETA,
     challenge: CHALLENGES[save.challenge] ? save.challenge : null,
@@ -1391,6 +1673,9 @@ const TUTORIAL_GATED = new Set([
   'USE_CANIVETE',
   'CANIVETE_PICK',
   'CANCEL_CANIVETE',
+  'USE_GRAMPO',
+  'GRAMPO_PICK',
+  'CANCEL_GRAMPO',
   'NEXT_ROUND',
   'OPEN_MAP',
   'ENTER_NODE',
@@ -1615,6 +1900,13 @@ export function gameReducer(state, action) {
       return caniveteTransform(state, action);
     case 'CANCEL_CANIVETE':
       return cancelCanivete(state, action);
+    // versão 1.4: Grampo de Cabelo
+    case 'USE_GRAMPO':
+      return openGrampo(state, action);
+    case 'GRAMPO_PICK':
+      return grampoPick(state, action);
+    case 'CANCEL_GRAMPO':
+      return cancelGrampo(state, action);
     // Patch PvP (src/pvp): o duelo entre duas pessoas e as paradas da rota online
     case 'PVP_START_DUEL':
       return startPvpDuel(state, action);

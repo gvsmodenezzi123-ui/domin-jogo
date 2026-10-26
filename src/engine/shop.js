@@ -106,10 +106,13 @@ export function buildShop(state, rerolls = 0) {
     return { tileId, enhancement, price: shopPrice(state, ENHANCEMENTS[enhancement].price), sold: false };
   });
 
-  // Nota de 3 Reais (talismã) e Amizade com o Valtinho (Conta do Boteco): o 1º reembaralhar da visita é de graça
-  const freeFirst = rerolls === 0 && (hasPerk(state, 'valtinho') || state.relics.player.some((id) => RELICS[id]?.firstRerollFree));
-  return { relics, tiles, rerolls, rerollCost: freeFirst ? 0 : rerollCost(rerolls) };
+  // Pé de Coelho Sarnento (versão 1.4): enquanto tiver reembaralhar grátis guardado, sai de graça
+  const free = freeFirstReroll(state, rerolls) || (state.run?.freeRerolls ?? 0) > 0;
+  return { relics, tiles, rerolls, rerollCost: free ? 0 : rerollCost(rerolls) };
 }
+
+/** Nota de 3 Reais (talismã) e Amizade com o Valtinho (Conta do Boteco): o 1º reembaralhar da visita é de graça. */
+export const freeFirstReroll = (state, rerolls) => rerolls === 0 && (hasPerk(state, 'valtinho') || state.relics.player.some((id) => RELICS[id]?.firstRerollFree));
 
 /** Por que não dá para comprar esse talismã agora (ou null se dá). */
 export function relicBuyBlock(state, offer) {

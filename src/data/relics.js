@@ -35,12 +35,24 @@
  *   rewindRound                    golpe fatal recomeça a rodada e queima 2 talismãs (Testamento)
  *   ability: 'canivete'            botão do Canivete Suíço (1x por partida, só o jogador)
  *
+ * Versão 1.4 (18 talismãs novos, todos por conquista):
+ *   onFoeFive(state, ctx)          o adversário fechou múltiplo de 5 (ctx: + { amount })
+ *   freePaidDraw / freeSecondDraw  compra paga de graça 1x por partida (Bicarbonato) / a 2ª do turno (Óleo)
+ *   trancaSumOffset(state, seat)   também pode ser função (Espátula: −3 por pedra comprada na rodada)
+ *   trancaEdge                     tranca decidida por até N pontos é do dono, +1 de dano (Trena)
+ *   trancaWinBonus                 +N de dano na tranca que o dono vence (Cadeado Enferrujado)
+ *   rerollOnHurt                   batida tomada vira reembaralhar grátis na próxima loja (Pé de Coelho)
+ *   rewindBatida                   1x por partida a batida do adversário volta (Ampulheta Rachada)
+ *   heartCap                       senta na partida com até o máximo −N corações (Vela Preta)
+ *   reveal.numberCounts            quantas pedras de cada número o rival tem (Lupa de Joalheiro)
+ *   ability: 'grampo'              botão do Grampo de Cabelo (1x por rodada)
+ *
  * Ícones: mapas de pixels 12x12 (cada caractere aponta para a paleta; '.' é vazio).
  */
 
 import { mixSeed } from '../engine/seedEngine.js';
 import { boardTileCount, canPlayOn, isDouble, pipSum, sortHand } from '../engine/dominoLogic.js';
-import { directDamage, emit, gainCoins, loseCoins, patchFx, proc } from '../engine/effects.js';
+import { countBought, directDamage, emit, gainCoins, loseCoins, patchFx, proc } from '../engine/effects.js';
 import { getEnhancement } from './enhancedTiles.js';
 
 export const RELIC_SLOTS = 4;
@@ -77,7 +89,7 @@ function forceDraw(state, seat, count) {
   if (!taken.length) return state;
   let next = { ...state, boneyard: state.boneyard.slice(taken.length), hands: { ...state.hands, [seat]: [...state.hands[seat], ...taken] } };
   for (const tile of taken) next = emit(next, { type: 'drawTile', by: seat, tileId: tile.id, cost: null, forced: true });
-  return next;
+  return countBought(next, seat, taken.length);
 }
 
 /** Dado Viciado: troca pedras leves do dono por pedras com 6 (do dorme ou, se faltar, do adversário). */
@@ -845,8 +857,9 @@ export const RELICS = Object.freeze({
 
   cinzeiroBitucas: Object.freeze({
     id: 'cinzeiroBitucas',
-    name: 'Cinzeiro Cheio de Bitucas',
-    short: 'BITUCAS',
+    // versão 1.4: era o Cinzeiro Cheio de Bitucas (o id fica, por causa dos saves)
+    name: 'Lanterna do Vigia',
+    short: 'LANTERNA',
     art: 'cinzeiroBitucas',
     rarity: 'raro',
     price: 7,
@@ -858,7 +871,7 @@ export const RELICS = Object.freeze({
       if (!hidden.length) return state;
       const tile = hidden.slice().sort((x, y) => pipSum(y) - pipSum(x) || y.b - x.b)[0];
       const next = patchFx(state, { revealed: [...shown, tile.id] });
-      return relicProc(next, owner, 'cinzeiroBitucas', `BITUCAS: ELE TEM [${tile.a}|${tile.b}]`);
+      return relicProc(next, owner, 'cinzeiroBitucas', mine(owner) ? `LANTERNA: ELE TEM [${tile.a}|${tile.b}]` : `LANTERNA DELE: VOCÊ TEM [${tile.a}|${tile.b}]`);
     },
   }),
 
@@ -895,8 +908,9 @@ export const RELICS = Object.freeze({
 
   espelhoBanheiro: Object.freeze({
     id: 'espelhoBanheiro',
-    name: 'Espelho de Banheiro Trincado',
-    short: 'ESPELHO TRINCADO',
+    // versão 1.4: era o Espelho de Banheiro Trincado (o id fica, por causa dos saves)
+    name: 'Papel Carbono Amassado',
+    short: 'CARBONO',
     art: 'espelhoBanheiro',
     rarity: 'lendario',
     price: 14,
@@ -910,7 +924,7 @@ export const RELICS = Object.freeze({
       const copy = { ...target, enhancement: enhancement.id, copied: true };
       const next = { ...state, hands: { ...state.hands, [owner]: hand.map((t) => (t.id === target.id ? copy : t)) } };
       const name = enhancement.name.toUpperCase();
-      return relicProc(next, owner, 'espelhoBanheiro', mine(owner) ? `ESPELHO: SUA [${target.a}|${target.b}] VIROU ${name}` : `ESPELHO DELE: ${name}`);
+      return relicProc(next, owner, 'espelhoBanheiro', mine(owner) ? `CARBONO: SUA [${target.a}|${target.b}] VIROU ${name}` : `CARBONO DELE: ${name}`);
     },
   }),
 
@@ -992,6 +1006,280 @@ export const RELICS = Object.freeze({
     rules: () => ({ sixWild: true }),
     passHeartCost: 1,
   }),
+
+  // -------------------------------------------------------------------------
+  // Versão 1.4: 18 talismãs novos, todos trancados por conquista (engine/achievements.js).
+  // Arte 40x40 em components/art/RelicArt140.jsx. Os números foram acertados pela simulação
+  // de 600 partidas (fuzz/balance.mjs): por rodada você joga ~7 pedras e ~1,3 bucha, o rival
+  // fecha ~2 múltiplos de 5, compra ~2,6 vezes e passa ~0,5; a tranca sai em ~27% das rodadas.
+  // -------------------------------------------------------------------------
+
+  pires: Object.freeze({
+    id: 'pires',
+    name: 'Pires de Aperitivo',
+    short: 'PIRES',
+    art: 'pires',
+    rarity: 'comum',
+    price: 4,
+    lockedBy: 'petisco_balcao',
+    description: 'Começar a rodada com 2 ou mais pedras leves (soma até 3) na mão dá +$2.',
+    onDeal(state, { owner }) {
+      if (state.hands[owner].filter((t) => pipSum(t) <= 3).length < 2) return state;
+      return relicProc(gainCoins(state, owner, 2, 'pires'), owner, 'pires', mine(owner) ? 'PIRES: PETISCO, +$2' : 'PIRES DELE: +$2');
+    },
+  }),
+
+  gilete: Object.freeze({
+    id: 'gilete',
+    name: 'Gilete no Colarinho',
+    short: 'GILETE',
+    art: 'gilete',
+    rarity: 'comum',
+    price: 5,
+    lockedBy: 'corte_fino',
+    description: 'Bucha sua que entra numa ponta ímpar ([1|1], [3|3] ou [5|5]) dá +$3.',
+    onPlay(state, { owner, tile, side }) {
+      if (!isDouble(tile) || side === 'root' || tile.a % 2 === 0) return state;
+      return relicProc(gainCoins(state, owner, 3, 'gilete'), owner, 'gilete', mine(owner) ? 'GILETE: CORTE FINO, +$3' : 'GILETE DELE: +$3');
+    },
+  }),
+
+  bicarbonato: Object.freeze({
+    id: 'bicarbonato',
+    name: 'Bicarbonato de Sódio',
+    short: 'BICARBONATO',
+    art: 'bicarbonato',
+    rarity: 'comum',
+    price: 4,
+    lockedBy: 'azia_beco',
+    description: '1x por partida: a sua próxima compra do dorme que custaria $ ou coração sai de graça.',
+    // engine/powers.js (drawAvailabilityFor): a compra paga vira grátis uma vez por partida
+    freePaidDraw: true,
+  }),
+
+  cofrinho: Object.freeze({
+    id: 'cofrinho',
+    name: 'Cofrinho de Barro',
+    short: 'COFRINHO',
+    art: 'cofrinho',
+    rarity: 'comum',
+    price: 5,
+    lockedBy: 'pano_furado',
+    description: 'Quando o rival fecha um múltiplo de 5, você ganha metade do que ele faturou (arredondado para cima).',
+    onFoeFive(state, { owner, amount }) {
+      const gain = Math.ceil(amount / 2);
+      if (gain <= 0) return state;
+      return relicProc(gainCoins(state, owner, gain, 'cofrinho'), owner, 'cofrinho', mine(owner) ? `COFRINHO: +$${gain}` : `COFRINHO DELE: +$${gain}`);
+    },
+  }),
+
+  prego: Object.freeze({
+    id: 'prego',
+    name: 'Prego Enferrujado',
+    short: 'PREGO',
+    art: 'prego',
+    rarity: 'comum',
+    price: 4,
+    lockedBy: 'tetano_mesa',
+    description: 'A 1ª pedra com 0 que você joga na rodada deixa 1 pedra do rival à mostra até o fim dela (com o [0|0], 2 pedras).',
+    onPlay(state, { owner, foe, tile }) {
+      if (!human(state, owner) || isUsed(state, owner, 'prego') || (tile.a !== 0 && tile.b !== 0)) return state;
+      const shown = new Set(state.fx.revealed ?? []);
+      const hidden = state.hands[foe].filter((t) => !shown.has(t.id));
+      const count = Math.min(isDouble(tile) ? 2 : 1, hidden.length);
+      const next = markUsed(state, owner, 'prego');
+      if (!count) return next;
+      // ao acaso (pela semente), sem Math.random no reducer
+      const pool = hidden.slice();
+      const picked = [];
+      for (let i = 0; i < count; i += 1) picked.push(...pool.splice(roll(next, `prego-${i}`) % pool.length, 1));
+      const revealed = patchFx(next, { revealed: [...shown, ...picked.map((t) => t.id)] });
+      const names = picked.map((t) => `[${t.a}|${t.b}]`).join(' ');
+      return relicProc(revealed, owner, 'prego', mine(owner) ? `PREGO: ELE TEM ${names}` : `PREGO DELE: VOCÊ TEM ${names}`);
+    },
+  }),
+
+  peCoelho: Object.freeze({
+    id: 'peCoelho',
+    name: 'Pé de Coelho Sarnento',
+    short: 'PÉ DE COELHO',
+    art: 'peCoelho',
+    rarity: 'comum',
+    price: 4,
+    lockedBy: 'azar_compartilhado',
+    description: 'Cada batida que você toma vale 1 reembaralhar de graça na próxima Loja do Valtinho (junta até 3).',
+    // engine/gameReducer.js (finishRound) junta as fichas em `run.freeRerolls`
+    rerollOnHurt: true,
+  }),
+
+  grampo: Object.freeze({
+    id: 'grampo',
+    name: 'Grampo de Cabelo',
+    short: 'GRAMPO',
+    art: 'grampo',
+    rarity: 'raro',
+    price: 7,
+    lockedBy: 'gazuada',
+    description: '1x por rodada, na sua vez: esconde uma bucha da mão no fundo do dorme. A vez acaba ali, sem custo e sem contar como passe.',
+    ability: 'grampo',
+  }),
+
+  espatula: Object.freeze({
+    id: 'espatula',
+    name: 'Espátula de Gordura',
+    short: 'ESPÁTULA',
+    art: 'espatula',
+    rarity: 'raro',
+    price: 7,
+    lockedBy: 'fritura_pesada',
+    description: 'Cada pedra que você compra do dorme na rodada tira 3 pontos da sua soma na contagem da tranca.',
+    trancaSumOffset: (state, seat) => -3 * (state.fx?.bought?.[seat] ?? 0),
+  }),
+
+  taco: Object.freeze({
+    id: 'taco',
+    name: 'Taco de Sinuca Lascado',
+    short: 'TACO',
+    art: 'taco',
+    rarity: 'raro',
+    price: 8,
+    lockedBy: 'tacada_torta',
+    description: 'Se a sua jogada deixar as duas pontas com o mesmo número, o rival não pode jogar bucha na vez dele.',
+    onPlay(state, { owner, foe, endsAfter }) {
+      if (!endsAfter || endsAfter.left !== endsAfter.right) return state;
+      const next = patchFx(state, { noDoubles: { ...(state.fx.noDoubles ?? {}), [foe]: true } });
+      return relicProc(next, owner, 'taco', mine(owner) ? 'TACO: BUCHA PROIBIDA PRO RIVAL' : 'TACO DELE: SEM BUCHA PRA VOCÊ');
+    },
+  }),
+
+  oleo: Object.freeze({
+    id: 'oleo',
+    name: 'Óleo de Máquina Singer',
+    short: 'ÓLEO',
+    art: 'oleo',
+    rarity: 'raro',
+    price: 8,
+    lockedBy: 'engrenagem_cega',
+    description: 'A 2ª compra do dorme no mesmo turno sai de graça (no lugar dos $3).',
+    // engine/powers.js (drawAvailabilityFor)
+    freeSecondDraw: true,
+  }),
+
+  pacoteTremoco: Object.freeze({
+    id: 'pacoteTremoco',
+    name: 'Pacote de Tremoço',
+    short: 'TREMOÇO',
+    art: 'pacoteTremoco',
+    rarity: 'raro',
+    price: 7,
+    lockedBy: 'mao_pesada',
+    description: 'Começar a rodada com mais de 45 pontos na mão dá +$4.',
+    onDeal(state, { owner }) {
+      if (state.hands[owner].reduce((sum, t) => sum + pipSum(t), 0) <= 45) return state;
+      return relicProc(gainCoins(state, owner, 4, 'pacoteTremoco'), owner, 'pacoteTremoco', mine(owner) ? 'TREMOÇO: MÃO PESADA, +$4' : 'TREMOÇO DELE: +$4');
+    },
+  }),
+
+  cadeado: Object.freeze({
+    id: 'cadeado',
+    name: 'Cadeado Enferrujado',
+    short: 'CADEADO',
+    art: 'cadeado',
+    rarity: 'raro',
+    price: 8,
+    lockedBy: 'porteira_fechada',
+    description: 'Rodada que você vence por tranca tira 1 coração a mais do rival.',
+    trancaWinBonus: 1,
+  }),
+
+  chapaFogao: Object.freeze({
+    id: 'chapaFogao',
+    name: 'Chapa de Fogão a Lenha',
+    short: 'CHAPA',
+    art: 'chapaFogao',
+    rarity: 'lendario',
+    price: 14,
+    lockedBy: 'calor_fornalha',
+    description: '1x por rodada: depois de uma bucha sua, se o rival comprar ou passar na vez seguinte, ele toma 1 de dano.',
+    onPlay(state, { owner, foe, tile }) {
+      if (!isDouble(tile) || isUsed(state, owner, 'chapaFogao') || state.fx.chapa?.[foe]) return state;
+      const next = patchFx(state, { chapa: { ...(state.fx.chapa ?? {}), [foe]: true } });
+      return relicProc(next, owner, 'chapaFogao', mine(owner) ? 'CHAPA QUENTE' : 'CHAPA DELE QUENTE');
+    },
+  }),
+
+  lupa: Object.freeze({
+    id: 'lupa',
+    name: 'Lupa de Joalheiro',
+    short: 'LUPA',
+    art: 'lupa',
+    rarity: 'lendario',
+    price: 13,
+    lockedBy: 'olho_clinico',
+    description: 'Mostra quantas pedras com cada número (0 a 6) o rival tem na mão.',
+    reveal: { numberCounts: true },
+  }),
+
+  canetaLoterica: Object.freeze({
+    id: 'canetaLoterica',
+    name: 'Caneta de Lotérica Azul',
+    short: 'CANETA',
+    art: 'canetaLoterica',
+    rarity: 'lendario',
+    price: 15,
+    lockedBy: 'acertei_quina',
+    description: 'Jogada sua que deixa as pontas somando 10 ou 12 tira $4 do bolso do rival para o seu.',
+    onPlay(state, { owner, foe, endsAfter }) {
+      if (!endsAfter) return state;
+      const sum = endsAfter.left + endsAfter.right;
+      if (sum !== 10 && sum !== 12) return state;
+      const taken = Math.min(4, state.coins[foe]);
+      if (taken <= 0) return state;
+      const next = gainCoins(loseCoins(state, foe, taken, 'canetaLoterica'), owner, taken, 'canetaLoterica');
+      return relicProc(next, owner, 'canetaLoterica', mine(owner) ? `CANETA: DEU ${sum}! +$${taken} DO RIVAL` : `CANETA DELE: DEU ${sum}! +$${taken} DO SEU BOLSO`);
+    },
+  }),
+
+  trena: Object.freeze({
+    id: 'trena',
+    name: 'Trena de Pedreiro',
+    short: 'TRENA',
+    art: 'trena',
+    rarity: 'lendario',
+    price: 12,
+    lockedBy: 'por_um_fio',
+    description: 'Tranca decidida por até 5 pontos (empate incluso) é sua e tira 1 coração a mais.',
+    // engine/gameReducer.js (trancaResult)
+    trancaEdge: 5,
+  }),
+
+  ampulheta: Object.freeze({
+    id: 'ampulheta',
+    name: 'Ampulheta Rachada',
+    short: 'AMPULHETA',
+    art: 'ampulheta',
+    rarity: 'mitico',
+    price: 24,
+    lockedBy: 'hora_morta',
+    description: '1x por partida: quando o rival bater, o tempo volta. A pedra volta para a mão dele, ele compra 2 do dorme e a vez é sua.',
+    // engine/gameReducer.js (cucoRewind)
+    rewindBatida: true,
+  }),
+
+  velaPreta: Object.freeze({
+    id: 'velaPreta',
+    name: 'Vela Preta Derretida',
+    short: 'VELA PRETA',
+    art: 'velaPreta',
+    rarity: 'necrotico',
+    price: 24,
+    lockedBy: 'despacho_meia_noite',
+    description: 'Batida com [0|0] ou [6|6] dá 4 de dano (não soma com o Cálice). Em troca, você senta em toda partida com, no máximo, 1 coração a menos que o seu máximo.',
+    // `max` (não soma): com o Cálice de Sangue de Galo vale o maior; a Mão Grande dobra depois
+    order: 0,
+    batidaDamage: (damage, state, { tile }) => (tile && isDouble(tile) && (tile.a === 0 || tile.a === 6) ? Math.max(damage, 4) : damage),
+    heartCap: 1,
+  }),
 });
 
 export const RELIC_IDS = Object.freeze(Object.keys(RELICS));
@@ -1012,8 +1300,11 @@ export const isRelicAvailable = (id, unlocks = []) => Boolean(RELICS[id]) && (!R
  * próxima pedra dela, ela comprando até encaixar) não saem na loja nem no beco do online.
  * Versão 1.3: nem a Carteira Recheada (+1 de dano a cada $15): com as moedas da mesa online
  * ($50 a $300) ela virava uma batida que zera o outro de uma vez.
+ * Versão 1.4: o Taco (assimetria de bucha), a Lupa de Joalheiro (contaria a mão escondida do
+ * outro), a Ampulheta Rachada (desfazer a batida de gente) e o Pé de Coelho (não tem loja
+ * depois do duelo) também ficam de fora.
  */
-export const PVP_BANNED_RELICS = Object.freeze(['relogio', 'oculosFundo', 'dedoCadaver', 'carteira']);
+export const PVP_BANNED_RELICS = Object.freeze(['relogio', 'oculosFundo', 'dedoCadaver', 'carteira', 'taco', 'lupa', 'ampulheta', 'peCoelho']);
 /** O talismã pode sair na vitrine desta run (no online, fora os da IA)? */
 export const isRelicOffered = (id, state) => isRelicAvailable(id, state?.unlocks) && !(state?.pvp && PVP_BANNED_RELICS.includes(id));
 

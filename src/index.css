@@ -546,6 +546,100 @@
     animation: ghost-drift 4s ease-in-out infinite alternate;
   }
 
+  /* Versão 1.4 — Âmbar Fóssil: resina cor de mel, translúcida e mais alaranjada que o Ouro, com
+     bolhinhas de ar e o mosquito preso lá dentro */
+  .tile-enh-ambar {
+    --cast-a: 0.45;
+    background:
+      radial-gradient(ellipse at 32% 20%, rgba(255, 240, 200, 0.6), transparent 34%),
+      radial-gradient(ellipse 80% 60% at 55% 60%, rgba(255, 150, 40, 0.35), transparent 70%),
+      linear-gradient(160deg, rgba(255, 190, 90, 0.95) 0%, rgba(226, 120, 28, 0.92) 48%, rgba(140, 58, 10, 0.95) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 214, 150, 0.85),
+      inset 0 0 8px rgba(255, 200, 120, 0.5),
+      inset 0 -3px 6px rgba(120, 40, 0, 0.45),
+      0 var(--d) 0 #7a3608,
+      0 calc(var(--d) + 1px) 0 #2a1003,
+      var(--cast),
+      0 0 7px rgba(255, 150, 40, 0.3);
+  }
+
+  .tile-enh-ambar .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #8a4a12 0%, #4a2206 65%, #240e02 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(0, 0, 0, 0.7),
+      0 1px 0 rgba(255, 220, 170, 0.55);
+  }
+
+  .tile-enh-ambar .domino-divider {
+    background: rgba(120, 50, 6, 0.7);
+    box-shadow: 1px 1px 0 rgba(255, 220, 170, 0.45);
+  }
+
+  /* o mosquito: corpo escuro, as duas asinhas claras e as perninhas; e as bolhas de ar */
+  .tile-enh-ambar .tile-enh-layer {
+    background:
+      radial-gradient(ellipse 10% 3.6% at 52% 59.5%, rgba(50, 20, 2, 0.88) 0 70%, transparent 100%),
+      radial-gradient(circle at 44% 59%, rgba(50, 20, 2, 0.85) 0 2%, transparent 2.8%),
+      radial-gradient(ellipse 11% 3% at 50% 55.5%, rgba(255, 245, 225, 0.6) 0 60%, transparent 100%),
+      radial-gradient(ellipse 11% 3% at 57% 55.5%, rgba(255, 245, 225, 0.5) 0 60%, transparent 100%),
+      radial-gradient(circle at 26% 34%, rgba(255, 250, 235, 0.75) 0 2.2%, transparent 3%),
+      radial-gradient(circle at 72% 24%, rgba(255, 250, 235, 0.6) 0 1.6%, transparent 2.3%),
+      radial-gradient(circle at 34% 84%, rgba(255, 250, 235, 0.55) 0 1.4%, transparent 2.1%);
+    opacity: 0.95;
+  }
+
+  .tile-enh-ambar .tile-enh-glow {
+    opacity: 1;
+    box-shadow: 0 0 7px 1px rgba(255, 150, 40, 0.38);
+  }
+
+  /* Versão 1.4 — Obsidiana Vulcânica: vidro vulcânico preto espelhado, com o reflexo da
+     lâmpada em faixa, as lascas conchoidais em luz fria, o brilho furta-cor correndo devagar
+     por dentro e os pips como brasa presa no vidro */
+  .tile-enh-obsidiana {
+    --cast-a: 0.6;
+    background:
+      linear-gradient(122deg, transparent 16%, rgba(255, 255, 255, 0.34) 22%, rgba(255, 255, 255, 0.07) 29%, transparent 33%),
+      radial-gradient(ellipse 75% 38% at 80% 84%, rgba(130, 100, 190, 0.38), transparent 62%),
+      radial-gradient(ellipse 60% 32% at 20% 16%, rgba(190, 170, 235, 0.3), transparent 60%),
+      linear-gradient(160deg, #2c2436 0%, #110c17 46%, #050307 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(235, 225, 255, 0.6),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.85),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+      0 var(--d) 0 #140f1a,
+      0 calc(var(--d) + 1px) 0 #000,
+      var(--cast);
+  }
+
+  .tile-enh-obsidiana .domino-pip {
+    background: radial-gradient(circle at 40% 35%, #ffe1ad 0%, #ff8a32 36%, #8a2008 76%, #1c0503 100%);
+    box-shadow:
+      0 0 2px rgba(255, 130, 50, 0.75),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.55);
+  }
+
+  .tile-enh-obsidiana .domino-divider {
+    background: linear-gradient(90deg, rgba(170, 150, 210, 0.12), rgba(215, 200, 250, 0.65), rgba(170, 150, 210, 0.12));
+    box-shadow: none;
+  }
+
+  /* o furta-cor da obsidiana: arco-íris discreto passando no vidro */
+  .tile-enh-obsidiana .tile-enh-layer {
+    background: linear-gradient(115deg, transparent 30%, rgba(120, 220, 255, 0.2) 42%, rgba(205, 125, 255, 0.22) 50%, rgba(255, 175, 95, 0.18) 58%, transparent 70%);
+    background-size: 260% 260%;
+    mix-blend-mode: screen;
+    animation: holoPrismCycle 6s ease-in-out infinite;
+  }
+
+  .tile-enh-obsidiana .tile-enh-glow {
+    opacity: 1;
+    box-shadow:
+      0 0 5px 1px rgba(185, 150, 255, 0.28),
+      0 2px 8px rgba(255, 110, 40, 0.16);
+  }
+
   /* pedra do Tio Zé revelada (Olho de Vidro, Espelho Retrovisor) */
 
   /* ---------- Mesa ---------- */
@@ -2619,6 +2713,7 @@
 .reduce-motion .tile-enh-rubi .domino-pip,
 .reduce-motion .tile-enh-fantasma,
 .reduce-motion .tile-enh-cristal .tile-enh-layer,
+.reduce-motion .tile-enh-obsidiana .tile-enh-layer,
 .reduce-motion .tile-shimmer-effect::after {
     animation: none !important;
   }
@@ -3051,6 +3146,33 @@
   min-height: 30px;
   padding: 4px 10px;
   font-size: 8px;
+}
+
+/* versão 1.4: dois ou três poderes prontos na mesma linha (Relógio, Canivete, Grampo) */
+/* Versão 1.4: a linha de talismãs que desce degraus para caber (PlayerRack.jsx → fitRelicRow) */
+.relic-ability .lbl-short {
+  display: none;
+}
+
+.relic-row[data-fit='1'] .relic-row-tools {
+  gap: 6px;
+}
+
+.relic-row[data-fit='1'] .btn-pixel.btn-mini.relic-ability {
+  padding: 4px 5px;
+  font-size: 7px;
+}
+
+.relic-row[data-fit='1'] .relic-ability .lbl-full {
+  display: none;
+}
+
+.relic-row[data-fit='1'] .relic-ability .lbl-short {
+  display: inline;
+}
+
+.relic-row[data-fit='2'] .relic-ability {
+  display: none;
 }
 
 .btn-pixel[data-tone='play'] {
@@ -6768,13 +6890,478 @@
   }
 }
 
+/* --- versão 1.4: rifa (Genésio da Rifa) --- */
+.boss-intro-rifa .bi-card {
+  border: 3px solid #5c1414;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 220, 160, 0.06) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #3a0e0e, #1f0707 70%, #120404);
+  box-shadow:
+    inset 0 0 0 2px #e9c46a,
+    0 0 24px rgba(233, 80, 60, 0.35),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: bi-pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1) 220ms both;
+}
+
+@keyframes bi-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.boss-intro-rifa .bi-portrait {
+  border-color: #e9c46a;
+}
+
+.boss-intro-rifa .bi-kicker,
+.boss-intro-rifa .bi-title {
+  color: #ffd27a;
+}
+
+.boss-intro-rifa .bi-name {
+  color: #fff1d6;
+  text-shadow:
+    0 0 6px rgba(255, 90, 60, 0.7),
+    0 3px 0 #000;
+}
+
+/* o globo da rifa girando atrás do cartão */
+.bi-globe {
+  left: 50%;
+  top: 44%;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 58%, rgba(233, 196, 106, 0.22) 58% 60%, transparent 60%),
+    repeating-conic-gradient(from 0deg, rgba(233, 196, 106, 0.5) 0 4deg, transparent 4deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 62%, #000 62% 70%, transparent 70%);
+  mask: radial-gradient(circle, transparent 0 62%, #000 62% 70%, transparent 70%);
+  animation:
+    rc-fade 300ms ease-out both,
+    bi-spin 1100ms cubic-bezier(0.2, 0.6, 0.4, 1) both;
+}
+
+@keyframes bi-spin {
+  from {
+    transform: rotate(-540deg);
+  }
+  to {
+    transform: rotate(0);
+  }
+}
+
+/* a bolinha sorteada salta do cartão */
+.bi-ball {
+  position: absolute;
+  right: -12px;
+  top: -14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #3a0e0e;
+  background: radial-gradient(circle at 35% 30%, #fff 0 3px, #ffe9b0 5px, #e9c46a 12px, #b8862a 15px);
+  box-shadow:
+    0 0 0 2px #0b0705,
+    0 0 12px rgba(255, 210, 120, 0.7);
+  animation: bi-ball 620ms cubic-bezier(0.3, 1.8, 0.5, 1) 1000ms both;
+}
+
+@keyframes bi-ball {
+  0% {
+    transform: translate(-60px, 60px) scale(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* bilhetes de rifa caindo e girando */
+.bi-tickets i {
+  position: absolute;
+  top: -24px;
+  width: 16px;
+  height: 10px;
+  background:
+    linear-gradient(90deg, transparent 0 4px, rgba(90, 20, 20, 0.6) 4px 5px, transparent 5px),
+    #f4e3b8;
+  border: 1px solid #8a5a2a;
+  opacity: 0;
+  animation: bi-ticket 1600ms cubic-bezier(0.4, 0, 0.8, 0.6) both;
+}
+
+@keyframes bi-ticket {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(112vh) rotate(calc(var(--turn, 12deg) * 20));
+    opacity: 0;
+  }
+}
+
+/* --- versão 1.4: chic (Dama Soró) --- */
+.boss-intro-chic .bi-card {
+  border: 3px solid #3a0f2a;
+  background: linear-gradient(180deg, rgba(50, 12, 36, 0.96), rgba(20, 4, 14, 0.97));
+  box-shadow:
+    inset 0 0 0 2px #ff8fc8,
+    inset 0 0 0 4px #3a0f2a,
+    0 0 30px rgba(255, 110, 190, 0.35),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: rc-fade 420ms ease-out 360ms both;
+}
+
+.boss-intro-chic .bi-portrait {
+  border: 3px double #ff8fc8;
+  box-shadow: 0 0 16px rgba(255, 143, 200, 0.55);
+}
+
+.boss-intro-chic .bi-kicker,
+.boss-intro-chic .bi-title {
+  color: #ffb3dc;
+}
+
+.boss-intro-chic .bi-name {
+  color: #fff0f8;
+  text-shadow:
+    0 0 6px #ff6fbf,
+    0 3px 0 #000;
+  letter-spacing: 0.04em;
+}
+
+.bi-spot-pink {
+  background: radial-gradient(ellipse 46% 60% at 50% 42%, rgba(255, 140, 200, 0.3), transparent 70%);
+}
+
+/* os dois leques de plumas: fechados cobrindo o cartão, abrem para os lados */
+.bi-fan {
+  top: 50%;
+  width: 360px;
+  height: 360px;
+  margin-top: -180px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #1a0612 0 12%, transparent 12.5%),
+    repeating-conic-gradient(from 0deg, #f7d6e8 0 6deg, #e79ac2 6deg 9deg, #c25e95 9deg 12deg);
+  -webkit-mask: conic-gradient(from 180deg, #000 0 180deg, transparent 180deg);
+  mask: conic-gradient(from 180deg, #000 0 180deg, transparent 180deg);
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.7));
+}
+
+.bi-fan-l {
+  left: 50%;
+  margin-left: -180px;
+  animation: bi-fan-l 700ms cubic-bezier(0.6, 0, 0.3, 1) 260ms forwards;
+}
+
+.bi-fan-r {
+  left: 50%;
+  margin-left: -180px;
+  transform: scaleX(-1);
+  animation: bi-fan-r 700ms cubic-bezier(0.6, 0, 0.3, 1) 260ms forwards;
+}
+
+@keyframes bi-fan-l {
+  to {
+    transform: translateX(-62%) rotate(-28deg) scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes bi-fan-r {
+  to {
+    transform: scaleX(-1) translateX(-62%) rotate(-28deg) scale(0.85);
+    opacity: 0;
+  }
+}
+
+/* paetê piscando no escuro */
+.bi-sequins i {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  box-shadow:
+    0 0 6px #ff8fc8,
+    0 0 2px #fff;
+  transform: rotate(45deg);
+  opacity: 0;
+  animation: bi-twinkle 900ms ease-in-out both;
+}
+
+@keyframes bi-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.3);
+  }
+}
+
+/* --- versão 1.4: ronda (Sargento Brandão) --- */
+.boss-intro-ronda .bi-card {
+  border: 3px solid #0f1a30;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #1b2740, #0e1626 70%, #070b14);
+  box-shadow:
+    inset 0 0 0 2px #c9d6ea,
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: rc-fade 300ms ease-out 200ms both;
+}
+
+.boss-intro-ronda .bi-portrait {
+  border-color: #c9d6ea;
+}
+
+.boss-intro-ronda .bi-kicker,
+.boss-intro-ronda .bi-title {
+  color: #9fc2ff;
+}
+
+.boss-intro-ronda .bi-name {
+  color: #f2f6ff;
+  text-shadow: 0 3px 0 #000;
+  animation: bi-blink-name 1400ms steps(1, end) 300ms both;
+}
+
+@keyframes bi-blink-name {
+  0%,
+  50% {
+    text-shadow:
+      0 0 10px #ff3b3b,
+      0 3px 0 #000;
+  }
+  25%,
+  75% {
+    text-shadow:
+      0 0 10px #3b7bff,
+      0 3px 0 #000;
+  }
+  100% {
+    text-shadow: 0 3px 0 #000;
+  }
+}
+
+/* a sirene: metade vermelha, metade azul, alternando */
+.bi-siren {
+  background:
+    linear-gradient(90deg, rgba(255, 40, 40, 0.35), transparent 45%),
+    linear-gradient(270deg, rgba(40, 110, 255, 0.35), transparent 45%);
+  animation: bi-siren 360ms steps(2, jump-none) 4 both;
+}
+
+@keyframes bi-siren {
+  from {
+    filter: hue-rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    filter: hue-rotate(180deg);
+    opacity: 0.4;
+  }
+}
+
+/* o holofote varrendo de um lado para o outro */
+.bi-beam {
+  left: 50%;
+  bottom: -10%;
+  width: 140px;
+  height: 130%;
+  margin-left: -70px;
+  background: linear-gradient(0deg, rgba(255, 248, 210, 0.38), rgba(255, 248, 210, 0) 85%);
+  clip-path: polygon(46% 100%, 54% 100%, 100% 0, 0 0);
+  transform-origin: 50% 100%;
+  animation: bi-beam 1500ms ease-in-out 150ms both;
+}
+
+@keyframes bi-beam {
+  0% {
+    transform: rotate(-38deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    transform: rotate(30deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0);
+    opacity: 0;
+  }
+}
+
+/* --- versão 1.4: agiota (Dona Odete) --- */
+.boss-intro-agiota .bi-card {
+  border: 3px solid #1d0f1d;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 15px, rgba(120, 60, 90, 0.18) 15px 16px),
+    linear-gradient(180deg, #2c172c, #1a0c1a 70%, #0e060e);
+  box-shadow:
+    inset 0 0 0 2px #b88aa8,
+    0 8px 0 rgba(0, 0, 0, 0.6);
+  animation: rc-fade 400ms ease-out 200ms both;
+}
+
+.boss-intro-agiota .bi-portrait {
+  border-color: #b88aa8;
+}
+
+.boss-intro-agiota .bi-kicker,
+.boss-intro-agiota .bi-title {
+  color: #e2b9d2;
+}
+
+/* o relógio da dívida: ponteiro batendo de segundo em segundo */
+.bi-clock {
+  left: 50%;
+  top: 44%;
+  width: 280px;
+  height: 280px;
+  margin: -140px 0 0 -140px;
+  border-radius: 50%;
+  background:
+    linear-gradient(0deg, transparent 49%, rgba(226, 185, 210, 0.55) 49% 51%, transparent 51%) 50% 0 / 4px 50% no-repeat,
+    repeating-conic-gradient(from -2deg, rgba(226, 185, 210, 0.45) 0 4deg, transparent 4deg 30deg),
+    radial-gradient(circle, rgba(40, 18, 40, 0.6) 0 66%, transparent 66%);
+  -webkit-mask: radial-gradient(circle, #000 0 70%, transparent 70%);
+  mask: radial-gradient(circle, #000 0 70%, transparent 70%);
+  animation:
+    rc-fade 300ms ease-out both,
+    bi-tick 1000ms steps(4, end) both;
+}
+
+@keyframes bi-tick {
+  from {
+    transform: rotate(-120deg);
+  }
+  to {
+    transform: rotate(0);
+  }
+}
+
+/* o carimbo vermelho desce torto no cartão */
+.bi-stamp {
+  position: absolute;
+  left: 50%;
+  top: 70%;
+  padding: 6px 10px;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: #ff4d5e;
+  border: 3px solid #ff4d5e;
+  border-radius: 4px;
+  background: rgba(40, 0, 6, 0.25);
+  transform: translate(-50%, -50%) rotate(-14deg);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: bi-stamp 300ms cubic-bezier(0.5, 0, 1, 0.5) 1150ms both;
+  pointer-events: none;
+}
+
+@keyframes bi-stamp {
+  0% {
+    transform: translate(-50%, -50%) rotate(-14deg) scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-14deg) scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* --- versão 1.4: contrabando (Valtinho Renegado) --- */
+.boss-intro-contrabando .bi-card {
+  border: 3px solid #26150a;
+  background: linear-gradient(180deg, rgba(56, 32, 15, 0.97), rgba(26, 14, 6, 0.98));
+  box-shadow:
+    inset 0 0 0 2px #d8a05a,
+    0 8px 0 rgba(0, 0, 0, 0.6);
+}
+
+.boss-intro-contrabando .bi-portrait {
+  border-color: #d8a05a;
+}
+
+.boss-intro-contrabando .bi-kicker,
+.boss-intro-contrabando .bi-title {
+  color: #f0c27a;
+}
+
+.boss-intro-contrabando .bi-name {
+  color: #ffe9c8;
+  text-shadow:
+    2px 0 0 #8a1f12,
+    0 3px 0 #000;
+}
+
+/* a porta de aço de enrolar: desce batendo, treme e sobe de novo */
+.bi-shutter {
+  background:
+    repeating-linear-gradient(180deg, #8d949c 0 10px, #5d646b 10px 12px, #b4bcc4 12px 13px, #6f767d 13px 22px),
+    #6f767d;
+  box-shadow: inset 0 -6px 0 #2a2e33;
+  transform: translateY(-100%);
+  animation: bi-shutter 1500ms cubic-bezier(0.6, 0, 0.4, 1) 0ms both;
+}
+
+@keyframes bi-shutter {
+  0% {
+    transform: translateY(-100%);
+  }
+  26% {
+    transform: translateY(0);
+  }
+  32% {
+    transform: translateY(-2%);
+  }
+  36% {
+    transform: translateY(0);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-105%);
+  }
+}
+
 /* "menos movimento": só o cartão, parado */
 .boss-intro.is-still .bi-half,
 .boss-intro.is-still .bi-slash,
 .boss-intro.is-still .bi-curtain,
 .boss-intro.is-still .bi-coins,
 .boss-intro.is-still .bi-sparks,
-.boss-intro.is-still .bi-stage::after {
+.boss-intro.is-still .bi-stage::after,
+.boss-intro.is-still .bi-globe,
+.boss-intro.is-still .bi-tickets,
+.boss-intro.is-still .bi-fan,
+.boss-intro.is-still .bi-sequins,
+.boss-intro.is-still .bi-siren,
+.boss-intro.is-still .bi-beam,
+.boss-intro.is-still .bi-clock,
+.boss-intro.is-still .bi-shutter {
   display: none;
 }
 
@@ -8230,6 +8817,98 @@
   font-size: 16px;
   line-height: 1.02;
   color: #ffe9b8;
+}
+
+/* versão 1.4, Lupa de Joalheiro: a contagem de cada número na mão do rival */
+.rival-counts {
+  font-size: 6px;
+  line-height: 1;
+}
+
+.rival-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 1px 2px;
+  background: rgba(10, 6, 3, 0.75);
+  border: 1px solid rgba(154, 208, 224, 0.45);
+  color: #d8f0f8;
+}
+
+.rival-count-face {
+  color: rgba(216, 240, 248, 0.55);
+}
+
+.rival-count-sep {
+  color: rgba(216, 240, 248, 0.4);
+}
+
+.rival-count-n {
+  color: #ffffff;
+}
+
+.rival-count.is-zero {
+  border-color: rgba(255, 110, 90, 0.6);
+}
+
+.rival-count.is-zero .rival-count-n {
+  color: #ff8a7a;
+}
+
+/* versão 1.4: o selo da regra do rival (ao lado do selo da regra de mesa, se tiver) */
+.rival-rule {
+  top: 10px;
+  left: 10px;
+}
+
+.rival-rule.is-shifted {
+  left: 50px;
+}
+
+.rival-rule-seal {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 10px;
+  color: #ffe8d8;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  background: radial-gradient(circle at 40% 35%, #e0504a, #8a1a18 72%);
+  border: 2px solid #0b0705;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3),
+    0 3px 0 rgba(0, 0, 0, 0.6);
+  opacity: 0.9;
+}
+
+.rival-rule-seal.is-open,
+.rival-rule-seal:active {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+/* o valor muda (outro número da rifa, mais uma vez dos juros): dá um pulinho */
+.rival-rule-value {
+  display: inline-block;
+  animation: boneyard-pop 320ms ease-out;
+}
+
+.rival-rule-tip {
+  border-color: #e0504a;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(224, 80, 74, 0.3);
+}
+
+.boneyard-pile.is-cova .boneyard-count {
+  color: #b9b3a2;
+  animation: none;
+}
+
+.boneyard-pile.is-cova .boneyard-stack {
+  filter: grayscale(0.8) brightness(0.7);
 }
 
 /* Fumaça Densa: o dorme some na fumaça */

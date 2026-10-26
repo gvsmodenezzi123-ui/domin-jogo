@@ -20,10 +20,11 @@ const B = BASE_UNIT_PX;
  * lâmpada fica no meio). Com 3 ou menos o número fica âmbar; vazio, vermelho. Cada
  * compra dá um pulinho no número.
  */
-const BoneyardPile = memo(function BoneyardPile({ count, hidden = false }) {
-  // Fumaça Densa (Patch 0.9.4): o dorme some na fumaça (nem a pilha nem o número aparecem)
-  const tone = hidden ? 'is-smoke' : count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
-  if (hidden) {
+const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
+  // Fumaça Densa (Patch 0.9.4): o dorme some na fumaça (nem a pilha nem o número aparecem);
+  // versão 1.4, Geraldo Coveiro ('cova'): as pedras ficam enterradas, viradas, sem o número
+  const tone = hidden === 'smoke' ? 'is-smoke' : hidden === 'cova' ? 'is-cova' : count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
+  if (hidden === 'smoke') {
     return (
       <div className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`} role="status" aria-label="Dorme escondido pela fumaça">
         <span className="boneyard-smoke" aria-hidden="true">
@@ -32,6 +33,20 @@ const BoneyardPile = memo(function BoneyardPile({ count, hidden = false }) {
         <span className="boneyard-info" aria-hidden="true">
           <span className="boneyard-count font-pixel text-shadow-pixel">?</span>
           <span className="boneyard-label font-pixel">FUMAÇA</span>
+        </span>
+      </div>
+    );
+  }
+  if (hidden === 'cova') {
+    return (
+      <div className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`} role="status" aria-label="Dorme enterrado: a quantidade não aparece">
+        <span className="boneyard-stack" aria-hidden="true">
+          <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-2" />
+          <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-1" />
+        </span>
+        <span className="boneyard-info" aria-hidden="true">
+          <span className="boneyard-count font-pixel text-shadow-pixel">?</span>
+          <span className="boneyard-label font-pixel">COVA</span>
         </span>
       </div>
     );
@@ -53,6 +68,43 @@ const BoneyardPile = memo(function BoneyardPile({ count, hidden = false }) {
         </span>
         <span className="boneyard-label font-pixel">{count === 0 ? 'VAZIO' : 'DORME'}</span>
       </span>
+    </div>
+  );
+});
+
+/**
+ * Versão 1.4: selo da regra do rival (engine/rivalInfo.js: rivalRuleBadge), um lacre vermelho
+ * ao lado do selo da regra de mesa: o número da rifa, quantas vezes faltam para os juros, quanto
+ * a Mesa de Luxo já cobrou... Tocar abre o lembrete (some sozinho em 5 s).
+ */
+const RivalRuleSeal = memo(function RivalRuleSeal({ rule, shifted = false }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    const timer = setTimeout(() => setOpen(false), 5000);
+    return () => clearTimeout(timer);
+  }, [open]);
+  if (!rule) return null;
+  return (
+    <div className={`rival-rule absolute z-[8] ${shifted ? 'is-shifted' : ''}`}>
+      <button
+        type="button"
+        data-rival-rule={rule.id}
+        className={`rival-rule-seal font-pixel ${open ? 'is-open' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={`Regra do rival: ${rule.label}. Toque para ler`}
+      >
+        <span key={String(rule.value)} className="rival-rule-value">
+          {rule.value}
+        </span>
+      </button>
+      {open && (
+        <div className="table-mod-tip rival-rule-tip" role="status">
+          <p className="table-mod-tip-name">REGRA DO RIVAL · {rule.label}</p>
+          <p className="table-mod-tip-rule">{rule.text}</p>
+        </div>
+      )}
     </div>
   );
 });
@@ -153,6 +205,8 @@ function TableBoard({
   noMoves = false,
   boneyardCount = null,
   tableMod = null,
+  boneyardHidden = false,
+  rivalRule = null,
 }) {
   const [areaRef, size] = useElementSize();
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
@@ -299,8 +353,9 @@ function TableBoard({
       <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
-      {boneyardCount !== null && <BoneyardPile count={boneyardCount} hidden={tableMod === 'fumacaDensa'} />}
+      {boneyardCount !== null && <BoneyardPile count={boneyardCount} hidden={tableMod === 'fumacaDensa' ? 'smoke' : boneyardHidden ? 'cova' : null} />}
       <TableModSeal id={tableMod} />
+      <RivalRuleSeal rule={rivalRule} shifted={Boolean(tableModifierOf(tableMod))} />
 
       {dimmed && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
 

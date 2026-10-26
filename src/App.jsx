@@ -50,6 +50,7 @@ import {
   unlockAchievement,
 } from './engine/achievements.js';
 import { trackStatsEvents } from './engine/accountStats.js';
+import { rivalRuleBadge } from './engine/rivalInfo.js';
 import { trackRunStatsEvents } from './engine/runStats.js';
 import { generateRandomSeed, initPRNG, normalizeSeed, seedLabelOf, shuffle as seededShuffle } from './engine/seedEngine.js';
 import { MARKET_MUSIC, SHOP_MUSIC, sound } from './engine/audioSynth.js';
@@ -80,12 +81,15 @@ import {
 import {
   canUndo,
   canUseCanivete,
+  canUseGrampo,
   drawAvailabilityFor,
   endMarksFor,
   knownPlayerTiles,
   passAvailabilityFor,
   requiredOpeningFor,
   revealedTioZeTiles,
+  rivalMechanics,
+  rivalNumberCounts,
   rulesFor,
   spentRelicsOf,
 } from './engine/powers.js';
@@ -176,6 +180,8 @@ const SLAM_SHAKE_MS = 150;
 const NO_MOVES_MS = 1600;
 /** Canivete Suíço: os botões do modo de escolha (no Giz são PULAR · DESCARTAR). */
 const CANIVETE_LABELS = { skip: 'CANCELAR', confirm: 'VIRAR BUCHA' };
+/** Grampo de Cabelo (versão 1.4): os botões do modo de escolha. */
+const GRAMPO_LABELS = { skip: 'CANCELAR', confirm: 'ESCONDER' };
 
 /** Atraso (ms) de cada som dentro de um mesmo lote de eventos, para não embolar. */
 const FX_DELAY = {
@@ -296,6 +302,25 @@ function runEventFx(ev, shell, table, offset = 0) {
         sound.playAnvil();
         haptic([20, 30, 20]);
       });
+      break;
+    // versão 1.4
+    case 'grampo':
+      at(() => sound.playPass());
+      break;
+    case 'cuco':
+      at(() => {
+        sound.playRewind();
+        haptic([30, 60, 30]);
+      });
+      break;
+    case 'raffle':
+      at(() => sound.playCoinTing(2), 300);
+      break;
+    case 'relicStolen':
+      at(() => {
+        sound.playLock();
+        haptic([40, 40, 40]);
+      }, 400);
       break;
     case 'dev':
       at(() => sound.playClick());
@@ -763,7 +788,9 @@ export default function App() {
   const discardMode = pending?.type === 'discard';
   // Canivete Suíço: escolher a pedra que vira bucha usa o mesmo leque do descarte do Giz
   const caniveteMode = pending?.type === 'canivete';
-  const pickMode = discardMode || caniveteMode;
+  // Grampo de Cabelo (versão 1.4): escolher a bucha que some no dorme
+  const grampoMode = pending?.type === 'grampo';
+  const pickMode = discardMode || caniveteMode || grampoMode;
   // enquanto a jogada do rival está em cena, a sua vez ainda não começou
   const isPlayerTurn = playing && state.turn === 'player' && !pending && !tableAnim;
   const hand = state.hands.player;
@@ -776,12 +803,13 @@ export default function App() {
     if (discardMode) return new Set(hand.map((t) => t.id));
     // bucha já é bucha: o Canivete só serve nas outras
     if (caniveteMode) return new Set(hand.filter((t) => t.a !== t.b).map((t) => t.id));
+    if (grampoMode) return new Set(hand.filter((t) => t.a === t.b).map((t) => t.id));
     if (!isPlayerTurn) return new Set();
     const moves = getPlayableMoves(hand, state.board, requiredTileId, playerRules).map((m) => m.tile.id);
     // no treino só acende a pedra que o passo pede
     if (tutorialExpect) return new Set(tutorialExpect.type === 'play' ? moves.filter((id) => id === tutorialExpect.tile) : []);
     return new Set(moves);
-  }, [discardMode, caniveteMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules, tutorialExpect]);
+  }, [discardMode, caniveteMode, grampoMode, isPlayerTurn, hand, state.board, requiredTileId, playerRules, tutorialExpect]);
 
   const selectedTile =
     isPlayerTurn || pickMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
@@ -797,6 +825,7 @@ export default function App() {
   const forcedPass = playing && state.pending?.type === 'forcedPass';
   const undoReady = canUndo(state) && !tableAnim;
   const caniveteReady = isPlayerTurn && canUseCanivete(state);
+  const grampoReady = isPlayerTurn && !tutorialExpect && canUseGrampo(state);
 
   const speechNow = useMemo(() => deriveTioZeSpeech(state.events, state.rivalId), [state.events, state.rivalId]);
   // no treino quem fala é a caixa da aula
@@ -813,6 +842,10 @@ export default function App() {
   const revealedNow = foreseen && !revealedBase.some((t) => t.id === foreseen.id) ? [...revealedBase, foreseen] : revealedBase;
   const revealed = useStableValue(revealedNow, revealedNow.map((t) => t.id).join(','));
   const endMarks = useStableValue(endMarksFor(state));
+  // versão 1.4: o selo da regra do rival, a contagem da Lupa de Joalheiro e o dorme do Geraldo
+  const rivalRule = useStableValue(rivalRuleBadge(state));
+  const numberCounts = useStableValue(playing ? rivalNumberCounts(state) : null);
+  const boneyardHidden = Boolean(rivalMechanics(state).hideBoneyard);
   const spentRelics = useStableValue(spentRelicsOf(state, 'player'));
   const knownKey = playing ? knownPlayerTiles(state).map((t) => t.id).join(',') : null;
   const knownIds = useMemo(() => (knownKey === null ? null : new Set(knownKey ? knownKey.split(',') : [])), [knownKey]);
@@ -918,6 +951,25 @@ export default function App() {
     sound.playClick();
     setSelectedId(null);
     dispatch({ type: 'CANCEL_CANIVETE' });
+  });
+
+  const handleGrampo = useStableHandler(() => {
+    if (!grampoReady) return;
+    sound.playPowerSelect();
+    setSelectedId(null);
+    dispatch({ type: 'USE_GRAMPO' });
+  });
+
+  const handleGrampoPick = useStableHandler(() => {
+    if (!grampoMode || !selectedTile) return;
+    dispatch({ type: 'GRAMPO_PICK', tileId: selectedTile.id });
+    setSelectedId(null);
+  });
+
+  const handleCancelGrampo = useStableHandler(() => {
+    sound.playClick();
+    setSelectedId(null);
+    dispatch({ type: 'CANCEL_GRAMPO' });
   });
 
   const handleUndo = useStableHandler(() => {
@@ -1392,6 +1444,7 @@ export default function App() {
         handRef={rivalHandRef}
         roundKey={`${state.run.match}:${state.round}`}
         press={press}
+        numberCounts={numberCounts}
       />
       {state.tutorial && <div className="tut-spacer shrink-0" aria-hidden="true" />}
 
@@ -1411,6 +1464,8 @@ export default function App() {
         noMoves={forcedPass && !menuOpen && !devOpen}
         boneyardCount={state.boneyard.length}
         tableMod={state.tableMod}
+        boneyardHidden={boneyardHidden}
+        rivalRule={rivalRule}
       />
 
       <PlayerRack
@@ -1434,9 +1489,9 @@ export default function App() {
         endsSum={ends ? ends.left + ends.right : null}
         hint={hint}
         discardMode={pickMode}
-        pickLabels={caniveteMode ? CANIVETE_LABELS : undefined}
-        onDiscard={caniveteMode ? handleCanivetePick : handleDiscard}
-        onSkipDiscard={caniveteMode ? handleCancelCanivete : handleSkipDiscard}
+        pickLabels={caniveteMode ? CANIVETE_LABELS : grampoMode ? GRAMPO_LABELS : undefined}
+        onDiscard={caniveteMode ? handleCanivetePick : grampoMode ? handleGrampoPick : handleDiscard}
+        onSkipDiscard={caniveteMode ? handleCancelCanivete : grampoMode ? handleCancelGrampo : handleSkipDiscard}
         onSecretTap={gameSecretTap}
         relics={state.relics.player}
         relicSlots={relicSlotsFor(state)}
@@ -1447,6 +1502,8 @@ export default function App() {
         onUndo={handleUndo}
         canCanivete={caniveteReady}
         onCanivete={handleCanivete}
+        canGrampo={grampoReady}
+        onGrampo={handleGrampo}
         devUnlocked={devUnlocked}
         onOpenDev={openDev}
         muted={muted}
@@ -1488,7 +1545,7 @@ export default function App() {
         />
       )}
 
-      {showBossIntro && <BossIntro key={bossIntroKey} rival={rival} onDone={finishBossIntro} />}
+      {showBossIntro && <BossIntro key={bossIntroKey} rival={rival} onDone={finishBossIntro} ball={state.fx.raffle?.number ?? null} />}
 
       {state.phase === 'secretReveal' && !tableAnim && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
 

@@ -1,6 +1,6 @@
 // src/components/ArtSprites.jsx
 // Toda a arte vetorial do jogo (SVG 40x40, crispEdges), num lugar só:
-//   - os 18 rivais da campanha (retratos com 4 humores e boca que fala);
+//   - os 28 rivais da campanha (retratos com 4 humores e boca que fala);
 //   - os 15 talismãs (volume 3D, sombra no chão, brilho especular);
 //   - os ícones de interface (moeda, coração, som, menu, lâmpada, olho).
 // Nenhuma imagem externa: tudo é <rect>/<path> desenhado em código.
@@ -37,10 +37,8 @@ export {
   BalancaAcougueIcon,
   CaliceGaloIcon,
   CaniveteIcon,
-  CinzeiroBitucasIcon,
   DadoOssoIcon,
   DedoCadaverIcon,
-  EspelhoBanheiroIcon,
   FitaCrepeIcon,
   FosforoIcon,
   MoedaFuradaIcon,
@@ -58,6 +56,42 @@ export {
 
 // Patch 0.8.0: O Dono da Noite (nó 19 secreto)
 export { DonoDaNoiteAvatar } from './art/SecretBossArt.jsx';
+
+// Versão 1.4: os 10 rivais novos e os 18 talismãs novos
+export {
+  BrandaoAvatar,
+  GenesioAvatar,
+  GeraldoAvatar,
+  JuvenalAvatar,
+  MarquinhosAvatar,
+  NelsinhoAvatar,
+  OdeteAvatar,
+  SoroAvatar,
+  ValtinhoRenegadoAvatar,
+  ZecaAvatar,
+} from './art/Rivals140.jsx';
+export {
+  AmpulhetaIcon,
+  BicarbonatoIcon,
+  CadeadoIcon,
+  CanetaLotericaIcon,
+  ChapaFogaoIcon,
+  CofrinhoIcon,
+  EspatulaIcon,
+  GileteIcon,
+  GrampoIcon,
+  LanternaVigiaIcon,
+  LupaIcon,
+  OleoIcon,
+  PacoteTremocoIcon,
+  PapelCarbonoIcon,
+  PeCoelhoIcon,
+  PiresIcon,
+  PregoIcon,
+  TacoIcon,
+  TrenaIcon,
+  VelaPretaIcon,
+} from './art/RelicArt140.jsx';
 export { BottleCapIcon } from './art/MetaArt.jsx';
 // Patch 0.9.5: Vô Juca, o Professor do Boteco (partida de treino)
 export { VoJucaAvatar } from './art/TutorArt.jsx';

@@ -100,13 +100,24 @@ const VOICE_PROFILES = {
   corvo: { baseFreq: 72, mod: 18, type: 'sawtooth', speed: 105 }, // Corvo da Madrugada: sussurro grave no escuro do beco
   seuTiao: { baseFreq: 150, mod: 55, type: 'triangle', speed: 90 }, // Seu Tião das Moedas: velho risonho, sem pressa
   voJuca: { baseFreq: 132, mod: 38, type: 'triangle', speed: 34 }, // Vô Juca (tutorial): vozinha de vô, fala ligeiro pra aula não arrastar
+  // versão 1.4
+  juvenal: { baseFreq: 145, mod: 30, type: 'triangle', speed: 80 }, // cobrador de pasta, voz de cartório
+  zeca: { baseFreq: 175, mod: 65, type: 'square', speed: 60 }, // charreteiro aos berros
+  marquinhos: { baseFreq: 200, mod: 70, type: 'square', speed: 50 }, // cobrador de van, atropela as palavras
+  nelsinho: { baseFreq: 165, mod: 35, type: 'triangle', speed: 78 }, // contador de pontos, certinho
+  geraldo: { baseFreq: 78, mod: 12, type: 'sine', speed: 130 }, // coveiro, quase não fala
+  genesio: { baseFreq: 185, mod: 75, type: 'square', speed: 58 }, // camelô da rifa, gritando o bilhete
+  soro: { baseFreq: 310, mod: 85, type: 'sine', speed: 88 }, // madame do ponto chic, arrastada
+  brandao: { baseFreq: 100, mod: 28, type: 'sawtooth', speed: 70 }, // sargento, seco e mandão
+  odete: { baseFreq: 270, mod: 45, type: 'sine', speed: 100 }, // agiota velhinha, doce e gelada
+  valtinhoRenegado: { baseFreq: 108, mod: 40, type: 'sawtooth', speed: 76 }, // o ex-sócio do Valtinho, rouco
 };
 
 /** ids do jogo → perfis acima. */
 const VOICE_ALIASES = { neide: 'donaNeide', arlindo: 'seuArlindo' };
 
 /** ids das pedras de grife no jogo → nomes usados no motor. */
-const ENHANCEMENT_ALIASES = { ouro: 'gold', cristal: 'crystal', rubi: 'ruby', chumbo: 'lead', fantasma: 'ghost' };
+const ENHANCEMENT_ALIASES = { ouro: 'gold', cristal: 'crystal', rubi: 'ruby', chumbo: 'lead', fantasma: 'ghost', ambar: 'amber', obsidiana: 'obsidian' };
 
 /** Letras que não fazem som (pausa natural da fala). */
 export const SILENT_CHARS = new Set([' ', '.', ',', '!', '?', '…', '-', ':', ';']);
@@ -128,6 +139,9 @@ export const voiceProfile = (character) => VOICE_PROFILES[VOICE_ALIASES[characte
 // vidro nas notas do acorde — `lead` com [índice da nota, oitava] — e um sino a cada `toll`
 // compassos). `hats`: true/'16' (semicolcheias), '8' (colcheias), 'off' (contratempos) ou
 // 'shaker' (ganzá).
+// Versão 1.4: mais 5 kits, um por chefe novo: 'rifa' (Genésio: sanfona de órgão e zabumba),
+// 'chic' (Dama Soró: cordas e vibrafone), 'ronda' (Sargento Brandão: tuba e metais de marcha),
+// 'agiota' (Dona Odete: órgão escuro e relógio) e 'contrabando' (Valtinho: o lounge da loja elétrico).
 export const TRACKS = {
   // Boteco da Esquina: bossa-funk em ii-V-I, contrabaixo andando e piano elétrico macio
   botecoJazz: {
@@ -278,6 +292,121 @@ export const TRACKS = {
     hats: true,
     rim: [],
   },
+  // Versão 1.4: os 5 chefes novos, cada um com o estilo (o kit) dele.
+  // Genésio da Rifa (Região 1): "Forró da Rifa". Xote ligeiro a 124 BPM em Sol: sanfona de órgão
+  // em stabs, zabumba (surdo), triângulo correndo (ganzá), o "plim" do bingo no lead e o agogô.
+  bossGenesio: {
+    bpm: 124,
+    swing: 0.1,
+    level: 1.02,
+    style: 'rifa',
+    cutoff: 4200,
+    chords: [
+      { root: 43, ep: [59, 62, 67] }, // G
+      { root: 48, ep: [60, 64, 67] }, // C
+      { root: 50, ep: [60, 62, 66] }, // D7
+      { root: 43, ep: [59, 62, 65] }, // G7
+    ],
+    bass: { 0: 0, 3: 7, 6: 0, 8: 0, 11: 7, 14: 12 },
+    comp: { 2: 0.12, 6: 0.12, 10: 0.12, 14: 0.12 },
+    lead: { 0: 24, 4: 28, 8: 31, 12: 28 },
+    kick: [0, 6, 8],
+    snare: [4, 12],
+    bells: { 2: 'h', 10: 'l' },
+    hats: 'shaker',
+    rim: [],
+  },
+  // Dama Soró (Região 2): "Bolero do Ponto Chic". Cabaré lento a 100 BPM em Lá menor frígio:
+  // cordas em pad, vibrafone de vidro nas notas do acorde, baixo acústico e castanholas (palmas).
+  bossSoro: {
+    bpm: 100,
+    swing: 0.08,
+    level: 1.05,
+    style: 'chic',
+    cutoff: 3800,
+    chords: [
+      { root: 45, ep: [57, 60, 64] }, // Am
+      { root: 38, ep: [57, 62, 65] }, // Dm
+      { root: 41, ep: [57, 60, 65] }, // F
+      { root: 40, ep: [56, 59, 62] }, // E7
+    ],
+    bass: { 0: 0, 3: 7, 6: 7, 8: 0, 11: 12, 12: 7 },
+    comp: { 0: 1.5 },
+    lead: { 0: [0, 12], 2: [1, 12], 3: [1, 12], 6: [2, 12], 8: [0, 24], 10: [1, 12], 12: [2, 24], 14: [0, 24] },
+    kick: [0, 8],
+    snare: [6, 7, 14],
+    hats: '8',
+    rim: [],
+  },
+  // Sargento Brandão (Região 2): "Ronda Noturna". Marcha a 116 BPM em Sol menor: tuba de serra,
+  // metais em stabs, caixa rufando, bumbo de desfile e o apito no lead.
+  bossBrandao: {
+    bpm: 116,
+    swing: 0,
+    level: 0.86,
+    style: 'ronda',
+    cutoff: 4400,
+    chords: [
+      { root: 43, ep: [55, 58, 62] }, // Gm
+      { root: 38, ep: [54, 57, 62] }, // D
+      { root: 43, ep: [55, 58, 62] }, // Gm
+      { root: 39, ep: [55, 58, 63] }, // Eb
+    ],
+    bass: { 0: 0, 4: 7, 8: 0, 12: 7 },
+    comp: { 0: 0.14, 4: 0.14, 8: 0.14, 10: 0.1, 12: 0.2 },
+    lead: { 14: 31, 15: 34 },
+    kick: [0, 8],
+    snare: [4, 10, 11, 12, 13],
+    hats: '8',
+    rim: [],
+  },
+  // Dona Odete (chefe final): "Juros com Sangue". 132 BPM em Si bemol menor: órgão de igreja
+  // escuro, o tic-tac do relógio no vidro, bumbo de coração, caixa de ferro e o sino da cobrança
+  // a cada 4 compassos.
+  bossOdete: {
+    bpm: 132,
+    swing: 0,
+    level: 0.96,
+    style: 'agiota',
+    cutoff: 4000,
+    chords: [
+      { root: 46, ep: [58, 61, 65] }, // Bbm
+      { root: 42, ep: [58, 61, 66] }, // Gb
+      { root: 39, ep: [58, 63, 66] }, // Ebm
+      { root: 41, ep: [57, 60, 65] }, // F
+    ],
+    bass: { 0: 0, 2: 0, 6: 12, 8: 0, 10: 0, 14: 12 },
+    comp: { 0: 0.9, 8: 0.6 },
+    lead: { 0: [0, 24], 4: [2, 24], 8: [0, 24], 12: [2, 24] },
+    kick: [0, 2, 8, 10],
+    snare: [4, 12],
+    toll: 4,
+    hats: 'off',
+    rim: [],
+  },
+  // Valtinho Renegado (chefe final): "Contrabando". O lounge da Loja do Valtinho virado do avesso
+  // a 144 BPM: os mesmos acordes, com baixo de serra saturado, piano elétrico batido, arpejo
+  // quadrado e chimbal correndo.
+  bossValtinho: {
+    bpm: 144,
+    swing: 0,
+    level: 0.8,
+    style: 'contrabando',
+    cutoff: 5000,
+    chords: [
+      { root: 41, ep: [57, 60, 64] }, // Fmaj7
+      { root: 40, ep: [56, 59, 62] }, // E7
+      { root: 38, ep: [53, 57, 60] }, // Dm7
+      { root: 36, ep: [55, 59, 64] }, // Cmaj7
+    ],
+    bass: { 0: 0, 2: 12, 3: 0, 6: 7, 8: 0, 10: 12, 11: 0, 14: 7 },
+    comp: { 0: 0.2, 3: 0.12, 8: 0.2, 11: 0.12 },
+    lead: { 0: 24, 2: 28, 4: 31, 6: 28, 8: 36, 10: 31, 12: 28, 14: 31 },
+    kick: [0, 4, 8, 11, 12],
+    snare: [4, 12],
+    hats: true,
+    rim: [],
+  },
   // Loja Clandestina: lounge suave, sem bumbo, piano longo e baixo em mínimas
   lojaLounge: {
     bpm: 96,
@@ -369,6 +498,41 @@ const KITS = {
     lead: 'glass',
     kick: 'heart',
     snare: 'clap',
+  },
+  // versão 1.4
+  rifa: {
+    bass: 'saw',
+    bassOpts: { drive: 4, from: 1300, to: 380, q: 3, dur: 0.14, peak: 0.38 },
+    comp: 'organ',
+    lead: 'square',
+    kick: 'surdo',
+    snare: 'clap',
+  },
+  chic: { bass: 'acoustic', comp: 'pad', lead: 'glass', kick: 'soft', snare: 'clap' },
+  ronda: {
+    bass: 'saw',
+    bassOpts: { drive: 12, from: 900, to: 260, q: 3, dur: 0.22, peak: 0.42 },
+    comp: 'power',
+    compOpts: { drive: 10, lp: 2600, peak: 0.12 },
+    lead: 'square',
+    kick: 'hard',
+    snare: 'crack',
+  },
+  agiota: {
+    bass: 'saw',
+    bassOpts: { drive: 14, from: 900, to: 180, q: 5, dur: 0.2, peak: 0.42 },
+    comp: 'organ',
+    lead: 'glass',
+    kick: 'heart',
+    snare: 'iron',
+  },
+  contrabando: {
+    bass: 'saw',
+    bassOpts: { drive: 34, from: 2200, to: 300, q: 6, dur: 0.16, peak: 0.42 },
+    comp: 'ep',
+    lead: 'square',
+    kick: 'hard',
+    snare: 'crack',
   },
 };
 
@@ -884,6 +1048,9 @@ export class SoundEngine {
     if (enh === 'ruby') this.playRubySub();
     if (enh === 'lead') this.playAnvil();
     if (enh === 'ghost') this.playGhostSigh();
+    // versão 1.4: o Âmbar estala como resina endurecendo; a Obsidiana chia como lava esfriando
+    if (enh === 'amber') this.playCrystalBell();
+    if (enh === 'obsidian') this.noise({ freq: 1800, filter: 'highpass', q: 0.6, peak: 0.16, dur: 0.3, attack: 0.02, delay: 0.05 });
   }
 
   /** Pedra assentando na mesa (sua ou do rival). */
@@ -1768,6 +1935,54 @@ export class SoundEngine {
     this.brassChord([43, 50, 55, 59], { delay: 0.3, dur: 0.18, peak: 0.12 });
     this.brassChord([48, 55, 60, 64], { delay: 0.52, dur: 0.9, peak: 0.14 });
     [0.75, 0.86, 0.94, 1.08, 1.17, 1.3, 1.42].forEach((delay, i) => this.tone({ type: 'triangle', freq: [2093, 2637, 2349, 3136, 2794, 2637, 3520][i], peak: 0.05, dur: 0.18, delay }));
+  }
+
+  /**
+   * Versão 1.4, entrada do Genésio da Rifa: as bolinhas chacoalhando no globo (cada vez mais
+   * devagar) e o "plim-plim" do número sorteado.
+   */
+  playRaffleSpin() {
+    this.duck();
+    const clicks = [0, 0.06, 0.12, 0.19, 0.27, 0.36, 0.46, 0.58, 0.72, 0.88];
+    clicks.forEach((delay, i) => this.noise({ freq: 2600 + (i % 3) * 500, filter: 'bandpass', q: 4, peak: 0.16, dur: 0.025, delay }));
+    this.tone({ type: 'triangle', freq: 1568, peak: 0.08, dur: 0.22, delay: 1.0 });
+    this.tone({ type: 'triangle', freq: 2093, peak: 0.08, dur: 0.4, delay: 1.12, partials: [[1, 1], [2, 0.25]] });
+  }
+
+  /** Entrada da Dama Soró: o sopro dos leques de plumas e um glissando de harpa subindo. */
+  playSilkFan() {
+    this.duck();
+    this.noise({ freq: 1400, filter: 'lowpass', q: 0.5, peak: 0.16, dur: 0.5, attack: 0.12 });
+    [523, 659, 784, 988, 1175, 1319, 1568].forEach((freq, i) => this.tone({ type: 'triangle', freq, peak: 0.06, dur: 0.5, attack: 0.006, delay: 0.3 + i * 0.06 }));
+  }
+
+  /** Entrada do Sargento Brandão: dois apitos secos e a sirene de duas notas. */
+  playPatrolWhistle() {
+    this.duck();
+    [0, 0.22].forEach((delay, i) => this.tone({ type: 'square', freq: 2700 - i * 120, freqEnd: 2650 - i * 120, peak: 0.05, dur: i ? 0.32 : 0.14, delay }));
+    [0.7, 0.98, 1.26].forEach((delay, i) => this.tone({ type: 'sawtooth', freq: i % 2 ? 740 : 988, peak: 0.05, dur: 0.26, attack: 0.02, delay }));
+  }
+
+  /** Entrada da Dona Odete: tic-tac do relógio da dívida, o baque do carimbo e a caixa registradora. */
+  playDebtStamp() {
+    this.duck();
+    [0, 0.25, 0.5, 0.75].forEach((delay, i) => this.noise({ freq: i % 2 ? 2200 : 3000, filter: 'bandpass', q: 6, peak: 0.18, dur: 0.02, delay }));
+    this.later(1.15, () => {
+      this.tone({ type: 'sine', freq: 90, freqEnd: 40, peak: 0.6, dur: 0.22 });
+      this.noise({ freq: 700, filter: 'lowpass', q: 0.8, peak: 0.32, dur: 0.12 });
+    });
+    this.tone({ type: 'triangle', freq: 2637, peak: 0.06, dur: 0.5, delay: 1.45, partials: [[1, 1], [2.4, 0.3]] });
+  }
+
+  /** Entrada do Valtinho Renegado: a porta de aço descendo (chacoalho), o estrondo no chão e subindo de novo. */
+  playShutterSlam() {
+    for (let i = 0; i < 8; i += 1) this.noise({ freq: 1800 - i * 120, filter: 'bandpass', q: 2, peak: 0.12, dur: 0.035, delay: i * 0.045 });
+    this.later(0.39, () => {
+      this.duck();
+      this.tone({ type: 'sine', freq: 75, freqEnd: 36, peak: 0.75, dur: 0.34 });
+      this.noise({ freq: 1200, filter: 'bandpass', q: 0.7, peak: 0.36, dur: 0.18 });
+    });
+    for (let i = 0; i < 10; i += 1) this.noise({ freq: 1000 + i * 110, filter: 'bandpass', q: 2, peak: 0.08, dur: 0.03, delay: 0.95 + i * 0.05 });
   }
 
   /**

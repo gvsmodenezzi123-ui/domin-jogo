@@ -26,10 +26,14 @@
  *   ROOM_FULL     {}                                    a mesa já tem dois
  */
 
-/** 2 = versão 1.3 (rota Loja → Mercado Negro → Duelo e a configuração da mesa). */
+/**
+ * 2 = versão 1.3 (rota Loja → Mercado Negro → Duelo e a configuração da mesa).
+ * 3 = versão 1.4 (talismãs e pedras de grife novos, o Grampo de Cabelo): uma mesa 1.3 e uma
+ * 1.4 não sentam juntas (uma não conhece as peças da outra).
+ */
 import { isRoom } from '../data/pvpRoom.js';
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export const MSG = Object.freeze({
   HELLO: 'HELLO',

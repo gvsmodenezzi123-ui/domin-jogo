@@ -120,7 +120,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.3</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.4</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -129,7 +129,7 @@ function Credits() {
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">NA MESA</span>
-        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador e mais 14 figuras da noite. Quem ensina os novatos é o Vô Juca. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas. E dizem que, para quem carrega almas demais, a noite tem mais uma mesa.
+        Tio Zé, Seu Arlindo, Beto Cigano, o Comendador, a Dona Odete e mais 23 figuras da noite. Quem ensina os novatos é o Vô Juca. A cada run, 15 deles sentam à mesa, numa teia de caminhos que muda sempre. No beco, o Corvo da Madrugada; no engradado, o Seu Tião das Moedas. E dizem que, para quem carrega almas demais, a noite tem mais uma mesa.
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">SOM</span>
@@ -285,7 +285,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 1.3{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO 1.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

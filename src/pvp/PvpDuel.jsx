@@ -17,7 +17,7 @@ import { sound } from '../engine/audioSynth.js';
 import { getOpenEnds, getPlayableMoves, getValidSides } from '../engine/dominoLogic.js';
 import { bonusFloat, buildPlayerHint } from '../engine/gameFeedback.js';
 import { haptic } from '../engine/progress.js';
-import { canUseCanivete, drawAvailabilityFor, endMarksFor, passAvailabilityFor, requiredOpeningFor, revealedTioZeTiles, rulesFor, spentRelicsOf } from '../engine/powers.js';
+import { canUseCanivete, canUseGrampo, drawAvailabilityFor, endMarksFor, passAvailabilityFor, requiredOpeningFor, revealedTioZeTiles, rulesFor, spentRelicsOf } from '../engine/powers.js';
 import { actorOf } from './duelHost.js';
 import { deriveRelicFlashes, hurtKeyOf, procOrigin, runEventFx, shake, tileName } from './duelFx.js';
 import NetBadge from './NetBadge.jsx';
@@ -30,6 +30,7 @@ const SPOTLIGHT_MS = 800;
 const LANDED_MS = 280;
 const SLAM_SHAKE_MS = 150;
 const CANIVETE_LABELS = { skip: 'CANCELAR', confirm: 'VIRAR BUCHA' };
+const GRAMPO_LABELS = { skip: 'CANCELAR', confirm: 'ESCONDER' };
 
 /** O feltro da mesa online (verde-garrafa, um tom mais frio que o do Tio Zé). */
 const PVP_FELT = Object.freeze({ light: '#2f4a3c', mid: '#223a2e', dark: '#16281f' });
@@ -188,7 +189,8 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const minePending = pending && (pending.owner ?? 'player') === 'player' ? pending : null;
   const discardMode = minePending?.type === 'discard';
   const caniveteMode = minePending?.type === 'canivete';
-  const pickMode = discardMode || caniveteMode;
+  const grampoMode = minePending?.type === 'grampo';
+  const pickMode = discardMode || caniveteMode || grampoMode;
   const locked = Boolean(duel.awaiting) || Boolean(duel.result);
   const isPlayerTurn = playing && view.turn === 'player' && !pending && !tableAnim && !locked;
   const hand = view.hands.player;
@@ -198,9 +200,10 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const playableIds = useMemo(() => {
     if (discardMode) return new Set(hand.map((t) => t.id));
     if (caniveteMode) return new Set(hand.filter((t) => t.a !== t.b).map((t) => t.id));
+    if (grampoMode) return new Set(hand.filter((t) => t.a === t.b).map((t) => t.id));
     if (!isPlayerTurn) return new Set();
     return new Set(getPlayableMoves(hand, view.board, requiredTileId, playerRules).map((m) => m.tile.id));
-  }, [discardMode, caniveteMode, isPlayerTurn, hand, view.board, requiredTileId, playerRules]);
+  }, [discardMode, caniveteMode, grampoMode, isPlayerTurn, hand, view.board, requiredTileId, playerRules]);
 
   const selectedTile = isPlayerTurn || pickMode ? (hand.find((t) => t.id === selectedId && playableIds.has(t.id)) ?? null) : null;
   const selectedSides = useStableValue(selectedTile && !pickMode ? getValidSides(selectedTile, view.board, playerRules) : []);
@@ -210,6 +213,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const passRule = useStableValue(isPlayerTurn && boardOpen ? passAvailabilityFor(view, 'player') : null);
   const canPass = Boolean(passRule?.allowed);
   const caniveteReady = isPlayerTurn && canUseCanivete(view, 'player');
+  const grampoReady = isPlayerTurn && canUseGrampo(view, 'player');
   const forcedMine = minePending?.type === 'forcedPass';
 
   const flashesNow = useMemo(() => deriveRelicFlashes(view.events), [view.events]);
@@ -279,6 +283,16 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const handleCancelCanivete = useStableHandler(() => {
     sound.playClick();
     send({ kind: 'caniveteCancel' });
+  });
+  const handleGrampo = useStableHandler(() => {
+    if (!grampoReady) return;
+    sound.playPowerSelect();
+    send({ kind: 'grampo' });
+  });
+  const handleGrampoPick = useStableHandler(() => grampoMode && selectedTile && send({ kind: 'grampoPick', tileId: selectedTile.id }));
+  const handleCancelGrampo = useStableHandler(() => {
+    sound.playClick();
+    send({ kind: 'grampoCancel' });
   });
   const noop = useStableHandler(() => {});
 
@@ -367,9 +381,9 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         endsSum={ends ? ends.left + ends.right : null}
         hint={duel.awaiting ? 'Mandando a jogada...' : hint}
         discardMode={pickMode}
-        pickLabels={caniveteMode ? CANIVETE_LABELS : undefined}
-        onDiscard={caniveteMode ? handleCanivetePick : handleDiscard}
-        onSkipDiscard={caniveteMode ? handleCancelCanivete : handleSkipDiscard}
+        pickLabels={caniveteMode ? CANIVETE_LABELS : grampoMode ? GRAMPO_LABELS : undefined}
+        onDiscard={caniveteMode ? handleCanivetePick : grampoMode ? handleGrampoPick : handleDiscard}
+        onSkipDiscard={caniveteMode ? handleCancelCanivete : grampoMode ? handleCancelGrampo : handleSkipDiscard}
         onSecretTap={noop}
         relics={view.relics.player}
         relicSlots={relicSlots}
@@ -380,6 +394,8 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         onUndo={noop}
         canCanivete={caniveteReady}
         onCanivete={handleCanivete}
+        canGrampo={grampoReady}
+        onGrampo={handleGrampo}
         devUnlocked={false}
         onOpenDev={noop}
         muted={muted}

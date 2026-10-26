@@ -31,6 +31,9 @@ function progressText(achievementId, progress) {
   if (achievementId === 'fregues_ze') return `Tio Zé derrotado: ${Math.min(progress.tio_ze_defeats, 2)}/2`;
   if (achievementId === 'colecionador') return `Comuns básicos equipados: ${Math.min(progress.used_common_relics.length, 6)}/6`;
   if (achievementId === 'rei_sinuca') return `Campanhas no Normal: ${Math.min(progress.normal_mode_clears, 2)}/2`;
+  // versão 1.4
+  if (achievementId === 'mao_pesada') return `Rodadas com mais de 45 pontos: ${Math.min(progress.heavy_hands ?? 0, 3)}/3`;
+  if (achievementId === 'olho_clinico') return `Vitórias nas Pretas ou Prateadas: ${Math.min(progress.dark_mode_wins ?? 0, 5)}/5`;
   return null;
 }
 

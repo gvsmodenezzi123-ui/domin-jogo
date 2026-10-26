@@ -9,6 +9,9 @@
  *   onPlay(state, ctx)     → estado    ao jogar a pedra (ctx: + { tile, side })
  *   onRoundWin(state, ctx) → estado    o dono venceu a rodada com ela na mão ou na mesa
  *   extraTurn: true                    jogar a pedra não passa a vez
+ *   trancaValue: N                     vale N pontos na contagem da tranca (Obsidiana: −5)
+ *
+ * Versão 1.4: Âmbar Fóssil (trava a ponta para os dois) e Obsidiana Vulcânica (−5 na tranca).
  *
  * O visual de cada uma ("shader" em CSS) fica em index.css: .tile-enh-<id>.
  */
@@ -17,6 +20,8 @@ import { gainCoins, patchFx, proc } from '../engine/effects.js';
 
 export const GOLD_PLAY_COINS = 4;
 export const GOLD_WIN_COINS = 10;
+/** Versão 1.4: quanto a Obsidiana Vulcânica vale na contagem da tranca. */
+export const OBSIDIAN_POINTS = -5;
 
 const BOTH_ENDS = Object.freeze(['left', 'right']);
 const endsTouched = (side) => (side === 'root' ? BOTH_ENDS : [side]);
@@ -90,6 +95,37 @@ export const ENHANCEMENTS = Object.freeze({
     description: 'Jogar ela não gasta a sua vez: jogue outra pedra em seguida.',
     // o aviso "JOGUE DE NOVO" sai do reducer, só quando a vez extra vale (não na batida)
     extraTurn: true,
+  }),
+
+  // Versão 1.4
+  ambar: Object.freeze({
+    id: 'ambar',
+    name: 'Âmbar Fóssil',
+    rarity: 'raro',
+    price: 7,
+    color: '#f2a93b',
+    description: 'Trava a ponta onde ela entrou para os dois: o rival não usa essa ponta na próxima vez dele, e você também não na sua seguinte.',
+    onPlay(state, { owner, foe, side }) {
+      // abrindo a mesa ela fica nas duas pontas: trava só a direita (as duas travariam a mesa)
+      const sides = side === 'root' ? ['right'] : endsTouched(side);
+      const frozen = { ...state.fx.frozen, [foe]: [...new Set([...state.fx.frozen[foe], ...sides])] };
+      // a trava do dono só pega depois da vez do rival (engine/gameReducer.js: endTurn)
+      const amber = state.fx.amberNext ?? { player: [], tioZe: [] };
+      const amberNext = { ...amber, [owner]: [...new Set([...(amber[owner] ?? []), ...sides])] };
+      const next = patchFx(state, { frozen, amberNext });
+      return tileProc(next, owner, 'ambar', owner === 'player' ? 'ÂMBAR: PONTA PETRIFICADA' : 'ÂMBAR DELE: PONTA PETRIFICADA');
+    },
+  }),
+
+  obsidiana: Object.freeze({
+    id: 'obsidiana',
+    name: 'Obsidiana Vulcânica',
+    rarity: 'raro',
+    price: 9,
+    color: '#3b2a3f',
+    description: `Na contagem da tranca ela vale −${-OBSIDIAN_POINTS} pontos: na sua mão, ou na mesa se foi você quem jogou.`,
+    // engine/powers.js (trancaTileValues e trancaSumOffsets)
+    trancaValue: OBSIDIAN_POINTS,
   }),
 });
 

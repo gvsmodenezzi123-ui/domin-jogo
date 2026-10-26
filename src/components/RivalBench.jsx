@@ -39,6 +39,7 @@ function RivalBench({
   roundKey,
   press,
   avatar = null,
+  numberCounts = null,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
   // boca do retrato abre e fecha enquanto a fala aparece no balão
@@ -69,6 +70,19 @@ function RivalBench({
             <Hotbar relics={relics} size={20} cols={4} flashes={flashes} press={press} owner="tioZe" bare label={`Talismãs de ${rival.name}`} />
           </div>
         </div>
+
+        {/* versão 1.4, Lupa de Joalheiro: quantas pedras com cada número ele tem (embaixo da mão) */}
+        {numberCounts && (
+          <div className="rival-counts absolute bottom-0.5 right-2 flex gap-[3px] font-pixel" role="status" aria-label={`Lupa: ${numberCounts.map((n, i) => `${n} com ${i}`).join(', ')}`}>
+            {numberCounts.map((n, i) => (
+              <span key={i} className={`rival-count ${n === 0 ? 'is-zero' : ''}`} aria-hidden="true">
+                <span className="rival-count-face">{i}</span>
+                <span className="rival-count-sep">×</span>
+                <span className="rival-count-n">{n}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* mão do rival presa à direita: só a pedra jogada anima */}
         <RivalHand

@@ -102,7 +102,7 @@ describe('Patch 0.9.4: teia v2 (eventos [?] e regras de mesa)', () => {
   it('save v5 guarda a teia e as cicatrizes; save v4 (sem `map`) volta na teia de antes', () => {
     const s = act(createInitialState(), 'NEW_RUN', { seed: 9 });
     const save = snapshotRun({ ...s, run: { ...s.run, scars: 1 } }, 'map', 1);
-    expect(save).toMatchObject({ v: 5, map: MAP_VERSION, scars: 1 });
+    expect(save).toMatchObject({ v: 6, map: MAP_VERSION, scars: 1 });
     expect(isValidSave(save)).toBe(true);
     const loaded = act(createInitialState(), 'LOAD_RUN', { save });
     expect(loaded.run.map).toBe(MAP_VERSION);

@@ -207,26 +207,6 @@ export const AbridorLataIcon = makeIcon(
   'al',
 );
 
-/** Cinzeiro cheio de bitucas: vidro com as pontas de cigarro amontoadas. */
-export const CinzeiroBitucasIcon = makeIcon(
-  () => {
-    const c = pixelCanvas(40, 40);
-    c.ellipse(20, 26, 16, 8, 'g');
-    c.ellipse(20, 24, 13, 5, 'a');
-    c.shade('g', 'G', (x, y) => y < 25);
-    for (const [x0, y0, x1, y1] of [[10, 22, 18, 17], [16, 24, 25, 18], [22, 22, 31, 20], [13, 20, 20, 23]]) {
-      c.line(x0, y0, x1, y1, 'w', 2);
-      c.rect(x0 - 1, y0 - 1, 3, 3, 'o');
-    }
-    c.set(31, 20, 'e').set(25, 18, 'e');
-    c.set(28, 14, 's').set(29, 12, 's').set(27, 10, 's');
-    c.outline('k');
-    return c.rows();
-  },
-  { k: K, g: '#6f8a96', G: '#a9c4cf', a: '#4a4a46', w: '#efeae0', o: '#d9902a', e: '#ff5a2a', s: '#9aa1a8' },
-  'cb',
-);
-
 /** Nota de 3 reais: cédula verde com o 3. */
 export const NotaTresIcon = makeIcon(
   () => {
@@ -263,22 +243,6 @@ export const FitaCrepeIcon = makeIcon(
   },
   { k: K, t: '#d9c48a', T: '#b89f62', d: '#8f7a42', W: '#fff4cf' },
   'fc',
-);
-
-/** Espelho de banheiro trincado: moldura com a rachadura. */
-export const EspelhoBanheiroIcon = makeIcon(
-  () => {
-    const c = pixelCanvas(40, 40);
-    c.rect(8, 4, 24, 32, 'f');
-    c.rect(11, 7, 18, 26, 'g');
-    c.shade('g', 'G', (x, y) => x + y < 26);
-    c.line(14, 9, 20, 18, 'k').line(20, 18, 17, 25, 'k').line(20, 18, 26, 22, 'k').line(17, 25, 21, 31, 'k');
-    c.set(20, 18, 'W');
-    c.outline('k');
-    return c.rows();
-  },
-  { k: K, f: '#9aa1a8', g: '#9fd3e6', G: '#e0f6ff', W: '#ffffff' },
-  'eb',
 );
 
 /** Balança de açougue: mostrador redondo com o ponteiro torto e o prato. */

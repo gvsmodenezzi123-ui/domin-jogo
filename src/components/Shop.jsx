@@ -335,7 +335,12 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
               <DiceCupIcon className="h-14 w-14" />
             </span>
             <span className="shop-dice-label">REEMBARALHAR</span>
-            <Price amount={shop.rerollCost} short />
+            {/* versão 1.4: reembaralhares guardados pelo Pé de Coelho Sarnento */}
+            {shop.rerollCost === 0 && (state.run?.freeRerolls ?? 0) > 0 ? (
+              <span className="shop-price shop-price-short">GRÁTIS ×{state.run.freeRerolls}</span>
+            ) : (
+              <Price amount={shop.rerollCost} short />
+            )}
           </button>
           <button type="button" className="scene-tap shop-plank" onClick={onLeave}>
             <span className="shop-nail shop-nail-tl" aria-hidden="true" />

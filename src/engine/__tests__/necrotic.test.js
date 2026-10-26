@@ -223,7 +223,7 @@ describe('Mercado Negro do Corvo da Madrugada', () => {
   it('vende só Necróticos de $18 a $26, que a loja do Valtinho nunca mostra', () => {
     expect(NECROTIC_IDS).toEqual([
       'pactoCoveiro', 'ossoEnsanguentado', 'olhoMorte', 'trancaCadaverica', 'falsaPartida',
-      'caliceGalo', 'dedoCadaver', 'testamento', 'dadoOsso',
+      'caliceGalo', 'dedoCadaver', 'testamento', 'dadoOsso', 'velaPreta',
     ]);
     for (const id of NECROTIC_IDS) {
       expect(RELICS[id].price).toBeGreaterThanOrEqual(18);

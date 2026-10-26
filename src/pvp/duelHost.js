@@ -79,6 +79,10 @@ const ACTIONS = {
   canivete: () => ({ type: 'USE_CANIVETE' }),
   canivetePick: (i) => ({ type: 'CANIVETE_PICK', tileId: i.tileId }),
   caniveteCancel: () => ({ type: 'CANCEL_CANIVETE' }),
+  // versão 1.4: Grampo de Cabelo
+  grampo: () => ({ type: 'USE_GRAMPO' }),
+  grampoPick: (i) => ({ type: 'GRAMPO_PICK', tileId: i.tileId }),
+  grampoCancel: () => ({ type: 'CANCEL_GRAMPO' }),
 };
 export const INTENT_KINDS = Object.freeze(Object.keys(ACTIONS));
 
@@ -102,6 +106,7 @@ export function autoIntent(state, seat) {
     if (pending.type === 'drawChoice') return { kind: 'pick', tileId: pending.options.slice().sort((x, y) => tileScore(y) - tileScore(x))[0].id };
     if (pending.type === 'discard') return { kind: 'skipDiscard' };
     if (pending.type === 'canivete') return { kind: 'caniveteCancel' };
+    if (pending.type === 'grampo') return { kind: 'grampoCancel' };
     return { kind: 'pass' };
   }
   const moves = getPlayableMoves(state.hands[seat], state.board, requiredOpeningFor(state, seat), rulesFor(state, seat));

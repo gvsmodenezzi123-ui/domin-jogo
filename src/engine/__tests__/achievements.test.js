@@ -46,8 +46,8 @@ afterEach(() => {
 });
 
 describe('Patch 0.7.0: banco das conquistas', () => {
-  it('10 conquistas, cada uma liberando um talismã trancado por ela', () => {
-    expect(ACHIEVEMENT_IDS).toHaveLength(10);
+  it('28 conquistas (10 do 0.7.0 e 18 da versão 1.4), cada uma liberando um talismã trancado por ela', () => {
+    expect(ACHIEVEMENT_IDS).toHaveLength(28);
     expect(ACHIEVEMENT_IDS.map((id) => ACHIEVEMENTS[id].relic).sort()).toEqual(LOCKED_RELIC_IDS.slice().sort());
     for (const id of ACHIEVEMENT_IDS) {
       const a = ACHIEVEMENTS[id];
@@ -167,8 +167,9 @@ describe('Patch 0.7.0: gatilhos pelos eventos do jogo', () => {
 
   it('Milagre de Boteco: bater com bucha com 1 coração', () => {
     const end = (hearts) => ev('roundEnd', { result: { kind: 'bucha', winner: 'player', reason: 'batida' }, hearts: { player: hearts, tioZe: 1 }, handCounts: { player: 0, tioZe: 3 } });
-    expect(trackAchievements([ev('tilePlaced', { by: 'player', tileId: '3-3', double: true }), end(2)], st())).toEqual([]);
-    expect(trackAchievements([ev('tilePlaced', { by: 'player', tileId: '3-4', double: false }), end(1)], st())).toEqual([]);
+    // (versão 1.4: essa batida sem pedra de 6 já libera o Petisco de Balcão)
+    expect(trackAchievements([ev('tilePlaced', { by: 'player', tileId: '3-3', double: true }), end(2)], st())).not.toContain('milagre_boteco');
+    expect(trackAchievements([ev('tilePlaced', { by: 'player', tileId: '3-4', double: false }), end(1)], st())).not.toContain('milagre_boteco');
     expect(trackAchievements([ev('tilePlaced', { by: 'player', tileId: '5-5', double: true }), end(1)], st())).toContain('milagre_boteco');
   });
 

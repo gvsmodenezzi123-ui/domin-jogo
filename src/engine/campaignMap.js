@@ -23,6 +23,11 @@
  * EVENTO "[?]" nos andares 2–5 (data/encounters.js) e algumas mesas comuns ganham uma REGRA DE
  * MESA (data/tableModifiers.js: `node.mod`). A versão 1 continua gerando exatamente o mapa de
  * antes, para o CONTINUAR das runs salvas antes do 0.9.4.
+ *
+ * Versão 3 (versão 1.4): a mesma teia da 2 (os mesmos sorteios de andares, ligações e tipos),
+ * mas o elenco sai dos candidatos novos (`pool` em data/campaign.js, com os 5 rivais comuns
+ * novos) e o chefe de cada região é sorteado entre os `bosses` dela. As versões 1 e 2 seguem
+ * com o elenco de antes.
  */
 
 import { REGIONS } from '../data/campaign.js';
@@ -46,8 +51,15 @@ export const NODE_LABEL = Object.freeze({
   coins: 'SEU TIÃO DAS MOEDAS',
   event: 'EVENTO',
 });
-/** Versão da teia das runs novas (1 = até o Patch 0.9.3; 2 = com eventos e regras de mesa). */
-export const MAP_VERSION = 2;
+/**
+ * Versão da teia das runs novas (1 = até o Patch 0.9.3; 2 = com eventos e regras de mesa;
+ * 3 = versão 1.4, com os rivais novos e o chefe de cada região sorteado).
+ */
+export const MAP_VERSION = 3;
+/** Teias que o jogo ainda sabe gerar (o CONTINUAR de runs antigas volta no mesmo mapa). */
+export const MAP_VERSIONS = Object.freeze([1, 2, 3]);
+/** A versão da teia, ou 1 se não for uma que o jogo conhece. */
+export const knownMapVersion = (version) => (MAP_VERSIONS.includes(version) ? version : 1);
 /** Chance de uma mesa comum (andares 2–5, e a entrada das regiões 2 e 3) ganhar regra de mesa. */
 export const TABLE_MOD_CHANCE = 0.4;
 /** Prêmio do Seu Tião das Moedas. */
@@ -83,10 +95,14 @@ const shuffled = shuffleWith;
  * O de menos corações entre os 4 abre a região; os outros 3 são os comuns dos caminhos.
  * `benched` é quem ficou de fora nesta run.
  */
-export function runCast(seed, regionId) {
-  const list = REGIONS[regionId - 1].nodes;
-  const boss = list[list.length - 1];
-  const pool = list.slice(0, -1);
+export function runCast(seed, regionId, version = 1) {
+  const region = REGIONS[regionId - 1];
+  const list = region.nodes;
+  // teia v3 (versão 1.4): candidatos novos e o chefe sorteado (sorteio próprio, não mexe no elenco)
+  const v3 = version >= 3 && region.pool && region.bosses;
+  const bossRoll = v3 ? createSeededRng(mixSeed(seed ?? 0, `chefe-${regionId}`))() : 0;
+  const boss = v3 ? region.bosses[Math.floor(bossRoll * region.bosses.length)] : list[list.length - 1];
+  const pool = v3 ? region.pool : list.slice(0, -1);
   const rng = createSeededRng(mixSeed(seed ?? 0, `elenco-${regionId}`));
   const picked = shuffled(pool, rng).slice(0, RIVALS_PER_REGION - 1);
   const least = Math.min(...picked.map((id) => RIVALS[id].hearts));
@@ -298,11 +314,11 @@ const eventsFor = (key, regionId) => (regionId === 1 ? 1 : createSeededRng(mixSe
 /** A teia da run inteira para esta semente e versão (memorizada). */
 export function generateCampaign(seed = 0, version = 1) {
   const key = (Number.isFinite(seed) ? seed : 0) >>> 0;
-  const v = version === MAP_VERSION ? MAP_VERSION : 1;
+  const v = knownMapVersion(version);
   const cacheKey = `${key}:${v}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
   let regions = REGIONS.map((region) => {
-    const cast = runCast(key, region.id);
+    const cast = runCast(key, region.id, v);
     const rng = createSeededRng(mixSeed(key, `regiao-${region.id}`));
     const events = v === 1 ? 0 : eventsFor(key, region.id);
     for (let i = 0; i < MAX_TRIES; i += 1) {
@@ -311,7 +327,7 @@ export function generateCampaign(seed = 0, version = 1) {
     }
     return fallbackRegion(region.id, cast);
   });
-  if (v === MAP_VERSION) regions = dressV2(key, regions);
+  if (v >= 2) regions = dressV2(key, regions);
   const byId = new Map(regions.flatMap((r) => r.nodes.map((n) => [n.id, n])));
   // os 15 da run, na ordem das regiões (entrada, comuns, chefe)
   const cast = regions.flatMap((r) => [r.cast.intro, ...r.cast.commons, r.cast.boss]);
@@ -322,7 +338,7 @@ export function generateCampaign(seed = 0, version = 1) {
 }
 
 /** A versão da teia de uma run (saves e runs de antes do 0.9.4: 1). */
-export const mapVersionOf = (state) => (state?.run?.map === MAP_VERSION ? MAP_VERSION : 1);
+export const mapVersionOf = (state) => knownMapVersion(state?.run?.map);
 
 export const campaignOf = (state) => generateCampaign(state.seed ?? 0, mapVersionOf(state));
 

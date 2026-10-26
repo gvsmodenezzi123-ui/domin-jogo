@@ -154,6 +154,7 @@ export const canPlayOn = (tile, endValue) => hasValue(tile, endValue);
  *   steelZero:   a [0|0] encaixa em qualquer ponta (Bucha de Aço)
  *   tilted:      Mesa Desnivelada (regra de mesa, Patch 0.9.4): a 1ª pedra de cada ponta tem
  *                de deixar número PAR na esquerda e ÍMPAR na direita
+ *   noDoubles:   nenhuma bucha entra nesta vez (Taco de Sinuca Lascado do adversário, versão 1.4)
  */
 export const BASE_RULES = Object.freeze({});
 
@@ -192,6 +193,8 @@ export function getPlacement(tile, board, side, rules = BASE_RULES) {
   if (!ends) return side === SIDES.ROOT ? { inner: tile.a, outer: tile.b, via: 'root' } : null;
   if (side !== SIDES.LEFT && side !== SIDES.RIGHT) return null;
   if (rules.frozenSides?.includes(side)) return null;
+  // Taco de Sinuca Lascado (versão 1.4): nesta vez, bucha não entra
+  if (rules.noDoubles && tile.a === tile.b) return null;
   const end = ends[side];
   // Mesa Desnivelada: nos encaixes "forçados" o giro já escolhe o lado que deixa a paridade certa
   const level = (outer) => levelOk(board, side, rules, outer);

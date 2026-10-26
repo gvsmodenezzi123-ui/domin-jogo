@@ -96,11 +96,12 @@ describe('Patch 0.9.0: chefes e Conta do Boteco', () => {
     expect(bossMusicOf('comendador')).toBe('bossFight');
     expect(bossMusicOf('donoDaNoite')).toBe('bossNoite');
     expect(REGIONS[2].music).toBe('submundoNoir');
-    expect(new Set(Object.values(BOSS_TRACKS)).size).toBe(4);
+    // versão 1.4: + os 5 chefes sorteados (Genésio, Dama Soró, Brandão, Odete e Valtinho Renegado)
+    expect(new Set(Object.values(BOSS_TRACKS)).size).toBe(9);
   });
 
-  it('os três chefes de região têm entrada própria', () => {
-    expect([...BOSS_INTRO_IDS].sort()).toEqual(['arlindo', 'beto', 'comendador']);
+  it('os chefes de região (os de antes e os sorteados da 1.4) têm entrada própria', () => {
+    expect([...BOSS_INTRO_IDS].sort()).toEqual(['arlindo', 'beto', 'brandao', 'comendador', 'genesio', 'odete', 'soro', 'valtinhoRenegado']);
   });
 
   it('Conta do Boteco (Patch 0.9.6): 1 tampinha cada; o Bolso Fundo (5º espaço) custa 2', () => {

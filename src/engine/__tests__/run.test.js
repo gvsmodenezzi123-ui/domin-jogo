@@ -244,11 +244,13 @@ describe('partida → mapa → loja (caminho opcional) → próximo rival', () =
 });
 
 describe('rivais', () => {
-  it('18 rivais na ordem da campanha, mais o Dono da Noite (nó 19 secreto, fora do sorteio)', () => {
-    expect(RIVAL_IDS).toHaveLength(19);
-    expect(RIVAL_IDS.filter((id) => !RIVALS[id].secret)).toEqual(REGIONS.flatMap((r) => r.nodes));
+  it('28 rivais na campanha (18 de antes e 10 da versão 1.4), mais o Dono da Noite (nó 19 secreto, fora do sorteio)', () => {
+    expect(RIVAL_IDS).toHaveLength(29);
+    const campaign = REGIONS.flatMap((r) => [...r.pool, ...r.bosses]);
+    expect(RIVAL_IDS.filter((id) => !RIVALS[id].secret).sort()).toEqual(campaign.slice().sort());
+    for (const id of REGIONS.flatMap((r) => r.nodes)) expect(campaign).toContain(id);
     expect(RIVAL_IDS.filter((id) => RIVALS[id].secret)).toEqual(['donoDaNoite']);
-    expect(BOSS_IDS).toEqual(['arlindo', 'beto', 'comendador', 'donoDaNoite']);
+    expect(BOSS_IDS).toEqual(['arlindo', 'genesio', 'beto', 'soro', 'brandao', 'comendador', 'odete', 'valtinhoRenegado', 'donoDaNoite']);
     for (const id of RIVAL_IDS) {
       const rival = RIVALS[id];
       expect(rival.art, id).toBe(id);

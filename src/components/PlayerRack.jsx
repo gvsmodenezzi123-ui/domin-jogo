@@ -64,6 +64,8 @@ function DrawCost({ draw }) {
 function passButtonText(rule) {
   if (!rule) return 'PASSAR A VEZ';
   if (rule.reason === 'coins') return `SALDO INSUFICIENTE ($${rule.cost ?? 3})`;
+  // Sargento Brandão (versão 1.4): com pedra que encaixa, não passa
+  if (rule.reason === 'mustPlay') return 'PASSAR A VEZ: TOQUE DE RECOLHER, JOGUE A PEDRA';
   if (rule.reason === 'mustDraw') return 'PASSAR A VEZ: COMPRE ANTES';
   if (rule.fiado) return 'PASSAR A VEZ (FIADO: DE GRAÇA)';
   return rule.cost > 0 ? `PASSAR A VEZ ($${rule.cost})` : 'PASSAR A VEZ';
@@ -84,6 +86,7 @@ function PassLabel({ rule }) {
       <span className="block">A VEZ{rule?.cost > 0 ? ` ($${rule.cost})` : ''}</span>
       {rule?.fiado && <span className="pass-note block text-brass-300">FIADO</span>}
       {rule?.reason === 'mustDraw' && <span className="pass-note block text-bone-200">COMPRE ANTES</span>}
+      {rule?.reason === 'mustPlay' && <span className="pass-note block text-bone-200">PROIBIDO</span>}
     </>
   );
 }
@@ -121,6 +124,19 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
 });
 
 /**
+ * Versão 1.4: a linha de talismãs desce degraus até caber, direto no DOM e antes de pintar
+ * (data-fit, estilos em index.css): 0 rótulos inteiros · 1 rótulos curtos e botões menores ·
+ * 2 sem os botões dos poderes (o talismã que brilha vira o botão). Sem estado do React: medir
+ * e trocar o degrau não re-renderiza nada.
+ */
+function fitRelicRow(row) {
+  for (const step of ['0', '1', '2']) {
+    row.dataset.fit = step;
+    if (row.scrollWidth <= row.clientWidth + 1) return;
+  }
+}
+
+/**
  * Sua hotbar de talismãs, o DESFAZER do Relógio, o atalho do DEV e (desde o 0.6.2) o som e
  * o menu da partida, que saíram de cima da mão do rival.
  */
@@ -133,6 +149,8 @@ const RelicRow = memo(function RelicRow({
   onUndo,
   canCanivete = false,
   onCanivete,
+  canGrampo = false,
+  onGrampo,
   devUnlocked,
   onOpenDev,
   muted,
@@ -140,9 +158,36 @@ const RelicRow = memo(function RelicRow({
   onOpenMenu,
   press,
 }) {
-  const ready = canUndo && canCanivete ? READY_BOTH : canUndo ? READY_RELOGIO : canCanivete ? READY_CANIVETE : NONE;
+  const ready = readyRelics(canUndo, canCanivete, canGrampo);
+  const abilities = (canUndo ? 1 : 0) + (canCanivete ? 1 : 0) + (canGrampo ? 1 : 0);
+  // Versão 1.4: os botões dos poderes tentam caber na linha (ver fitRelicRow). O toque rápido
+  // no talismã que brilha também usa o poder, e é o caminho quando os botões não cabem.
+  const rowRef = useRef(null);
+  const fitKey = `${ready.join(',')}|${relics.length}|${relicSlots}|${devUnlocked ? 1 : 0}`;
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return undefined;
+    fitRelicRow(row);
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    let width = row.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (row.clientWidth === width) return;
+      width = row.clientWidth;
+      fitRelicRow(row);
+    });
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [fitKey]);
+  const tapRelic = useCallback(
+    (id) => {
+      if (id === 'relogio' && canUndo) onUndo();
+      else if (id === 'canivete' && canCanivete) onCanivete();
+      else if (id === 'grampo' && canGrampo) onGrampo();
+    },
+    [canUndo, canCanivete, canGrampo, onUndo, onCanivete, onGrampo],
+  );
   return (
-    <div className="flex h-[34px] items-center gap-2 px-3 pt-1">
+    <div ref={rowRef} className="relic-row flex h-[34px] items-center gap-2 px-3 pt-1">
       <Hotbar
         relics={relics}
         slots={relicSlots}
@@ -151,18 +196,25 @@ const RelicRow = memo(function RelicRow({
         spent={spentRelics}
         ready={ready}
         press={press}
+        onTap={abilities ? tapRelic : undefined}
         bare
         label="Seus talismãs"
       />
-      <div className="ml-auto flex items-center gap-2">
+      <div className="relic-row-tools ml-auto flex items-center gap-2">
         {canUndo && (
-          <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={onUndo}>
-            DESFAZER
+          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onUndo}>
+            <span className="lbl-full">DESFAZER</span>
+            <span className="lbl-short">VOLTAR</span>
           </button>
         )}
         {canCanivete && (
-          <button type="button" data-tone="brass" className="btn-pixel btn-mini" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
+          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
             CANIVETE
+          </button>
+        )}
+        {canGrampo && (
+          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onGrampo} aria-label="Grampo: esconder uma bucha no fundo do dorme">
+            GRAMPO
           </button>
         )}
         {devUnlocked && (
@@ -191,10 +243,12 @@ const RelicRow = memo(function RelicRow({
   );
 });
 
-const READY_RELOGIO = ['relogio'];
-const READY_CANIVETE = ['canivete'];
-const READY_BOTH = ['relogio', 'canivete'];
 const NONE = [];
+/** Talismãs com o poder pronto (o slot brilha): uma lista fixa para cada combinação (8). */
+const READY = Object.freeze(
+  Array.from({ length: 8 }, (_, i) => Object.freeze([i & 1 && 'relogio', i & 2 && 'canivete', i & 4 && 'grampo'].filter(Boolean))),
+);
+const readyRelics = (undo, canivete, grampo) => READY[(undo ? 1 : 0) + (canivete ? 2 : 0) + (grampo ? 4 : 0)];
 
 /**
  * Uma pedra do leque. Só ela re-renderiza quando muda (selecionar outra pedra não
@@ -413,6 +467,8 @@ function PlayerRack({
   onUndo,
   canCanivete = false,
   onCanivete,
+  canGrampo = false,
+  onGrampo,
   devUnlocked = false,
   onOpenDev,
   muted = false,
@@ -439,6 +495,8 @@ function PlayerRack({
         onUndo={onUndo}
         canCanivete={canCanivete}
         onCanivete={onCanivete}
+        canGrampo={canGrampo}
+        onGrampo={onGrampo}
         devUnlocked={devUnlocked}
         onOpenDev={onOpenDev}
         muted={muted}

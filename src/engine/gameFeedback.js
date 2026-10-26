@@ -7,7 +7,7 @@ import { pickRivalLine } from '../data/rivals.js';
 import { BASE_RULES, getOpenEnds, getPlacement, getValidSides } from './dominoLogic.js';
 import { requiredOpeningFor } from './powers.js';
 
-const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'olhoMorte', 'trucoMarcado', 'caliceGalo', 'dadoOsso', 'dev']);
+const DIRECT_HURT = new Set(['rubi', 'dedal', 'anel', 'olhoMorte', 'trucoMarcado', 'caliceGalo', 'dadoOsso', 'dev', 'chapaFogao', 'juros']);
 
 function findLast(events, predicate) {
   for (let i = events.length - 1; i >= 0; i -= 1) {
@@ -50,6 +50,7 @@ function lineKindFor(ev) {
       // dano direto: ele reclama quando sofre, provoca quando é você
       return ev.who === 'tioZe' ? 'hurtRelic' : 'winRound';
     case 'undo':
+    case 'cuco':
       return 'undo';
     default:
       return null;
@@ -115,6 +116,9 @@ export function buildPlayerHint({
   if (state.pending?.type === 'canivete') {
     return selectedTile ? 'Toque em VIRAR BUCHA: ela vira a bucha do número maior.' : 'Canivete: escolha a pedra que vira bucha (ou cancele).';
   }
+  if (state.pending?.type === 'grampo') {
+    return selectedTile ? 'ESCONDER: some no dorme e a vez passa.' : 'Grampo: escolha a bucha para esconder.';
+  }
   if (state.pending?.type === 'forcedPass') return `Nada encaixa e acabaram as compras. A vez é de ${rivalName}.`;
   if (!isPlayerTurn) return `Vez de ${rivalName}...`;
   if (!state.board.root) {
@@ -138,6 +142,7 @@ export function buildPlayerHint({
     }
     return 'Toque no JOGAR ou na vaga pontilhada da mesa.';
   }
+  if (playableCount > 0 && passRule?.reason === 'mustPlay') return 'Toque de recolher: tem pedra que encaixa, é jogar.';
   if (playableCount > 0) return `Sua vez. ${playableCount} pedra${playableCount > 1 ? 's' : ''} encaixa${playableCount > 1 ? 'm' : ''}.`;
   if (passRule?.reason === 'mustDraw') return 'Nada encaixa. Compre no dorme: a 1ª é grátis.';
   if (drawAllowed) return 'Nada encaixa. Compre de novo ou passe a vez.';

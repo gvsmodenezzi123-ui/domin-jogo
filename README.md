@@ -67,7 +67,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 | | |
 | --- | --- |
 | Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
-| Versão | `versionName` = `package.json` (1.3.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Versão | `versionName` = `package.json` (1.4.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
 | Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
 | Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
 | Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
@@ -163,6 +163,105 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Versão 1.4: 10 rivais novos, 18 talismãs, 2 pedras e a teia sorteada
+
+### Teia v3: elenco e chefes sorteados (`data/campaign.js`, `engine/campaignMap.js`)
+
+Cada região tem uma lista de rivais (`pool`) e uma de chefes (`bosses`). A semente da run
+escolhe quem senta em cada nó e qual chefe espera no topo (`mixSeed(seed, 'chefe-<região>')`),
+então a mesma semente monta sempre a mesma teia.
+
+| Região | Rivais | Chefes |
+| --- | --- | --- |
+| 1 | Tio Zé, Tonho, Baiano, Valdir, Dona Neide, **Juvenal Cobrador**, **Zeca Charreteiro** | Seu Arlindo ou **Genésio da Rifa** |
+| 2 | Marcão, Serginho, Cida, Paulinho, Tião, **Marquinhos da Van**, **Nelsinho 71** | Beto Cigano, **Dama Soró** ou **Sargento Brandão** |
+| 3 | Carlinhos, Bigode, Sofia, Fausto, Alemão, **Geraldo Coveiro** | Comendador, **Dona Odete** ou **Valtinho Renegado** |
+
+- Runs guardadas na teia v1 ou v2 continuam com o elenco antigo (`MAP_VERSION` 3, `knownMapVersion`).
+- O save foi para a versão 6 (lê 3 a 6) e guarda os reembaralhares grátis do Pé de Coelho.
+- O Dono da Noite (nó 19) aparece depois de qualquer um dos 3 chefes finais, com 3+ Necróticos.
+
+### Os rivais novos (`data/rivals.js`, retratos em `art/Rivals140.jsx`)
+
+| Rival | Região | ♥ | Talismãs | Regra própria |
+| --- | --- | --- | --- | --- |
+| Juvenal Cobrador | 1 | 3 | Pires de Aperitivo | com mais de $15, o seu passe voluntário custa +$2 |
+| Zeca Charreteiro | 1 | 4 | Caneca de Chopp | abre toda rodada com a bucha mais alta dele |
+| Marquinhos da Van | 2 | 4 | Cinzeiro de Bar | o seu múltiplo de 5 rende $1 a menos ("SEM TROCO") |
+| Nelsinho 71 | 2 | 4 | Borracha Escolar | as buchas dele valem 1 ponto a menos na tranca |
+| Geraldo Coveiro | 3 | 5 | Chave de Fenda, Dedal | você não vê quantas pedras restam no dorme (COVA) |
+| Genésio da Rifa (chefe) | 1 | 5 | Cinzeiro de Bar, Abridor de Lata | aposta num número por rodada: cada pedra sua com ele custa $1 (até $3) |
+| Dama Soró (chefe) | 2 | 6 | Dado Viciado, Giz | cada pedra comum sua custa $1 (até $4 na rodada); bucha e grife não pagam |
+| Sargento Brandão (chefe) | 2 | 6 | Cadeado, Pano de Chão | com pedra que encaixa, você não pode passar |
+| Dona Odete (chefe final) | 3 | 8 | Dedal, Anel | a cada 4 vezes suas sem múltiplo de 5, $3 de juros (sem dinheiro, 1♥, nunca o último) |
+| Valtinho Renegado (chefe final) | 3 | 7 | Dedal, Mão Grande | desliga 1 talismã seu (sorteado) a partida inteira |
+
+- A regra de cada um aparece num selo no feltro (`rivalRuleBadge` em `engine/rivalInfo.js`),
+  com o número da rifa, os juros e o talismã roubado ao vivo.
+- Os 5 chefes novos têm entrada própria (`BossIntro.jsx`: globo da rifa, leques de paetê,
+  sirene da ronda, carimbo de dívida e porta de aço) e trilha própria (`bossGenesio`,
+  `bossSoro`, `bossBrandao`, `bossOdete`, `bossValtinho` em `engine/audioSynth.js`).
+- Peças Pretas e Prateadas: todos têm carga própria (`HARD_LOADOUTS`, `INFERNO_LOADOUTS`).
+
+### Os 18 talismãs novos (`data/relics.js`, arte em `art/RelicArt140.jsx`)
+
+Todos saem por conquista (🔒 até liberar; a meta aparece no Livro de Boteco).
+
+| Talismã | Raridade | Efeito | Como liberar |
+| --- | --- | --- | --- |
+| Pires de Aperitivo | Comum | começar a rodada com 2+ pedras leves (soma até 3): +$2 | bater uma rodada sem jogar pedra com 6 |
+| Gilete no Colarinho | Comum | bucha sua em ponta ímpar: +$3 | 3 buchas em pontas ímpares na mesma partida |
+| Bicarbonato de Sódio | Comum | 1x por partida: a próxima compra paga (em $ ou ♥) sai de graça | comprar 3 no mesmo turno, em 3 turnos da run |
+| Cofrinho de Barro | Comum | múltiplo de 5 do rival: você leva metade do que ele faturou | sofrer 2 múltiplos de 5 numa rodada e vencer a partida |
+| Prego Enferrujado | Comum | 1ª pedra com 0 da rodada: 1 pedra do rival à mostra (com o [0\|0], 2) | bater com o [0\|0] |
+| Pé de Coelho Sarnento | Comum | cada batida que você toma vale 1 reembaralhar grátis na próxima loja (até 3) | sobreviver a 3 batidas ficando com 1♥ |
+| Grampo de Cabelo | Raro | 1x por rodada: esconde uma bucha da mão no fundo do dorme (botão GRAMPO) | passar de propósito 3 vezes numa partida e vencer |
+| Espátula de Gordura | Raro | cada pedra comprada na rodada: −3 na sua soma da tranca | vencer uma tranca por 1 ponto |
+| Taco de Sinuca Lascado | Raro | pontas iguais depois da sua jogada: o rival não joga bucha na vez dele | pontas iguais 4 vezes numa partida |
+| Óleo de Máquina Singer | Raro | a 2ª compra do turno sai de graça | comprar uma bucha, jogá-la no turno e vencer a rodada |
+| Pacote de Tremoço | Raro | começar a rodada com mais de 45 pontos: +$4 | 3 rodadas com mais de 45 pontos (somando as runs) |
+| Cadeado Enferrujado | Raro | vitória por tranca: +1 de dano | derrubar um chefe numa tranca |
+| Chapa de Fogão a Lenha | Lendário | 1x por rodada: depois de uma bucha sua, se o rival comprar ou passar, 1 de dano | fazer o rival passar 4 vezes numa partida |
+| Lupa de Joalheiro | Lendário | mostra quantas pedras de cada número o rival tem | 5 partidas vencidas nas Pretas ou Prateadas |
+| Caneta de Lotérica Azul | Lendário | pontas somando 10 ou 12: $4 do bolso do rival para o seu | pontas somando 10 três vezes numa partida |
+| Trena de Pedreiro | Lendário | tranca decidida por até 5 pontos (empate incluso) é sua e dá +1 de dano | empatar uma tranca |
+| Ampulheta Rachada | Mítico | 1x por partida: o rival bateu, o tempo volta (a pedra volta, ele compra 2, a vez é sua) | vencer uma partida da Região 3 sem perder coração |
+| Vela Preta Derretida | Necrótico | batida com [0\|0] ou [6\|6] dá 4 de dano; você senta com até 1♥ a menos | derrubar um rival batendo com [0\|0] ou [6\|6] com 1♥ |
+
+- Ficaram de fora por quebrar o jogo: Ferradura, Mão de Glória e Mercúrio Líquido.
+- No online saem também a Lupa, o Taco, a Ampulheta e o Pé de Coelho (`PVP_BANNED_RELICS`).
+  O Grampo funciona no duelo (protocolo 3).
+
+### Duas pedras de grife (`data/enhancedTiles.js`, visual em `index.css`)
+
+| Pedra | Raridade | Visual | Efeito |
+| --- | --- | --- | --- |
+| Âmbar Fóssil | Raro ($7) | resina cor de mel com um inseto e bolhas presos | trava a ponta onde entrou: o rival não usa na vez dele, e você também não na sua seguinte |
+| Obsidiana Vulcânica | Raro ($9) | vidro vulcânico preto espelhado, brilho furta-cor, pontos de brasa | vale −5 na contagem da tranca (na sua mão ou na mesa, se foi você quem jogou) |
+
+### Nomes que se repetiam
+
+- Cinzeiro Cheio de Bitucas virou **Lanterna do Vigia** e o Espelho de Banheiro Trincado virou
+  **Papel Carbono Amassado**: mesmo efeito, arte nova. Os ids no código não mudaram
+  (`cinzeiroBitucas`, `espelhoBanheiro`), então saves e conquistas continuam valendo.
+- Madame Soró saiu como **Dama Soró** e o Tião Cobrador como **Juvenal Cobrador**.
+
+### Equilíbrio (150 duelos simulados por chefe, jogador sem talismãs; vitória do jogador)
+
+| Chefe | Normal | Pretas | Prateadas |
+| --- | --- | --- | --- |
+| Seu Arlindo / Genésio | 44% / 48% | 21% / 32% | 25% / 18% |
+| Beto / Soró / Brandão | 17% / 28% / 31% | 12% / 17% / 15% | 14% / 23% / 9% |
+| Comendador / Odete / Valtinho | 4% / 5% / 7% | 7% / 2% / 2% | 3% / 3% / 5% |
+
+- Genésio estava com 24% no normal (o Truco Marcado dele tirava coração demais para a
+  Região 1). Agora tem o Abridor de Lata, e a rifa cobra $1 até $3.
+- O Brandão tinha 5% por causa do Dedal. Trocou pelo Cadeado Enferrujado.
+- O Valtinho estava fácil demais para um chefe final (33%, ou 51% contra um jogador com 4
+  talismãs, contra 11% e 17% dos outros dois). Ganhou o Dedal no lugar do Anel.
+- Os talismãs novos ficam entre −7 e +19 pontos de vitória contra rivais da Região 2. A
+  referência mais forte do jogo continua sendo o Dedal antigo, com +34.
 
 ## Versão 1.3: a mesa online rápida (Loja → Mercado Negro → Duelo)
 
@@ -772,10 +871,10 @@ Até a meta sair, esse talismã não aparece em lugar nenhum.
 | Canivete Suíço Enferrujado | Raro | 1x por partida: 1 pedra da mão vira a bucha do número maior (botão CANIVETE) |
 | Baralho de Truco Marcado 🔒 | Raro | Múltiplo de 5 com uma ponta 4: −1♥ no rival |
 | Abridor de Lata Cego 🔒 | Raro | Batida com o rival ainda com 2+ pedras: +1 de dano |
-| Cinzeiro Cheio de Bitucas | Raro | Rival passou 2 vezes seguidas: 1 pedra dele fica à mostra |
+| Cinzeiro Cheio de Bitucas (1.4: Lanterna do Vigia) | Raro | Rival passou 2 vezes seguidas: 1 pedra dele fica à mostra |
 | Nota de 3 Reais 🔒 | Raro | 1º reembaralhar de cada visita à Loja é grátis |
 | Fita Crepe do Gambiarra 🔒 | Lendário | 1x por partida: joga de novo se a próxima pedra encaixa na ponta que abriu |
-| Espelho de Banheiro Trincado | Lendário | Pedra de grife do rival: a sua comum mais pesada copia o material |
+| Espelho de Banheiro Trincado (1.4: Papel Carbono Amassado) | Lendário | Pedra de grife do rival: a sua comum mais pesada copia o material |
 | Balança de Açougue Descalibrada 🔒 | Lendário | Na tranca, sua soma tem −10 |
 | Relógio de Parede do Bar | Lendário | Mesa com 4, 8, 12… pedras: ponta direita aceita qualquer número na sua vez |
 | Cálice de Sangue de Galo 🔒 | Necrótico | Batida de bucha dá 5 de dano; cada compra custa 1♥ (nunca o último) |

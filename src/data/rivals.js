@@ -1,14 +1,15 @@
 /**
- * Os 18 personagens da campanha (3 regiões; cada uma com 1 rival de entrada, 4 comuns
- * espalhados pela teia de caminhos e o chefe no topo). A escalação fica em data/campaign.js,
- * a teia em engine/campaignMap.js. O nível da IA sai da região (ver AI_TIERS abaixo).
+ * Os personagens da campanha (3 regiões; cada uma com 1 rival de entrada, comuns espalhados
+ * pela teia de caminhos e o chefe no topo). A escalação fica em data/campaign.js, a teia em
+ * engine/campaignMap.js. O nível da IA sai da região (ver AI_TIERS abaixo). Versão 1.4: 5
+ * comuns novos e 5 chefes novos, sorteados com os de antes (teia v3).
  *
  * Cada rival tem:
  *   region / boss      região (1–3) e se é o chefe dela
  *   hearts / coins     corações e moedas no começo da partida
  *   relics             talismãs passivos (aparecem na hotbar dele)
  *   deck               pedras aprimoradas do baralho dele ({ id: aprimoramento })
- *   mechanics          regras próprias (ver gameReducer.js):
+ *   mechanics          regras próprias (ver gameReducer.js e engine/powers.js):
  *                        doubleBuchaDamage  batida com bucha dele dá dano dobrado
  *                        drawFee            você paga $N a ele a cada compra do dorme
  *                        healOnPlayerPass   ele recupera 1♥ quando você passa
@@ -17,6 +18,17 @@
  *                        stealOnCross       rouba $N quando joga casando as duas pontas
  *                        trancaWeight       as pedras dele valem N× na contagem da tranca
  *                        trancaShield       ignora o primeiro dano de tranca da partida
+ *                      versão 1.4:
+ *                        passTax            { above, extra }: com mais de $above, seu passe voluntário custa +$extra
+ *                        opensWithBucha     abre toda rodada com a bucha mais alta dele
+ *                        fiveTax            o seu múltiplo de 5 paga $N a menos
+ *                        doubleDiscount     as buchas dele valem N pontos a menos na tranca
+ *                        hideBoneyard       você não vê quantas pedras restam no dorme
+ *                        raffle             { fee, cap }: o número apostado da rodada cobra $fee por pedra sua com ele (até $cap)
+ *                        luxuryFee          { fee, cap }: cada pedra comum sua custa $fee (até $cap por rodada)
+ *                        mustPlay           com pedra que encaixa, você não pode passar
+ *                        stolenStock        desliga 1 talismã seu (sorteado) a partida inteira
+ *                        interest           { every, fee }: juros a cada N vezes suas sem múltiplo de 5
  *   style              pesos da IA (ver scoreMove em ai/tioZeAI.js)
  *   reflexMs           tempo de "pensar" antes de cada ação (mínimo 600 ms, para dar para ver)
  *   prizeBonus         moedas extras ao vencê-lo
@@ -234,6 +246,77 @@ export const RIVALS = Object.freeze({
       hurtRelic: ['Que falta de educação!'],
     },
   }),
+  // Versão 1.4: dois rivais comuns novos na Região 1
+  juvenal: Object.freeze({
+    id: 'juvenal',
+    art: 'juvenal', // retrato 40x40 em components/art/Rivals140.jsx
+    name: 'Juvenal Cobrador',
+    title: 'O Homem da Pasta',
+    region: 1,
+    boss: false,
+    rarity: 'comum',
+    hearts: 3,
+    coins: 5,
+    relics: ['pires'],
+    deck: {},
+    // com mais de $15 no seu bolso, cada passe voluntário seu custa $2 a mais
+    mechanics: { passTax: { above: 15, extra: 2 } },
+    style: style({ heavy: 1.2, follow: 2.2 }),
+    reflexMs: 850,
+    prizeBonus: 1,
+    felt: { light: '#4a3f2a', mid: '#382f1f', dark: '#261f14' },
+    decor: [],
+    lines: {
+      intro: ['Boa noite. Vim cobrar uma continha.', 'Pasta na mesa, conta no papel.'],
+      play: ['Anotado.', 'Juros, juros...', 'Mais uma parcela.', 'Assina aqui.'],
+      playDouble: ['Bucha vencida!', 'Parcela dupla.'],
+      draw: ['Vou consultar o arquivo...'],
+      pass: ['Passo. Fica pra próxima parcela.'],
+      bonus5: ['Cinco no carnê.', 'Múltiplo de cinco, recibo emitido.'],
+      playerPass: ['Passou? Isso tem taxa, viu.', 'Passe também se paga.'],
+      playerDraw: ['Cava, cava, que a dívida espera.'],
+      winRound: ['Quitado!', 'Conta paga, freguês.'],
+      loseRound: ['Hm. Erro de cálculo.', 'Vou recorrer.'],
+      tranca: ['Trancou? Vamos à auditoria.'],
+      duelWin: ['Seu nome tá no caderninho agora.'],
+      duelLose: ['Tá quitado. Por hoje.'],
+      hurtRelic: ['Ai! Isso não estava no contrato!'],
+    },
+  }),
+  zeca: Object.freeze({
+    id: 'zeca',
+    art: 'zeca',
+    name: 'Zeca Charreteiro',
+    title: 'O Chicote Estalando',
+    region: 1,
+    boss: false,
+    rarity: 'raro',
+    hearts: 4,
+    coins: 5,
+    relics: ['caneca'],
+    deck: {},
+    // abre toda rodada com a bucha mais alta dele, se tiver uma
+    mechanics: { opensWithBucha: true },
+    style: style({ doubles: 1.6, earlyDoubles: 8, follow: 2 }),
+    reflexMs: 650,
+    prizeBonus: 3,
+    felt: { light: '#5a4a24', mid: '#45381a', dark: '#2e2511' },
+    decor: [],
+    lines: {
+      intro: ['Eita, segura o burro! Vamo jogar!', 'Chicote na mão, bucha na frente.'],
+      play: ['Arre!', 'Ê, boi!', 'Vai, vai, vai!', 'Toca a carroça.'],
+      playDouble: ['CARROÇA NA FRENTE!', 'Bucha puxando a fila!'],
+      draw: ['Deixa eu ver o que tem no feno...'],
+      pass: ['Empacou. Passo.'],
+      bonus5: ['Cinco léguas!', 'Cinco no embornal.'],
+      playerPass: ['Empacou, é? Hehe.'],
+      winRound: ['Estalou o chicote!', 'Cheguei primeiro!'],
+      loseRound: ['Atolou a roda...', 'Égua!'],
+      duelWin: ['Vai a pé, que a charrete é minha.'],
+      duelLose: ['Tu tem rédea curta, hein.'],
+      hurtRelic: ['Ai! Coice!'],
+    },
+  }),
   arlindo: Object.freeze({
     id: 'arlindo',
     art: 'arlindo', // retrato 40x40 em components/ArtSprites.jsx
@@ -267,6 +350,43 @@ export const RIVALS = Object.freeze({
       duelWin: ['Volta quando crescer a barba.'],
       duelLose: ['Bom jogo, rapaz. Bom jogo.'],
       hurtRelic: ['Ai, minha coluna!'],
+    },
+  }),
+  // Versão 1.4: chefe sorteado da Região 1 (no lugar do Seu Arlindo, meio a meio)
+  genesio: Object.freeze({
+    id: 'genesio',
+    art: 'genesio',
+    name: 'Genésio da Rifa',
+    title: 'O Picareta do Bilhete',
+    region: 1,
+    boss: true,
+    rarity: 'lendario',
+    hearts: 5,
+    coins: 8,
+    relics: ['cinzeiro', 'abridorLata'],
+    deck: { '4-4': 'ouro', '2-2': 'cristal' },
+    // Aposta Casada: cada rodada ele aposta num número; cada pedra SUA com ele custa $1 (até $3 na rodada)
+    mechanics: { raffle: { fee: 1, cap: 3 } },
+    style: style({ five: 6, follow: 2.5, pressure: 3 }),
+    reflexMs: 800,
+    prizeBonus: 10,
+    felt: { light: '#6a2a2a', mid: '#511f1f', dark: '#371414' },
+    decor: ['mug'],
+    lines: {
+      intro: ['Olha a rifa! Um número, uma fortuna!', 'Escolhi meu número. Joga nele, que eu cobro.'],
+      play: ['Vai que é sorte!', 'Olha o bilhete!', 'Tá premiado!', 'Hehe, comprou?'],
+      playDouble: ['Bucha premiada!', 'Dois números, dupla sorte!'],
+      draw: ['Deixa eu ver os canhotos...'],
+      pass: ['Passo. A rifa ainda corre.'],
+      bonus5: ['Cinco! Prêmio da casa.', 'Deu o cinco no sorteio!'],
+      playerPass: ['Sem bilhete, freguês?'],
+      playerDraw: ['Compra, compra, que o sorteio é já.'],
+      winRound: ['Saiu o meu número!', 'Prêmio entregue!'],
+      loseRound: ['Rifa furada...', 'Esse bilhete era falso!'],
+      tranca: ['Trancou? Sorteio cancelado.'],
+      duelWin: ['Volte sempre, a rifa nunca acaba.'],
+      duelLose: ['Leva o prêmio. Foi honesto. Juro.'],
+      hurtRelic: ['Ai! Isso é golpe!'],
     },
   }),
   marcao: Object.freeze({
@@ -438,6 +558,78 @@ export const RIVALS = Object.freeze({
       hurtRelic: ['Ninguém encosta no Tião!'],
     },
   }),
+  // Versão 1.4: dois rivais comuns novos na Região 2
+  marquinhos: Object.freeze({
+    id: 'marquinhos',
+    art: 'marquinhos',
+    name: 'Marquinhos da Van',
+    title: 'Sem Troco',
+    region: 2,
+    boss: false,
+    rarity: 'comum',
+    hearts: 4,
+    coins: 6,
+    relics: ['cinzeiro'],
+    deck: { '2-5': 'ouro' },
+    // o seu múltiplo de 5 paga $1 a menos (ele nunca tem troco)
+    mechanics: { fiveTax: 1 },
+    style: style({ five: 6, heavy: 1.1, pressure: 3.5 }),
+    reflexMs: 600,
+    prizeBonus: 2,
+    felt: { light: '#2a5a5a', mid: '#1f4444', dark: '#142d2d' },
+    decor: ['neon'],
+    lines: {
+      intro: ['Sobe aí, que a van tá saindo!', 'Só aceito trocado, hein.'],
+      play: ['Próxima parada!', 'Encosta aí.', 'Vai descer?', 'Tá lotado!'],
+      playDouble: ['Bucha no corredor!'],
+      draw: ['Deixa eu ver a gaveta do troco...'],
+      pass: ['Passo. Engarrafou.'],
+      bonus5: ['Cinco! Passagem paga.', 'Múltiplo de cinco, sem troco.'],
+      playerPass: ['Perdeu o ponto?'],
+      playerBonus: ['Cinco? Fico com o troco.', 'Troco tá em falta, parceiro.'],
+      winRound: ['Fim da linha!', 'Desce aqui.'],
+      loseRound: ['Furou o pneu...', 'Multaram a van.'],
+      duelWin: ['A próxima sai às dez.'],
+      duelLose: ['Tá liberado, pode descer.'],
+      hurtRelic: ['Ô! Cuidado com a lataria!'],
+    },
+  }),
+  nelsinho: Object.freeze({
+    id: 'nelsinho',
+    art: 'nelsinho',
+    name: 'Nelsinho 71',
+    title: 'O Mestre do Ponto',
+    region: 2,
+    boss: false,
+    rarity: 'raro',
+    hearts: 4,
+    coins: 6,
+    relics: ['borracha'],
+    deck: { '3-5': 'cristal' },
+    // as buchas dele valem 1 ponto a menos na contagem da tranca
+    mechanics: { doubleDiscount: 1 },
+    style: style({ doubles: 1.4, lockEnds: 3, trancaBias: 0.12, heavy: 1.3 }),
+    reflexMs: 750,
+    prizeBonus: 3,
+    felt: { light: '#5a2a5a', mid: '#441f44', dark: '#2d142d' },
+    decor: ['neon', 'chalk'],
+    lines: {
+      intro: ['Setenta e um. Esse é o meu ponto.', 'Aqui cada ponto conta, campeão.'],
+      play: ['Ponto.', 'Contado.', 'Hmm, no ponto.', 'Calculado.'],
+      playDouble: ['Bucha leve, ponto baixo.'],
+      draw: ['Vou buscar o ponto certo...'],
+      pass: ['Passo. O ponto tá comigo.'],
+      passTranca: ['Passo... e vamos contar.'],
+      bonus5: ['Cinco, como manda o ponto.'],
+      playerPass: ['Perdeu o ponto, é?'],
+      winRound: ['Ponto final.', 'Contou menos, levou.'],
+      loseRound: ['Errei a conta...', 'Ponto fora da curva.'],
+      tranca: ['Trancou. Minha especialidade.'],
+      duelWin: ['Treina a contagem, campeão.'],
+      duelLose: ['Tu conta bem. Respeito.'],
+      hurtRelic: ['Ei! Isso tira ponto!'],
+    },
+  }),
   beto: Object.freeze({
     id: 'beto',
     art: 'beto', // retrato 40x40 em components/ArtSprites.jsx
@@ -472,6 +664,79 @@ export const RIVALS = Object.freeze({
       duelWin: ['Seu destino era perder. Paciência.'],
       duelLose: ['O pote é seu. Por hoje.'],
       hurtRelic: ['Mau-olhado! Mau-olhado!'],
+    },
+  }),
+  // Versão 1.4: chefes sorteados da Região 2 (Beto Cigano, Dama Soró ou Sargento Brandão)
+  soro: Object.freeze({
+    id: 'soro',
+    art: 'soro',
+    name: 'Dama Soró',
+    title: 'A Rainha do Ponto Chic',
+    region: 2,
+    boss: true,
+    rarity: 'mitico',
+    hearts: 6,
+    coins: 15,
+    relics: ['dadoViciado', 'giz'],
+    deck: { '6-6': 'rubi', '3-3': 'chumbo' },
+    // Mesa de Luxo: cada pedra comum sua (nem bucha nem grife) custa $1, até $4 na rodada; com $0, sai de graça
+    mechanics: { luxuryFee: { fee: 1, cap: 4 } },
+    style: style({ doubles: 1.2, five: 5, pressure: 4, follow: 3 }),
+    reflexMs: 850,
+    prizeBonus: 15,
+    felt: { light: '#6a1f4a', mid: '#511738', dark: '#370f26' },
+    decor: ['velvet', 'neon'],
+    lines: {
+      intro: ['Bem-vindo ao Ponto Chic, querido. Aqui tudo tem preço.', 'Pedra comum na minha mesa? Paga a entrada.'],
+      play: ['Charmoso.', 'Com classe, querido.', 'Ui.', 'Que deselegante...'],
+      playDouble: ['Bucha de gala!', 'Só entra quem tem estilo.'],
+      draw: ['Deixa eu retocar o batom...'],
+      pass: ['Passo, meu bem.'],
+      bonus5: ['Cinco, com gorjeta.', 'Champanhe na conta!'],
+      playerPass: ['Ficou sem par pra dança?'],
+      playerDraw: ['Pode cavar, querido. Com licença.'],
+      winRound: ['Elegância vence.', 'Fecha a conta, garçom!'],
+      loseRound: ['Que vulgar!', 'Desfiou a meia...'],
+      tranca: ['Trancou? Que fino.'],
+      duelWin: ['Volte quando tiver traje.'],
+      duelLose: ['Você tem estilo, admito.'],
+      hurtRelic: ['Meu vestido!'],
+    },
+  }),
+  brandao: Object.freeze({
+    id: 'brandao',
+    art: 'brandao',
+    name: 'Sargento Brandão',
+    title: 'A Ronda Noturna',
+    region: 2,
+    boss: true,
+    rarity: 'mitico',
+    hearts: 6,
+    coins: 12,
+    relics: ['cadeado', 'panoChao'],
+    deck: { '5-5': 'chumbo', '4-6': 'chumbo' },
+    // Toque de Recolher: com pedra que encaixa, você é obrigado a jogar (passar só sem jogada)
+    mechanics: { mustPlay: true },
+    style: style({ pressure: 6, heavy: 1.3, lockEnds: 2 }),
+    reflexMs: 700,
+    prizeBonus: 15,
+    felt: { light: '#2a3a5a', mid: '#1f2c45', dark: '#141d2e' },
+    decor: ['neon'],
+    lines: {
+      intro: ['Documentos e pedras na mesa. É a ronda!', 'Toque de recolher: aqui ninguém passa.'],
+      play: ['Circulando!', 'Na linha!', 'Ordem!', 'Mãos onde eu possa ver.'],
+      playDouble: ['Bucha apreendida!', 'Dois por dois, em forma!'],
+      draw: ['Revista no dorme.'],
+      pass: ['Passo. Por ordem superior.'],
+      bonus5: ['Cinco. Multa aplicada.'],
+      playerPass: ['Passar? Aqui não, cidadão.'],
+      playerDraw: ['Pode cavar. Eu tô de olho.'],
+      winRound: ['Detido!', 'Ocorrência registrada.'],
+      loseRound: ['Fugiu da ronda...', 'Vou pedir reforço!'],
+      tranca: ['Barreira fechada!'],
+      duelWin: ['Assina o boletim e vai pra casa.'],
+      duelLose: ['Liberado. Mas tô de olho.'],
+      hurtRelic: ['Desacato!'],
     },
   }),
   carlinhos: Object.freeze({
@@ -639,6 +904,43 @@ export const RIVALS = Object.freeze({
       hurtRelic: ['Ai! Tétano!'],
     },
   }),
+  // Versão 1.4: rival comum novo na Região 3
+  geraldo: Object.freeze({
+    id: 'geraldo',
+    art: 'geraldo',
+    name: 'Geraldo Coveiro',
+    title: 'O Silencioso',
+    region: 3,
+    boss: false,
+    rarity: 'raro',
+    hearts: 5,
+    coins: 8,
+    relics: ['chaveDeFenda', 'dedal'],
+    deck: { '1-6': 'chumbo' },
+    // o dorme fica enterrado na mesa dele: você não vê quantas pedras restam
+    mechanics: { hideBoneyard: true },
+    style: style({ heavy: 1.6, pressure: 5, lockEnds: 2, trancaBias: 0.1 }),
+    reflexMs: 1000,
+    prizeBonus: 5,
+    felt: { light: '#3a3f33', mid: '#2b2f26', dark: '#1c1f19' },
+    decor: [],
+    lines: {
+      intro: ['...', 'A terra guarda tudo. Até o dorme.'],
+      play: ['...', 'Hm.', 'Terra.', 'Mais uma.'],
+      playDouble: ['Duas pás.'],
+      draw: ['Cavando...'],
+      pass: ['...'],
+      bonus5: ['Cinco palmos.'],
+      playerPass: ['...O silêncio te pegou.'],
+      playerDraw: ['Cava. Eu entendo de cavar.'],
+      winRound: ['Enterrado.', 'Descanse.'],
+      loseRound: ['...', 'Hm. Raso.'],
+      tranca: ['A cova fechou.'],
+      duelWin: ['Mais um pro meu canteiro.'],
+      duelLose: ['...Vai em paz.'],
+      hurtRelic: ['...!'],
+    },
+  }),
   comendador: Object.freeze({
     id: 'comendador',
     art: 'comendador', // retrato 40x40 em components/ArtSprites.jsx
@@ -673,7 +975,82 @@ export const RIVALS = Object.freeze({
       hurtRelic: ['Como ousa?!'],
     },
   }),
-  // Patch 0.8.0: nó 19 secreto. Só aparece se você vencer o Comendador com 3+ Necróticos.
+  // Versão 1.4: chefes finais sorteados da Região 3 (Comendador, Dona Odete ou Valtinho Renegado)
+  odete: Object.freeze({
+    id: 'odete',
+    art: 'odete',
+    name: 'Dona Odete',
+    title: 'A Agiota do Beco Escuro',
+    region: 3,
+    boss: true,
+    rarity: 'mitico',
+    hearts: 8,
+    coins: 30,
+    relics: ['dedal', 'anel'],
+    deck: { '6-6': 'rubi', '5-5': 'fantasma', '3-6': 'ouro' },
+    // Juros com Sangue: a cada 4 vezes suas sem fechar múltiplo de 5, ela leva $3; sem dinheiro,
+    // 1 coração (nunca o último, no máximo 1 por rodada)
+    mechanics: { interest: { every: 4, fee: 3 } },
+    style: style({ five: 8, pressure: 6, heavy: 1.4, follow: 3, trancaBias: 0.05 }),
+    reflexMs: 950,
+    prizeBonus: 40,
+    felt: { light: '#3a1f3a', mid: '#2c172c', dark: '#1d0f1d' },
+    decor: ['coins', 'velvet'],
+    lines: {
+      intro: ['Senta, meu anjo. A conta já está aberta.', 'Cada rodada sem pagar, os juros correm.'],
+      play: ['Anotado no caderninho.', 'Com juros, meu bem.', 'Corre, corre...', 'Tic-tac.'],
+      playDouble: ['Bucha com correção monetária!', 'Dobrou a dívida!'],
+      draw: ['Deixa eu ver os penhores...'],
+      pass: ['Passo. O relógio corre por mim.'],
+      bonus5: ['Cinco. Por conta dos juros.', 'Mais cinco no cofrinho.'],
+      playerPass: ['Atrasou a parcela, querido?'],
+      playerDraw: ['Pode cavar. Tudo entra na conta.'],
+      playerBonus: ['Pagou a parcela. Bom menino.'],
+      winRound: ['Conta cobrada.', 'Ninguém foge da Odete.'],
+      loseRound: ['Calote!', 'Isso vai pro caderninho.'],
+      tranca: ['Trancou? Juros de mora.'],
+      duelWin: ['Sua alma fica de garantia.'],
+      duelLose: ['Dívida quitada. Por enquanto.'],
+      hurtRelic: ['Que desaforo!'],
+    },
+  }),
+  valtinhoRenegado: Object.freeze({
+    id: 'valtinhoRenegado',
+    art: 'valtinhoRenegado',
+    name: 'Valtinho Renegado',
+    title: 'O Ex-Sócio do Balcão',
+    region: 3,
+    boss: true,
+    rarity: 'mitico',
+    hearts: 7,
+    coins: 25,
+    relics: ['dedal', 'maoGrande'],
+    deck: { '6-6': 'fantasma', '0-0': 'rubi', '4-5': 'cristal' },
+    // Estoque Roubado: desliga 1 talismã seu (sorteado) a partida inteira
+    mechanics: { stolenStock: true },
+    style: style({ five: 7, pressure: 5, follow: 3, heavy: 1.3, aggression: 0.5 }),
+    reflexMs: 800,
+    prizeBonus: 40,
+    felt: { light: '#4a2a14', mid: '#38200f', dark: '#26150a' },
+    decor: ['mahogany', 'ash'],
+    lines: {
+      intro: ['O balcão era meu. O estoque também. Inclusive o seu.', 'Peguei um talismã seu emprestado. Devolvo... talvez.'],
+      play: ['Mercadoria quente.', 'Sem nota fiscal.', 'Pega essa.', 'Do meu estoque.'],
+      playDouble: ['Bucha de contrabando!', 'Essa caiu do caminhão.'],
+      draw: ['Vou no depósito...'],
+      pass: ['Passo. O estoque aguenta.'],
+      bonus5: ['Cinco. Lucro limpo.', 'Margem de cinco!'],
+      playerPass: ['Faltou mercadoria, freguês?'],
+      playerDraw: ['Compra, compra. Sem garantia.'],
+      winRound: ['Liquidação total!', 'Vendido!'],
+      loseRound: ['Devolução? Não aceito!', 'Prejuízo...'],
+      tranca: ['Trancou o depósito.'],
+      duelWin: ['O balcão é meu de novo.'],
+      duelLose: ['Fica com o balcão. E manda lembranças pro meu ex-sócio.'],
+      hurtRelic: ['Isso é roubo! ...Ah, é verdade.'],
+    },
+  }),
+  // Patch 0.8.0: nó 19 secreto. Só aparece se você vencer o chefe final com 3+ Necróticos.
   donoDaNoite: Object.freeze({
     id: 'donoDaNoite',
     art: 'donoDaNoite', // retrato 48x48 em components/art/SecretBossArt.jsx
@@ -840,6 +1217,8 @@ export const playStyleOf = (id, mode = 'normal') => {
 //   Chefes    Seu Arlindo: 6♥ e as buchas viram Chumbo (travam as pontas)
 //             Beto Cigano: 7♥, taxa de $3 a cada compra do dorme, 2 Ouros e 1 Rubi
 //             Comendador Moreira: 8♥, 2 talismãs Necróticos e imune à 1ª tranca
+//             (1.4) Genésio: 6♥ e a rifa cobra até $5; Dama Soró: 7♥ e o luxo até $5;
+//             Sargento Brandão: 7♥ e um Rubi; Dona Odete: 9♥ e juros de $4; Valtinho: 8♥
 // ---------------------------------------------------------------------------
 
 export const HARD_LOADOUTS = Object.freeze({
@@ -861,6 +1240,17 @@ export const HARD_LOADOUTS = Object.freeze({
   fausto: { relics: ['maoGrande', 'dedal'], deck: { '3-6': 'cristal', '1-4': 'cristal', '0-6': 'rubi' } },
   alemao: { relics: ['buchaDeAco', 'dedal'], deck: { '6-6': 'chumbo', '4-5': 'chumbo', '5-5': 'fantasma' } },
   comendador: { hearts: 8, relics: ['trancaCadaverica', 'falsaPartida'], deck: { '6-6': 'fantasma', '5-5': 'rubi', '4-6': 'ouro' } },
+  // versão 1.4
+  juvenal: { relics: ['pires'], deck: { '1-2': 'ouro' } },
+  zeca: { relics: ['caneca'], deck: { '6-6': 'chumbo' } },
+  genesio: { hearts: 6, relics: ['cinzeiro', 'abridorLata'], deck: { '4-4': 'ouro', '2-2': 'cristal', '5-5': 'ouro' }, mechanics: { raffle: { fee: 2, cap: 5 } } },
+  marquinhos: { relics: ['cinzeiro', 'giz'], deck: { '2-5': 'ouro', '1-4': 'ouro' } },
+  nelsinho: { relics: ['borracha', 'chaveDeFenda'], deck: { '3-5': 'cristal', '4-4': 'chumbo' } },
+  soro: { hearts: 7, relics: ['dadoViciado', 'giz'], deck: { '6-6': 'rubi', '3-3': 'chumbo', '5-5': 'ouro' }, mechanics: { luxuryFee: { fee: 1, cap: 5 } } },
+  brandao: { hearts: 7, relics: ['cadeado', 'panoChao'], deck: { '5-5': 'chumbo', '4-6': 'chumbo', '6-6': 'rubi' } },
+  geraldo: { relics: ['chaveDeFenda', 'dedal'], deck: { '1-6': 'chumbo', '0-0': 'rubi', '2-3': 'fantasma' } },
+  odete: { hearts: 9, relics: ['dedal', 'anel'], deck: { '6-6': 'rubi', '5-5': 'fantasma', '3-6': 'ouro' }, mechanics: { interest: { every: 4, fee: 4 } } },
+  valtinhoRenegado: { hearts: 8, relics: ['dedal', 'maoGrande'], deck: { '6-6': 'fantasma', '0-0': 'rubi', '4-5': 'cristal' } },
   donoDaNoite: { hearts: 10, relics: ['anel', 'dedal'], deck: { '6-6': 'fantasma', '0-0': 'rubi', '3-3': 'cristal', '5-5': 'rubi' } },
 });
 
@@ -937,6 +1327,57 @@ export const INFERNO_LOADOUTS = Object.freeze({
       '6-6': 'fantasma', '5-5': 'rubi',
       '4-6': 'ouro', '2-6': 'ouro', '3-5': 'ouro', '1-5': 'ouro', '0-6': 'ouro',
       '3-6': 'cristal', '1-1': 'cristal', '2-4': 'cristal',
+    },
+  },
+  // versão 1.4
+  juvenal: { relics: ['pires'], deck: { '1-2': 'ouro', '3-6': 'rubi' } },
+  zeca: { relics: ['caneca'], deck: { '6-6': 'chumbo', '2-5': 'ouro' } },
+  genesio: {
+    hearts: 5,
+    relics: ['cinzeiro', 'abridorLata', 'giz', 'caneca', 'borracha'],
+    deck: {
+      '4-4': 'ouro', '2-2': 'cristal', '5-5': 'ouro',
+      '0-4': 'ouro', '1-4': 'ouro', '3-4': 'ouro', '4-6': 'ouro',
+      '1-2': 'cristal', '2-6': 'cristal', '6-6': 'chumbo',
+    },
+  },
+  marquinhos: { relics: ['cinzeiro', 'giz'], deck: { '2-5': 'ouro', '1-4': 'ouro', '0-6': 'rubi' } },
+  nelsinho: { relics: ['borracha', 'chaveDeFenda'], deck: { '3-5': 'cristal', '4-4': 'chumbo', '1-1': 'fantasma' } },
+  soro: {
+    hearts: 7,
+    relics: ['dadoViciado', 'giz', 'cinzeiro', 'caneca', 'chaveDeFenda'],
+    deck: {
+      '6-6': 'rubi', '3-3': 'chumbo', '5-5': 'ouro',
+      '1-6': 'ouro', '2-6': 'ouro', '4-6': 'ouro', '0-6': 'ouro',
+      '3-6': 'cristal', '1-1': 'cristal', '4-4': 'chumbo',
+    },
+  },
+  brandao: {
+    hearts: 7,
+    relics: ['cadeado', 'panoChao', 'cinzeiro', 'giz', 'chaveDeFenda'],
+    deck: {
+      '5-5': 'chumbo', '4-6': 'chumbo', '6-6': 'rubi',
+      '3-5': 'chumbo', '2-4': 'chumbo', '1-5': 'ouro', '0-5': 'ouro',
+      '2-5': 'cristal', '3-3': 'ouro', '1-3': 'ouro',
+    },
+  },
+  geraldo: { relics: ['chaveDeFenda', 'dedal', 'cinzeiro'], deck: { '1-6': 'chumbo', '0-0': 'rubi', '2-3': 'fantasma', '4-5': 'ouro' } },
+  odete: {
+    hearts: 8,
+    relics: ['dedal', 'anel', 'cinzeiro', 'giz', 'chaveDeFenda'],
+    deck: {
+      '6-6': 'rubi', '5-5': 'fantasma', '3-6': 'ouro',
+      '2-6': 'ouro', '1-5': 'ouro', '0-5': 'ouro', '4-4': 'ouro',
+      '2-3': 'cristal', '1-4': 'cristal', '0-0': 'chumbo',
+    },
+  },
+  valtinhoRenegado: {
+    hearts: 7,
+    relics: ['maoGrande', 'dedal', 'anel', 'cinzeiro', 'chaveDeFenda'],
+    deck: {
+      '6-6': 'fantasma', '0-0': 'rubi', '4-5': 'cristal',
+      '5-6': 'ouro', '3-5': 'ouro', '2-5': 'ouro', '1-6': 'ouro',
+      '0-3': 'cristal', '2-2': 'cristal', '4-4': 'chumbo',
     },
   },
   donoDaNoite: {

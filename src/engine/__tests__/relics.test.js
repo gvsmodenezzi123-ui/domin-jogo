@@ -179,9 +179,10 @@ describe('peças aprimoradas', () => {
   });
 
   it('cada aprimoramento tem nome, raridade, preço, cor e descrição', () => {
-    expect(ENHANCEMENT_IDS).toEqual(['ouro', 'rubi', 'cristal', 'chumbo', 'fantasma']);
+    // versão 1.4: + Âmbar Fóssil e Obsidiana Vulcânica
+    expect(ENHANCEMENT_IDS).toEqual(['ouro', 'rubi', 'cristal', 'chumbo', 'fantasma', 'ambar', 'obsidiana']);
     const rarity = Object.fromEntries(ENHANCEMENT_IDS.map((id) => [id, ENHANCEMENTS[id].rarity]));
-    expect(rarity).toEqual({ ouro: 'raro', rubi: 'mitico', cristal: 'lendario', chumbo: 'lendario', fantasma: 'mitico' });
+    expect(rarity).toEqual({ ouro: 'raro', rubi: 'mitico', cristal: 'lendario', chumbo: 'lendario', fantasma: 'mitico', ambar: 'raro', obsidiana: 'raro' });
     for (const id of ENHANCEMENT_IDS) {
       expect(ENHANCEMENTS[id]).toMatchObject({ id, name: expect.any(String), color: expect.any(String) });
       expect(ENHANCEMENTS[id].price).toBeGreaterThan(0);
@@ -369,8 +370,8 @@ describe('talismãs (seus)', () => {
     expect(s.fx.undo).toBeNull();
   });
 
-  it('todas as 40 relíquias (20 de antes + 20 do Patch 0.7.0) têm raridade, preço e arte', () => {
-    expect(RELIC_IDS).toHaveLength(40);
+  it('todas as 58 relíquias (20 de antes + 20 do Patch 0.7.0 + 18 da versão 1.4) têm raridade, preço e arte', () => {
+    expect(RELIC_IDS).toHaveLength(58);
     for (const id of RELIC_IDS) {
       const relic = RELICS[id];
       expect(relic.id).toBe(id);

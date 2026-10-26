@@ -5,7 +5,7 @@ import { MODES, modeOf, playerMaxHearts } from '../../data/difficulty.js';
 import { RELICS } from '../../data/relics.js';
 import { BOSS_IDS, HARD_LOADOUTS, HARD_PLAY_STYLES, PLAY_STYLES, RIVALS, RIVAL_IDS, rivalFor, tierOf } from '../../data/rivals.js';
 import { ENHANCEMENTS } from '../../data/enhancedTiles.js';
-import { availableNodes } from '../campaignMap.js';
+import { availableNodes, campaignOf } from '../campaignMap.js';
 import {
   FULL_SET,
   MAX_HEARTS,
@@ -55,7 +55,9 @@ describe('maletas: Branca (normal) e Preta (difícil)', () => {
     s = { ...s, hearts: { ...s.hearts, player: 3 } };
     s = dev(s, 'winMatch');
     expect(s.hearts.player).toBe(4); // +2, mas o teto é 4
-    const boss = dev({ ...s, phase: 'playing', hearts: { ...s.hearts, player: 1 } }, 'setRival', { rivalId: 'arlindo', deck: FULL_SET.slice() });
+    // versão 1.4: o chefe da Região 1 é sorteado (Seu Arlindo ou Genésio)
+    const r1Boss = campaignOf(s).regions[0].cast.boss;
+    const boss = dev({ ...s, phase: 'playing', hearts: { ...s.hearts, player: 1 } }, 'setRival', { rivalId: r1Boss, deck: FULL_SET.slice() });
     const won = dev(boss, 'winMatch');
     expect(won.hearts.player).toBe(4); // chefe cura tudo (até 4)
   });
