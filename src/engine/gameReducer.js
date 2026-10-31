@@ -89,7 +89,7 @@ import {
 import { MAX_RELIC_SLOTS, challengeIs, relicSlotsFor, startCoinsFor } from './loadout.js';
 import { MAX_FREE_REROLLS, isValidSave } from './save.js';
 import { DEFAULT_ROOM, ROOM_RARITY_CHANCES } from '../data/pvpRoom.js';
-import { buildShop, freeFirstReroll, relicBuyBlock, sellPriceFor, tileBuyBlock } from './shop.js';
+import { buildShop, freeFirstReroll, packBuyBlock, relicBuyBlock, rollPack, sellPriceFor, tileBuyBlock } from './shop.js';
 
 export const SEATS = Object.freeze(['player', 'tioZe']);
 export const other = (seat) => (seat === 'player' ? 'tioZe' : 'player');
@@ -1293,7 +1293,7 @@ function tioZeAct(input) {
 // ---------------------------------------------------------------------------
 
 function buyRelic(state, { index }) {
-  if (state.phase !== 'shop') return state;
+  if (state.phase !== 'shop' || state.shop.opening) return state;
   const offer = state.shop.relics[index];
   if (relicBuyBlock(state, offer)) return state;
   let next = loseCoins(state, 'player', offer.price, 'shop');
@@ -1307,7 +1307,7 @@ function buyRelic(state, { index }) {
 
 /** A pedra de grife substitui a comum no SEU baralho (continua com 28). */
 function buyTile(state, { index }) {
-  if (state.phase !== 'shop') return state;
+  if (state.phase !== 'shop' || state.shop.opening) return state;
   const offer = state.shop.tiles[index];
   if (tileBuyBlock(state, offer)) return state;
   let next = loseCoins(state, 'player', offer.price, 'shop');
@@ -1320,7 +1320,7 @@ function buyTile(state, { index }) {
 }
 
 function sellRelic(state, { id }) {
-  if (state.phase !== 'shop' || !hasRelic(state, 'player', id)) return state;
+  if (state.phase !== 'shop' || state.shop.opening || !hasRelic(state, 'player', id)) return state;
   const price = sellPriceFor(state, id);
   let next = { ...state, relics: { ...state.relics, player: state.relics.player.filter((r) => r !== id) } };
   next = gainCoins(next, 'player', price, 'sell');
@@ -1328,15 +1328,52 @@ function sellRelic(state, { id }) {
 }
 
 /** Reembaralhar: $3, $5, $8 e depois $12 por vez na mesma visita. */
+/**
+ * Versão 1.5: compra um pacote fechado. Paga, abre na hora (shop.opening com as 3 opções) e
+ * a loja espera a escolha (SHOP_PACK_PICK): nada de comprar, vender, reembaralhar ou sair antes.
+ */
+function buyPack(state, { index }) {
+  if (state.phase !== 'shop') return state;
+  const offer = state.shop.packs?.[index];
+  if (packBuyBlock(state, offer)) return state;
+  let next = loseCoins(state, 'player', offer.price, 'shop');
+  const options = rollPack(next, offer.id);
+  next = {
+    ...next,
+    shop: {
+      ...next.shop,
+      packs: next.shop.packs.map((o, i) => (i === index ? { ...o, sold: true } : o)),
+      opening: { packId: offer.id, options },
+    },
+  };
+  return emit(next, { type: 'shopBuy', kind: 'pack', id: offer.id, price: offer.price });
+}
+
+/** Escolhe 1 das 3 opções do pacote aberto. */
+function pickPack(state, { index }) {
+  if (state.phase !== 'shop' || !state.shop.opening) return state;
+  const option = state.shop.opening.options[index];
+  if (!option) return state;
+  let next = { ...state, shop: { ...state.shop, opening: null } };
+  if (option.kind === 'relic') {
+    if (next.relics.player.length >= relicSlotsFor(next) || next.relics.player.includes(option.id)) return state;
+    next = { ...next, relics: { ...next.relics, player: [...next.relics.player, option.id] } };
+  } else {
+    next = { ...next, decks: { ...next.decks, player: { ...next.decks.player, [option.tileId]: option.enhancement } } };
+  }
+  return emit(next, { type: 'packPick', pack: state.shop.opening.packId, ...option });
+}
+
 function rerollShop(state) {
-  if (state.phase !== 'shop' || state.coins.player < state.shop.rerollCost) return state;
+  if (state.phase !== 'shop' || state.shop.opening || state.coins.player < state.shop.rerollCost) return state;
   // Pé de Coelho Sarnento (versão 1.4): gasta um reembaralhar grátis guardado (o 1º grátis
   // da Nota de 3 Reais e da Amizade com o Valtinho vem antes e não gasta a ficha)
   const token = state.shop.rerollCost === 0 && !freeFirstReroll(state, state.shop.rerolls) && (state.run.freeRerolls ?? 0) > 0;
   let next = loseCoins(state, 'player', state.shop.rerollCost, 'reroll');
   if (token) next = { ...next, run: { ...next.run, freeRerolls: next.run.freeRerolls - 1 } };
   const rerolls = state.shop.rerolls + 1;
-  next = { ...next, shop: buildShop(next, rerolls) };
+  // os pacotes não reembaralham: a prateleira de cima segue como estava (o que comprou, comprou)
+  next = { ...next, shop: { ...buildShop(next, rerolls), packs: state.shop.packs ?? buildShop(next, rerolls).packs } };
   return emit(next, { type: 'shopReroll', rerolls, free: token ? 'peCoelho' : null });
 }
 
@@ -1355,7 +1392,7 @@ function backToMap(state, extra = {}) {
 
 /** Sai da loja para o mapa. */
 function leaveShop(state) {
-  if (state.phase !== 'shop') return state;
+  if (state.phase !== 'shop' || state.shop?.opening) return state;
   return backToMap(state);
 }
 
@@ -1926,6 +1963,10 @@ export function gameReducer(state, action) {
       return sellRelic(state, action);
     case 'SHOP_REROLL':
       return rerollShop(state);
+    case 'SHOP_BUY_PACK':
+      return buyPack(state, action);
+    case 'SHOP_PACK_PICK':
+      return pickPack(state, action);
     case 'LEAVE_SHOP':
       return leaveShop(state);
     case 'MARKET_BUY':

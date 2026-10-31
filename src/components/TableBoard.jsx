@@ -7,9 +7,13 @@ import NoMovesBanner from './NoMovesBanner.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
 import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
+import { SceneProp } from './BotecoBackdrop.jsx';
+import { CadeadoSprite, CorrentesSprite } from './art/CaseArt.jsx';
 
-/** Margem interna do feltro (a mesa usa quase toda a largura da tela). */
-const BOARD_PADDING = 8;
+/** Margem interna do feltro: o aro de madeira (Versão 1.5, 11 px) e uma folga. */
+const BOARD_PADDING = 15;
+/** Faixa do alto do feltro reservada ao dorme e aos selos (px): as pedras ficam abaixo dela. */
+const HUD_TOP = 40;
 /** Folga visual entre pedras vizinhas, em px do mundo (antes da câmera). */
 const TILE_INSET = 1.5;
 const B = BASE_UNIT_PX;
@@ -234,7 +238,11 @@ function TableBoard({
     () => (previewDouble ? computeBoardLayout(board, cols, rows, { previewDouble: true }) : baseLayout),
     [board, cols, rows, previewDouble, baseLayout],
   );
-  const camera = computeCamera(baseLayout, size);
+  // Versão 1.5: a faixa de cima do feltro é do dorme e dos selos; a câmera enquadra abaixo dela
+  const camera = useMemo(() => {
+    const cam = computeCamera(baseLayout, { width: size.width, height: Math.max(0, size.height - HUD_TOP) });
+    return { ...cam, y: cam.y + HUD_TOP };
+  }, [baseLayout, size.width, size.height]);
   const unit = B - TILE_INSET * 2;
   const enhancementOf = useMemo(
     () => new Map(boardTilesInOrder(board).filter((t) => t.enhancement).map((t) => [t.id, t.enhancement])),
@@ -255,7 +263,16 @@ function TableBoard({
       <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
       <div className="felt-vignette pointer-events-none absolute inset-0" />
 
-      <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING }}>
+      {/* Versão 1.5: o aro de madeira gasta da mesa (com a marca do copo) e o que ficou em cima
+          dele: tampinhas, cinzeiro e o copo americano. Ficam por baixo das pedras. */}
+      <div aria-hidden="true" className="felt-frame pointer-events-none absolute inset-0" />
+      <div aria-hidden="true" className="felt-props pointer-events-none absolute inset-0">
+        <SceneProp name="caps" scale={2} className="felt-prop felt-prop-caps" />
+        <SceneProp name="ashtray" scale={2} className="felt-prop felt-prop-ashtray" />
+        <SceneProp name="glass" scale={2} className="felt-prop felt-prop-glass" />
+      </div>
+
+      <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING, zIndex: 3 }}>
         {size.width > 0 && (
           <div
             className="board-world absolute left-0 top-0"
@@ -335,6 +352,13 @@ function TableBoard({
                       }}
                     >
                       {slot.value}
+                      {/* Versão 1.5: ponta travada (Chumbo, Âmbar): correntes cruzadas e o cadeado */}
+                      {(endMarks[side] === 'frozen' || endMarks[side] === 'blocked') && (
+                        <span aria-hidden="true" className={`end-lock end-lock-${endMarks[side]}`}>
+                          <CorrentesSprite className="end-lock-chains" />
+                          <CadeadoSprite className="end-lock-pad" />
+                        </span>
+                      )}
                     </button>
                   )}
                 </div>

@@ -1041,6 +1041,10 @@ export class SoundEngine {
     this.noise({ freq: 800 * j * 2.2, q: 2.2, peak: 0.42 * weight, dur: 0.015 });
     // madeira oca: 120 Hz descendo, com o corpo do tampo
     this.tone({ type: 'triangle', freq: 120 * j * (isDouble ? 0.85 : 1), freqEnd: 72 * j, peak: 0.95 * weight, dur: 0.08, attack: 0.002 });
+    // Versão 1.5: o tapa seco na fórmica (bucha: 95 Hz caindo até 30, mais pesado); curto para
+    // caber no orçamento de vozes (a batida inteira solta os nós em ~120 ms)
+    if (isDouble) this.tone({ type: 'triangle', freq: 95 * j, freqEnd: 30, peak: 0.9, dur: 0.08, attack: 0.001 });
+    else this.tone({ freq: 160 * j, freqEnd: 30, peak: 0.45, dur: 0.08, attack: 0.001 });
 
     const enh = ENHANCEMENT_ALIASES[enhancement] ?? enhancement;
     if (enh === 'gold') this.playGoldTinkle();
@@ -1671,6 +1675,31 @@ export class SoundEngine {
     const freq = 880 * 2 ** (Math.min(step, 18) / 12);
     this.tone({ type: 'triangle', freq, peak: 0.16 + Math.min(step, 12) * 0.006, dur: 0.09, attack: 0.002 });
     this.tone({ freq: freq * 2.76, peak: 0.05, dur: 0.06, attack: 0.001 });
+  }
+
+  /**
+   * Versão 1.5: múltiplo de 5 em sequência. Cada fechamento seguido do mesmo jogador sobe o tom
+   * (×1,12 por degrau, até 10 degraus), a partir do Dó: o combo vai ficando mais agudo e mais brilhante.
+   */
+  playComboStep(step = 0) {
+    const k = Math.min(Math.max(0, step), 10);
+    const base = 261.63 * 2 * 1.12 ** k;
+    this.tone({ type: 'triangle', freq: base, peak: 0.26, dur: 0.18, attack: 0.002 });
+    this.tone({ freq: base * 1.5, peak: 0.2, dur: 0.16, delay: 0.06 });
+    if (k >= 2) this.tone({ freq: base * 2, peak: 0.12 + k * 0.01, dur: 0.14, delay: 0.11 });
+  }
+
+  /** Versão 1.5: a pedrinha batendo no feltro, uma por pedra da mão que chega (cascata). */
+  playDealTick(index = 0) {
+    const j = 1 + index * 0.035;
+    this.tone({ type: 'triangle', freq: 640 * j, peak: 0.12, dur: 0.012, attack: 0.001 });
+    this.tone({ type: 'triangle', freq: 130 * j, freqEnd: 70, peak: 0.28, dur: 0.05, attack: 0.002 });
+  }
+
+  /** Versão 1.5: o estalo seco de um coração trincando (um por coração, em sequência). */
+  playHeartBreak() {
+    this.tone({ type: 'sawtooth', freq: 320, freqEnd: 80, peak: 0.32, dur: 0.08, attack: 0.001 });
+    this.noise({ freq: 2400, filter: 'highpass', peak: 0.22, dur: 0.05, delay: 0.01 });
   }
 
   /** Nome antigo do cristal (Patch 0.4). */

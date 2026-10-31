@@ -36,7 +36,8 @@
   /* bucha: salta, bate (~62% = 290ms) e assenta */
   --animate-tile-slam: tile-slam 470ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
   --animate-power-wiggle: power-wiggle 420ms ease-in-out both;
-  --animate-tile-in: tile-in 260ms steps(5, end) both;
+  /* Versão 1.5: a mão chega em cascata, com um quique no fim */
+  --animate-tile-in: tile-in 350ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
   --animate-end-pulse: end-pulse 1.6s ease-in-out infinite;
   --animate-heart-crack: heart-crack 620ms steps(6, end) both;
   --animate-avatar-hit: avatar-hit 520ms steps(6, end) both;
@@ -101,7 +102,7 @@
   @keyframes tile-in {
     from {
       opacity: 0;
-      transform: translateY(14px);
+      transform: translateY(38px) scale(0.88);
     }
     to {
       opacity: 1;
@@ -10293,4 +10294,1306 @@
   .pvp-room-id {
     font-size: 17px;
   }
+}
+
+/* =====================================================================================
+   Versão 1.5: o boteco em volta de tudo (BotecoBackdrop.jsx, art/botecoScene.js)
+   ===================================================================================== */
+.boteco-backdrop {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.scene-prop {
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* ---------- Tela de título ---------- */
+.title-screen.title-screen {
+  background: #0b0d0d;
+}
+
+.title-lamp-space {
+  height: clamp(104px, 21vh, 190px);
+}
+
+.title-head {
+  transition: opacity 260ms ease-out;
+}
+
+.title-head.is-dim {
+  opacity: 0.55;
+}
+
+.title-tagline {
+  margin-top: 10px;
+  font-family: var(--font-term);
+  font-size: clamp(18px, 5.4vw, 23px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #ebe5d3;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.75),
+    0 0 10px rgba(0, 0, 0, 0.6);
+  transform: rotate(-1.5deg);
+}
+
+/* risco de giz embaixo do BOTECO */
+.title-tagline-mark {
+  position: relative;
+  display: inline-block;
+}
+
+.title-tagline-mark::after {
+  content: '';
+  position: absolute;
+  left: -4%;
+  right: -6%;
+  bottom: -5px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(235, 229, 211, 0.2), #ebe5d3 18%, #ebe5d3 75%, rgba(235, 229, 211, 0.15));
+  transform: rotate(-2.5deg);
+}
+
+/* tábuas pregadas na parede com os atalhos de cima */
+.title-plank {
+  pointer-events: auto;
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 2px solid #1a0d05;
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 7px 7px, #c9a24a 0 1.5px, #3a2410 2px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 7px) 7px, #c9a24a 0 1.5px, #3a2410 2px, transparent 2.5px),
+    repeating-linear-gradient(180deg, transparent 0 5px, rgba(20, 10, 4, 0.35) 5px 6px, transparent 6px 11px),
+    linear-gradient(180deg, #7a4a24, #4e2d15 60%, #33190b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 140, 0.35),
+    0 4px 8px rgba(0, 0, 0, 0.6);
+}
+
+.title-plank .title-icon {
+  width: 48px;
+  height: 48px;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.65));
+}
+
+.title-pinned {
+  transform: rotate(-4deg);
+}
+
+.title-pinned-b {
+  transform: rotate(3deg);
+}
+
+.title-pinned:active {
+  transform: rotate(-4deg) scale(0.92);
+}
+
+.title-pinned-b:active {
+  transform: rotate(3deg) scale(0.92);
+}
+
+/* chuva na janela pintada (mesmo retângulo do cenário: 60% da largura, de 17% a 50% da altura) */
+.title-rain {
+  left: 60%;
+  right: 0;
+  top: 17%;
+  height: 33%;
+  overflow: hidden;
+  opacity: 0.55;
+}
+
+.title-rain::before {
+  content: '';
+  position: absolute;
+  inset: -100% 0 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='90'%3E%3Cg stroke='%23a9c6d4' stroke-width='1' stroke-linecap='square' opacity='.7'%3E%3Cpath d='M6 4l-2 9M22 40l-2 9M40 14l-2 9M55 58l-2 9M14 70l-2 9M31 77l-2 8M48 33l-2 8M60 6l-2 8'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 64px 90px;
+  animation: titleRain 0.7s linear infinite;
+}
+
+@keyframes titleRain {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-10px, 90px, 0);
+  }
+}
+
+/* poeira dourada boiando no facho da lâmpada */
+.title-dust::before {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 14%;
+  height: 46%;
+  background-image:
+    radial-gradient(circle, rgba(255, 224, 150, 0.85) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 224, 150, 0.6) 0 1px, transparent 1.5px);
+  background-size:
+    37px 53px,
+    59px 71px;
+  background-position:
+    0 0,
+    19px 23px;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 40%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 40%, #000 30%, transparent 75%);
+  animation: titleDust 14s linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes titleDust {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-12px, -60px, 0);
+  }
+}
+
+.title-deck {
+  padding-bottom: 6px;
+}
+
+/* ---------- A caixa JOGAR ---------- */
+.play-case {
+  position: relative;
+  width: min(80vw, 300px);
+  height: 116px;
+  margin-bottom: clamp(4px, 2.5vh, 26px);
+}
+
+.play-case-lid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #1c0e05;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(178deg, transparent 0 9px, rgba(40, 20, 8, 0.28) 9px 10px, transparent 10px 17px),
+    linear-gradient(180deg, #9a6232 0%, #7a4a24 45%, #5a3418 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 210, 150, 0.4),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.4),
+    inset 0 0 0 7px rgba(40, 20, 8, 0.25),
+    inset 0 0 0 9px rgba(255, 200, 140, 0.12),
+    0 10px 0 #2a1608,
+    0 12px 0 #120802,
+    0 18px 26px rgba(0, 0, 0, 0.7);
+  transform-origin: 50% 0;
+  transition:
+    transform 380ms cubic-bezier(0.3, 1.25, 0.5, 1),
+    opacity 260ms ease-out 120ms;
+  cursor: pointer;
+}
+
+.play-case-lid:active {
+  transform: translateY(2px);
+}
+
+/* filete entalhado com cantoneiras */
+.play-case-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(40, 20, 8, 0.55);
+  box-shadow: 1px 1px 0 rgba(255, 210, 150, 0.25);
+}
+
+.play-case-corner-tl {
+  left: 12px;
+  top: 12px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.play-case-corner-tr {
+  right: 12px;
+  top: 12px;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.play-case-title {
+  font-family: var(--font-pixel);
+  font-size: clamp(24px, 8vw, 32px);
+  letter-spacing: 0.08em;
+  color: #2a1406;
+  text-shadow:
+    0 2px 0 rgba(255, 214, 160, 0.4),
+    0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.play-case-latch {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 26px;
+  height: 18px;
+  transform: translateX(-50%);
+  border: 2px solid #3a2606;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffe39a, #c99632 55%, #8a6016);
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    0 2px 0 #1c0e05;
+}
+
+.play-case-latch::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 4px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: #2a1a04;
+}
+
+/* aberta: a tampa sobe e some; o forro de veludo cresce para cima */
+.play-case.is-open .play-case-lid {
+  transform: perspective(500px) rotateX(82deg) translateY(-30px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.play-case-inside {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 100%;
+  padding: 12px 14px 14px;
+  border: 3px solid #1c0e05;
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 40%, rgba(150, 30, 40, 0.45), transparent 75%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 3px),
+    #5a0f18;
+  box-shadow:
+    inset 0 0 0 6px #4e2d15,
+    inset 0 0 0 7px #1c0e05,
+    inset 0 10px 18px rgba(0, 0, 0, 0.6),
+    0 12px 0 #2a1608,
+    0 18px 26px rgba(0, 0, 0, 0.7);
+  clip-path: inset(100% 0 0 0 round 6px);
+  opacity: 0;
+  transition:
+    clip-path 360ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 160ms ease-out;
+}
+
+.play-case.is-open .play-case-inside {
+  clip-path: inset(0 0 0 0 round 6px);
+  opacity: 1;
+}
+
+.play-case-inside .title-choices {
+  gap: 7px;
+  padding: 6px 4px 0;
+}
+
+.play-case-inside .title-confirm {
+  color: #f0dcb0;
+  font-size: 18px;
+}
+
+/* plaquinhas de osso */
+.case-bone-tab {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 40px;
+  padding: 8px 10px 7px;
+  border: 2px solid #4a3418;
+  border-radius: 4px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #2a1a0a;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 40%),
+    linear-gradient(180deg, #f3e8c9, #d8c492);
+  box-shadow:
+    inset 0 -2px 0 rgba(90, 60, 20, 0.35),
+    0 3px 0 #2a1608;
+  transition: transform 90ms ease-out;
+}
+
+.case-bone-tab:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 -2px 0 rgba(90, 60, 20, 0.35),
+    0 1px 0 #2a1608;
+}
+
+.case-bone-tab:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.case-bone-tab .title-choice-note {
+  font-size: 14px;
+  line-height: 1;
+  color: #5a4626;
+}
+
+.case-bone-gold {
+  border-color: #5a3a08;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent 40%),
+    linear-gradient(180deg, #ffe08a, #d6a23e);
+  color: #3a2206;
+}
+
+.case-bone-danger {
+  border-color: #5a1208;
+  background: linear-gradient(180deg, #ffb4a0, #d66a52);
+  color: #3a0a04;
+}
+
+.case-bone-tab.title-choice-dim {
+  opacity: 0.6;
+}
+
+.case-close-tab {
+  margin-top: 2px;
+  padding: 4px 12px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #f0dcb0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+}
+
+@media (max-height: 700px) {
+  .case-bone-tab {
+    min-height: 34px;
+    padding: 6px 10px 5px;
+    font-size: 11px;
+  }
+  .play-case-inside .title-choices {
+    gap: 5px;
+  }
+  .play-case {
+    height: 100px;
+  }
+}
+
+.reduce-motion .title-rain::before,
+.reduce-motion .title-dust::before {
+  animation: none;
+}
+
+/* ---------- Tela larga: o bar dos lados ---------- */
+.wide-room {
+  position: fixed;
+  inset: -12px;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(4px) brightness(0.55) saturate(0.85);
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.8),
+    0 0 60px rgba(0, 0, 0, 0.85);
+}
+
+/* ---------- Balcão de Maletas (imagem 2 do 1.5) ---------- */
+.counter-scene.counter-scene {
+  background: #0d0805;
+}
+
+.counter-scene .case-title {
+  font-size: clamp(14px, 4.2vw, 18px);
+  color: #ffd36b;
+  text-shadow:
+    0 0 10px rgba(255, 190, 80, 0.75),
+    0 0 26px rgba(255, 150, 40, 0.35),
+    0 3px 0 #3a2206;
+}
+
+.counter-head {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 6px;
+  animation: introFadeIn 220ms ease-out both;
+}
+
+.counter-pick-name {
+  font-family: var(--font-pixel);
+  font-size: clamp(13px, 4.6vw, 19px);
+  letter-spacing: 0.04em;
+  color: #86eef4;
+  text-shadow:
+    0 0 10px rgba(80, 220, 240, 0.6),
+    0 2px 0 #062a30;
+}
+
+.counter-pick-sub {
+  margin-top: 3px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #c9e8ea;
+}
+
+.counter-head .diff-pick {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* a bancada de feltro onde as maletas repousam */
+.case-stage {
+  position: relative;
+  width: calc(100% + 28px);
+  max-width: 520px;
+  margin: 10px -14px 0;
+  padding: 2px 6px 6px;
+  border-top: 8px solid #4e2d15;
+  border-bottom: 11px solid #3a2010;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 45%, rgba(70, 160, 90, 0.35), transparent 75%),
+    var(--felt-noise),
+    linear-gradient(180deg, #164a2a, #0f3a20 60%, #0a2a17);
+  box-shadow:
+    inset 0 8px 10px rgba(0, 0, 0, 0.55),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.4),
+    0 -1px 0 #7a4a24,
+    0 6px 14px rgba(0, 0, 0, 0.7);
+}
+
+.case-stage::before,
+.case-stage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+}
+
+/* quina iluminada do aro de cima e da frente */
+.case-stage::before {
+  top: -8px;
+  background: rgba(255, 200, 140, 0.35);
+}
+
+.case-stage::after {
+  bottom: -11px;
+  background: rgba(255, 200, 140, 0.22);
+}
+
+.case-stage .case-carousel {
+  margin-top: 4px;
+}
+
+.case-stage .case-dots {
+  margin-top: -2px;
+}
+
+.case-stage-prop {
+  position: absolute;
+  z-index: 1;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5));
+}
+
+.case-stage-ashtray {
+  left: 4px;
+  bottom: 4px;
+}
+
+.case-stage-glass {
+  right: 8px;
+  top: 6px;
+}
+
+/* as vizinhas mostram o nome em cima, como etiqueta na alça */
+.case-slot:not(.is-focus) .counter-name {
+  opacity: 0.85;
+}
+
+.counter-scene.is-picked .case-stage {
+  margin-top: 8px;
+}
+
+.counter-scene.is-picked .counter-card {
+  border-color: #1c0e05;
+  background:
+    radial-gradient(ellipse 80% 80% at 50% 30%, rgba(150, 30, 40, 0.35), transparent 75%),
+    linear-gradient(180deg, rgba(70, 12, 20, 0.95), rgba(40, 6, 10, 0.95));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 140, 0.25),
+    0 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.counter-scene.is-picked .seed-field-label {
+  color: #ffd36b;
+}
+
+.counter-scene.is-picked {
+  --case-size: clamp(80px, 17vh, 166px);
+}
+
+@media (max-height: 700px) {
+  /* celular baixinho: com a maleta aberta (e o aviso de trancado), a maleta encolhe para o VOLTAR caber */
+  .counter-scene.is-picked {
+    --case-size: clamp(60px, 11.5vh, 96px);
+  }
+  .counter-scene.is-picked .case-stage {
+    margin-top: 4px;
+    padding-bottom: 2px;
+  }
+  .counter-head .diff-option {
+    padding: 5px 3px 4px;
+  }
+  .counter-pick-sub {
+    display: none;
+  }
+  .case-stage-glass {
+    display: none;
+  }
+}
+
+/* ---------- Mesa da partida (imagem 3 do 1.5) ---------- */
+/* a parede de azulejo atrás do rival */
+.rival-bench.rival-bench {
+  background: #0d1614;
+}
+
+.rival-bench-wall {
+  opacity: 0.92;
+}
+
+.rival-bench > .relative {
+  z-index: 1;
+}
+
+/* o retrato vira polaroide presa com fita crepe */
+.rival-bench .avatar-frame {
+  padding: 3px 3px 9px;
+  background: linear-gradient(180deg, #f6f2e6, #e3dcc8);
+  border: 0;
+  border-radius: 1px;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transform: rotate(-3deg);
+}
+
+.rival-bench .avatar-frame::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  left: 22%;
+  width: 56%;
+  height: 10px;
+  background: rgba(226, 210, 150, 0.82);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  transform: rotate(4deg);
+  pointer-events: none;
+}
+
+.rival-bench .avatar-frame-active {
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(224, 83, 63, 0.8),
+    0 0 14px rgba(224, 83, 63, 0.6);
+}
+
+/* o aro de madeira gasta da mesa: 11 px de tábua com veio, quina clara em cima e a sombra no pano */
+.felt-frame {
+  z-index: 1;
+  padding: 11px;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 214, 160, 0.45) 0 1px, transparent 1px calc(100% - 2px), rgba(0, 0, 0, 0.7) calc(100% - 2px)),
+    linear-gradient(90deg, rgba(255, 214, 160, 0.25) 0 1px, transparent 1px calc(100% - 1px), rgba(0, 0, 0, 0.6) calc(100% - 1px)),
+    repeating-linear-gradient(90deg, transparent 0 13px, rgba(30, 14, 5, 0.32) 13px 14px, transparent 14px 23px, rgba(255, 200, 140, 0.06) 23px 24px),
+    repeating-linear-gradient(0deg, transparent 0 13px, rgba(30, 14, 5, 0.32) 13px 14px, transparent 14px 23px, rgba(255, 200, 140, 0.06) 23px 24px),
+    linear-gradient(180deg, #7a4a24, #55311a 50%, #3e2312);
+  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-clip: content-box, border-box;
+  -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-clip: content-box, border-box;
+  mask-composite: exclude;
+}
+
+/* a quina de dentro do aro e a sombra que ele faz no pano */
+.felt-table::before {
+  content: '';
+  position: absolute;
+  inset: 11px;
+  z-index: 2;
+  border-radius: 3px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px #0b0602,
+    0 0 0 2px rgba(255, 210, 150, 0.12),
+    inset 0 12px 12px -6px rgba(0, 0, 0, 0.6);
+}
+
+/* marca do copo na madeira, no canto de cima à direita */
+.felt-table::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 68px;
+  width: 30px;
+  height: 11px;
+  border: 2px solid rgba(255, 235, 200, 0.1);
+  border-top: 0;
+  border-radius: 0 0 16px 16px;
+  pointer-events: none;
+}
+
+.felt-props {
+  z-index: 2;
+}
+
+.felt-prop {
+  position: absolute;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.55));
+}
+
+.felt-prop-caps {
+  left: 1px;
+  top: 24%;
+}
+
+.felt-prop-ashtray {
+  left: -10px;
+  bottom: 14%;
+}
+
+.felt-prop-glass {
+  right: -4px;
+  top: 30%;
+}
+
+/* o feltro ficou dentro do aro: a moldura antiga só escurece o pano, por dentro do aro */
+.felt-table .felt-bevel {
+  inset: 11px;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px #0b0602,
+    inset 0 0 34px 12px rgba(0, 0, 0, 0.5);
+}
+
+.felt-table .boneyard-pile {
+  top: 15px;
+  right: 15px;
+}
+
+/* ponta travada: correntes em X e o cadeado por cima do número */
+.end-lock {
+  position: absolute;
+  inset: -55%;
+  pointer-events: none;
+}
+
+.end-lock > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.6));
+}
+
+.end-lock .end-lock-pad {
+  inset: 22% 22% auto auto;
+  width: 62%;
+  height: 62%;
+  transform: translate(12%, -22%);
+}
+
+/* a sua mesa: a tábua de madeira da beirada, onde o leque descansa */
+.player-hand.player-hand {
+  background:
+    linear-gradient(180deg, rgba(255, 200, 140, 0.24) 0 2px, rgba(0, 0, 0, 0.55) 2px 4px, transparent 4px),
+    repeating-linear-gradient(180deg, transparent 0 22px, rgba(16, 8, 3, 0.55) 22px 24px),
+    repeating-linear-gradient(90deg, transparent 0 41px, rgba(16, 8, 3, 0.18) 41px 42px, transparent 42px 97px),
+    radial-gradient(ellipse 110% 70% at 50% 0%, #5a3418, #3a2010 55%, #1c0e05 100%);
+}
+
+/* botões da mesa: tábuas com prego, letra pintada */
+.action-wood .btn-pixel {
+  --plate-hi: #87562b;
+  --plate-lo: #4a2a13;
+  --plate-edge: #c28a52;
+  --plate-base: #1a0c04;
+  --plate-ink: #f6e7c4;
+  --rivet: #2a1a0a;
+  --rivet-hi: #d9b56a;
+  background:
+    radial-gradient(circle at 7px 50%, var(--rivet-hi) 0 1px, var(--rivet) 1px 2.2px, transparent 2.6px),
+    radial-gradient(circle at calc(100% - 7px) 50%, var(--rivet-hi) 0 1px, var(--rivet) 1px 2.2px, transparent 2.6px),
+    repeating-linear-gradient(178deg, transparent 0 7px, rgba(30, 14, 5, 0.3) 7px 8px, transparent 8px 13px),
+    linear-gradient(180deg, var(--plate-hi) 0%, var(--plate-lo) 100%);
+}
+
+.action-wood .btn-pixel[data-tone='play'] {
+  --plate-hi: #a36a34;
+  --plate-lo: #5e3618;
+  --plate-edge: #f0c27a;
+  --plate-ink: #fff4d2;
+  border-color: #3a2206;
+  box-shadow:
+    inset 0 2px 0 var(--plate-edge),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.32),
+    0 0 0 2px #e0a84a,
+    0 4px 0 2px var(--plate-base),
+    0 0 16px rgba(255, 190, 90, 0.45);
+}
+
+.action-wood .btn-pixel[data-tone='blood'] {
+  --plate-hi: #7a3a24;
+  --plate-lo: #43170d;
+  --plate-edge: #c07a52;
+  --plate-ink: #ffe2d0;
+}
+
+.action-wood .btn-pixel[data-tone='brass'] {
+  --plate-hi: #c99a4a;
+  --plate-lo: #8a6022;
+  --plate-ink: #1e1306;
+}
+
+.action-wood .btn-placeholder {
+  border-color: rgba(255, 220, 170, 0.22);
+  background: rgba(10, 5, 2, 0.35);
+}
+
+/* ---------- Corações trincando em sequência no fim da rodada ---------- */
+.cracked-hearts {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.cracked-heart {
+  display: inline-block;
+  animation: heartCrackSeq 260ms steps(4, end) both;
+}
+
+@keyframes heartCrackSeq {
+  0% {
+    opacity: 0.35;
+    transform: scale(1.35);
+    filter: brightness(1.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(0.9) rotate(-8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+.reduce-motion .cracked-heart {
+  animation: none;
+}
+
+/* ---------- Balão do rival em papel (imagem 3 do 1.5) ---------- */
+.speech-balloon.speech-balloon {
+  --speech-bg: #eadcbc;
+  --speech-solid: #eadcbc;
+  --speech-edge: #4a3418;
+  color: #2a1a0a;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  line-height: 1.05;
+  border-width: 2px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 19px, rgba(120, 90, 50, 0.12) 19px 20px),
+    linear-gradient(180deg, #f2e6c8, #e2d2ae);
+  box-shadow:
+    inset 0 -2px 0 rgba(120, 90, 50, 0.25),
+    0 4px 0 rgba(0, 0, 0, 0.5),
+    0 6px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Livro de Boteco: álbum de 3 × 4 nichos (Versão 1.5) ---------- */
+.album {
+  height: min(56vh, 470px);
+  flex: none;
+}
+
+.album-shelves {
+  display: grid;
+  height: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 8px 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 calc(25% - 4px), rgba(20, 10, 4, 0.55) calc(25% - 4px) 25%),
+    linear-gradient(180deg, #3a2414, #24150b);
+  box-shadow:
+    inset 0 0 0 2px #120a04,
+    inset 0 6px 14px rgba(0, 0, 0, 0.6);
+  animation: introFadeIn 180ms ease-out both;
+}
+
+.album-niche {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid #120a04;
+  border-radius: 3px;
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255, 220, 160, 0.12), transparent 70%), #1a0f07;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 210, 150, 0.08);
+  transition: transform 90ms ease-out;
+}
+
+.album-niche.is-known {
+  border-color: var(--rarity, #6a4a2a);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 10px color-mix(in srgb, var(--rarity, #6a4a2a) 30%, transparent),
+    0 0 0 1px #120a04;
+}
+
+.album-niche.is-mythic {
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 12px rgba(255, 200, 90, 0.45),
+    0 0 8px rgba(255, 180, 60, 0.35);
+}
+
+.album-niche.is-selected {
+  transform: translateY(-2px);
+  outline: 2px solid #ffd36b;
+  outline-offset: 1px;
+}
+
+.album-niche.is-empty {
+  opacity: 0.35;
+}
+
+.album-niche:active:not(.is-empty) {
+  transform: scale(0.95);
+}
+
+.album-niche-art {
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+
+.album-niche.is-locked .album-niche-art {
+  opacity: 0.45;
+}
+
+/* o "?" de giz por cima do que ainda não apareceu */
+.album-chalk {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: rgba(236, 232, 220, 0.85);
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.6),
+    -1px 0 0 rgba(236, 232, 220, 0.35);
+  pointer-events: none;
+}
+
+/* a ficha do item, no rodapé do álbum */
+.album-sheet {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 34px 10px 10px;
+  border: 2px solid #120a04;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 17px, rgba(120, 90, 50, 0.1) 17px 18px),
+    linear-gradient(180deg, #f2e6c8, #ddcba4);
+  color: #2a1a0a;
+  box-shadow:
+    0 -6px 16px rgba(0, 0, 0, 0.55),
+    0 3px 0 rgba(0, 0, 0, 0.5);
+  animation: albumSheetUp 200ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+@keyframes albumSheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.album-sheet-art {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 3px;
+  background: #1a0f07;
+  box-shadow: inset 0 0 0 2px #120a04;
+}
+
+.album-sheet-name {
+  font-size: 9px;
+  line-height: 1.35;
+  color: #2a1a0a;
+}
+
+.album-sheet-text {
+  margin-top: 3px;
+  font-size: 16px;
+  line-height: 1.02;
+  color: #3a2814;
+}
+
+.album-sheet .book-unlock-goal {
+  background: rgba(26, 15, 7, 0.88);
+}
+
+.album-sheet-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  color: #2a1a0a;
+  background: rgba(0, 0, 0, 0.08);
+  border: 2px solid #4a3418;
+  border-radius: 3px;
+}
+
+@media (max-height: 700px) {
+  .album {
+    height: min(52vh, 360px);
+  }
+  .album-shelves {
+    gap: 6px;
+    padding: 6px;
+  }
+}
+
+.reduce-motion .album-sheet,
+.reduce-motion .album-shelves {
+  animation: none;
+}
+
+/* ---------- Pacotes fechados na Loja do Valtinho (Versão 1.5) ---------- */
+.shop-packs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 6px 0;
+  padding: 6px 6px 4px;
+  list-style: none;
+  border-top: 3px solid #2a1608;
+  background: linear-gradient(180deg, rgba(20, 10, 4, 0.5), rgba(20, 10, 4, 0.15));
+}
+
+.shop-pack {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 5px;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+.shop-pack-art {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.6));
+  transition: transform 120ms ease-out;
+}
+
+.shop-pack:active .shop-pack-art {
+  transform: translateY(-3px) rotate(-4deg);
+}
+
+.shop-pack-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #000;
+}
+
+.shop-pack.is-sold .shop-pack-name {
+  opacity: 0.5;
+}
+
+.shop-pack.is-short .shop-price {
+  color: #ff9c8a;
+}
+
+.pack-open {
+  border: 3px solid #0b0705;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(150, 30, 40, 0.35), transparent 75%),
+    #3a0a12;
+  box-shadow:
+    inset 0 0 0 2px #6e4220,
+    0 8px 0 #000,
+    0 0 40px rgba(0, 0, 0, 0.8);
+  animation: packDeal 260ms ease-out both;
+}
+
+.pack-open-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pack-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.pack-option {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 8px;
+  border: 2px solid var(--rarity);
+  border-radius: 3px;
+  color: #f4ecd2;
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, color-mix(in srgb, var(--rarity) 30%, transparent), transparent 75%), #1a0f07;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    0 3px 0 #000;
+  animation: packDeal 320ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+  transition: transform 100ms ease-out;
+}
+
+.pack-option.is-on {
+  transform: translateY(-4px);
+  outline: 2px solid #ffd36b;
+  outline-offset: 2px;
+}
+
+.pack-option.is-mythic {
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    0 3px 0 #000,
+    0 0 14px rgba(255, 190, 70, 0.55);
+}
+
+@keyframes packDeal {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.85) rotate(-6deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pack-option-art {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+
+.pack-option-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.pack-option-text {
+  font-family: var(--font-term);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-bone-300);
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.reduce-motion .pack-option,
+.reduce-motion .pack-open {
+  animation: none;
+}
+
+/* ---------- Mapa em papel de pão (Versão 1.5) ---------- */
+.map-screen.map-screen {
+  background: #1a120a;
+}
+
+.map-paper {
+  box-shadow:
+    inset 0 0 50px rgba(45, 25, 5, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* as regiões viram só uma tinta por cima do papel (o feltro saiu) */
+.map-paper .map-region {
+  background: none;
+  border-top: 2px dashed rgba(60, 40, 15, 0.35);
+}
+
+.map-paper .map-region-neon {
+  background: linear-gradient(180deg, rgba(110, 50, 140, 0.12), rgba(40, 60, 140, 0.1));
+}
+
+.map-paper .map-region-bicho {
+  background: linear-gradient(180deg, rgba(150, 30, 20, 0.14), rgba(90, 10, 5, 0.18));
+}
+
+.map-paper .web-region-far {
+  filter: none;
+  opacity: 0.55;
+}
+
+/* o nome da região a lápis numa etiqueta presa com durex */
+.map-paper .map-region-head {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%) rotate(-1.5deg);
+  padding: 6px 14px 5px;
+  border: 0;
+  background: #f3ecda;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(90, 70, 40, 0.25);
+}
+
+.map-paper .map-region-head::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 30%;
+  width: 40%;
+  height: 10px;
+  background: rgba(220, 205, 150, 0.7);
+  transform: rotate(1deg);
+}
+
+.map-paper .map-region-head p {
+  color: #2a1e10;
+  text-shadow: none;
+}
+
+/* caminhos de caneta esferográfica azul gasta */
+.map-paper .web-edge {
+  stroke: rgba(26, 54, 93, 0.55);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+}
+
+.map-paper .web-edge-open {
+  stroke: #1f4f9a;
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+}
+
+.map-paper .web-edge-done {
+  stroke: #14284a;
+  stroke-width: 3.2;
+  stroke-dasharray: none;
+  opacity: 0.85;
+}
+
+.map-paper .web-edge-gone {
+  stroke: rgba(26, 54, 93, 0.22);
+  stroke-width: 2;
+  stroke-dasharray: 3 6;
+}
+
+/* polaroides: fita crepe amarelada; a do chefe, inclinada e maior */
+.map-paper .polaroid-tape {
+  width: 50%;
+  background: rgba(220, 205, 150, 0.75);
+}
+
+.map-paper .map-node-boss .polaroid-tape {
+  background: rgba(220, 205, 150, 0.85);
+}
+
+.map-paper .web-node.map-polaroid {
+  background: #fdfbf7;
+  padding: 4px 4px 3px;
+  box-shadow:
+    inset 0 0 0 1px rgba(90, 70, 40, 0.2),
+    2px 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.map-paper .web-node.map-node-boss {
+  box-shadow:
+    inset 0 0 0 1px rgba(90, 70, 40, 0.2),
+    2px 4px 10px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(180, 30, 20, 0.55);
+}
+
+/* o X de quem já caiu: caneta vermelha */
+.map-paper .chalk-x {
+  background:
+    linear-gradient(45deg, transparent calc(50% - 3px), rgba(180, 20, 20, 0.9) calc(50% - 2px) calc(50% + 2px), transparent calc(50% + 3px)),
+    linear-gradient(-45deg, transparent calc(50% - 3px), rgba(180, 20, 20, 0.85) calc(50% - 2px) calc(50% + 1.5px), transparent calc(50% + 3px));
+  filter: none;
+  -webkit-mask: none;
+  mask: none;
 }

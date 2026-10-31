@@ -5,6 +5,7 @@ import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
+import WideRoom from './components/WideRoom.jsx';
 import { applyReducedMotion } from './components/motion.js';
 import { loadSettings } from './engine/progress.js';
 import { installTouchGuards, registerServiceWorker } from './pwa.js';
@@ -16,6 +17,7 @@ applyReducedMotion(loadSettings().reducedMotion);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    <WideRoom />
     <App />
   </StrictMode>,
 );

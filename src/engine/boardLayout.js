@@ -10,9 +10,9 @@
  * a serpentina da sua metade, sempre dentro do feltro:
  *
  *   1. base: do centro para a borda;
- *   2. lateral: sobe pela margem;
- *   3. topo: dobra 90° para DENTRO, em direção ao centro;
- *   4. se ainda precisar: desce pelo meio e fecha a volta por dentro.
+ *   2. lateral: sobe pela margem, no máximo 3 pedras (Versão 1.5: MAX_VERTICAL_CHAIN);
+ *   3. dobra 90° para DENTRO, em direção ao centro;
+ *   4. se ainda precisar: sobe em zigue-zague, deitando a cada 3 pedras (a serpente).
  *
  * Posições estáticas: as pedras são posicionadas NA ORDEM EM QUE FORAM JOGADAS
  * (`seq`). Cada pedra nova só olha para as que já estão na mesa, então nunca
@@ -28,18 +28,25 @@
 import { getOpenEnds } from './dominoLogic.js';
 
 export const WORLD_COLS = 10;
-export const MIN_WORLD_ROWS = 13;
-export const MAX_WORLD_ROWS = 16;
+/** Versão 1.5: o mundo tem pelo menos 16 linhas: com o braço baixo, a espiral precisa do alto
+ *  livre para correntes compridas (a câmera enquadra só as pedras, então não encolhe nada). */
+export const MIN_WORLD_ROWS = 16;
+export const MAX_WORLD_ROWS = 18;
 /** px por unidade com zoom máximo (pedra comum 96 x 48 px). */
 export const BASE_UNIT_PX = 48;
-/** Abaixo disso a câmera prefere enquadrar só as pontas abertas. */
-export const MIN_UNIT_PX = 26;
+/** Abaixo disso a câmera prefere enquadrar só as pontas abertas (Versão 1.5: 22, a mesa lotada fica inteira). */
+export const MIN_UNIT_PX = 22;
 /** Zoom mínimo absoluto. Os badges têm tamanho fixo na tela. */
 export const FLOOR_UNIT_PX = 12;
 /** Folga mínima entre pedras que não se encaixam (voltas da serpentina). */
 const GAP = 0.5;
 /** Quantas pedras à frente a tartaruga confere antes de entrar num corredor. */
 const LOOKAHEAD = 2;
+/**
+ * Versão 1.5: no máximo 3 pedras seguidas subindo; a 4ª deita. O U fica baixo e largo, longe do
+ * balão do rival, do dorme e do leque, e a corrente comprida sobe em zigue-zague (serpente).
+ */
+export const MAX_VERTICAL_CHAIN = 3;
 const EPS = 1e-6;
 
 const DIR = {
@@ -73,6 +80,9 @@ const LEVELS = [
   { area: 'world', gap: true, look: true },
   { area: 'world', gap: false, look: false },
 ];
+
+/** A serpente só vale dentro da metade do ramo; fora dela, a regra antiga decide. */
+const HALF_LEVELS = LEVELS.filter((level) => level.area === 'half');
 
 const axisOf = (d) => (d === 'W' || d === 'E' ? 'horizontal' : 'vertical');
 const add = (p, d, k = 1) => ({ x: p.x + DIR[d].x * k, y: p.y + DIR[d].y * k });
@@ -282,8 +292,43 @@ function emergencyPlacement(cursor, double, ctx) {
   };
 }
 
+/** O primeiro candidato bom da lista, nível por nível (ou null). */
+function pickFrom(list, ctx, levels) {
+  for (const level of levels) {
+    const valid = list.filter((cand) => isValid(cand, ctx, level));
+    if (!valid.length) continue;
+    if (!level.look) return valid[0];
+    const safe = valid.find((cand) => hasWayOut(cand, ctx, level, LOOKAHEAD));
+    if (safe) return safe;
+  }
+  return null;
+}
+
+/**
+ * Versão 1.5, a serpente: nenhuma subida passa de 3 pedras; na 4ª a corrente deita (para
+ * dentro ou para fora, para onde houver espaço). Correndo deitada, a dobra que SOBE vem antes
+ * da que desce: a corrente sobe em zigue-zague pela metade dela em vez de fazer coluna alta.
+ * Só dentro da metade do ramo; sem espaço ali, vale a regra antiga (choosePlacement segue).
+ */
+function serpentPlacement(cursor, double, ctx) {
+  const both = () => [...candidates(cursor, double, ctx.turnMap), ...candidates(cursor, double, ctx.counterMap).slice(1)];
+  if (cursor.d === 'N') {
+    if (ctx.vertRun < MAX_VERTICAL_CHAIN) return null;
+    return pickFrom(both().filter((cand) => cand.next.d !== 'N' && cand.next.d !== 'S'), ctx, HALF_LEVELS);
+  }
+  if (cursor.d === 'W' || cursor.d === 'E') {
+    const list = both();
+    const straight = list.filter((cand) => cand.next.d === cursor.d);
+    const up = list.filter((cand) => cand.next.d === 'N');
+    return pickFrom([...straight, ...up], ctx, HALF_LEVELS);
+  }
+  return null;
+}
+
 /** Melhor posição para a pedra, do nível mais confortável ao último recurso. */
 function choosePlacement(cursor, double, ctx) {
+  const serpent = serpentPlacement(cursor, double, ctx);
+  if (serpent) return serpent;
   const list = candidates(cursor, double, ctx.turnMap);
   for (const level of LEVELS) {
     const valid = list.filter((cand) => isValid(cand, ctx, level));
@@ -294,7 +339,7 @@ function choosePlacement(cursor, double, ctx) {
   }
   // beco: tenta encostar na ponta virando para o outro lado, ainda conectada
   const lastLevel = LEVELS[LEVELS.length - 1];
-  const counter = candidates(cursor, double, COUNTER_TURNS[ctx.branch]).slice(1);
+  const counter = candidates(cursor, double, ctx.counterMap).slice(1);
   const escape = counter.find((cand) => isValid(cand, ctx, lastLevel));
   if (escape) return escape;
   return emergencyPlacement(cursor, double, ctx);
@@ -386,9 +431,18 @@ export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previe
   };
   const placed = [geo.rect];
   const byBranch = { left: [], right: [] };
+  /** Quantas pedras seguidas, do fim do ramo para trás, correm na vertical. */
+  const vertRunOf = (branch) => {
+    const list = byBranch[branch];
+    let n = 0;
+    for (let i = list.length - 1; i >= 0 && list[i].lineAxis === 'vertical'; i -= 1) n += 1;
+    return n;
+  };
   const ctxFor = (branch) => ({
     branch,
     turnMap: TURNS[branch],
+    counterMap: COUNTER_TURNS[branch],
+    vertRun: vertRunOf(branch),
     half: halves[branch],
     world,
     placed,

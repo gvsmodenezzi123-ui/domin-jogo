@@ -21,6 +21,8 @@ import ScreenVeil from './components/ScreenTransition.jsx';
 import { useSceneTransition } from './components/useSceneTransition.js';
 import Shop from './components/Shop.jsx';
 import TableBoard from './components/TableBoard.jsx';
+import { DEAL_STEP_MS } from './components/handFan.js';
+import { PACKS } from './data/packs.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
@@ -216,12 +218,29 @@ function shake(element, strength = 6, duration = 380) {
   );
 }
 
+/**
+ * Versão 1.5: o combo de múltiplos de 5. Cada jogada que fecha 5 logo depois da anterior do
+ * mesmo jogador sobe um degrau no tom (sound.playComboStep); jogada sem 5 zera; rodada nova zera.
+ */
+const COMBO = { player: 0, tioZe: 0, scored: { player: false, tioZe: false } };
+
 /** Som e tremida para cada evento emitido pelo reducer (`offset`: espera o voo da pedra). */
 function runEventFx(ev, shell, table, offset = 0) {
   const at = (fn, extra = 0) => setTimeout(fn, offset + (FX_DELAY[ev.type] ?? 0) + extra);
   switch (ev.type) {
+    case 'roundStart':
+      COMBO.player = 0;
+      COMBO.tioZe = 0;
+      COMBO.scored = { player: false, tioZe: false };
+      // a mão chega em cascata (PlayerRack): um toque de pedra no feltro para cada uma
+      for (let i = 0; i < 7; i += 1) at(() => sound.playDealTick(i), 120 + i * DEAL_STEP_MS);
+      break;
     case 'tilePlaced':
       // o som e a tremida saem no pouso do voo (App: stagePlay)
+      if (ev.by === 'player' || ev.by === 'tioZe') {
+        if (!COMBO.scored[ev.by]) COMBO[ev.by] = 0;
+        COMBO.scored[ev.by] = false;
+      }
       break;
     case 'drawTile':
     case 'drawPeek':
@@ -241,9 +260,14 @@ function runEventFx(ev, shell, table, offset = 0) {
     case 'discard':
       at(() => sound.playPass());
       break;
-    case 'bonus5':
-      at(() => sound.playCoinJingle());
+    case 'bonus5': {
+      const seat = ev.by === 'tioZe' ? 'tioZe' : 'player';
+      COMBO[seat] += 1;
+      COMBO.scored[seat] = true;
+      const step = COMBO[seat] - 1;
+      at(() => sound.playComboStep(step));
       break;
+    }
     case 'coins':
       // a gorjeta do Seu Tião tem o som dela (uma moeda por vez, CoinEventModal)
       if (ev.who === 'player' && ev.amount > 0 && ev.source !== 'dev' && ev.source !== 'tiao') at(() => sound.playCoinJingle());
@@ -404,8 +428,20 @@ function procOrigin(ev, tileId, table) {
   return felt ? { x: felt.left + felt.width / 2, y: felt.top + felt.height * 0.3 } : null;
 }
 
+/** Versão 1.5: as chances de um pacote em texto curto ("65% COMUM · 25% RARO..."). */
+const PACK_RATE_LABEL = { comum: 'COMUM', raro: 'RARO', lendario: 'LENDÁRIO', mitico: 'MÍTICO', normal: 'DE BALCÃO', luxo: 'DE LUXO' };
+const packRatesText = (rates) =>
+  Object.entries(rates)
+    .map(([k, v]) => `${Math.round(v * 100)}% ${PACK_RATE_LABEL[k] ?? k.toUpperCase()}`)
+    .join(' · ');
+
 /** Conteúdo do balão do toque longo. */
 function inspectInfo(payload, state, rival) {
+  if (payload.kind === 'pack') {
+    const pack = PACKS[payload.id];
+    if (!pack) return null;
+    return { title: pack.name.toUpperCase(), rarity: pack.kind === 'tile' ? 'lendario' : 'raro', description: pack.blurb, extra: packRatesText(pack.rates) };
+  }
   if (payload.kind === 'tile' || payload.kind === 'offerTile') {
     const tileId = payload.kind === 'tile' ? payload.tile.id : payload.tileId;
     const enhancement = getEnhancement(payload.kind === 'tile' ? payload.tile.enhancement : payload.enhancement);
@@ -638,7 +674,8 @@ export default function App() {
           sound.playBoneSlam(ev.double, ev.enhancement);
           shake(tableRef.current, ev.double ? 4 : 3, SLAM_SHAKE_MS);
           kickLamp(ev.double ? 1.4 : 1);
-          haptic(ev.double ? 22 : 12);
+          // Versão 1.5: bucha dá um tranco duplo no celular; pedra comum, um toque curto
+          haptic(ev.double ? [35, 20, 40] : 15);
         },
         onDone: () => {
           cancelFlight.current = null;
@@ -1401,6 +1438,16 @@ export default function App() {
             onBuyTile={(index) => shopAction({ type: 'SHOP_BUY_TILE', index })}
             onSell={(id) => shopAction({ type: 'SHOP_SELL_RELIC', id })}
             onReroll={() => shopAction({ type: 'SHOP_REROLL' })}
+            onBuyPack={(index) => {
+              sound.playCaseOpen();
+              haptic([12, 40, 12]);
+              dispatch({ type: 'SHOP_BUY_PACK', index });
+            }}
+            onPackPick={(index) => {
+              sound.playPurchase();
+              haptic(20);
+              dispatch({ type: 'SHOP_PACK_PICK', index });
+            }}
             onLeave={leaveTo('LEAVE_SHOP')}
           />
           {devChip}

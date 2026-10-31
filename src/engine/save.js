@@ -28,6 +28,7 @@ import { RELIC_IDS } from '../data/relics.js';
 import { MAX_RELIC_SLOTS } from './loadout.js';
 import { MAP_VERSIONS, generateCampaign, knownMapVersion } from './campaignMap.js';
 import { ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
+import { PACK_IDS } from '../data/packs.js';
 import { FULL_SET, MAX_HEARTS } from './dominoLogic.js';
 
 export const SAVE_VERSION = 6;
@@ -66,6 +67,9 @@ export function snapshotRun(state, resume, savedAt = 0) {
         ? {
             relics: state.shop.relics.map((o) => ({ ...o })),
             tiles: state.shop.tiles.map((o) => ({ ...o })),
+            // versão 1.5: a prateleira de pacotes e o pacote aberto (pago, esperando a escolha)
+            packs: (state.shop.packs ?? []).map((o) => ({ ...o })),
+            opening: state.shop.opening ? { packId: state.shop.opening.packId, options: state.shop.opening.options.map((o) => ({ ...o })) } : null,
             rerolls: state.shop.rerolls,
             rerollCost: state.shop.rerollCost,
           }
@@ -90,7 +94,17 @@ export function isValidShop(shop) {
   if (!isInt(shop.rerolls) || shop.rerolls < 0 || !isInt(shop.rerollCost) || shop.rerollCost < 0) return false;
   const priced = (o) => o && isInt(o.price) && o.price >= 0 && typeof o.sold === 'boolean';
   if (!shop.relics.every((o) => priced(o) && RELIC_IDS.includes(o.id))) return false;
-  return shop.tiles.every((o) => priced(o) && TILE_IDS.has(o.tileId) && ENHANCEMENT_IDS.includes(o.enhancement));
+  if (!shop.tiles.every((o) => priced(o) && TILE_IDS.has(o.tileId) && ENHANCEMENT_IDS.includes(o.enhancement))) return false;
+  // versão 1.5 (opcionais: saves antigos não têm)
+  if (shop.packs != null && !(Array.isArray(shop.packs) && shop.packs.every((o) => priced(o) && PACK_IDS.includes(o.id)))) return false;
+  if (shop.opening != null) {
+    const open = shop.opening;
+    if (!PACK_IDS.includes(open.packId) || !Array.isArray(open.options) || open.options.length > 3) return false;
+    const okOption = (o) =>
+      o && (o.kind === 'relic' ? RELIC_IDS.includes(o.id) : o.kind === 'tile' && TILE_IDS.has(o.tileId) && ENHANCEMENT_IDS.includes(o.enhancement));
+    if (!open.options.every(okOption)) return false;
+  }
+  return true;
 }
 
 /** A vitrine do Mercado Negro guardada ainda bate com os dados do jogo? */

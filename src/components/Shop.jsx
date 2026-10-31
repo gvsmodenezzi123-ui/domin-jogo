@@ -6,7 +6,9 @@ import { relicSlotsFor } from '../engine/loadout.js';
 import { sound } from '../engine/audioSynth.js';
 import { availableNodes, regionOfState } from '../engine/campaignMap.js';
 import { haptic } from '../engine/progress.js';
-import { relicBuyBlock, sellPriceFor, tileBuyBlock } from '../engine/shop.js';
+import { packBuyBlock, relicBuyBlock, sellPriceFor, tileBuyBlock } from '../engine/shop.js';
+import { PACKS } from '../data/packs.js';
+import { PackSprite } from './art/PackArt.jsx';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
@@ -25,6 +27,7 @@ const REACTIONS = {
   reroll: 'Deixa eu ver o que tem lá no fundo...',
   coins: 'Sem dinheiro, sem mercadoria.',
   full: 'Bolsa cheia, campeão. Vende alguma coisa antes.',
+  pack: 'Veio direto da fronteira. Escolhe logo, que o fiscal passa.',
 };
 
 /** Último evento da loja desta visita (abriu, comprou, vendeu, reembaralhou). */
@@ -70,6 +73,63 @@ function Price({ amount, short = false }) {
   );
 }
 
+/**
+ * Versão 1.5: o pacote aberto em cima do balcão. As 3 opções lado a lado; tocar escolhe,
+ * FICAR COM ESTE confirma (o pacote já foi pago: não tem como fechar sem levar um).
+ */
+function PackOpening({ opening, onPick, press }) {
+  const [picked, setPicked] = useState(null);
+  const pack = PACKS[opening.packId];
+  return (
+    <div className="overlay-backdrop fixed inset-0 z-[72] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="pack-title">
+      <div className="pack-open w-full max-w-[380px] px-3 pb-4 pt-3 text-center">
+        <div className="pack-open-head">
+          <PackSprite id={pack.id} className="h-12 w-12" />
+          <div className="text-left">
+            <p id="pack-title" className="font-pixel text-[11px] leading-snug text-[#ffd36b]">
+              {pack.name.toUpperCase()}
+            </p>
+            <p className="font-term text-[17px] leading-none text-bone-200">Escolha um. Os outros voltam pro Valtinho.</p>
+          </div>
+        </div>
+        <div className="pack-options mt-3" role="radiogroup" aria-label="Opções do pacote">
+          {opening.options.map((option, index) => {
+            const relic = option.kind === 'relic' ? getRelic(option.id) : null;
+            const enh = option.kind === 'tile' ? ENHANCEMENTS[option.enhancement] : null;
+            const tier = getRarity(relic ? relic.rarity : enh.rarity);
+            const [a, b] = option.kind === 'tile' ? option.tileId.split('-').map(Number) : [0, 0];
+            return (
+              <button
+                key={`${option.id ?? option.tileId}-${index}`}
+                type="button"
+                role="radio"
+                aria-checked={picked === index}
+                className={`pack-option ${picked === index ? 'is-on' : ''} ${tier.id === 'mitico' ? 'is-mythic' : ''}`}
+                style={{ '--rarity': tier.color, animationDelay: `${index * 110}ms` }}
+                onClick={() => {
+                  sound.playClick();
+                  setPicked(index);
+                }}
+                {...(relic ? press({ kind: 'relic', id: relic.id, owner: 'shop' }) : press({ kind: 'offerTile', tileId: option.tileId, enhancement: option.enhancement }))}
+              >
+                <span className="pack-option-art">
+                  {relic ? <RelicIcon relic={relic} size={44} /> : <DominoTile values={[a, b]} unit={18} depth={3} enhancement={option.enhancement} shimmer />}
+                </span>
+                <span className={`rarity-badge ${tier.id === 'mitico' ? 'rarity-badge-mythic' : ''}`}>{tier.label}</span>
+                <span className="pack-option-name">{relic ? relic.short : enh.name.toUpperCase()}</span>
+                <span className="pack-option-text">{relic ? relic.description : `Substitui o seu ${tileLabel(option.tileId)} comum. ${enh.description}`}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button type="button" data-tone="play" className="btn-pixel mt-3 w-full" disabled={picked === null} onClick={() => onPick?.(picked)}>
+          {picked === null ? 'TOQUE NUMA OPÇÃO' : 'FICAR COM ESTE'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Valtinho do Bar: respira devagar e pisca de vez em quando. */
 function Valtinho() {
   const [blink, setBlink] = useState(false);
@@ -108,7 +168,7 @@ function Valtinho() {
  * Segurar qualquer mercadoria mostra o efeito. Desde o Patch 0.6.1 a loja é um caminho
  * opcional da teia: sair dela volta para o mapa, que mostra as próximas bifurcações.
  */
-export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, press, leaveTitle = 'VOLTAR AO MAPA →', leaveNote = null }) {
+export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, onLeave, onBuyPack, onPackPick, press, leaveTitle = 'VOLTAR AO MAPA →', leaveNote = null }) {
   // Patch 0.9.3: sem scroll; se ainda passar da tela, a cena encolhe para caber
   const [fitOuter, fitInner, fitStyle] = useFitScale();
   const [sellId, setSellId] = useState(null);
@@ -155,6 +215,22 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
       return;
     }
     if (!block) onBuyTile(index);
+  };
+
+  const buyPack = (index) => {
+    const offer = shop.packs[index];
+    if (offer.sold) return;
+    const block = packBuyBlock(state, offer);
+    if (block === 'full') {
+      setAlert((n) => n + 1);
+      complain('full');
+      return;
+    }
+    if (block === 'coins') {
+      complain('coins');
+      return;
+    }
+    if (!block) onBuyPack?.(index);
   };
 
   const reroll = () => {
@@ -277,6 +353,34 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
             })}
           </div>
 
+          {/* Versão 1.5: a prateleira dos pacotes fechados (abre na hora, escolhe 1 de 3) */}
+          {shop.packs?.length > 0 && (
+            <>
+              <h2 className="sr-only">Pacotes fechados</h2>
+              <ul className="shop-packs">
+                {shop.packs.map((offer, index) => {
+                  const pack = PACKS[offer.id];
+                  const block = packBuyBlock(state, offer);
+                  return (
+                    <li key={offer.id}>
+                      <button
+                        type="button"
+                        className={`scene-tap shop-pack ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
+                        onClick={() => buyPack(index)}
+                        aria-label={offer.sold ? `${pack.name}: já aberto` : `Comprar ${pack.name} por ${offer.price} moedas: ${pack.blurb}`}
+                        {...press({ kind: 'pack', id: offer.id })}
+                      >
+                        <span className="shop-pack-art">{!offer.sold && <PackSprite id={offer.id} className="h-10 w-10" />}</span>
+                        <span className="shop-pack-name">{pack.short}</span>
+                        {offer.sold ? <span className="shop-tag-sold">ABERTO</span> : <Price amount={offer.price} short />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+
           {/* frente do balcão: a Bolsa de Talismãs, 4 nichos entalhados */}
           <div key={`pouch-${alert}`} className={`shop-pouch ${alert ? 'animate-hotbar-full' : ''}`}>
             <p className="shop-pouch-label">
@@ -355,6 +459,8 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
         </footer>
         </div>
       </div>
+
+      {shop.opening && <PackOpening opening={shop.opening} onPick={onPackPick} press={press} />}
 
       {selling && (
         <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">

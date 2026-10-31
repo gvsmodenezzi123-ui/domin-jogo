@@ -12,6 +12,31 @@ import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import VictoryModal from './VictoryModal.jsx';
+import { sound } from '../engine/audioSynth.js';
+
+/** Versão 1.5: intervalo entre um coração trincando e o seguinte (ms). */
+const CRACK_STEP_MS = 180;
+
+/**
+ * Os corações que a rodada tirou, trincando um depois do outro, cada um com o estalo dele
+ * (sound.playHeartBreak). No máximo 6 na fila; o número na frente diz o total.
+ */
+function CrackedHearts({ count }) {
+  const shown = Math.min(count, 6);
+  useEffect(() => {
+    const timers = Array.from({ length: shown }, (_, i) => setTimeout(() => sound.playHeartBreak(), 420 + i * CRACK_STEP_MS));
+    return () => timers.forEach(clearTimeout);
+  }, [shown]);
+  return (
+    <span className="cracked-hearts" aria-hidden="true">
+      {Array.from({ length: shown }, (_, i) => (
+        <span key={i} className="cracked-heart" style={{ animationDelay: `${420 + i * CRACK_STEP_MS}ms` }}>
+          <PixelHeart broken pixel={2} />
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /** Versão 1.4: como acaba a noite, conforme o chefe final que a teia sorteou. */
 const FINAL_LINES = {
@@ -231,7 +256,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             {damage > 0 && (
               <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[11px] text-blood-400">
                 <span>−{damage}</span>
-                <PixelHeart broken pixel={2} />
+                <CrackedHearts count={damage} />
                 <span className="text-bone-200">{playerWon ? `EM ${name}` : 'EM VOCÊ'}</span>
               </div>
             )}

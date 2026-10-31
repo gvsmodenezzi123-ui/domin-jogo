@@ -1,7 +1,7 @@
 import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
-import { computeFan } from './handFan.js';
+import { DEAL_STEP_MS, computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import { CoinGlyph, EyeGlyph, MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
@@ -274,7 +274,8 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
       }}
     >
       <div className={`hand-float ${selected ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
-        <div className="animate-tile-in" style={{ animationDelay: `${Math.min(index, 7) * 45}ms` }}>
+        {/* Versão 1.5: a mão chega em cascata, uma pedra a cada 70 ms (o estalo de cada uma toca no App) */}
+        <div className="animate-tile-in" style={{ animationDelay: `${Math.min(index, 7) * DEAL_STEP_MS}ms` }}>
           {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
           <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
             <DominoTile
@@ -368,7 +369,7 @@ const ActionBar = memo(function ActionBar({
   return (
     <>
       {discardMode ? (
-        <div className="grid grid-cols-[1fr_1.4fr] gap-2 px-3 pt-1.5">
+        <div className="action-wood grid grid-cols-[1fr_1.4fr] gap-2 px-3 pt-1.5">
           <button type="button" className="btn-pixel" onClick={onSkipDiscard}>
             {pickLabels.skip}
           </button>
@@ -377,7 +378,7 @@ const ActionBar = memo(function ActionBar({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
+        <div className="action-wood grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
           <button type="button" data-tut="draw" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
             <span>COMPRAR</span>
             <span className="text-[8px] text-bone-200">

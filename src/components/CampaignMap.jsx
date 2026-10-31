@@ -16,6 +16,7 @@ import { rivalBlurb } from '../engine/rivalInfo.js';
 import { relicSlotsFor } from '../engine/loadout.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
+import BotecoBackdrop from './BotecoBackdrop.jsx';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
@@ -332,7 +333,9 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
       </header>
 
       <div ref={scrollRef} className="map-scroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="relative mx-auto w-full max-w-[460px]" style={{ height }}>
+        <div className="map-paper relative mx-auto w-full max-w-[460px]" style={{ height }}>
+          {/* Versão 1.5: a teia desenhada numa folha de papel de pão (manchas de copo, dobras) */}
+          <BotecoBackdrop scene="map" seed={campaign.seed % 997} className="absolute inset-0" />
           {regions.map((r) => (
             <section
               key={r.id}
@@ -342,7 +345,7 @@ export default function CampaignMap({ state, onEnter, onMenu, press }) {
             />
           ))}
 
-          {/* caminhos riscados a giz de sinuca (o filtro deixa o traço áspero) */}
+          {/* caminhos riscados a caneta esferográfica azul (o filtro deixa o traço falhado) */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <filter id="chalk-rough" x="-5%" y="-1%" width="110%" height="102%">

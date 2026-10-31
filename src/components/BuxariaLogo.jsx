@@ -37,7 +37,24 @@ const CHIPS = [
   [47.6, 0.4, 0.5],
 ];
 
-function BuxariaLogo({ className = '', onClick }) {
+/** Versão 1.5: a pele de madeira da tela inicial (face em tábua com veio, extrusão em madeira escura). */
+const SKINS = {
+  bone: { face: ['#fff7e0', '#f1dfac', '#dcc07e', '#a77d3b'], edge: ['#fffdf2', '#c9a764'], ext: ['#9a3220', '#3a0d07'], back: '#2a0805', metal: ['#f3efe2', '#9d968a', '#3f372c'] },
+  wood: { face: ['#f2b46a', '#c9803e', '#a8622a', '#6e3a14'], edge: ['#ffe0a8', '#b8743a'], ext: ['#5a3214', '#1e0e05'], back: '#140903', metal: ['#ffd9a0', '#8a5a2a', '#3a1e0a'] },
+};
+
+/** Veio da madeira atravessando as letras (só na pele de madeira). */
+const GRAIN = [
+  'M-1 1.6C8 1.2 16 2.2 24 1.7S44 1.1 62 1.9',
+  'M-1 3.4C10 3.9 20 3.1 30 3.6S50 4.1 62 3.3',
+  'M-1 5.3C6 5 14 5.8 26 5.4S46 4.9 62 5.6',
+  'M-1 7.2C12 7.6 22 6.9 34 7.3S52 7.8 62 7.1',
+  'M-1 8.9C9 8.6 19 9.3 29 9S49 8.7 62 9.2',
+];
+
+function BuxariaLogo({ className = '', onClick, skin = 'bone' }) {
+  const pal = SKINS[skin] ?? SKINS.bone;
+  const id = (n) => `bx-${skin}-${n}`;
   return (
     <svg
       viewBox={`-1.6 -1.6 ${WIDTH + 4.6} 15`}
@@ -47,31 +64,31 @@ function BuxariaLogo({ className = '', onClick }) {
       onClick={onClick}
     >
       <defs>
-        <linearGradient id="bx-bone" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff7e0" />
-          <stop offset="0.46" stopColor="#f1dfac" />
-          <stop offset="0.54" stopColor="#dcc07e" />
-          <stop offset="1" stopColor="#a77d3b" />
+        <linearGradient id={id('face')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={pal.face[0]} />
+          <stop offset="0.46" stopColor={pal.face[1]} />
+          <stop offset="0.54" stopColor={pal.face[2]} />
+          <stop offset="1" stopColor={pal.face[3]} />
         </linearGradient>
-        <linearGradient id="bx-metal" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f3efe2" />
-          <stop offset="0.5" stopColor="#9d968a" />
-          <stop offset="1" stopColor="#3f372c" />
+        <linearGradient id={id('metal')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={pal.metal[0]} />
+          <stop offset="0.5" stopColor={pal.metal[1]} />
+          <stop offset="1" stopColor={pal.metal[2]} />
         </linearGradient>
-        <linearGradient id="bx-edge" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fffdf2" />
-          <stop offset="1" stopColor="#c9a764" />
+        <linearGradient id={id('edge')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={pal.edge[0]} />
+          <stop offset="1" stopColor={pal.edge[1]} />
         </linearGradient>
-        <linearGradient id="bx-ext" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9a3220" />
-          <stop offset="1" stopColor="#3a0d07" />
+        <linearGradient id={id('ext')} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={pal.ext[0]} />
+          <stop offset="1" stopColor={pal.ext[1]} />
         </linearGradient>
-        <linearGradient id="bx-sweep" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id={id('sweep')} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#fff" stopOpacity="0" />
           <stop offset="0.5" stopColor="#fff" stopOpacity="0.85" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
-        <clipPath id="bx-clip">
+        <clipPath id={id('clip')}>
           <path d={WORD_D} fillRule="evenodd" />
         </clipPath>
       </defs>
@@ -85,7 +102,7 @@ function BuxariaLogo({ className = '', onClick }) {
           key={k}
           d={WORD_D}
           fillRule="evenodd"
-          fill={k === DEPTH ? '#2a0805' : 'url(#bx-ext)'}
+          fill={k === DEPTH ? pal.back : `url(#${id('ext')})`}
           stroke={k === DEPTH ? '#0b0705' : 'none'}
           strokeWidth="0.62"
           strokeLinejoin="miter"
@@ -96,17 +113,25 @@ function BuxariaLogo({ className = '', onClick }) {
 
       {/* 3. face de osso, uma letra por vez (o degradê acompanha cada letra) */}
       {LETTERS.map((l) => (
-        <path key={l.key} d={l.d} fillRule="evenodd" fill="url(#bx-bone)" stroke="#0b0705" strokeWidth="0.62" strokeLinejoin="miter" paintOrder="stroke" />
+        <path key={l.key} d={l.d} fillRule="evenodd" fill={`url(#${id('face')})`} stroke="#0b0705" strokeWidth="0.62" strokeLinejoin="miter" paintOrder="stroke" />
       ))}
 
       {/* 4. chanfro duplo: faixa de metal e, na borda, o filete de osso claro */}
-      <g clipPath="url(#bx-clip)" fill="none" strokeLinejoin="miter">
+      <g clipPath={`url(#${id('clip')})`} fill="none" strokeLinejoin="miter">
         {LETTERS.map((l) => (
-          <path key={`m${l.key}`} d={l.d} stroke="url(#bx-metal)" strokeWidth="0.72" />
+          <path key={`m${l.key}`} d={l.d} stroke={`url(#${id('metal')})`} strokeWidth="0.72" />
         ))}
         {LETTERS.map((l) => (
-          <path key={`e${l.key}`} d={l.d} stroke="url(#bx-edge)" strokeWidth="0.26" />
+          <path key={`e${l.key}`} d={l.d} stroke={`url(#${id('edge')})`} strokeWidth="0.26" />
         ))}
+
+        {skin === 'wood' && (
+          <g stroke="#5a2e0e" strokeOpacity="0.55" strokeWidth="0.16">
+            {GRAIN.map((d) => (
+              <path key={d} d={d} />
+            ))}
+          </g>
+        )}
 
         {/* 5. desgaste */}
         <g stroke="#4a2e14" strokeOpacity="0.6" strokeWidth="0.14">
@@ -120,7 +145,7 @@ function BuxariaLogo({ className = '', onClick }) {
 
         {/* 6. feixe especular cruzando o logo */}
         <g transform="skewX(-22)">
-          <rect className="buxaria-sweep" x="-10" y="-2" width="5" height="16" fill="url(#bx-sweep)" />
+          <rect className="buxaria-sweep" x="-10" y="-2" width="5" height="16" fill={`url(#${id('sweep')})`} />
         </g>
       </g>
     </svg>

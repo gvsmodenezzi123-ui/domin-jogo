@@ -67,7 +67,7 @@ O workflow `.github/workflows/build-android.yml` gera a build de produção ofic
 | | |
 | --- | --- |
 | Pacote | `com.buxaria.game` ("Buxaria", em `capacitor.config.json`) |
-| Versão | `versionName` = `package.json` (1.4.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
+| Versão | `versionName` = `package.json` (1.5.0); `versionCode` = número da execução do workflow (ou o que você digitar ao rodar à mão) |
 | Alvo | Android 16 (API 36), exigido pela Play para apps novos e atualizações desde 31/08/2026; mínimo Android 7 (API 24) |
 | Ferramentas | Node 22, Capacitor 8, JDK 21 (o Capacitor 8 não compila com JDK 17) |
 | Permissões | só `INTERNET` (o WebView do Capacitor) e `VIBRATE` (a vibração do jogo); ID de publicidade, rede, câmera, localização e afins removidos explicitamente |
@@ -163,6 +163,105 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Dois passes seguidos (um de cada) = **tranca na hora**.
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
+
+## Versão 1.5: o boteco em volta de tudo
+
+### O cenário (`components/art/botecoScene.js`, `BotecoBackdrop.jsx`)
+
+O boteco é pintado por código num buffer de pixels: 1 pixel do cenário para cada 2 px da tela, sem
+imagem baixada. A mesma semente pinta sempre o mesmo boteco. A pintura acontece uma vez por tamanho
+de tela, então o navegador só compõe uma imagem parada e não pesa no iPhone.
+
+| Cena | Onde | O que tem |
+| --- | --- | --- |
+| `title` | tela inicial | azulejo encardido, quadro-negro, 3 prateleiras de garrafas e canecas, janela com chuva, rodapé de madeira e a mesa de feltro em perspectiva com pedras, ossos e o copo |
+| `counter` | Balcão de Maletas | parede de tábua escura e o chão; a bancada de feltro é CSS (`.case-stage`) e acompanha o carrossel |
+| `match` | atrás do rival | azulejo verde de boteco com a prateleira de garrafas e canecas |
+| `wide` | laterais em tela larga | o bar continua para os lados (prateleiras, lâmpadas, mesa), desfocado e no escuro (`WideRoom.jsx`) |
+| `map` | mapa | folha de papel de pão com fibras, dobras, marcas de copo e borda encardida |
+
+Objetos soltos (`SceneProp`): copo americano, cinzeiro com cigarro aceso e tampinhas.
+
+### Tela inicial e caixa JOGAR (`TitleScreen.jsx`)
+
+- O logo BUXARIA ganhou a pele de madeira (`BuxariaLogo skin="wood"`) e o subtítulo a giz
+  "DOMINÓ DE BOTECO · UM CONTRA UM".
+- O livro e o caderno estão pregados numa tábua; a engrenagem, em outra.
+- A chuva escorre na janela pintada e a poeira boia no facho da lâmpada.
+- O JOGAR é uma caixa de madeira entalhada em cima da mesa, com fecho de latão. Tocar estala o
+  fecho, a tampa sobe e o forro de veludo mostra as plaquinhas de osso: CONTINUAR, NOVO JOGO,
+  MESA ONLINE, DESAFIOS e FECHAR.
+
+### Balcão de Maletas (`CaseCounter.jsx`)
+
+Título em dourado e, com a maleta aberta, o nome dela em neon com as Peças Brancas, Pretas e
+Prateadas logo embaixo. As maletas repousam numa bancada de feltro com aro de madeira, com o
+cinzeiro e o copo nos cantos. A vantagem, a semente e o INICIAR ficam num cartão de veludo.
+
+### Mesa da partida (`TableBoard.jsx`, `RivalBench.jsx`, `PlayerRack.jsx`)
+
+- O feltro tem um aro de madeira gasta de 11 px com a marca do copo; tampinhas, cinzeiro e copo
+  ficam em cima do aro, por baixo das pedras.
+- Atrás do rival aparece a parede de azulejo com a prateleira. O retrato vira polaroide presa
+  com fita crepe.
+- Ponta travada (Chumbo, Âmbar): correntes em X e o cadeado por cima do número.
+- O balão do rival virou um bilhete de papel e quebra a linha em vez de cortar.
+- A sua parte da mesa é a tábua da beirada; COMPRAR, JOGAR e PASSAR são tábuas pregadas.
+- A mão chega em cascata, uma pedra a cada 70 ms, com um toque de pedra no feltro para cada uma.
+
+#### A serpente (`engine/boardLayout.js`)
+
+- Nenhuma subida passa de 3 pedras (`MAX_VERTICAL_CHAIN`); na 4ª a corrente deita.
+- Correndo deitada, a dobra que sobe vem antes da que desce. Por isso a corrente comprida sobe
+  em zigue-zague pela metade dela, em vez de fazer coluna alta.
+- O mundo tem no mínimo 16 linhas. A câmera enquadra só as pedras, então o U baixo aparece maior.
+- A faixa de cima do feltro (40 px) fica para o dorme e os selos: as pedras ficam abaixo dela.
+- A mesa lotada continua inteira na tela: a câmera aceita até 22 px por unidade antes de enquadrar
+  só as pontas.
+- Testado em 2.349 mesas de rodadas simuladas: 0,34% tiveram uma pedra solta, contra 0,26% antes.
+
+### Som e vibração (`engine/audioSynth.js`, `App.jsx`)
+
+| Som | Quando |
+| --- | --- |
+| tapa seco na fórmica (`playTileSlam`) | toda pedra; a bucha bate mais grave, com tranco duplo no celular (35-20-40 ms) |
+| combo (`playComboStep`) | cada múltiplo de 5 seguido do mesmo jogador sobe o tom ×1,12 (até 10 degraus); jogada sem 5 zera |
+| cascata (`playDealTick`) | as 7 pedras da mão chegando no começo da rodada |
+| estalo de coração (`playHeartBreak`) | no fim da rodada, um coração trincando por vez, a cada 180 ms |
+
+Tudo passa pelo motor de som de sempre: o volume e o mudo valem para os sons novos.
+
+### Livro de Boteco em álbum (`CollectionBook.jsx`)
+
+Cada página é uma prateleira de 3 × 4 nichos com a cor da raridade na moldura e o "?" de giz no
+que ainda não apareceu. Tocar num nicho sobe a ficha do item no rodapé: nome, raridade, efeito ou a
+meta de conquista. As setas, ou arrastar para o lado, viram a página.
+
+### Pacotes na Loja do Valtinho (`data/packs.js`, `engine/shop.js`)
+
+Uma prateleira a mais na loja; a vitrine de 3 talismãs e 2 pedras continua igual. Você paga, o
+pacote abre na hora e você escolhe 1 de 3. Dá para comprar um pacote de cada por visita. O sorteio
+sai da semente da run, e reembaralhar não troca os pacotes.
+
+| Pacote | Preço | O que vem |
+| --- | --- | --- |
+| Maço Paraguaio | $6 | talismãs: 65% comum, 25% raro, 8% lendário, 2% mítico |
+| Saco de Pedras | $9 | pedras de grife em pedras comuns do seu baralho: 70% raras ou lendárias, 30% míticas |
+| Engradado Jumbo | $12 | talismãs: 40% comum, 40% raro, 17% lendário, 3% mítico |
+
+- Nunca vêm necróticos nem talismãs que você já tem. Os da vitrine também ficam de fora, enquanto
+  houver outros.
+- O pacote de talismã não abre com a bolsa cheia.
+- Com o pacote aberto, a loja espera a escolha. O save guarda o pacote aberto.
+- O Saco de Pedras foi para $9 porque, a $5, uma pedra mítica saía por um quarto do preço da vitrine.
+- A mesa online não tem pacotes, porque as raridades lá são as da sala.
+
+### Mapa em papel de pão (`CampaignMap.jsx`)
+
+A teia fica desenhada numa folha de papel de embrulho, com a tinta de cada região por cima. Os
+caminhos são de caneta esferográfica azul: tracejado no que dá para andar, cheio no que já foi
+andado. As polaroides levam fita crepe amarelada e o nome da região é uma etiqueta escrita a lápis.
+Quem já caiu leva um X de caneta vermelha.
 
 ## Versão 1.4: 10 rivais novos, 18 talismãs, 2 pedras e a teia sorteada
 

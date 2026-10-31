@@ -4,6 +4,7 @@ import {
   computeBoardLayout,
   computeCamera,
   computeWorldSize,
+  MAX_VERTICAL_CHAIN,
   rectGap,
   rectsOverlap,
   tileOrientationOnBoard,
@@ -12,7 +13,7 @@ import { createEmptyBoard, makeTile, placeTile } from '../dominoLogic.js';
 
 const t = (a, b) => makeTile(a, b);
 const COLS = 10;
-const ROWS = 13;
+const ROWS = 16;
 
 /** Mesa sintética: o layout só usa inner/outer, então dá para montar correntes longas. */
 function synthetic(rootTile, left = [], right = []) {
@@ -104,12 +105,29 @@ describe('U e corrente longa', () => {
     }
   });
 
-  it('no topo a linha dobra 90° para dentro, deitando as pedras de novo', () => {
+  it('versão 1.5: o braço sobe no máximo 3 pedras pela margem e dobra para dentro', () => {
     const chain = Array.from({ length: 12 }, (_, i) => [i % 7, (i + 1) % 7]);
     const lay = computeBoardLayout(synthetic(t(0, 0), chain), COLS, ROWS);
-    const top = lay.tiles.filter((x) => x.branch === 'left' && !x.isDouble && x.y < 1);
-    expect(top.length).toBeGreaterThan(0);
-    expect(top.some((x) => x.lineAxis === 'horizontal' && x.x > 0.5)).toBe(true);
+    const left = lay.tiles.filter((x) => x.branch === 'left');
+    const arm = left.findIndex((x) => x.lineAxis === 'vertical');
+    expect(arm).toBeGreaterThan(0);
+    const run = left.slice(arm).findIndex((x) => x.lineAxis !== 'vertical');
+    expect(run).toBe(MAX_VERTICAL_CHAIN);
+    // a 4ª pedra deita e vai para dentro (para o centro da mesa)
+    const bend = left[arm + run];
+    const cx = (r) => r.x + r.w / 2;
+    expect(bend.lineAxis).toBe('horizontal');
+    expect(cx(bend)).toBeGreaterThan(cx(left[arm + run - 1]));
+    // o braço ficou baixo: nada da corrente sobe acima da metade do mundo antes da dobra
+    expect(Math.min(...left.slice(0, arm + run).map((x) => x.y))).toBeGreaterThan(ROWS / 2 - 1);
+  });
+
+  it('versão 1.5: corrente comprida num ramo só sobe em espiral e não solta pedra', () => {
+    const chain = Array.from({ length: 16 }, (_, i) => [i % 7, (i + 1) % 7]);
+    const lay = computeBoardLayout(synthetic(t(0, 0), chain), COLS, ROWS);
+    expect(lay.tiles.some((x) => x.detached)).toBe(false);
+    const left = [lay.tiles[0], ...lay.tiles.filter((x) => x.branch === 'left')];
+    for (let i = 1; i < left.length; i += 1) expect(rectGap(left[i - 1], left[i])).toBeLessThan(1e-6);
   });
 
   it('pedras já postas nunca mudam de lugar nem de rotação quando outra entra', () => {
@@ -149,8 +167,10 @@ describe('câmera', () => {
   const viewport = { width: 374, height: 430 };
 
   it('o mundo tem 10 colunas e a altura segue a tela', () => {
-    expect(computeWorldSize(374, 430)).toEqual({ cols: 10, rows: 13 });
-    expect(computeWorldSize(414, 640).rows).toBe(15);
+    // versão 1.5: no mínimo 16 linhas (a espiral precisa do alto livre)
+    expect(computeWorldSize(374, 430)).toEqual({ cols: 10, rows: 16 });
+    expect(computeWorldSize(414, 640).rows).toBe(16);
+    expect(computeWorldSize(300, 900).rows).toBe(18);
   });
 
   it('começo da rodada: zoom máximo (pedras grandes)', () => {
@@ -190,12 +210,13 @@ describe('câmera', () => {
     endsVisible(lay, computeCamera(lay, viewport));
   });
 
-  it('mesa lotada cabe inteira no feltro, com pedras ~30% maiores que no Patch 0.1', () => {
+  it('mesa lotada cabe inteira no feltro, com pedras maiores que no Patch 0.1', () => {
     const chain = Array.from({ length: 13 }, (_, i) => [3, 3 + (i % 2)]);
     const lay = computeBoardLayout(synthetic(t(3, 4), chain, chain), COLS, ROWS);
     const cam = computeCamera(lay, viewport);
     expect(cam.focus).toBe('all');
-    expect(cam.unitPx).toBeGreaterThanOrEqual(22 * 1.3);
+    // versão 1.5: o braço baixo deixa a mesa lotada mais alta (espiral); continua inteira na tela
+    expect(cam.unitPx).toBeGreaterThanOrEqual(22 * 1.1);
     endsVisible(lay, cam);
   });
 });

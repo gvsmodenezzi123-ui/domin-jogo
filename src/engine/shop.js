@@ -19,6 +19,7 @@ import { ROOM_RARITY_CHANCES } from '../data/pvpRoom.js';
 import { RARITIES } from '../data/rarities.js';
 import { RELICS, RELIC_IDS, isRelicOffered } from '../data/relics.js';
 import { FULL_SET, createSeededRng } from './dominoLogic.js';
+import { PACKS, PACK_IDS, PACK_OPTIONS, STONE_TIERS } from '../data/packs.js';
 import { hasPerk, relicSlotsFor, shopPrice } from './loadout.js';
 
 export const SHOP_RELIC_OFFERS = 3;
@@ -108,7 +109,43 @@ export function buildShop(state, rerolls = 0) {
 
   // Pé de Coelho Sarnento (versão 1.4): enquanto tiver reembaralhar grátis guardado, sai de graça
   const free = freeFirstReroll(state, rerolls) || (state.run?.freeRerolls ?? 0) > 0;
-  return { relics, tiles, rerolls, rerollCost: free ? 0 : rerollCost(rerolls) };
+  // Versão 1.5: a prateleira de pacotes (só no solo; a mesa online escolhe as raridades dela)
+  const packs = state.pvp?.run ? [] : PACK_IDS.map((id) => ({ id, price: shopPrice(state, PACKS[id].price), sold: false }));
+  return { relics, tiles, packs, rerolls, rerollCost: free ? 0 : rerollCost(rerolls) };
+}
+
+/**
+ * Versão 1.5: o que sai de um pacote (3 opções). Talismã: raridade por opção nas chances do
+ * pacote, sem repetir, sem os que você já tem nem os da vitrine, sem necrótico e só os liberados.
+ * Pedra: cada opção é uma pedra comum do seu baralho com uma pedra de grife (70% rara ou
+ * lendária, 30% mítica). Sai da semente: nó, reembaralhadas e o pacote.
+ */
+export function rollPack(state, packId) {
+  const pack = PACKS[packId];
+  const rng = shopRng(state, state.shop?.rerolls ?? 0, `pacote-${packId}`);
+  if (pack.kind === 'relic') {
+    const owned = new Set([...state.relics.player, ...(state.shop?.relics ?? []).filter((o) => !o.sold).map((o) => o.id)]);
+    let pool = RELIC_IDS.filter((id) => !owned.has(id) && RELICS[id].rarity !== 'necrotico' && isRelicOffered(id, state));
+    if (pool.length < PACK_OPTIONS) pool = RELIC_IDS.filter((id) => !state.relics.player.includes(id) && RELICS[id].rarity !== 'necrotico' && isRelicOffered(id, state));
+    return pickByRarity(pool, (id) => RELICS[id].rarity, pack.rates, PACK_OPTIONS, rng).map((id) => ({ kind: 'relic', id }));
+  }
+  const plain = FULL_SET.map((t) => t.id).filter((id) => !state.decks.player[id]);
+  const tileIds = pickWeighted(plain, () => 1, PACK_OPTIONS, rng);
+  return tileIds.map((tileId) => {
+    const tier = rng() < pack.rates.normal ? 'normal' : 'luxo';
+    const pool = ENHANCEMENT_IDS.filter((e) => STONE_TIERS[tier].includes(ENHANCEMENTS[e].rarity));
+    const enhancement = pool[Math.floor(rng() * pool.length)];
+    return { kind: 'tile', tileId, enhancement };
+  });
+}
+
+/** Por que não dá para comprar esse pacote agora (ou null se dá). */
+export function packBuyBlock(state, offer) {
+  if (!offer || offer.sold) return 'sold';
+  if (state.shop?.opening) return 'opening';
+  if (PACKS[offer.id].kind === 'relic' && state.relics.player.length >= relicSlotsFor(state)) return 'full';
+  if (state.coins.player < offer.price) return 'coins';
+  return null;
 }
 
 /** Nota de 3 Reais (talismã) e Amizade com o Valtinho (Conta do Boteco): o 1º reembaralhar da visita é de graça. */

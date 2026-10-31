@@ -5,6 +5,7 @@ import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
+import BotecoBackdrop from './BotecoBackdrop.jsx';
 
 /**
  * O outro lado da mesa, com o layout TRAVADO (nada aqui muda de tamanho
@@ -49,6 +50,8 @@ function RivalBench({
       className={`rival-bench relative z-30 shrink-0 ${isTurn ? 'rival-bench-active' : ''}`}
       style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}
     >
+      {/* Versão 1.5: atrás do rival, a parede de azulejo do boteco com a prateleira */}
+      <BotecoBackdrop scene="match" className="rival-bench-wall absolute inset-0" />
       <div className="relative h-24 w-full select-none overflow-hidden">
         {/* bloco fixo da esquerda */}
         <div className="absolute left-0 top-0 flex h-24 w-40 flex-shrink-0 gap-1.5 pl-2 pt-2">

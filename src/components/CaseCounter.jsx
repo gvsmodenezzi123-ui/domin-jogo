@@ -6,6 +6,7 @@ import { sound } from '../engine/audioSynth.js';
 import { markMaletasSeen } from '../engine/meta.js';
 import { SEED_MAX_LENGTH, normalizeSeed } from '../engine/seedEngine.js';
 import { haptic } from '../engine/progress.js';
+import BotecoBackdrop, { SceneProp } from './BotecoBackdrop.jsx';
 import DominoTile from './DominoTile.jsx';
 import LampRig from './LampRig.jsx';
 import { TileSkinContext } from './tileSkin.js';
@@ -334,6 +335,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
         if (e.key === 'ArrowLeft') focusTo(focus - 1);
       }}
     >
+      {/* Versão 1.5: a sala escura do boteco atrás do balcão */}
+      <BotecoBackdrop scene="counter" className="absolute inset-0 z-0" />
       {/* o pesadelo: a cor do balcão muda com a dificuldade */}
       <div aria-hidden="true" className="counter-dread">
         <span className="dread-hard" />
@@ -354,6 +357,19 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
           <span>{pvp ? pvp.note : rule ? rule.rule : 'Arraste para o lado e escolha a sua maleta'}</span>
         </h1>
 
+        {/* Versão 1.5: com a maleta aberta, o nome dela em neon e as três peças logo embaixo do título */}
+        {maleta && (
+          <div key={`head-${selected}`} className="counter-head">
+            <p className="counter-pick-name">{maleta.name.toUpperCase()}</p>
+            <p className="counter-pick-sub">{maleta.title}</p>
+            {!pvp && <DifficultyPick mode={mode} unlocked={modesOpen} onChange={chooseMode} />}
+          </div>
+        )}
+
+        {/* a bancada: as maletas em cima do feltro, com o cinzeiro e o copo nos cantos */}
+        <div className="case-stage">
+          <SceneProp name="ashtray" scale={2} className="case-stage-prop case-stage-ashtray" />
+          <SceneProp name="glass" scale={2} className="case-stage-prop case-stage-glass" />
         <CaseCarousel ids={MALETA_IDS} focus={focus} onFocus={focusTo}>
           {(id, i) => (
             <CaseSlot
@@ -391,6 +407,7 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
             <ArrowGlyph dir="next" size={12} />
           </button>
         </div>
+        </div>
 
         {!focusOpen ? (
           <div key={`info-${focusId}-${shake.id === focusId ? shake.n : 0}`} className={`counter-card counter-card-locked ${shake.id === focusId ? 'animate-shop-alert' : ''}`} role="status">
@@ -415,11 +432,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
           </div>
         ) : (
           <div key={selected} className="counter-card counter-card-open" role="group" aria-label={maleta.name}>
-            <p className="counter-card-title">{maleta.name.toUpperCase()}</p>
-            <p className="counter-card-sub">{maleta.title}</p>
             <p className="counter-buff">+ {maleta.buff}</p>
             {maleta.debuff && <p className="counter-debuff">− {pvp?.debuff?.[maleta.id] ?? maleta.debuff}</p>}
-            {!pvp && <DifficultyPick mode={mode} unlocked={modesOpen} onChange={chooseMode} />}
             {warn.n > 0 && (
               <p key={warn.n} className="case-warn animate-shop-alert" role="alert">
                 {warn.text}

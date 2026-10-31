@@ -5,6 +5,7 @@ import { getRival } from '../data/rivals.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
 import { loadChallenges, loadMetaProgress, loadSeenMaletas, loadUnlockedMaletas, subscribeMeta } from '../engine/meta.js';
+import BotecoBackdrop from './BotecoBackdrop.jsx';
 import BuxariaLogo from './BuxariaLogo.jsx';
 import CaseCounter from './CaseCounter.jsx';
 import ChallengesModal from './ChallengesModal.jsx';
@@ -15,6 +16,8 @@ import LampRig from './LampRig.jsx';
 import PagedBlocks from './PagedBlocks.jsx';
 import AccountStatsModal from './AccountStatsModal.jsx';
 import { BookIcon, GearIcon, LedgerIcon } from './art/SceneArt.jsx';
+import { sound } from '../engine/audioSynth.js';
+import { haptic } from '../engine/progress.js';
 
 function isStandalone() {
   if (typeof window === 'undefined') return false;
@@ -61,12 +64,12 @@ function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges,
     return (
       <div className="title-choices">
         <p className="title-confirm">Começar do zero apaga a run salva.</p>
-        <button type="button" className="text-action title-choice title-choice-danger" onClick={onNewGame}>
+        <button type="button" className="case-bone-tab case-bone-danger" onClick={onNewGame}>
           APAGAR E COMEÇAR
         </button>
         <button
           type="button"
-          className="text-action title-choice title-choice-quiet"
+          className="case-close-tab"
           onClick={() => {
             onTap?.();
             setConfirm(false);
@@ -79,15 +82,13 @@ function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges,
   }
   return (
     <div className="title-choices">
-      <button type="button" className={`text-action title-choice ${save ? 'title-choice-gold' : ''}`} disabled={!save} onClick={onContinue}>
+      <button type="button" className={`case-bone-tab ${save ? 'case-bone-gold' : ''}`} disabled={!save} onClick={onContinue}>
         CONTINUAR
-        <span className="title-choice-note">
-          {summary ?? 'Nenhuma run salva'}
-        </span>
+        <span className="title-choice-note">{summary ?? 'Nenhuma run salva'}</span>
       </button>
       <button
         type="button"
-        className="text-action title-choice"
+        className={`case-bone-tab ${save ? '' : 'case-bone-gold'}`}
         onClick={
           save
             ? () => {
@@ -101,15 +102,36 @@ function PlayChoices({ save, onNewGame, onContinue, onChallenges, hasChallenges,
       </button>
       {/* Patch PvP: a mesa online (sala privada com ID) */}
       {onOnline && (
-        <button type="button" className="text-action title-choice title-choice-online" onClick={onOnline}>
-          JOGAR ONLINE
+        <button type="button" className="case-bone-tab title-choice-online" onClick={onOnline}>
+          MESA ONLINE
         </button>
       )}
-      <button type="button" className={`text-action title-choice ${hasChallenges ? '' : 'title-choice-dim'}`} onClick={onChallenges}>
+      <button type="button" className={`case-bone-tab ${hasChallenges ? '' : 'title-choice-dim'}`} onClick={onChallenges}>
         DESAFIOS
       </button>
-      <button type="button" className="text-action title-choice title-choice-quiet" onClick={onBack}>
-        VOLTAR
+      <button type="button" className="case-close-tab" onClick={onBack}>
+        FECHAR
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Versão 1.5: a caixa de madeira na mesa. Fechada, é o JOGAR entalhado na tampa, com o fecho
+ * de latão; tocar estala o fecho e a tampa sobe, mostrando o forro de veludo com as escolhas em
+ * plaquinhas de osso. FECHAR baixa a tampa de novo.
+ */
+function PlayCase({ open, onOpen, children }) {
+  return (
+    <div className={`play-case ${open ? 'is-open' : ''}`}>
+      <div className="play-case-inside" inert={!open}>
+        {children}
+      </div>
+      <button type="button" className="play-case-lid" onClick={onOpen} inert={open}>
+        <span className="play-case-corner play-case-corner-tl" aria-hidden="true" />
+        <span className="play-case-corner play-case-corner-tr" aria-hidden="true" />
+        <span className="play-case-title">JOGAR</span>
+        <span className="play-case-latch" aria-hidden="true" />
       </button>
     </div>
   );
@@ -120,7 +142,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.4</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.5</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -187,10 +209,14 @@ export default function TitleScreen({
   };
   const startChoosing = () => {
     onTap?.();
+    // o fecho de latão estala e a tampa sobe
+    sound.playCaseOpen();
+    haptic([12, 40, 12]);
     setChoosing(true);
   };
   const back = () => {
     onTap?.();
+    sound.playCaseClose();
     setChoosing(false);
   };
   const openCases = () => {
@@ -223,6 +249,10 @@ export default function TitleScreen({
         paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
       }}
     >
+      {/* Versão 1.5: o boteco pintado atrás (azulejo, garrafas, janela com chuva e a mesa) */}
+      <BotecoBackdrop scene="title" className="absolute inset-0 z-0" />
+      <div aria-hidden="true" className="title-rain pointer-events-none absolute z-[1]" />
+      <div aria-hidden="true" className="title-dust pointer-events-none absolute inset-0 z-[4]" />
       {/* candeeiro preso no teto: balança de verdade (pivô no fio) e o facho varre
           o logo; quando a lâmpada falha, o salão inteiro escurece */}
       <LampRig part="light" lamp={120} cord={40} beamWidth={380} className="z-[4]" />
@@ -232,36 +262,36 @@ export default function TitleScreen({
       {/* ícones nos cantos: Coleções (livro), Estatísticas da Conta (caderno de fiado,
           Patch 0.9.1) e Opções (engrenagem de latão) */}
       <div className="title-corners" aria-label="Atalhos">
-        <div className="title-corner-group">
-          <button type="button" className="icon-btn title-icon" onClick={() => open('book')} aria-label="Coleções: Livro de Boteco">
+        <div className="title-corner-group title-plank">
+          <button type="button" className="icon-btn title-icon title-pinned" onClick={() => open('book')} aria-label="Coleções: Livro de Boteco">
             <BookIcon className="h-10 w-10" />
           </button>
-          <button type="button" className="icon-btn title-icon" onClick={() => open('stats')} aria-label="Estatísticas da conta: Caderno de Fiado">
+          <button type="button" className="icon-btn title-icon title-pinned title-pinned-b" onClick={() => open('stats')} aria-label="Estatísticas da conta: Caderno de Fiado">
             <LedgerIcon className="h-10 w-10" />
           </button>
         </div>
-        <button type="button" className="icon-btn title-icon" onClick={() => open('options')} aria-label="Opções">
-          <GearIcon className="h-10 w-10" />
-        </button>
+        <div className="title-plank">
+          <button type="button" className="icon-btn title-icon" onClick={() => open('options')} aria-label="Opções">
+            <GearIcon className="h-10 w-10" />
+          </button>
+        </div>
       </div>
 
       {/* espaço da lâmpada no topo (ela fica por cima, fora do fluxo) */}
-      <div aria-hidden="true" className="h-[150px] shrink-0" />
+      <div aria-hidden="true" className="title-lamp-space shrink-0" />
 
-      <div className="relative z-[5] mt-[6vh] flex w-full flex-col items-center">
+      <div className={`title-head relative z-[5] flex w-full flex-col items-center ${choosing ? 'is-dim' : ''}`}>
         <h1 className="w-full">
-          <BuxariaLogo className="title-logo-svg mx-auto" onClick={onSecretTap} />
+          <BuxariaLogo skin="wood" className="title-logo-svg mx-auto" onClick={onSecretTap} />
         </h1>
+        <p className="title-tagline">
+          DOMINÓ DE <span className="title-tagline-mark">BOTECO</span> · UM CONTRA UM
+        </p>
       </div>
 
-      {/* JOGAR, e no mesmo lugar as escolhas: só tipografia, sem caixas */}
-      <nav className="title-menu relative z-[5] flex-1 content-center" aria-label="Menu principal">
-        <div className={`title-panel ${choosing ? 'title-panel-off' : ''}`} inert={choosing}>
-          <button type="button" className="text-action title-play" onClick={startChoosing}>
-            JOGAR
-          </button>
-        </div>
-        <div className={`title-panel ${choosing ? '' : 'title-panel-off'}`} inert={!choosing}>
+      {/* o terço de baixo é a mesa: a caixa JOGAR repousa nela e abre como menu */}
+      <nav className="title-deck relative z-[5] flex w-full flex-1 flex-col items-center justify-end" aria-label="Menu principal">
+        <PlayCase open={choosing} onOpen={startChoosing}>
           {choosing && (
             <PlayChoices
               save={save}
@@ -274,7 +304,7 @@ export default function TitleScreen({
               onOnline={onOnline}
             />
           )}
-        </div>
+        </PlayCase>
       </nav>
 
       <footer className="relative z-[5] flex w-full flex-col items-center gap-1">
@@ -285,7 +315,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 1.4{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO 1.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>
