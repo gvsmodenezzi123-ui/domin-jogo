@@ -32,6 +32,7 @@ import { parseRoomInput } from './pvp/protocol.js';
 import { loadSavedTable } from './pvp/controller.js';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
+import { coinRain, flashOver, goldPop, hitstop, lateralShake, sparkBurst } from './components/juice.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
@@ -232,8 +233,10 @@ function runEventFx(ev, shell, table, offset = 0) {
       COMBO.player = 0;
       COMBO.tioZe = 0;
       COMBO.scored = { player: false, tioZe: false };
-      // a mão chega em cascata (PlayerRack): um toque de pedra no feltro para cada uma
-      for (let i = 0; i < 7; i += 1) at(() => sound.playDealTick(i), 120 + i * DEAL_STEP_MS);
+      // a mão chega em cascata (PlayerRack): um toque de pedra no feltro para cada uma, com o
+      // tom subindo, e a vibração em cascata junto (Versão 2.0: o estalo sai quando a pedra assenta)
+      for (let i = 0; i < 7; i += 1) at(() => sound.playDealTick(i), 190 + i * DEAL_STEP_MS);
+      at(() => haptic(Array.from({ length: 13 }, (_, i) => (i % 2 ? DEAL_STEP_MS - 9 : 9))), 190);
       break;
     case 'tilePlaced':
       // o som e a tremida saem no pouso do voo (App: stagePlay)
@@ -350,7 +353,20 @@ function runEventFx(ev, shell, table, offset = 0) {
       at(() => sound.playClick());
       break;
     case 'roundEnd':
-      at(() => (ev.result.kind === 'tranca' ? sound.playLock() : sound.playTileSlam(true)));
+      if (ev.result.kind === 'tranca') {
+        // Versão 2.0: tranca de mesa: tudo congela 100 ms (hitstop), depois a mesa treme 6 px
+        // soltando faísca, com a bigorna e a vibração pesada
+        at(() => {
+          sound.playLock();
+          hitstop(100).then(() => {
+            shake(shell, 6, 420);
+            const box = table?.getBoundingClientRect();
+            if (box) sparkBurst({ x: box.left + box.width / 2, y: box.top + box.height * 0.58 }, { count: 22, spread: Math.min(150, box.width * 0.4) });
+            sound.playSparks();
+            haptic([90, 40, 140]);
+          });
+        });
+      } else at(() => sound.playTileSlam(true));
       break;
     case 'heartLost':
       at(() => {
@@ -672,10 +688,18 @@ export default function App() {
         flip: rival,
         onLand: () => {
           sound.playBoneSlam(ev.double, ev.enhancement);
-          shake(tableRef.current, ev.double ? 4 : 3, SLAM_SHAKE_MS);
           kickLamp(ev.double ? 1.4 : 1);
-          // Versão 1.5: bucha dá um tranco duplo no celular; pedra comum, um toque curto
-          haptic(ev.double ? [35, 20, 40] : 15);
+          if (ev.double) {
+            // Versão 2.0: bucha: a tela treme 3 px para os lados, a mesa dá um clarão, a mão
+            // espalmada bate pesada na fórmica e o celular dá a vibração pesada
+            lateralShake(shellRef.current, 3, 220);
+            flashOver(tableRef.current);
+            sound.playPalmSlap();
+            haptic([70, 30, 100]);
+          } else {
+            shake(tableRef.current, 3, SLAM_SHAKE_MS);
+            haptic(15);
+          }
         },
         onDone: () => {
           cancelFlight.current = null;
@@ -723,10 +747,16 @@ export default function App() {
       const tileId = lastTileId;
       if (ev.type === 'bonus5') {
         const info = bonusFloat(ev);
+        // Versão 2.0: o número dourado gigante pula na pedra (1,5 → 1,0) e a chuva de moedas voa
+        // da pedra até o contador, que pulsa quando a última chega; o +$ sobe da pedra
         pushFloat(() => {
           const from = centerOf(`[data-tile-id="${tileId}"]`);
-          const to = centerOf(`[data-coin-target="${info.to}"]`);
-          return from && { from, to, text: info.text, tone: info.tone, kind: 'coin' };
+          if (!from) return null;
+          const targetEl = document.querySelector(`[data-coin-target="${info.to}"]`);
+          const to = centerOf(targetEl);
+          goldPop({ x: from.x, y: from.y - 26 }, `${ev.sum}`, { tone: info.tone });
+          if (to) coinRain(from, to, { count: 4 + Math.min(8, ev.amount * 2), targetEl, onArrive: (i) => sound.playCoinTing(i) });
+          return { from: { x: from.x, y: from.y + 18 }, text: info.text, tone: info.tone, kind: 'label' };
         }, offset + FX_DELAY.bonus5);
       }
       if (ev.type === 'proc') {

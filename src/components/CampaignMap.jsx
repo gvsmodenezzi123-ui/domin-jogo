@@ -12,7 +12,7 @@ import {
   mapRegionId,
   mixSeed,
 } from '../engine/campaignMap.js';
-import { rivalBlurb } from '../engine/rivalInfo.js';
+import { rivalBlurb, shortRivalName } from '../engine/rivalInfo.js';
 import { relicSlotsFor } from '../engine/loadout.js';
 import { maletaOf } from '../data/maletas.js';
 import { challengeOf } from '../data/meta.js';
@@ -26,6 +26,45 @@ import { CorvoSprite, TiaoMoedasSprite } from './art/NecroticArt.jsx';
 import { ValtinhoSprite } from './art/SceneArt.jsx';
 import { EventPlaqueIcon, TableModIcon } from './art/TableModArt.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
+import PixelCanvas from './PixelCanvas.jsx';
+import {
+  ALLEY_SIZE,
+  CAP_SIZE,
+  COINS_SIZE,
+  CRATE_SIZE,
+  DOOR_SIZE,
+  STAPLE_SIZE,
+  paintAlley,
+  paintBlackDoor,
+  paintBottleCap,
+  paintCoinStack,
+  paintCrate,
+  paintStaple,
+} from './art/mapPixels.js';
+
+/**
+ * Versão 2.0: os nós viram objetos em pixel art no caderno de fiado (art/mapPixels.js): o
+ * engradado da loja (treme), o beco do [?] (chuva e neblina por cima), a pilha de moedas do
+ * Seu Tião e a porta do beco; as mesas comuns são tampinhas amassadas com o rival no miolo.
+ */
+const OBJ_PX = 1.5;
+const STOP_OBJ = {
+  shop: () => <PixelCanvas cacheKey="mapa-engradado" paint={paintCrate} w={CRATE_SIZE.w} h={CRATE_SIZE.h} scale={OBJ_PX} />,
+  event: () => (
+    <>
+      <PixelCanvas cacheKey="mapa-beco" paint={paintAlley} w={ALLEY_SIZE.w} h={ALLEY_SIZE.h} scale={OBJ_PX} />
+      <span aria-hidden="true" className="web-obj-rain" />
+      <span aria-hidden="true" className="web-obj-fog" />
+    </>
+  ),
+  coins: () => <PixelCanvas cacheKey="mapa-moedas" paint={paintCoinStack} w={COINS_SIZE.w} h={COINS_SIZE.h} scale={OBJ_PX} />,
+  black: () => <PixelCanvas cacheKey="mapa-porta" paint={paintBlackDoor} w={DOOR_SIZE.w} h={DOOR_SIZE.h} scale={OBJ_PX} />,
+};
+
+/** O grampo enferrujado da polaroide do chefe. */
+const Staple = ({ side }) => (
+  <PixelCanvas cacheKey="mapa-grampo" paint={paintStaple} w={STAPLE_SIZE.w} h={STAPLE_SIZE.h} scale={OBJ_PX} className={`polaroid-staple polaroid-staple-${side}`} />
+);
 
 /** Altura de cada andar (px), cabeçalho de cada região e folga embaixo. */
 const STEP = 98;
@@ -122,6 +161,34 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
     ? `${node.boss ? 'Chefe' : 'Mesa'}: ${known ? rival.name : 'rival desconhecido'}${mod ? `, regra da mesa: ${mod.name}` : ''}`
     : NODE_LABEL[node.type];
   const cls = `web-node web-${status} ${selected ? 'web-selected' : ''}`;
+  if (fight && !node.boss) {
+    // Versão 2.0: mesa comum: a tampinha amassada, com o rival no miolo
+    const variant = [...node.id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 5;
+    return (
+      <button
+        type="button"
+        className={`${cls} web-cap`}
+        style={{ left: `${point.x}%`, top: point.y, rotate: `${tilt * 2}deg` }}
+        onClick={() => onSelect(node.id)}
+        aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
+        aria-pressed={selected}
+      >
+        <span className="web-cap-art">
+          <PixelCanvas cacheKey={`mapa-tampinha-${variant}`} paint={() => paintBottleCap(variant)} w={CAP_SIZE.w} h={CAP_SIZE.h} scale={OBJ_PX} />
+          <span className="web-cap-face" style={{ rotate: `${-tilt * 2}deg` }}>
+            {known ? <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={30} smoke={false} /> : <span className="map-node-lock font-pixel">?</span>}
+          </span>
+          {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
+        </span>
+        <span className="web-cap-caption font-pixel">{known ? shortRivalName(rival.name) : '???'}</span>
+        {mod && (
+          <span aria-hidden="true" className="map-mod-badge">
+            <TableModIcon icon={mod.icon} className="h-full w-full" />
+          </span>
+        )}
+      </button>
+    );
+  }
   if (fight) {
     const photo = node.boss ? 56 : 40;
     return (
@@ -134,6 +201,8 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
         aria-pressed={selected}
       >
         <span aria-hidden="true" className="polaroid-tape" />
+        <Staple side="l" />
+        <Staple side="r" />
         <span className="polaroid-photo" style={{ width: photo, height: photo }}>
           {known ? (
             <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={photo} smoke={false} />
@@ -160,14 +229,15 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
   return (
     <button
       type="button"
-      className={`${cls} web-stop web-stop-${node.type}`}
+      className={`${cls} web-stop web-stop-${node.type} web-stop-obj`}
       style={{ left: `${point.x}%`, top: point.y }}
       onClick={() => onSelect(node.id)}
       aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
       aria-pressed={selected}
     >
-      <span className="web-stop-chip">{STOP_ART[node.type]('web-stop-art')}</span>
-      <span className="web-stop-caption font-pixel">{STOP_CAPTION[node.type]}</span>
+      {/* Versão 2.0: a etiqueta de papel em cima e o objeto em pixel art */}
+      <span className="web-tag font-pixel">{STOP_CAPTION[node.type]}</span>
+      <span className="web-obj">{STOP_OBJ[node.type]?.() ?? STOP_ART[node.type]('web-stop-art')}</span>
       {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
     </button>
   );

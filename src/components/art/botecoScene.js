@@ -538,6 +538,26 @@ function sceneMatch(b, r) {
   vignette(b, 0.8, 0.8);
 }
 
+/** Versão 2.0: a sala atrás e em volta da mesa inclinada (parede de azulejo e o chão de taco). */
+function sceneTableRoom(b, r) {
+  const { w, h } = b;
+  const floor = Math.round(h * 0.34);
+  tiles(b, r, 0, 0, w, floor, { size: 11, base: hex('#24443d'), grout: hex('#101c19'), grime: 0.7 });
+  plank(b, r, 0, floor - 4, w, 4, { tone: { ...WOOD, hi: hex('#3a2212'), mid: hex('#24140a') } });
+  // chão de taco escuro, em perspectiva (as tábuas fecham para o fundo)
+  for (let y = floor; y < h; y += 1) {
+    const t = (y - floor) / (h - floor);
+    const row = Math.floor(Math.sqrt(t) * 14);
+    const base = row % 2 ? hex('#2a1a0e') : hex('#22150b');
+    for (let x = 0; x < w; x += 1) {
+      const seam = Math.round((x + row * 7) / (10 + row)) % 3 === 0 && (x + row * 7) % (10 + row) === 0;
+      b.put(x, y, seam ? hex('#120a05') : shift(base, Math.round((r() - 0.5) * 6)));
+    }
+  }
+  lampGlow(b, w / 2, h * 0.5, w * 0.8, 0.18);
+  vignette(b, 0.9, 0.5);
+}
+
 function sceneWide(b, r) {
   const { w, h } = b;
   const tableTop = Math.round(h * 0.72);
@@ -552,45 +572,136 @@ function sceneWide(b, r) {
   feltTable(b, r, tableTop, { inset: 0.02 });
 }
 
+/**
+ * Versão 2.0: o caderno de fiado do boteco (o mapa da campanha). Folha pautada amarelada, a
+ * margem vermelha dupla, os furos rasgados da espiral à esquerda, a beirada da direita rasgada,
+ * dobras, manchas de gordura (o papel fica translúcido e mais escuro), fumaça encardindo as
+ * bordas, marcas de copo e os rabiscos de caneta nas margens: as contas riscadas, os pauzinhos
+ * de contagem, um coração, uma estrela e as linhas de "letra" de quem anota fiado.
+ */
 function sceneMap(b, r) {
   const { w, h } = b;
-  // papel de pão: bege-palha com fibras, mais escuro nas bordas
-  const paper = hex('#cdb68c');
+  const paper = hex('#e6d8b4');
+  const back = hex('#1a120a');
+  // a beirada rasgada da direita (onde rasgou, aparece o fundo escuro)
+  const tear = Array.from({ length: h }, (_, y) => w - 2 - Math.round(Math.abs(Math.sin(y * 0.37) * 1.5 + Math.sin(y * 0.11) * 1.2) + (r() < 0.15 ? 1 : 0)));
   for (let y = 0; y < h; y += 1) {
     for (let x = 0; x < w; x += 1) {
+      if (x > tear[y]) {
+        b.put(x, y, back);
+        continue;
+      }
       const n = r();
-      b.put(x, y, n < 0.08 ? shift(paper, -14) : n > 0.94 ? shift(paper, 10) : paper);
+      let c = n < 0.07 ? shift(paper, -12) : n > 0.95 ? shift(paper, 8) : paper;
+      // amarelado de velho, mais forte perto das bordas
+      const edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+      if (edge < 18) c = mixRgb(c, hex('#c8a86a'), (1 - edge / 18) * 0.35);
+      b.put(x, y, c);
     }
   }
-  for (let i = 0; i < (w * h) / 90; i += 1) {
+  // a pauta azul (uma linha a cada 9) e a margem vermelha dupla
+  const marginX = Math.round(w * 0.085);
+  for (let y = 14; y < h; y += 9) {
+    for (let x = 0; x <= tear[y]; x += 1) if (r() > 0.04) b.put(x, y, hex('#7f9fc4'), 0.42);
+  }
+  for (let y = 0; y < h; y += 1) {
+    b.put(marginX, y, hex('#c8504a'), 0.55);
+    b.put(marginX + 2, y, hex('#c8504a'), 0.4);
+  }
+  // furos da espiral, rasgados (a folha foi arrancada do caderno)
+  for (let y = 6; y < h - 4; y += 12) {
+    b.ellipse(3.5, y, 2.2, 2.6, back);
+    b.put(5, y - 2, hex('#f4ecd8'));
+    b.put(6, y + 1, hex('#b8a070'));
+    if (r() < 0.5) b.rect(1, y - 1, 2, 3, back);
+  }
+  // fibras do papel
+  for (let i = 0; i < (w * h) / 120; i += 1) {
     const fx = Math.floor(r() * w);
     const fy = Math.floor(r() * h);
-    b.line(fx, fy, fx + 2 + Math.floor(r() * 4), fy + (r() < 0.5 ? 0 : 1), hex('#b29c70'), 0.5);
+    b.line(fx, fy, fx + 2 + Math.floor(r() * 3), fy + (r() < 0.5 ? 0 : 1), hex('#c4b28a'), 0.4);
   }
-  // dobras do papel
-  b.line(0, Math.round(h * 0.34), w, Math.round(h * 0.36), hex('#a8905e'), 0.45);
-  b.line(0, Math.round(h * 0.35), w, Math.round(h * 0.37), hex('#e2d2ac'), 0.5);
-  b.line(Math.round(w * 0.5), 0, Math.round(w * 0.52), h, hex('#a8905e'), 0.35);
-  // marca de copo e gordura
-  for (let i = 0; i < 3; i += 1) {
-    const cx = w * (0.15 + r() * 0.7);
-    const cy = h * (0.1 + r() * 0.8);
-    const rr = 9 + r() * 6;
-    for (let a = 0; a < Math.PI * 2; a += 0.02) {
-      const rw = rr + Math.sin(a * 3) * 0.6;
-      b.put(cx + Math.cos(a) * rw, cy + Math.sin(a) * rw, hex('#8a6a3a'), 0.45);
-      b.put(cx + Math.cos(a) * (rw - 1), cy + Math.sin(a) * (rw - 1), hex('#9a7a48'), 0.25);
+  // dobras: um vinco escuro com a quina clara do lado, a cada terço da folha
+  for (const fy of [0.33, 0.66].map((t) => Math.round(h * t))) {
+    b.line(0, fy, w, fy + 2, hex('#9a8256'), 0.5);
+    b.line(0, fy + 1, w, fy + 3, hex('#fbf4e0'), 0.55);
+    b.light(0, fy - 6, w, 12, hex('#6a5230'), (x, y) => Math.max(0, 1 - Math.abs(y - fy) / 6) * 0.12);
+  }
+  b.line(Math.round(w * 0.5), 0, Math.round(w * 0.52), h, hex('#9a8256'), 0.35);
+  b.line(Math.round(w * 0.5) + 1, 0, Math.round(w * 0.52) + 1, h, hex('#fbf4e0'), 0.4);
+  // manchas de gordura: o papel embebido fica mais escuro e amarelo, com a borda marcada
+  for (let i = 0; i < Math.max(3, h / 120); i += 1) {
+    const cx = w * (0.12 + r() * 0.76);
+    const cy = h * r();
+    const rad = 6 + r() * 9;
+    const lobes = Array.from({ length: 5 }, () => 0.75 + r() * 0.5);
+    for (let y = Math.floor(cy - rad * 1.3); y < cy + rad * 1.3; y += 1) {
+      for (let x = Math.floor(cx - rad * 1.3); x < cx + rad * 1.3; x += 1) {
+        const a = Math.atan2(y - cy, x - cx);
+        const k = lobes[Math.floor(((a + Math.PI) / (Math.PI * 2)) * 5) % 5];
+        const d = Math.hypot(x - cx, y - cy) / (rad * k);
+        if (d < 1) b.put(x, y, d > 0.85 ? hex('#a07a3a') : hex('#c8a45a'), d > 0.85 ? 0.45 : 0.3);
+      }
     }
   }
-  for (let i = 0; i < 4; i += 1) b.ellipse(w * r(), h * r(), 6 + r() * 10, 5 + r() * 8, hex('#b49a62'), 0.35);
-  // borda queimada / encardida
-  b.light(0, 0, w, h, hex('#503714'), (x, y) => {
+  // marcas de copo (arco falhado)
+  for (let i = 0; i < Math.max(2, h / 200); i += 1) {
+    const cx = w * (0.15 + r() * 0.7);
+    const cy = h * r();
+    const rr = 9 + r() * 5;
+    const start = r() * Math.PI * 2;
+    for (let a = start; a < start + Math.PI * 1.7; a += 0.02) {
+      b.put(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, hex('#8a6a3a'), 0.4);
+      b.put(cx + Math.cos(a) * (rr - 1), cy + Math.sin(a) * (rr - 1), hex('#9a7a48'), 0.2);
+    }
+  }
+  // rabiscos de caneta azul nas margens: linhas de letra, contas riscadas, pauzinhos, coração
+  const ink = hex('#26408a');
+  const scribble = (x0, y0, len, amp) => {
+    for (let x = 0; x < len; x += 1) {
+      const y = y0 + Math.round(Math.sin(x * 1.3 + x0) * amp + Math.sin(x * 0.4) * 0.6);
+      b.put(x0 + x, y, ink, 0.75);
+      if (r() < 0.25) b.put(x0 + x, y - 1, ink, 0.6);
+    }
+  };
+  for (let y = 20; y < h - 20; y += 9 * (3 + Math.floor(r() * 4))) {
+    const side = r() < 0.5;
+    const x0 = side ? marginX + 4 : Math.round(w * 0.6 + r() * w * 0.12);
+    const len = 8 + Math.floor(r() * 12);
+    if (x0 + len > tear[y] - 2) continue;
+    scribble(x0, y - 2, len, 1);
+    if (r() < 0.4) b.line(x0 - 1, y - 2, x0 + len, y - 3, ink, 0.8); // conta paga: riscada
+  }
+  for (let i = 0; i < Math.max(2, h / 160); i += 1) {
+    // pauzinhos de contagem (quatro e o risco atravessado)
+    const x0 = Math.round(1 + r() * (marginX - 6));
+    const y0 = Math.round(20 + r() * (h - 40));
+    for (let k = 0; k < 4; k += 1) b.line(x0 + 8 + k * 2, y0, x0 + 8 + k * 2, y0 + 5, ink, 0.7);
+    b.line(x0 + 7, y0 + 4, x0 + 16, y0 + 1, ink, 0.7);
+  }
+  {
+    // um coração e uma estrela rabiscados
+    const hx = Math.round(w * 0.88);
+    const hy = Math.round(h * 0.18);
+    for (let a = 0; a < Math.PI * 2; a += 0.08) {
+      const x = 16 * Math.sin(a) ** 3;
+      const y = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+      b.put(hx + x * 0.28, hy + y * 0.28, hex('#b8261c'), 0.7);
+    }
+    const sx = Math.round(w * 0.12);
+    const sy = Math.round(h * 0.74);
+    const pts = Array.from({ length: 6 }, (_, k) => [sx + Math.cos((k * 4 * Math.PI) / 5 - Math.PI / 2) * 5, sy + Math.sin((k * 4 * Math.PI) / 5 - Math.PI / 2) * 5]);
+    for (let k = 0; k < 5; k += 1) b.line(pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1], ink, 0.7);
+  }
+  // fumaça: encardido marrom-acinzentado subindo das bordas e dos cantos
+  b.light(0, 0, w, h, hex('#4a3a28'), (x, y) => {
     const e = Math.min(x, y, w - 1 - x, h - 1 - y);
-    return Math.max(0, 1 - e / 14) * 0.7;
+    const corner = Math.max(0, 1 - Math.hypot(Math.min(x, w - x) / (w * 0.4), Math.min(y, h - y) / (w * 0.5)));
+    return Math.max(0, 1 - e / 16) * 0.55 + corner * 0.18;
   });
 }
 
-const SCENES = { title: sceneTitle, counter: sceneCounter, match: sceneMatch, wide: sceneWide, map: sceneMap };
+const SCENES = { title: sceneTitle, counter: sceneCounter, match: sceneMatch, wide: sceneWide, map: sceneMap, tableroom: sceneTableRoom };
 export const SCENE_IDS = Object.freeze(Object.keys(SCENES));
 
 /** Pinta a cena `name` numa grade de `w`×`h` pixels. */
@@ -636,3 +747,9 @@ export function paintProp(name, seed = 7) {
   prop.draw(b, rngOf(seed));
   return { w: prop.w, h: prop.h, data: b.data };
 }
+
+// ---------------------------------------------------------------------------
+// Versão 2.0: o kit de pintura fica disponível para os outros desenhos grandes
+// (maletas em 128x128, pilha do dorme, nós do mapa), que também viram <canvas>.
+// ---------------------------------------------------------------------------
+export const paintKit = Object.freeze({ hex, mixRgb, shift, rngOf, bayer, buffer, plank, felt, looseTile, beerGlass, ashtray, bone, WOOD, FELT });

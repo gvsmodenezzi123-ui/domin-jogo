@@ -9,8 +9,12 @@ import WideRoom from './components/WideRoom.jsx';
 import { applyReducedMotion } from './components/motion.js';
 import { loadSettings } from './engine/progress.js';
 import { installTouchGuards, registerServiceWorker } from './pwa.js';
+import { installBoneGrain } from './components/art/boneTexture.js';
+import { installPixelSkins } from './components/art/uiPixels.js';
 
 installTouchGuards();
+installBoneGrain();
+installPixelSkins();
 registerServiceWorker();
 // as animações reduzidas valem desde o 1º quadro (a abertura lê isso ao montar, antes dos efeitos do App)
 applyReducedMotion(loadSettings().reducedMotion);

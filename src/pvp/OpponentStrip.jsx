@@ -2,7 +2,7 @@ import { maletaOf } from '../data/maletas.js';
 import CoinCount from '../components/CoinCount.jsx';
 import Hotbar from '../components/Hotbar.jsx';
 import { HeartsBar } from '../components/PixelHeart.jsx';
-import { MaletaSprite } from '../components/art/CaseArt.jsx';
+import MaletaSprite from '../components/MaletaPixel.jsx';
 import { whereText } from './ladder.js';
 
 /**

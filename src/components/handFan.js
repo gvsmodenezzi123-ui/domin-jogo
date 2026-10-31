@@ -30,4 +30,4 @@ export function computeFan(count, width, { baseUnit = 44, minUnit = 32, angle = 
 }
 
 /** Versão 1.5: intervalo da cascata da mão (ms entre uma pedra e a seguinte). */
-export const DEAL_STEP_MS = 70;
+export const DEAL_STEP_MS = 60;

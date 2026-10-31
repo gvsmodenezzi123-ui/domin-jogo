@@ -12,7 +12,12 @@ import LampRig from './LampRig.jsx';
 import { TileSkinContext } from './tileSkin.js';
 import { ArrowGlyph } from './UiGlyphs.jsx';
 import { useUnlockSequence } from './useUnlockSequence.js';
-import { CadeadoSprite, CorrentesSprite, MaletaSprite } from './art/CaseArt.jsx';
+import { CadeadoSprite } from './art/CaseArt.jsx';
+import { CASE_PX, TOKEN_SIZE, paintCaseChains, paintCaseLock, paintDifficultyToken } from './art/casePixels.js';
+import MaletaPixel from './MaletaPixel.jsx';
+import PixelCanvas from './PixelCanvas.jsx';
+
+const FILL = { width: '100%', height: '100%' };
 
 /** Progresso das metas que somam (Borracharia: trancas vencidas). */
 function progressOf(id, progress) {
@@ -68,16 +73,17 @@ function CaseSlot({ id, unlocked, fresh, open, closing, disabled, waiting = fals
         <span key={`${shown}-${shakeKey}`} className={`case-body ${motion} ${shakeKey ? 'case-shake' : ''}`}>
           {shown ? (
             <>
-              {/* a fechada estala os fechos e some; a aberta sobe no lugar */}
+              {/* a fechada estala os fechos e some; por baixo está a bandeja, e a tampa gira de
+                  pé a partir da dobradiça (Versão 2.0: 2.5D, rotateX) */}
               <span className="case-layer case-layer-closed">
-                <MaletaSprite id={id} className="case-sprite" />
+                <MaletaPixel id={id} className="case-sprite" />
               </span>
-              <span className="case-layer case-layer-open">
-                <MaletaSprite id={id} open className="case-sprite" />
+              <span className="case-layer case-layer-open case-open-25d">
+                <MaletaPixel id={id} open className="case-sprite" lidClassName="case-lid-swing" />
               </span>
             </>
           ) : (
-            <MaletaSprite id={id} className="case-sprite" />
+            <MaletaPixel id={id} className="case-sprite" />
           )}
         </span>
         {shown && (
@@ -90,10 +96,17 @@ function CaseSlot({ id, unlocked, fresh, open, closing, disabled, waiting = fals
         {!free && (
           <>
             <span aria-hidden="true" className={`case-chains ${stage === 'unlocking' ? 'is-falling' : ''}`}>
-              <CorrentesSprite className="case-sprite" />
+              <PixelCanvas cacheKey="maleta-correntes" paint={paintCaseChains} w={CASE_PX} h={CASE_PX} className="case-sprite" style={FILL} />
             </span>
             <span aria-hidden="true" className={`case-lock ${stage === 'unlocking' ? 'is-open' : ''}`}>
-              <CadeadoSprite open={stage === 'unlocking'} className="case-sprite" />
+              <PixelCanvas
+                cacheKey={`maleta-cadeado-${stage === 'unlocking'}`}
+                paint={() => paintCaseLock(stage === 'unlocking')}
+                w={CASE_PX}
+                h={CASE_PX}
+                className="case-sprite"
+                style={FILL}
+              />
             </span>
           </>
         )}
@@ -136,6 +149,50 @@ function DifficultyPick({ mode, unlocked, onChange }) {
               <span className="diff-tag">{locked ? 'TRANCADO' : MODES[id].tag}</span>
             </span>
             {locked && <CadeadoSprite className="diff-lock" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Versão 2.0: as dificuldades viram fichas presas na tira de elástico da tampa aberta (osso
+ * para as Peças Brancas, ébano com latão para as Pretas, prata para as Prateadas). Tocar dá o
+ * estalo de metal. Ficam por cima da maleta (fora do botão dela), na altura da tampa.
+ */
+const TOKEN_LABEL = { normal: 'BRANCAS', hard: 'PRETAS', inferno: 'PRATAS' };
+
+function LidTokens({ mode, unlocked, onChange }) {
+  return (
+    <div className="lid-tokens" role="radiogroup" aria-label="Dificuldade">
+      {['normal', 'hard', 'inferno'].map((id) => {
+        const locked = !unlocked[id];
+        const on = mode === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            aria-disabled={locked}
+            aria-label={`${MODES[id].name}${locked ? ' (trancado)' : ''}`}
+            className={`scene-tap lid-token lid-token-${id} ${on ? 'is-on' : ''} ${locked ? 'is-locked' : ''}`}
+            onClick={() => {
+              sound.playTokenClick();
+              onChange(id);
+            }}
+          >
+            <PixelCanvas
+              cacheKey={`ficha-${id}-${on}-${locked}`}
+              paint={() => paintDifficultyToken(id, { on, locked })}
+              w={TOKEN_SIZE.w}
+              h={TOKEN_SIZE.h}
+              style={FILL}
+            />
+            <span className="lid-token-name" aria-hidden="true">
+              {TOKEN_LABEL[id]}
+            </span>
           </button>
         );
       })}
@@ -372,6 +429,7 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
           <SceneProp name="glass" scale={2} className="case-stage-prop case-stage-glass" />
         <CaseCarousel ids={MALETA_IDS} focus={focus} onFocus={focusTo}>
           {(id, i) => (
+            <>
             <CaseSlot
               id={id}
               unlocked={unlocked.includes(id)}
@@ -384,6 +442,8 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
               shakeKey={shake.id === id ? shake.n : 0}
               onPick={pick}
             />
+            {!pvp && id === selected && i === focus && <LidTokens mode={mode} unlocked={modesOpen} onChange={chooseMode} />}
+            </>
           )}
         </CaseCarousel>
         <div className="case-dots">
@@ -432,6 +492,11 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
           </div>
         ) : (
           <div key={selected} className="counter-card counter-card-open" role="group" aria-label={maleta.name}>
+            {!pvp && (
+              <p className={`counter-mode counter-mode-${mode}`}>
+                {MODES[mode].name.toUpperCase()} · {MODES[mode].tag}
+              </p>
+            )}
             <p className="counter-buff">+ {maleta.buff}</p>
             {maleta.debuff && <p className="counter-debuff">− {pvp?.debuff?.[maleta.id] ?? maleta.debuff}</p>}
             {warn.n > 0 && (

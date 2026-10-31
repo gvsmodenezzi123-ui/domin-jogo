@@ -1696,10 +1696,57 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 130 * j, freqEnd: 70, peak: 0.28, dur: 0.05, attack: 0.002 });
   }
 
-  /** Versão 1.5: o estalo seco de um coração trincando (um por coração, em sequência). */
+  /**
+   * Versão 1.5: o estalo seco de um coração trincando (um por coração, em sequência).
+   * Versão 2.0: agora é vidro: o "tec" agudo do estalo, duas parciais inarmônicas curtas
+   * (o vidro rachando) e o caquinho tilintando logo depois, por cima do baque grave.
+   */
   playHeartBreak() {
-    this.tone({ type: 'sawtooth', freq: 320, freqEnd: 80, peak: 0.32, dur: 0.08, attack: 0.001 });
-    this.noise({ freq: 2400, filter: 'highpass', peak: 0.22, dur: 0.05, delay: 0.01 });
+    if (this.isMuted || !this.ready()) return;
+    const j = 1 + (Math.random() - 0.5) * 0.08;
+    this.noise({ freq: 3600 * j, filter: 'highpass', q: 0.8, peak: 0.36, dur: 0.025 });
+    this.tone({ freq: 2930 * j, peak: 0.1, dur: 0.07, attack: 0.001 });
+    this.tone({ freq: 4170 * j, peak: 0.07, dur: 0.05, attack: 0.001, delay: 0.008 });
+    this.tone({ type: 'sawtooth', freq: 300, freqEnd: 80, peak: 0.22, dur: 0.07, attack: 0.001 });
+    this.tone({ freq: 5270 * j, peak: 0.05, dur: 0.04, attack: 0.001, delay: 0.06 });
+  }
+
+  /**
+   * Versão 2.0: bucha na mesa: a mão espalmada pesada na fórmica do boteco. O estalo da palma
+   * (ruído médio, largo), o baque surdo do tampo e o chocalhar das pedras na mesa.
+   */
+  playPalmSlap() {
+    if (this.isMuted || !this.ready()) return;
+    this.noise({ freq: 1100, q: 0.7, peak: 0.5, dur: 0.05 });
+    this.tone({ type: 'triangle', freq: 82, freqEnd: 34, peak: 0.85, dur: 0.14, attack: 0.001 });
+    this.noise({ freq: 320, q: 2.5, peak: 0.2, dur: 0.07, delay: 0.03 });
+  }
+
+  /** Versão 2.0: as faíscas da tranca (chiado agudo picotado) por cima de uma batida de bigorna. */
+  playSparks() {
+    if (this.isMuted || !this.ready()) return;
+    this.tone({ type: 'triangle', freq: 62, freqEnd: 26, peak: 0.9, dur: 0.24, attack: 0.001 });
+    this.noise({ freq: 2200, q: 1.5, peak: 0.34, dur: 0.04 });
+    [0.03, 0.08, 0.12, 0.19, 0.27].forEach((delay, i) => {
+      this.noise({ freq: 5200 + i * 600, filter: 'highpass', q: 0.7, peak: 0.16 - i * 0.02, dur: 0.02, delay });
+    });
+  }
+
+  /** Versão 2.0: a ficha de dificuldade presa na tampa da maleta: o estalo de metal ("tlinc"). */
+  playTokenClick() {
+    if (this.isMuted || !this.ready()) return;
+    this.noise({ freq: 3200, filter: 'highpass', q: 0.8, peak: 0.3, dur: 0.02 });
+    this.tone({ type: 'triangle', freq: 1860, peak: 0.16, dur: 0.06, attack: 0.001 });
+    this.tone({ freq: 2790, peak: 0.08, dur: 0.04, attack: 0.001, delay: 0.012 });
+  }
+
+  /** Versão 2.0: a explosão de moedas (vitória na rodada): seis "tins" caindo um atrás do outro. */
+  playCoinBurst() {
+    if (this.isMuted || !this.ready()) return;
+    for (let i = 0; i < 6; i += 1) {
+      const freq = 1320 * 2 ** ((i * 2 + (i % 2)) / 12);
+      this.tone({ type: 'triangle', freq, peak: 0.12, dur: 0.08, attack: 0.002, delay: i * 0.045 });
+    }
   }
 
   /** Nome antigo do cristal (Patch 0.4). */

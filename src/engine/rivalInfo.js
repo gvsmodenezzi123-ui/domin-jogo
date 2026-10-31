@@ -100,3 +100,18 @@ export function rivalRuleBadge(state) {
   const [label, text] = STATIC[found];
   return { id: found, label, value: '!', text };
 }
+
+/**
+ * Versão 2.0: o nome do rival que cabe na polaroide sem corte. Até 11 letras vai inteiro;
+ * mais que isso, o primeiro nome e a inicial do último ("JUVENAL COBRADOR" → "JUVENAL C.").
+ * Artigo na frente ("O Dono da Noite") não conta como primeiro nome.
+ */
+export function shortRivalName(name) {
+  const full = String(name ?? '').toUpperCase().trim();
+  if (full.length <= 11) return full;
+  const words = full.split(/\s+/).filter((w) => !['O', 'A', 'DA', 'DE', 'DO', 'DOS', 'DAS'].includes(w));
+  if (words.length < 2) return full;
+  const short = `${words[0]} ${words[words.length - 1][0]}.`;
+  // primeiro nome comprido ("COMENDADOR M."): fica só ele, que cabe inteiro na lousinha
+  return short.length > 12 ? words[0] : short;
+}

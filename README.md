@@ -164,6 +164,105 @@ Pela linha de comando (GitHub CLI): `gh secret set ANDROID_KEYSTORE_BASE64 < bux
 - Tranca também acontece sozinha quando a mesa fecha (pontas iguais e as 7 pedras do número na mesa)
   ou quando o Dorme secou e ninguém encaixa.
 
+## Versão 2.0: Revolução Gráfica
+
+Tudo o que aparece na partida foi repintado do zero em pixel art de alta densidade, sem imagem
+baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
+`components/art/botecoScene.js`) e mostrada num `<canvas>` ampliado sem suavização
+(`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
+denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
+
+### Mesa em perspectiva (`TableBoard.jsx`, `art/tablePixels.js`)
+
+- O plano da mesa tomba 24° (`perspective` + `rotateX` no CSS, acelerado pela GPU). As pedras, as
+  pontas e os toques continuam no mesmo plano.
+- A mesa inteira é uma pintura só (`paintTablePlane`, uma passada direto no buffer):
+  - **Aro de madeira:** grosso, com a quina boleada, veio, nós e meia-esquadria. Tem lascas,
+    riscos, marcas de copo desbotadas, verniz gasto onde se apoia o cotovelo, um queimado, pregos
+    de latão e os losangos de madrepérola.
+  - **Tabela e feltro:** a tabela de feltro tem a sombra dela no pano. O feltro tem trama em
+    sarja, manchas grandes, o miolo gasto pelas pedras, bebida derramada, marca de copo, queimado
+    de cigarro, pó de giz, fiapos, poeira e a vinheta.
+  - **Pintura:** o mogno e as cores de feltro de cada rival pintam outra mesa. O tamanho anda de
+    8 em 8 pixels, para a barra do Safari não repintar a mesa.
+- A frente da mesa (a saia) tem cantoneiras de latão. O cinzeiro de lata tem o cigarro aceso e a
+  fumaça subindo; ao lado, o copo americano de cerveja com colarinho e suor.
+- **Dorme:** quatro montinhos de pedras viradas, com o ébano por cima e o osso na lateral. Cada
+  compra tira a pedra de cima do mais alto. O número fica a giz numa lousinha.
+- **Ponta travada (Chumbo, Âmbar):** correntes de ferro em X com o cadeado de latão.
+- **Pedras:** textura de osso gasto (`art/boneTexture.js`), com veio, poros, fio de rachadura e
+  mancha de dedo, deslocada em cada pedra.
+
+### HUD em pixel art (`art/uiPixels.js`)
+
+As texturas são pintadas uma vez ao abrir o jogo e usadas pelo CSS como `border-image` de 9
+fatias (`--px-*`; sem canvas, fica o HUD antigo):
+
+- **Botões:** tábuas pesadas, de pinho, mel, vermelho descascando, latão ou apagadas com poeira.
+  A letra é clara com contorno grosso, e o botão que você deve tocar pulsa em dourado.
+- **Dica e soma:** a dica do meio é escrita a giz numa lousinha; a soma das pontas também.
+- **Botões de ícone:** som e menu em chapa de ferro rebitada.
+- **Cabeçalho:** o VOCÊ fica numa plaquinha de latão. O rival tem o nome, os corações e o
+  dinheiro numa lousinha na parede, e o nome sai inteiro ("JUVENAL C.").
+- **Mesa da mão:** a mão descansa numa bandeja de tábuas que repete sem emenda. As costas das
+  pedras do rival são de ébano.
+
+### Juice da partida (`components/juice.js`, `App.jsx`, `RoundOverlay.jsx`)
+
+Tudo direto no DOM com a Web Animations API (só transform e opacidade):
+
+- **Mão nova:** as pedras caem do centro da mesa, inclinadas, uma a cada 60 ms. Cada uma estala
+  com o tom subindo, e o celular vibra em cascata.
+- **Bucha:** a tela treme 3 px para os lados e a mesa dá um clarão. Soa a mão espalmada na
+  fórmica (`playPalmSlap`) e o celular dá a vibração pesada.
+- **Múltiplo de 5:** o número dourado gigante pula na pedra (escala 1,5 → 1,0). A chuva de
+  moedas em pixel art, girando, voa até o contador, e ele pulsa quando a última chega.
+- **Tranca:** tudo congela 100 ms (hitstop) e depois a mesa treme 6 px soltando faíscas, com a
+  bigorna (`playSparks`).
+- **Rodada vencida:** os corações do rival quebram um por um com o estalo de vidro
+  (`playHeartBreak`), e depois vem a explosão de moedas (`playCoinBurst`).
+
+### Maletas em 128×128 (`CaseCounter.jsx`, `MaletaPixel.jsx`, `art/casePixels.js`)
+
+- As cinco maletas foram repintadas com casca própria e fechos, alça, cantoneiras e emblema:
+  - Clássica: madeira marfim.
+  - Bicheiro: couro de crocodilo.
+  - Borracharia: borracha com sulco de pneu.
+  - Trapaceiro: veludo roxo.
+  - Seca: couro cru rachado de sol.
+- **Tampa:** a tampa abre girando a partir da dobradiça (2.5D). O que vem dentro:
+  - Clássica: pedras de osso.
+  - Bicheiro: maços de notas, o dado e a tabela do bicho.
+  - Borracharia: pedras de chumbo, chave de boca, remendo e parafusos.
+  - Trapaceiro: cartas, fichas e o fundo falso.
+  - Seca: cantil, charque e areia.
+- **Dificuldade:** a escolha virou fichas presas na tira de elástico da tampa: osso (Brancas),
+  ébano com latão (Pretas) e prata (Prateadas). Tocar dá o estalo de metal (`playTokenClick`).
+  Em tela baixa as fichas voltam para o cabeçalho.
+- As correntes e o cadeado das trancadas também são novos.
+
+### Mapa no caderno de fiado (`CampaignMap.jsx`, `art/mapPixels.js`)
+
+- **A folha:** a cena `map` virou a folha arrancada do caderno de fiado:
+  - pautada, com a margem vermelha dupla, os furos rasgados da espiral e a beirada rasgada;
+  - dobras, manchas de gordura, marcas de copo e fumaça encardindo as bordas;
+  - rabiscos de caneta nas margens (contas riscadas, pauzinhos, coração, estrela).
+- **Mesas comuns:** viraram tampinhas de cerveja amassadas, com o rival no miolo.
+- **Chefe:** a polaroide tem fita crepe enrugada e dois grampos enferrujados.
+- **Paradas:** cada uma tem a etiqueta de papel pardo em cima:
+  - Loja: engradado de cerveja, que treme quando dá para ir.
+  - [?]: beco com chuva caindo e neblina.
+  - Seu Tião: pilha de moedas.
+  - Mercado Negro: a porta de ferro com a luz vermelha.
+
+### Tela inicial e Livro (`TitleScreen.jsx`, `CollectionBook.jsx`)
+
+- **JOGAR:** a caixa é de madeira pintada, com cantoneiras de latão. As opções de dentro são
+  placas de dominó de osso; o NOVO JOGO é de marfim dourado e a apagada fica empoeirada.
+- **Garrafas:** o vidro da prateleira pisca quando o facho da lâmpada passa.
+- **Livro:** cada figurinha fica num nicho de madeira com profundidade e a cor da raridade no chão
+  do nicho. O que ainda não apareceu é uma silhueta escura com cadeado e poeira.
+
 ## Versão 1.5: o boteco em volta de tudo
 
 ### O cenário (`components/art/botecoScene.js`, `BotecoBackdrop.jsx`)

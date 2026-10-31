@@ -5,7 +5,7 @@ import InfoBalloon from '../components/InfoBalloon.jsx';
 import PlayerRack from '../components/PlayerRack.jsx';
 import RivalBench from '../components/RivalBench.jsx';
 import TableBoard from '../components/TableBoard.jsx';
-import { MaletaSprite } from '../components/art/CaseArt.jsx';
+import MaletaSprite from '../components/MaletaPixel.jsx';
 import { kickLamp } from '../components/lampKick.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from '../components/tileFlight.js';
 import { centerOf, useFloats } from '../components/useFloats.js';

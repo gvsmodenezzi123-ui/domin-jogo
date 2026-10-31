@@ -189,6 +189,8 @@ function DominoTile({
     : {
         '--d': `${depth}px`,
         background: [
+          // Versão 2.0: osso gasto (art/boneTexture.js): veio, poros e rachadura, deslocado por pedra
+          `var(--bone-grain, none) ${stain.x}% ${stain.y}% / 48px 48px`,
           `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(112,78,28,${stain.alpha}), transparent 42%)`,
           `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,252,236,.22), transparent 48%)`,
           'linear-gradient(150deg, #f3e9c9 0%, #e2d1a2 42%, #c9b47c 100%)',

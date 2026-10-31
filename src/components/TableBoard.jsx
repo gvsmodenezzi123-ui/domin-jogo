@@ -7,13 +7,47 @@ import NoMovesBanner from './NoMovesBanner.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
 import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
-import { SceneProp } from './BotecoBackdrop.jsx';
-import { CadeadoSprite, CorrentesSprite } from './art/CaseArt.jsx';
+import BotecoBackdrop, { SceneProp } from './BotecoBackdrop.jsx';
+import PixelCanvas from './PixelCanvas.jsx';
+import {
+  APRON_H,
+  ASHTRAY_SIZE,
+  BONEYARD_SIZE,
+  GLASS_SIZE,
+  LOCK_SIZE,
+  RAIL_WOOD_W,
+  TABLE_PX,
+  paintApron,
+  paintBoneyard,
+  paintCopoAmericano,
+  paintLock,
+  paintTablePlane,
+  paintTinAshtray,
+} from './art/tablePixels.js';
 
-/** Margem interna do feltro: o aro de madeira (Versão 1.5, 11 px) e uma folga. */
-const BOARD_PADDING = 15;
-/** Faixa do alto do feltro reservada ao dorme e aos selos (px): as pedras ficam abaixo dela. */
-const HUD_TOP = 40;
+/**
+ * Margem interna do feltro: a madeira do aro pintado (Versão 2.0, art/tablePixels.js) e uma
+ * folga; as pedras da ponta podem encostar na tabela de feltro, como numa mesa de verdade.
+ */
+const BOARD_PADDING = Math.round(RAIL_WOOD_W * TABLE_PX) + 2;
+/** O tamanho da pintura da mesa anda de 8 em 8 pixels (a barra do Safari não repinta a mesa). */
+const PLANE_STEP = 8;
+const planePixels = (px) => Math.max(PLANE_STEP * 4, Math.round(px / TABLE_PX / PLANE_STEP) * PLANE_STEP);
+/** A frente da mesa (a saia de madeira embaixo do aro de perto), em px de CSS. */
+const APRON_PX = APRON_H * TABLE_PX;
+/**
+ * Versão 2.0: a mesa em perspectiva. O plano do feltro tomba TILT graus para trás a partir da
+ * beirada de baixo, com a perspectiva proporcional à altura da mesa (PERSPECTIVE × altura).
+ * Para o fundo do feltro chegar no alto da tela, o plano é mais alto que a área (planeHeight).
+ */
+const TILT = 24;
+const PERSPECTIVE = 2.2;
+const SIN = Math.sin((TILT * Math.PI) / 180);
+const COS = Math.cos((TILT * Math.PI) / 180);
+/** Altura do plano inclinado que, projetada, ocupa `height` px da tela. */
+const planeHeightFor = (height) => Math.round((height * PERSPECTIVE) / (PERSPECTIVE * COS - SIN));
+/** Parte do alto do plano reservada ao dorme e aos selos (as pedras ficam abaixo dela). */
+const HUD_TOP_SHARE = 0.2;
 /** Folga visual entre pedras vizinhas, em px do mundo (antes da câmera). */
 const TILE_INSET = 1.5;
 const B = BASE_UNIT_PX;
@@ -27,6 +61,7 @@ const B = BASE_UNIT_PX;
 const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
   // Fumaça Densa (Patch 0.9.4): o dorme some na fumaça (nem a pilha nem o número aparecem);
   // versão 1.4, Geraldo Coveiro ('cova'): as pedras ficam enterradas, viradas, sem o número
+  // Versão 2.0: a pilha é pixel art (art/tablePixels.js) e baixa uma pedra a cada compra
   const tone = hidden === 'smoke' ? 'is-smoke' : hidden === 'cova' ? 'is-cova' : count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
   if (hidden === 'smoke') {
     return (
@@ -41,36 +76,21 @@ const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
       </div>
     );
   }
-  if (hidden === 'cova') {
-    return (
-      <div className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`} role="status" aria-label="Dorme enterrado: a quantidade não aparece">
-        <span className="boneyard-stack" aria-hidden="true">
-          <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-2" />
-          <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-1" />
-        </span>
-        <span className="boneyard-info" aria-hidden="true">
-          <span className="boneyard-count font-pixel text-shadow-pixel">?</span>
-          <span className="boneyard-label font-pixel">COVA</span>
-        </span>
-      </div>
-    );
-  }
+  const shown = hidden === 'cova' ? 7 : count;
   return (
     <div
       className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`}
       role="status"
-      aria-label={count === 0 ? 'Dorme vazio' : `Dorme: ${count} ${count === 1 ? 'pedra restante' : 'pedras restantes'}`}
+      aria-label={hidden === 'cova' ? 'Dorme enterrado: a quantidade não aparece' : count === 0 ? 'Dorme vazio' : `Dorme: ${count} ${count === 1 ? 'pedra restante' : 'pedras restantes'}`}
     >
-      <span className="boneyard-stack" aria-hidden="true">
-        {count > 2 && <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-3" />}
-        {count > 1 && <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-2" />}
-        {count > 0 ? <DominoTile faceDown unit={10} depth={2} className="boneyard-tile boneyard-tile-1" /> : <span className="boneyard-hole" />}
+      <span key={shown} className="boneyard-stack-px" aria-hidden="true">
+        <PixelCanvas cacheKey={`dorme-${Math.min(14, shown)}`} paint={() => paintBoneyard(shown)} w={BONEYARD_SIZE.w} h={BONEYARD_SIZE.h} scale={1.5} />
       </span>
       <span className="boneyard-info" aria-hidden="true">
         <span key={count} className="boneyard-count font-pixel text-shadow-pixel">
-          {count}
+          {hidden === 'cova' ? '?' : count}
         </span>
-        <span className="boneyard-label font-pixel">{count === 0 ? 'VAZIO' : 'DORME'}</span>
+        <span className="boneyard-label font-pixel">{hidden === 'cova' ? 'COVA' : count === 0 ? 'VAZIO' : 'DORME'}</span>
       </span>
     </div>
   );
@@ -213,6 +233,10 @@ function TableBoard({
   rivalRule = null,
 }) {
   const [areaRef, size] = useElementSize();
+  // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
+  const [roomRef, room] = useElementSize();
+  const planeHeight = room.height > APRON_PX ? planeHeightFor(room.height - APRON_PX) : 0;
+  const hudTop = Math.round(planeHeight * HUD_TOP_SHARE);
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
   const feltRef = useRef(null);
   useEffect(() => startTileLighting(feltRef.current), []);
@@ -240,37 +264,57 @@ function TableBoard({
   );
   // Versão 1.5: a faixa de cima do feltro é do dorme e dos selos; a câmera enquadra abaixo dela
   const camera = useMemo(() => {
-    const cam = computeCamera(baseLayout, { width: size.width, height: Math.max(0, size.height - HUD_TOP) });
-    return { ...cam, y: cam.y + HUD_TOP };
-  }, [baseLayout, size.width, size.height]);
+    const cam = computeCamera(baseLayout, { width: size.width, height: Math.max(0, size.height - hudTop) });
+    return { ...cam, y: cam.y + hudTop };
+  }, [baseLayout, size.width, size.height, hudTop]);
   const unit = B - TILE_INSET * 2;
   const enhancementOf = useMemo(
     () => new Map(boardTilesInOrder(board).filter((t) => t.enhancement).map((t) => [t.id, t.enhancement])),
     [board],
   );
   const feltVars = felt ? { '--felt-light': felt.light, '--felt-mid': felt.mid, '--felt-dark': felt.dark } : undefined;
+  // Versão 2.0: a mesa inteira pintada em pixel art (aro de madeira com volume, tabela e feltro gasto)
+  const mahogany = decor.includes('mahogany');
+  const planeW = room.width > 0 ? planePixels(room.width) : 0;
+  const planeH = planeHeight > 0 ? planePixels(planeHeight) : 0;
+  const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${mahogany ? 'mogno' : 'pinho'}`;
 
   return (
     <section
       ref={setFelt}
-      className={`felt-table felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${decor.includes('mahogany') ? 'felt-mahogany' : ''}`}
+      className={`felt-table felt-25d felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${mahogany ? 'felt-mahogany' : ''}`}
       style={feltVars}
       aria-label="Mesa"
     >
-      {decor.map((d) => (
-        <div key={d} aria-hidden="true" className={`felt-decor felt-decor-${d} pointer-events-none absolute inset-0`} />
-      ))}
-      <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
-      <div className="felt-vignette pointer-events-none absolute inset-0" />
-
-      {/* Versão 1.5: o aro de madeira gasta da mesa (com a marca do copo) e o que ficou em cima
-          dele: tampinhas, cinzeiro e o copo americano. Ficam por baixo das pedras. */}
-      <div aria-hidden="true" className="felt-frame pointer-events-none absolute inset-0" />
-      <div aria-hidden="true" className="felt-props pointer-events-none absolute inset-0">
-        <SceneProp name="caps" scale={2} className="felt-prop felt-prop-caps" />
-        <SceneProp name="ashtray" scale={2} className="felt-prop felt-prop-ashtray" />
-        <SceneProp name="glass" scale={2} className="felt-prop felt-prop-glass" />
+      {/* Versão 2.0: a sala em volta da mesa (aparece nos cantos do fundo, onde a mesa afina) */}
+      <div ref={roomRef} aria-hidden="true" className="table-room pointer-events-none absolute inset-0">
+        <BotecoBackdrop scene="tableroom" className="absolute inset-0" />
       </div>
+
+      {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}
+      <div
+        className="table-plane absolute inset-x-0"
+        style={
+          planeHeight
+            ? { bottom: APRON_PX, height: planeHeight, transform: `perspective(${Math.round((room.height - APRON_PX) * PERSPECTIVE)}px) rotateX(${TILT}deg)` }
+            : { top: 0, bottom: 0 }
+        }
+      >
+        {planeW > 0 && (
+          <PixelCanvas
+            cacheKey={planeKey}
+            paint={() => paintTablePlane({ w: planeW, h: planeH, ...(felt ?? {}), mahogany })}
+            w={planeW}
+            h={planeH}
+            className="table-surface-px absolute inset-0"
+            style={{ width: '100%', height: '100%' }}
+          />
+        )}
+        {decor.map((d) => (
+          <div key={d} aria-hidden="true" className={`felt-decor felt-decor-${d} pointer-events-none absolute inset-0`} />
+        ))}
+        <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
+        <div className="felt-vignette pointer-events-none absolute inset-0" />
 
       <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING, zIndex: 3 }}>
         {size.width > 0 && (
@@ -355,8 +399,7 @@ function TableBoard({
                       {/* Versão 1.5: ponta travada (Chumbo, Âmbar): correntes cruzadas e o cadeado */}
                       {(endMarks[side] === 'frozen' || endMarks[side] === 'blocked') && (
                         <span aria-hidden="true" className={`end-lock end-lock-${endMarks[side]}`}>
-                          <CorrentesSprite className="end-lock-chains" />
-                          <CadeadoSprite className="end-lock-pad" />
+                          <PixelCanvas cacheKey="cadeado" paint={paintLock} w={LOCK_SIZE.w} h={LOCK_SIZE.h} scale={1} className="end-lock-px" />
                         </span>
                       )}
                     </button>
@@ -368,13 +411,37 @@ function TableBoard({
         )}
       </div>
 
+      </div>
+
+      {/* o que ficou em cima da beirada, de pé (fora do plano): tampinhas, cinzeiro com o
+          cigarro soltando fumaça e o copo americano. Ficam nos cantos de perto, fora do jogo. */}
+      {/* a frente da mesa: a saia de madeira, com as cantoneiras de latão */}
+      {planeW > 0 && (
+        <PixelCanvas
+          cacheKey={`saia-${planeW}-${mahogany ? 'mogno' : 'pinho'}`}
+          paint={() => paintApron(planeW, { mahogany })}
+          w={planeW}
+          h={APRON_H}
+          className="table-apron pointer-events-none absolute inset-x-0 bottom-0"
+          style={{ width: '100%', height: APRON_PX }}
+        />
+      )}
+      <div aria-hidden="true" className="felt-props pointer-events-none absolute inset-0">
+        <SceneProp name="caps" scale={2} className="felt-prop felt-prop-caps" />
+        <span className="felt-prop felt-prop-ashtray">
+          <PixelCanvas cacheKey="cinzeiro-lata" paint={paintTinAshtray} w={ASHTRAY_SIZE.w} h={ASHTRAY_SIZE.h} scale={TABLE_PX} />
+          <span className="ashtray-smoke" />
+        </span>
+        <span className="felt-prop felt-prop-glass">
+          <PixelCanvas cacheKey="copo-americano" paint={paintCopoAmericano} w={GLASS_SIZE.w} h={GLASS_SIZE.h} scale={TABLE_PX} />
+        </span>
+      </div>
+
       {/* lâmpada pendurada: balança como pêndulo e o facho varre a mesa, clareando
           as pedras por onde passa; quando ela falha, a mesa inteira escurece */}
       <LampRig part="light" lamp={64} cord={2} beamWidth={300} />
       <div aria-hidden="true" className="room-flicker pointer-events-none absolute inset-0" />
 
-      {/* moldura chanfrada da mesa: aro escuro, quina iluminada em cima, sombra embaixo */}
-      <div aria-hidden="true" className="felt-bevel pointer-events-none absolute inset-0" />
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
       {boneyardCount !== null && <BoneyardPile count={boneyardCount} hidden={tableMod === 'fumacaDensa' ? 'smoke' : boneyardHidden ? 'cova' : null} />}

@@ -104,7 +104,7 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
     <div className="flex items-center justify-between gap-2 px-3 pt-2">
       <div className="flex items-center gap-2">
         {/* 3 toques seguidos aqui abrem o painel DEV */}
-        <button type="button" onClick={onSecretTap} className="font-pixel text-[10px] text-bone-50 text-shadow-pixel" aria-label="Você">
+        <button type="button" onClick={onSecretTap} className="hud-nameplate font-pixel text-[10px] text-bone-50 text-shadow-pixel" aria-label="Você">
           VOCÊ
         </button>
         <span data-tut="hearts">
@@ -113,7 +113,7 @@ const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum,
       </div>
       <div className="flex items-center gap-3">
         {sum !== null && (
-          <span data-tut="sum" className={`font-pixel text-[9px] ${sumIsFive ? 'text-brass-300' : 'text-bone-300'}`} aria-label={`Soma das pontas: ${sum}`}>
+          <span data-tut="sum" className={`hud-slate font-pixel text-[9px] ${sumIsFive ? 'text-brass-300 is-five' : 'text-bone-300'}`} aria-label={`Soma das pontas: ${sum}`}>
             Σ{sum}
           </span>
         )}
@@ -274,8 +274,12 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
       }}
     >
       <div className={`hand-float ${selected ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
-        {/* Versão 1.5: a mão chega em cascata, uma pedra a cada 70 ms (o estalo de cada uma toca no App) */}
-        <div className="animate-tile-in" style={{ animationDelay: `${Math.min(index, 7) * DEAL_STEP_MS}ms` }}>
+        {/* Versão 1.5: a mão chega em cascata (o estalo de cada uma toca no App). Versão 2.0: cada
+            pedra cai do centro da mesa, inclinada em 2.5D, uma a cada 60 ms, e assenta no leque */}
+        <div
+          className="animate-deal-fall"
+          style={{ animationDelay: `${Math.min(index, 7) * DEAL_STEP_MS}ms`, '--deal-x': `${-x}px`, '--deal-r': `${-angle}deg` }}
+        >
           {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
           <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
             <DominoTile
@@ -365,6 +369,7 @@ const ActionBar = memo(function ActionBar({
   canPass,
   passRule,
   onPass,
+  urgeDraw = false,
 }) {
   return (
     <>
@@ -379,7 +384,7 @@ const ActionBar = memo(function ActionBar({
         </div>
       ) : (
         <div className="action-wood grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
-          <button type="button" data-tut="draw" className="btn-pixel flex flex-col items-center justify-center gap-1" disabled={!canDraw} onClick={onDraw}>
+          <button type="button" data-tut="draw" className={`btn-pixel flex flex-col items-center justify-center gap-1 ${urgeDraw ? 'btn-urge' : ''}`} disabled={!canDraw} onClick={onDraw}>
             <span>COMPRAR</span>
             <span className="text-[8px] text-bone-200">
               <DrawCost draw={draw} />
@@ -390,7 +395,7 @@ const ActionBar = memo(function ActionBar({
           <div className="flex gap-2">
             {selectedSides.length > 0 ? (
               selectedSides.map((side) => (
-                <button key={side} type="button" data-tone="play" data-tut-side={side} className="btn-pixel flex-1" onClick={() => onPlay(side)}>
+                <button key={side} type="button" data-tone="play" data-tut-side={side} className="btn-pixel btn-urge flex-1" onClick={() => onPlay(side)}>
                   {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
                 </button>
               ))
@@ -538,6 +543,7 @@ function PlayerRack({
         canPass={canPass}
         passRule={passRule}
         onPass={onPass}
+        urgeDraw={isTurn && canDraw && !discardMode && playableIds.size === 0}
       />
     </section>
   );

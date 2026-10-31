@@ -142,7 +142,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 1.5</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 2.0</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -174,6 +174,16 @@ function Credits() {
  * Coleções (livro) e Opções (engrenagem) viram ícones nos cantos de cima.
  * O primeiro toque também destrava o áudio no iOS. 3 toques no logo liberam o painel DEV.
  */
+/** Versão 2.0: onde o vidro das garrafas da prateleira pisca (x %, y %, atraso em s). */
+const TITLE_GLINTS = [
+  [4, 36.5, 0],
+  [13, 37.2, 1.4],
+  [24, 36, 2.6],
+  [7, 48, 0.8],
+  [17, 47, 2.1],
+  [27, 47.6, 3.3],
+];
+
 export default function TitleScreen({
   save,
   onNewGame,
@@ -253,6 +263,12 @@ export default function TitleScreen({
       <BotecoBackdrop scene="title" className="absolute inset-0 z-0" />
       <div aria-hidden="true" className="title-rain pointer-events-none absolute z-[1]" />
       <div aria-hidden="true" className="title-dust pointer-events-none absolute inset-0 z-[4]" />
+      {/* Versão 2.0: o vidro das garrafas brilha quando o facho da lâmpada passa */}
+      <div aria-hidden="true" className="title-glints pointer-events-none absolute inset-0 z-[4]">
+        {TITLE_GLINTS.map(([x, y, delay]) => (
+          <i key={`${x}-${y}`} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${delay}s` }} />
+        ))}
+      </div>
       {/* candeeiro preso no teto: balança de verdade (pivô no fio) e o facho varre
           o logo; quando a lâmpada falha, o salão inteiro escurece */}
       <LampRig part="light" lamp={120} cord={40} beamWidth={380} className="z-[4]" />
@@ -315,7 +331,7 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 1.5{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO 2.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { coinBurst } from './juice.js';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
 import { modeBadge, modeOf } from '../data/difficulty.js';
@@ -21,14 +22,26 @@ const CRACK_STEP_MS = 180;
  * Os corações que a rodada tirou, trincando um depois do outro, cada um com o estalo dele
  * (sound.playHeartBreak). No máximo 6 na fila; o número na frente diz o total.
  */
-function CrackedHearts({ count }) {
+function CrackedHearts({ count, burst = false }) {
   const shown = Math.min(count, 6);
+  const ref = useRef(null);
   useEffect(() => {
     const timers = Array.from({ length: shown }, (_, i) => setTimeout(() => sound.playHeartBreak(), 420 + i * CRACK_STEP_MS));
+    // Versão 2.0: rodada sua: depois do último coração do rival quebrar, a explosão de moedas
+    if (burst) {
+      timers.push(
+        setTimeout(() => {
+          const box = ref.current?.getBoundingClientRect();
+          if (!box) return;
+          coinBurst({ x: box.left + box.width / 2, y: box.top + box.height / 2 }, { count: 14 + shown * 3 });
+          sound.playCoinBurst();
+        }, 420 + shown * CRACK_STEP_MS + 140),
+      );
+    }
     return () => timers.forEach(clearTimeout);
-  }, [shown]);
+  }, [shown, burst]);
   return (
-    <span className="cracked-hearts" aria-hidden="true">
+    <span ref={ref} className="cracked-hearts" aria-hidden="true">
       {Array.from({ length: shown }, (_, i) => (
         <span key={i} className="cracked-heart" style={{ animationDelay: `${420 + i * CRACK_STEP_MS}ms` }}>
           <PixelHeart broken pixel={2} />
@@ -256,7 +269,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             {damage > 0 && (
               <div className="mt-3 flex items-center justify-center gap-2 font-pixel text-[11px] text-blood-400">
                 <span>−{damage}</span>
-                <CrackedHearts count={damage} />
+                <CrackedHearts count={damage} burst={playerWon} />
                 <span className="text-bone-200">{playerWon ? `EM ${name}` : 'EM VOCÊ'}</span>
               </div>
             )}

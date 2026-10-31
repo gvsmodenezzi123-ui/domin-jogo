@@ -6,6 +6,7 @@ import RivalAvatar from './RivalAvatar.jsx';
 import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
+import { shortRivalName } from '../engine/rivalInfo.js';
 
 /**
  * O outro lado da mesa, com o layout TRAVADO (nada aqui muda de tamanho
@@ -63,8 +64,14 @@ function RivalBench({
               {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
             </span>
           </div>
-          <div className="flex w-[90px] min-w-0 flex-col gap-1">
-            <h2 className="truncate font-pixel text-[8px] leading-none text-bone-50 text-shadow-pixel">{rival.name.toUpperCase()}</h2>
+          <div className="rival-plate flex w-[90px] min-w-0 flex-col gap-1">
+            {/* Versão 2.0: o nome curto ("JUVENAL C."), sem reticências; o inteiro fica para o leitor de tela */}
+            <h2
+              className={`rival-name whitespace-nowrap font-pixel leading-none text-bone-50 text-shadow-pixel ${shortRivalName(rival.name).length > 10 ? 'text-[7px]' : 'text-[8px]'}`}
+              aria-label={rival.name}
+            >
+              {shortRivalName(rival.name)}
+            </h2>
             <HeartsBar current={hearts} max={maxHearts} size={11} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
             {/* o dorme saiu daqui no 0.7.0: agora fica grande no canto da mesa (TableBoard) */}
             <div className="flex items-center gap-2">

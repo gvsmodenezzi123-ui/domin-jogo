@@ -2,7 +2,7 @@ import { useState } from 'react';
 import LampRig from '../components/LampRig.jsx';
 import OptionsPanel from '../components/OptionsPanel.jsx';
 import { HeartsBar } from '../components/PixelHeart.jsx';
-import { MaletaSprite } from '../components/art/CaseArt.jsx';
+import MaletaSprite from '../components/MaletaPixel.jsx';
 import { maletaOf } from '../data/maletas.js';
 import { describeRoom } from '../data/pvpRoom.js';
 import NetBadge from './NetBadge.jsx';
