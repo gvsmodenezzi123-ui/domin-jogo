@@ -1678,6 +1678,78 @@ export class SoundEngine {
   }
 
   /**
+   * Versão 2.2: o pacote lacrado tremendo na mão (400 ms). Papel (maço, saco): estalinhos de
+   * celofane/papel que sobem de tom; engradado: a madeira rangendo, um gemido grave que sobe.
+   */
+  playPackShake(kind = 'paper') {
+    const wood = kind === 'wood';
+    for (let i = 0; i < 7; i += 1) {
+      const t = i / 6;
+      this.noise({ freq: (wood ? 380 : 2600) * (1 + t * 0.9), filter: 'bandpass', q: wood ? 7 : 2.2, peak: 0.08 + t * 0.07, dur: wood ? 0.05 : 0.025, delay: i * 0.055 });
+    }
+    if (wood) this.tone({ type: 'sawtooth', freq: 120, freqEnd: 210, peak: 0.05, dur: 0.38, attack: 0.04 });
+    else this.tone({ type: 'triangle', freq: 520, freqEnd: 980, peak: 0.04, dur: 0.36, attack: 0.05 });
+  }
+
+  /** Versão 2.2: o rasgo do papel (ou o estalo da madeira rachando) e o clarão. */
+  playPackBurst(kind = 'paper') {
+    if (kind === 'wood') {
+      this.noise({ freq: 900, filter: 'bandpass', q: 1.4, peak: 0.36, dur: 0.12 });
+      this.tone({ type: 'triangle', freq: 150, freqEnd: 60, peak: 0.3, dur: 0.16, attack: 0.002 });
+      this.noise({ freq: 2400, filter: 'highpass', q: 0.7, peak: 0.16, dur: 0.08, delay: 0.05 });
+    } else {
+      this.noise({ freq: 3200, filter: 'highpass', q: 0.8, peak: 0.3, dur: 0.16, attack: 0.01 });
+      this.noise({ freq: 1500, filter: 'bandpass', q: 1.2, peak: 0.16, dur: 0.1, delay: 0.04 });
+    }
+    this.tone({ freq: 1567.98, peak: 0.12, dur: 0.3, delay: 0.08 }); // o brilho do que saiu
+  }
+
+  /** Versão 2.2: as três opções aparecendo (um arpejo que sobe, mais brilhante se tiver mítico). */
+  playPackReveal(best = 'comum') {
+    const top = { comum: 0, raro: 1, lendario: 2, mitico: 3 }[best] ?? 0;
+    [523.25, 659.25, 783.99, 1046.5].slice(0, 2 + Math.min(2, top)).forEach((f, i) => this.tone({ type: 'triangle', freq: f, peak: 0.12, dur: 0.18, delay: i * 0.07 }));
+    if (top >= 3) this.tone({ freq: 2093, peak: 0.08, dur: 0.5, delay: 0.3, partials: [[1, 1], [2.76, 0.3]] });
+  }
+
+  /** Versão 2.2: a tranca de latão fechando (o item escolhido indo para a bolsa). */
+  playLatch() {
+    this.noise({ freq: 2400, filter: 'bandpass', q: 3, peak: 0.22, dur: 0.03 });
+    this.tone({ type: 'triangle', freq: 1760, peak: 0.12, dur: 0.06, attack: 0.001, delay: 0.01 });
+    this.noise({ freq: 1200, filter: 'bandpass', q: 4, peak: 0.2, dur: 0.04, delay: 0.07 });
+    this.tone({ freq: 2637, peak: 0.07, dur: 0.12, delay: 0.075 });
+  }
+
+  /** Versão 2.2: entrando na loja: o sininho da porta (dois toques de latão). */
+  playShopBell() {
+    const bell = [[1, 1], [2.76, 0.35], [5.4, 0.12]];
+    this.tone({ freq: 1318.51, peak: 0.16, dur: 0.5, attack: 0.002, partials: bell });
+    this.tone({ freq: 1046.5, peak: 0.13, dur: 0.6, attack: 0.002, delay: 0.16, partials: bell });
+  }
+
+  /** Versão 2.2: entrando no beco: o neon acendendo, zumbido e os estalos da falha. */
+  playNeonBuzz() {
+    this.tone({ type: 'sawtooth', freq: 100, peak: 0.05, dur: 0.7, attack: 0.02 });
+    [0, 0.18, 0.27, 0.5].forEach((d) => this.noise({ freq: 3600, filter: 'highpass', q: 0.8, peak: 0.12, dur: 0.02, delay: d }));
+  }
+
+  /** Versão 2.2: entrando no porão: o interruptor e a lâmpada esquentando. */
+  playLightOn() {
+    this.noise({ freq: 1800, filter: 'bandpass', q: 3, peak: 0.24, dur: 0.025 });
+    this.tone({ type: 'triangle', freq: 120, peak: 0.04, dur: 0.6, attack: 0.08, delay: 0.05 });
+    this.noise({ freq: 4200, filter: 'highpass', q: 0.8, peak: 0.08, dur: 0.02, delay: 0.32 });
+  }
+
+  /** Versão 2.2: a mercadoria assentando na prateleira (um toque de madeira por peça). */
+  playShelfTap(index = 0) {
+    this.tone({ type: 'triangle', freq: 220 * (1 + index * 0.06), freqEnd: 120, peak: 0.12, dur: 0.05, attack: 0.002 });
+  }
+
+  /** Versão 2.2: o que você não escolheu desmanchando em cinza (sopro grave e curto). */
+  playAsh() {
+    this.noise({ freq: 700, filter: 'lowpass', q: 0.7, peak: 0.12, dur: 0.4, attack: 0.05 });
+  }
+
+  /**
    * Versão 1.5: múltiplo de 5 em sequência. Cada fechamento seguido do mesmo jogador sobe o tom
    * (×1,12 por degrau, até 10 degraus), a partir do Dó: o combo vai ficando mais agudo e mais brilhante.
    */

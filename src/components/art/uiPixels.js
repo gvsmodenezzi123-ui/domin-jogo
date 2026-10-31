@@ -10,6 +10,7 @@
 //   bandeja    a tábua onde a sua mão descansa (repete sem emenda)
 //   costas     as costas das pedras (ébano com o chanfro)
 import { paintKit } from './botecoScene.js';
+import { paintKraft } from './shopPixels.js';
 
 const { hex, shift, rngOf, buffer } = paintKit;
 
@@ -656,6 +657,9 @@ export function installPixelSkins() {
     root.setProperty('--px-rack-lip', toDataUrl(paintRackLip()));
     root.setProperty('--px-rack-back', toDataUrl(paintRackBack()));
     root.setProperty('--px-near-rail', toDataUrl(paintNearRail()));
+    // versão 2.2: o papel pardo dos bilhetes e etiquetas da loja (e o encardido do beco)
+    root.setProperty('--px-kraft', toDataUrl(paintKraft()));
+    root.setProperty('--px-kraft-dark', toDataUrl(paintKraft(true)));
     document.documentElement.classList.add('px-skins');
   } catch {
     // sem canvas: o HUD fica com os degradês de sempre

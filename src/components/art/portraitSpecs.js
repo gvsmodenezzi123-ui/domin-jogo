@@ -226,6 +226,7 @@ const barTowel = (b, { hex }) => {
 
 /** Os olhos vermelhos que brilham no escuro (o Dono da Noite). */
 const nightEyes = (b, { hex, mood }) => {
+  if (mood === 'blink') return; // os olhos vermelhos apagam
   const y = mood === 'hurt' ? 28 : 27;
   for (const x of [CXL, CXR]) {
     b.rect(x, y, 4, 2, hex('#ff2a1a'));
@@ -671,3 +672,66 @@ export const PORTRAIT_EMBER = Object.freeze({
   tioZe: Object.freeze({ x: 46, y: 38, grid: 64, moods: ['idle', 'thinking', 'smug'] }),
   comendador: Object.freeze({ x: 47, y: 38, grid: 64, moods: ['idle', 'thinking', 'smug'] }),
 });
+
+/** A mão do Seu Tião (a esquerda dele) segurando a moeda de ouro reluzente. */
+const coinHand = (b, { hex }) => {
+  b.ellipse(50, 53, 5, 4.2, hex('#c88a62'));
+  b.ellipse(49, 52, 3.2, 2.4, hex('#e0a882'));
+  for (const x of [46, 49, 52]) b.rect(x, 48, 2, 4, hex('#d89a72'));
+  b.ellipse(50, 45.5, 4.2, 4.2, hex('#8a6214'));
+  b.ellipse(49.6, 45, 3.4, 3.4, hex('#e6c34a'));
+  b.ellipse(49, 44.2, 1.4, 1.4, hex('#fff6c0'));
+  b.put(53, 42, hex('#ffffff'));
+  b.put(54, 41, hex('#fff6c0'), 0.7);
+};
+
+/** Versão 2.2: os atendentes (Loja do Valtinho, Seu Tião no porão, o Corvo no beco), só a figura. */
+export const NPC_PORTRAITS = {
+  valtinho: {
+    seed: 41,
+    skin: '#c8875a',
+    jaw: 'square',
+    hair: { style: 'slick', color: '#141010' },
+    facial: { mustache: 'thin', stubble: true, color: '#141010' },
+    eyes: 'sleepy',
+    browShape: 'arched',
+    restMood: 'smug',
+    goldTooth: true,
+    rim: '#ffd890',
+    outfit: { type: 'tank', color: '#efefe8', shirt: '#efefe8', chain: true },
+    front: cigarette,
+  },
+  seuTiao: {
+    seed: 42,
+    skin: '#d8a07a',
+    jaw: 'long',
+    hair: { style: 'thin', color: '#e8e8e8' },
+    hat: { type: 'fedora', color: '#7a7c80', band: '#3a3a3e' },
+    facial: { beard: 'long', mustache: 'big', color: '#f0f0ec' },
+    wrinkles: true,
+    eyes: 'tired',
+    nose: 'big',
+    browShape: 'sad',
+    restMood: 'smug',
+    rim: '#ffe2a8',
+    outfit: { type: 'coat', color: '#6a4422', accent: '#5a381a', shirt: '#c8b898', scarf: '#c42a22', tears: true },
+    front: coinHand,
+  },
+  corvo: {
+    seed: 43,
+    skin: '#3a2a2a',
+    jaw: 'long',
+    hair: { style: 'none' },
+    hat: { type: 'hood', color: '#22202a' },
+    iris: '#120a0a',
+    lip: '#1a0e0e',
+    goldTooth: true,
+    restMood: 'smug',
+    rim: '#ff3a2a',
+    outfit: { type: 'coat', color: '#1e1c24', accent: '#2c2834', shirt: '#3a1626' },
+    front: nightEyes,
+  },
+};
+
+/** Onde fica a brasa do cigarro do Valtinho e a moeda do Seu Tião (na grade de 64). */
+export const NPC_SPOTS = Object.freeze({ valtinhoEmber: Object.freeze({ x: 46, y: 38 }), tiaoCoin: Object.freeze({ x: 50, y: 45 }) });

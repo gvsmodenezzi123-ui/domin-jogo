@@ -8,6 +8,7 @@
  *   thinking  olhos para o alto, uma sobrancelha erguida, boca de lado
  *   smug      pálpebra caída, sorriso de canto
  *   hurt      olhos apertados, sobrancelhas de dor, boca aberta, suor e a bochecha marcada
+ *   blink     piscando (os atendentes da loja, do porão e do beco piscam de vez em quando)
  *
  * e `speaking` (a boca abre, menos no hurt). O desenho é puro e com semente (cache por chave).
  */
@@ -211,10 +212,15 @@ function paintBody(b, spec) {
   } else if (type === 'tank') {
     const under = tones(o.shirt ?? '#efefe8');
     fill(b, CX - 12, 50, CX + 12, G - 1, (x, y) => lit(under, (CX - x) / 12, x, y));
-    // pele dos ombros de fora da regata
-    fill(b, 0, 48, G - 1, G - 1, (x, y) => {
-      const d = Math.abs(x - CX);
-      return d > 12 && d < 24 && y < 56 + (d - 12) * 0.3 ? lit(skin, (CX - x) / 20, x, y) : null;
+    // pele dos ombros e dos braços de fora da regata: arredondados, com a sombra da axila
+    fill(b, 0, 46, G - 1, G - 1, (x, y) => {
+      const d = Math.abs(x + 0.5 - CX);
+      const top = 47 + ((d - 12) / 14) ** 2 * 5;
+      if (d <= 12.5 || d > shoulder + 0.5 || y < top) return null;
+      const u = (d - 12) / Math.max(1, shoulder - 12); // 0 junto da regata .. 1 na ponta do ombro
+      let light = (x < CX ? 0.35 : -0.35) + (0.5 - Math.abs(u - 0.45)) * 0.6 - (y - top) * 0.04;
+      if (u < 0.18) light -= 0.45; // a dobra da cava
+      return lit(skin, light, x, y);
     });
   } else if (type === 'uniform' || type === 'jersey' || type === 'shirt' || type === 'apron' || type === 'robe' || type === 'cardigan') {
     // gola
@@ -253,6 +259,27 @@ function paintBody(b, spec) {
       b.rect(CX - 15, 53, 8, 4, hex('#f4f0e6'));
       b.line(CX - 14, 55, CX - 9, 55, hex(o.patch));
     }
+  }
+  if (o.scarf) {
+    // lenço no pescoço: o triângulo caindo no peito e o nó de lado
+    const sc = tones(o.scarf);
+    fill(b, CX - 11, 43, CX + 11, 56, (x, y) => {
+      const d = Math.abs(x + 0.5 - CX);
+      if (y < 47) return d < 10 - (y - 43) * 0.3 ? lit(sc, (CX - x) / 9 + 0.2, x, y) : null;
+      return d < 9 - (y - 47) * 1.05 ? lit(sc, (CX - x) / 8 - (y - 47) * 0.05, x, y) : null;
+    });
+    b.ellipse(CX + 7, 46, 2.2, 1.8, sc.lo);
+    b.line(CX + 8, 47, CX + 11, 52, sc.mid);
+    for (let x = CX - 8; x < CX + 8; x += 3) b.put(x, 45, sc.hi, 0.8);
+  }
+  if (o.tears) {
+    // o casaco rasgado e remendado
+    const patch = tones(o.patchColor ?? '#8a6a3a');
+    b.rect(CX - 20, 54, 5, 4, patch.mid);
+    for (let x = CX - 20; x < CX - 15; x += 2) b.put(x, 53, patch.hi);
+    b.line(CX + 15, 52, CX + 19, 58, cloth.deep);
+    b.line(CX + 16, 52, CX + 20, 58, cloth.hi, 0.6);
+    b.line(CX - 24, 60, CX - 21, 63, cloth.deep);
   }
   if (o.chain) {
     const gold = tones('#e6c34a');
@@ -362,6 +389,13 @@ function paintEyes(b, spec, mood) {
   const dark = hex('#100806');
   eyes.forEach((x0, i) => {
     const side = i === 0 ? -1 : 1;
+    if (mood === 'blink') {
+      // piscando: a pálpebra fechada e a sobrancelha no lugar
+      b.rect(x0, ey, 5, 1, dark);
+      b.rect(x0, ey - 1, 5, 1, skin.lo);
+      b.line(x0 - 1, ey - 4, x0 + 5, ey - 4, brow);
+      return;
+    }
     if (mood === 'hurt') {
       // olhos apertados: um > e um <
       const dir = side < 0 ? 1 : -1;
@@ -436,7 +470,9 @@ function paintNose(b, spec) {
   b.line(CX - 2, 35, CX + 2, 35, skin.lo, 0.7);
 }
 
-function paintMouth(b, spec, mood, speaking) {
+function paintMouth(b, spec, moodIn, speaking) {
+  // piscando, a boca fica no humor de descanso de cada um (o Valtinho, sempre de canto)
+  const mood = moodIn === 'blink' ? (spec.restMood ?? 'idle') : moodIn;
   const my = 38;
   const skin = tones(spec.skin ?? '#c88a5a');
   const lip = hex(spec.lip ?? '#8a4a3a');
@@ -626,7 +662,9 @@ function paintHat(b, spec) {
       const dx = Math.abs(x + 0.5 - CX);
       const w = 9.5 - ((brimY - y) / (brimY - crownTop)) * 1.5;
       if (dx > w) return null;
-      if (kind !== 'safari' && y < crownTop + 2 && dx < 3) return null; // o vinco do fedora
+      if (kind !== 'safari' && y < crownTop + 1 && dx < 3.5) return null; // o vinco do fedora (rasinho)
+      // o vinco descendo pelo meio da copa
+      if (kind !== 'safari' && kind !== 'straw' && y < crownTop + 4 && Math.abs(x + 0.5 - CX) < 1) return t.lo;
       return lit(t, (CX - x) / 10 + (crownTop + 3 - y) * 0.08, x, y);
     });
     if (band) b.rect(CX - 9, brimY - 3, 19, 2, band.mid);
@@ -712,6 +750,25 @@ function paintHat(b, spec) {
   if (kind === 'headband') {
     b.rect(CX - 13, top + 2, 27, 3, hex(hat.color ?? '#f4f0e6'));
     b.rect(CX - 13, top + 2, 27, 1, hex('#ffffff'));
+    return;
+  }
+  if (kind === 'hood') {
+    // capuz: o pano envolve a cabeça e a sombra come a metade de cima do rosto
+    const opening = (x, y) => ((x + 0.5 - CX) / 10.5) ** 2 + ((y + 0.5 - 32) / 13.5) ** 2 < 1 && y > top + 4;
+    fill(b, CX - 21, top - 9, CX + 21, 54, (x, y) => {
+      const dx = (x + 0.5 - CX) / 19.5;
+      const dy = (y + 0.5 - (top + 17)) / 25;
+      if (dx * dx + dy * dy > 1 || opening(x, y)) return null;
+      const fold = Math.sin((x - CX) * 0.55 + y * 0.12) > 0.7 ? -0.35 : 0;
+      return lit(t, -dx * 0.6 - dy * 0.35 + 0.05 + fold, x, y);
+    });
+    for (let y = top; y < 42; y += 1) {
+      for (let x = CX - 12; x <= CX + 12; x += 1) {
+        if (!opening(x, y)) continue;
+        const a = Math.max(0, Math.min(0.88, 0.95 - (y - top) * 0.045));
+        b.put(x, y, hex('#050304'), a);
+      }
+    }
     return;
   }
   if (kind === 'goggles') {

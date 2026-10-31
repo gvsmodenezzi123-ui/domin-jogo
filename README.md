@@ -1,4 +1,4 @@
-# Buxaria — Versão 1.3
+# Buxaria — Versão 2.2
 
 Duelo 1x1 tático de **dominó roguelike** numa campanha de 18 rivais, em dark pixel art
 (clima Inscryption / Buckshot Roulette). Roda como PWA (tela vertical de celular) e como app
@@ -171,6 +171,39 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 `components/art/botecoScene.js`) e mostrada num `<canvas>` ampliado sem suavização
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
+
+### 2.2: a Loja do Valtinho, o Mercado Negro e o Seu Tião repintados
+
+- **Tudo pintado por código** (`art/shopPixels.js`, fundos no tamanho da tela pelo
+  `PaintedBox.jsx`):
+  - na Loja, o toldo desbotado e rasgado, a parede de azulejo encardido e a estante de madeira
+    maciça em 2.5D (juntas, anéis de copo, gordura, marcas de faca);
+  - no beco, o tijolo molhado com o vermelho do neon e o forro do sobretudo em cetim;
+  - no porão do Seu Tião, o tijolo velho com os canos enferrujados e as teias.
+- **Atendentes em 64×64:** o Valtinho fumando, o Seu Tião (barba branca, chapéu de feltro,
+  lenço vermelho, casaco rasgado, moeda na mão) e o Corvo de capuz. Os três piscam, e o Corvo
+  apaga os olhos vermelhos quando pisca.
+- **Loja:**
+  - Os talismãs ficam na almofada de veludo, com a sombra, o brilho da raridade e a fumaça do
+    Cinzeiro.
+  - As pedras de grife ficam presas com alfinete em bilhetes de papel pardo.
+  - Os pacotes lacrados têm 128×128 e respiram, com as fagulhas douradas.
+  - A Bolsa fica em nichos entalhados, ao lado do copo de couro dos dados e da placa
+    rebitada.
+- **Abertura do pacote em cena de cinema** (`PackOpening.jsx`):
+  1. A vinheta escurece a tela e o pacote treme 400 ms com o papel ou a madeira rangendo.
+  2. Ele rasga num clarão, com as lascas voando.
+  3. As 3 opções sobem na aura da raridade.
+  4. Ao escolher, a tranca de latão fecha, o escolhido desce em arco até a Bolsa e os outros
+     viram cinza.
+  - O sorteio e as chances não mudaram (semente da run).
+- **Seu Tião:** as moedas saem da mão dele em arco até o SEU BOLSO, com o "tim" subindo e o
+  número pulando. A fala dele fica num bilhete em cima do caixote.
+- **Entradas animadas:**
+  - Loja: o toldo desce, a luz pisca e acende, o Valtinho sobe e a mercadoria cai nas
+    prateleiras, com o sininho da porta.
+  - Beco: o neon acende falhando e o sobretudo abre.
+  - Porão: a luz do teto pega, o caixote cai com poeira e o Seu Tião sobe atrás dele.
 
 ### 2.1: rostos novos, talismãs novos e o HUD do desenho
 

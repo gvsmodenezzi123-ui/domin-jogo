@@ -84,13 +84,15 @@ function shade(m, light, x, y) {
   return m.deep;
 }
 
-/** As ferramentas de desenho sobre um buffer 32×32. */
+/** As ferramentas de desenho sobre um buffer (32×32 nos talismãs; a loja usa até 128×128). */
 function kit(b) {
-  const solid = (x, y) => x >= 0 && y >= 0 && x < N && y < N && b.data[(y * N + x) * 4 + 3] > 200;
+  const W = b.w;
+  const H = b.h;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < H && b.data[(y * W + x) * 4 + 3] > 200;
   const px = (x, y, c, a = 1) => b.put(Math.round(x), Math.round(y), c, a);
   const each = (x0, y0, x1, y1, fn) => {
-    for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(N - 1, Math.ceil(y1)); y += 1) {
-      for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(N - 1, Math.ceil(x1)); x += 1) {
+    for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(H - 1, Math.ceil(y1)); y += 1) {
+      for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(W - 1, Math.ceil(x1)); x += 1) {
         const c = fn(x, y);
         if (c) b.put(x, y, c);
       }
@@ -307,11 +309,13 @@ function kit(b) {
 }
 
 /** Contorno colorido: a borda é a cor do vizinho escurecida (fica mais bonito que preto chapado). */
-function outline(b) {
-  const solid = (x, y) => x >= 0 && y >= 0 && x < N && y < N && b.data[(y * N + x) * 4 + 3] > 200;
+function outline(b, ink = INK, k = 0.78) {
+  const W = b.w;
+  const H = b.h;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < H && b.data[(y * W + x) * 4 + 3] > 200;
   const marks = [];
-  for (let y = 0; y < N; y += 1) {
-    for (let x = 0; x < N; x += 1) {
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
       if (solid(x, y)) continue;
       let best = null;
       let lum = 999;
@@ -322,7 +326,7 @@ function outline(b) {
         [x, y + 1],
       ]) {
         if (!solid(nx, ny)) continue;
-        const i = (ny * N + nx) * 4;
+        const i = (ny * W + nx) * 4;
         const c = [b.data[i], b.data[i + 1], b.data[i + 2]];
         const l = c[0] + c[1] + c[2];
         if (l < lum) {
@@ -330,7 +334,7 @@ function outline(b) {
           best = c;
         }
       }
-      if (best) marks.push([x, y, rgb(mix(best, INK, 0.78))]);
+      if (best) marks.push([x, y, rgb(mix(best, ink, k))]);
     }
   }
   for (const [x, y, c] of marks) b.put(x, y, c);
@@ -2012,3 +2016,6 @@ export function paintRelic(art, rarity) {
   }
   return b;
 }
+
+/** O kit de desenho (formas, materiais, contorno) para os outros pintores de objetos (a loja). */
+export const spriteKit = Object.freeze({ kit, mat, outline, M, shade });

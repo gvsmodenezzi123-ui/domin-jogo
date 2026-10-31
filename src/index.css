@@ -13430,3 +13430,2013 @@
   border: 0;
   box-shadow: none;
 }
+
+/* =====================================================================
+   Versão 2.2: a Loja do Valtinho pintada (toldo, azulejo, estante 2.5D,
+   veludo, bilhetes com alfinete, pacotes lacrados, nichos, copo e placa)
+   ===================================================================== */
+.painted-box {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.shop-v22 {
+  background: #140c07;
+}
+
+/* o papel pardo dos bilhetes e etiquetas */
+.kraft-paper,
+.shop-v22 .shop-tag,
+.shop-note::before,
+.pack-note {
+  background-color: #c9a56b;
+  background-image: var(--px-kraft, none);
+  background-size: 96px 96px;
+  image-rendering: pixelated;
+}
+
+/* --- toldo --- */
+.shop-v22 .shop-awning {
+  z-index: 9;
+  background: none;
+  box-shadow: none;
+}
+
+.shop-v22 .shop-awning::after {
+  display: none;
+}
+
+.shop-v22 .shop-awning-canvas {
+  z-index: 0;
+  height: calc(100% + 24px);
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.5));
+}
+
+.shop-v22 .shop-awning-inner {
+  position: relative;
+  z-index: 2;
+  padding-bottom: 16px;
+}
+
+.shop-v22 .shop-sign {
+  border: 2px solid transparent;
+  border-image: var(--px-plank-pinho) 8 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  padding: 6px 10px 7px;
+}
+
+/* --- parede, lâmpada, poeira e o Valtinho --- */
+.shop-v22 .shop-backwall {
+  margin-top: -24px;
+  min-height: 140px;
+  max-height: 200px;
+}
+
+.shop-v22 .shop-wall-canvas {
+  z-index: 0;
+}
+
+.shop-v22 .shop-lamp-zone .lamp-rig {
+  left: 22%;
+}
+
+.shop-dust {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.shop-dust i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(255, 236, 190, 0.75);
+  animation: dustDrift 7s linear infinite;
+}
+
+@keyframes dustDrift {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(7px, -14px);
+    opacity: 0.35;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-3px, -30px);
+    opacity: 0;
+  }
+}
+
+.shop-v22 .shop-npc-wrap {
+  bottom: -2px;
+}
+
+.shop-v22 .shop-npc {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.55));
+}
+
+/* fumaça do cigarro: três baforadas subindo (gradiente, sem blur: leve no iPhone) */
+.shop-smoke {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.shop-smoke i {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(222, 216, 204, 0.6), rgba(222, 216, 204, 0) 70%);
+  animation: shopSmoke 3.2s linear infinite;
+}
+
+.shop-smoke i:nth-child(2) {
+  animation-delay: -1.07s;
+}
+
+.shop-smoke i:nth-child(3) {
+  animation-delay: -2.14s;
+}
+
+@keyframes shopSmoke {
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(12px, -38px) scale(2.4);
+    opacity: 0;
+  }
+}
+
+.shop-npc-smoke {
+  left: 72%;
+  top: 59%;
+}
+
+/* --- a estante --- */
+.shop-estante {
+  position: relative;
+  z-index: 5;
+  margin: 0 4px;
+  box-shadow:
+    0 -8px 14px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 2px #0b0603;
+}
+
+.shop-row {
+  position: relative;
+  padding: 6px 12px 18px;
+}
+
+.shop-row > :not(.painted-box) {
+  position: relative;
+  z-index: 1;
+}
+
+.shop-v22 .shop-goods {
+  gap: 2px;
+}
+
+.shop-v22 .shop-good-btn {
+  gap: 0;
+}
+
+.shop-good-stage {
+  position: relative;
+  display: block;
+  width: 88px;
+  height: 70px;
+}
+
+.shop-cushion {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+
+.shop-v22 .shop-good-art {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  height: 48px;
+  margin-left: -24px;
+  animation: goodFloat 3.2s ease-in-out infinite alternate;
+  animation-delay: var(--float-delay, 0s);
+  will-change: transform;
+}
+
+@keyframes goodFloat {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+.shop-good-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 15px;
+  width: 42px;
+  height: 11px;
+  margin-left: -21px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(24, 0, 2, 0.7), rgba(24, 0, 2, 0) 70%);
+  animation: goodShadow 3.2s ease-in-out infinite alternate;
+  animation-delay: var(--float-delay, 0s);
+}
+
+@keyframes goodShadow {
+  to {
+    transform: scale(0.82);
+    opacity: 0.7;
+  }
+}
+
+.shop-good-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  width: 78px;
+  height: 64px;
+  margin-left: -39px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rarity) 42%, transparent), transparent 66%);
+  animation: goodGlow 2.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes goodGlow {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+.shop-relic-smoke {
+  left: 74%;
+  top: 30%;
+}
+
+.shop-v22 .shop-good-btn:active .shop-good-art {
+  transform: translateY(-6px) scale(1.08);
+}
+
+.shop-v22 .shop-tag {
+  margin-top: -4px;
+  width: 92%;
+  padding: 4px 4px 7px;
+  background-image:
+    radial-gradient(circle 2.5px at 50% 5px, #2a1a0a 0 2px, transparent 2.6px),
+    var(--px-kraft, none);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 9px, 100% calc(100% - 3px), 88% 100%, 70% calc(100% - 2px), 50% 100%, 30% calc(100% - 3px), 10% 100%, 0 calc(100% - 2px), 0 9px);
+  box-shadow: none;
+  rotate: -2deg;
+}
+
+.shop-v22 .shop-good:nth-child(2) .shop-tag {
+  rotate: 1.5deg;
+}
+
+.shop-v22 .shop-good:nth-child(3) .shop-tag {
+  rotate: -1deg;
+}
+
+/* --- pedras de grife nos bilhetes --- */
+.shop-v22 .shop-display {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 6px 0 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.shop-v22 .shop-grife {
+  position: relative;
+  width: 48%;
+  min-height: 76px;
+  padding: 0;
+  align-items: center;
+}
+
+.shop-note {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-left: 26px;
+  padding: 12px 8px 8px 22px;
+  color: #2b1a0a;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.55));
+  rotate: -2deg;
+}
+
+.shop-grife-right .shop-note {
+  rotate: 2deg;
+}
+
+.shop-note::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  clip-path: polygon(2% 6%, 18% 0, 40% 4%, 63% 0, 84% 5%, 100% 1%, 97% 30%, 100% 58%, 96% 82%, 99% 100%, 76% 95%, 52% 100%, 30% 94%, 8% 100%, 0 78%, 3% 50%, 0 24%);
+}
+
+.shop-pin {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  margin-left: -9px;
+  z-index: 2;
+}
+
+.shop-note-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+.shop-note-hand {
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1;
+  color: #23306a;
+  rotate: -3deg;
+}
+
+.shop-v22 .shop-grife-tile {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  z-index: 3;
+  width: auto;
+  min-height: 0;
+  margin-top: -26px;
+  filter: drop-shadow(3px 6px 3px rgba(0, 0, 0, 0.65));
+  transform: perspective(220px) rotateX(16deg) rotateZ(-10deg);
+}
+
+.shop-v22 .shop-grife-right .shop-grife-tile {
+  transform: perspective(220px) rotateX(16deg) rotateZ(8deg);
+}
+
+.shop-v22 .shop-grife:active .shop-grife-tile {
+  transform: perspective(220px) rotateX(4deg) translateY(-4px) scale(1.06);
+}
+
+/* --- mercadoria lacrada --- */
+.shop-sealed {
+  margin: 0 0 2px;
+  text-align: center;
+  font-size: 7px;
+  letter-spacing: 0.24em;
+  color: rgba(236, 222, 186, 0.62);
+  text-shadow:
+    0 1px 0 #000,
+    1px 0 0 rgba(0, 0, 0, 0.5);
+}
+
+.shop-v22 .shop-packs {
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.shop-v22 .shop-pack {
+  gap: 1px;
+  padding: 0;
+}
+
+.shop-v22 .shop-pack-art {
+  position: relative;
+  display: block;
+  width: 76px;
+  height: 76px;
+  margin-bottom: -6px;
+  filter: none;
+}
+
+.shop-pack-canvas {
+  transform-origin: 50% 92%;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.6));
+  animation: packBreath 2.8s ease-in-out infinite;
+  animation-delay: var(--breath-delay, 0s);
+  will-change: transform;
+}
+
+@keyframes packBreath {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.035, 1.045);
+  }
+}
+
+.shop-pack-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shop-pack-sparks i {
+  position: absolute;
+  bottom: 24%;
+  width: 3px;
+  height: 3px;
+  background: #ffe08a;
+  box-shadow: 0 0 4px 1px rgba(255, 176, 32, 0.8);
+  animation: sparkUp 3s linear infinite;
+}
+
+@keyframes sparkUp {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(4px, -56px);
+    opacity: 0;
+  }
+}
+
+.shop-pack-torn {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 14%;
+  height: 12px;
+  background: repeating-linear-gradient(100deg, #8a6a3a 0 5px, transparent 5px 9px);
+  opacity: 0.55;
+}
+
+.shop-v22 .shop-pack:active .shop-pack-art {
+  transform: translateY(-4px) rotate(-3deg);
+}
+
+/* --- frente do balcão e os nichos entalhados --- */
+.shop-counter-front {
+  position: relative;
+  z-index: 6;
+  padding: 16px 12px 10px;
+  box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.5);
+}
+
+.shop-counter-front > :not(.painted-box) {
+  position: relative;
+  z-index: 1;
+}
+
+.shop-v22 .shop-pouch {
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.shop-v22 .shop-pouch-label {
+  text-align: center;
+  color: #f0d8a8;
+  text-shadow:
+    0 2px 0 #0b0603,
+    0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+.shop-v22 .shop-niches {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.shop-v22 .shop-niche,
+.shop-v22 .shop-niche.relic-slot {
+  position: relative;
+  width: 52px;
+  height: 48px;
+  flex: 0 0 auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.shop-niche-px {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.shop-niche-relic {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -18px 0 0 -17px;
+  filter: drop-shadow(0 3px 1px rgba(0, 0, 0, 0.7));
+}
+
+.shop-v22 .shop-niche.relic-slot::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 7px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--rarity);
+  opacity: 0.55;
+  box-shadow: 0 0 6px var(--rarity);
+}
+
+.shop-v22 .shop-deck {
+  justify-content: center;
+}
+
+/* --- copo de dados e a placa --- */
+.shop-v22 .shop-controls {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.shop-v22 .shop-plank {
+  overflow: hidden;
+  min-height: 64px;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  box-shadow:
+    0 4px 0 #0b0603,
+    0 7px 8px rgba(0, 0, 0, 0.5);
+}
+
+.shop-plank-canvas {
+  z-index: 0;
+}
+
+.shop-v22 .shop-plank > span {
+  position: relative;
+  z-index: 1;
+}
+
+.shop-v22 .shop-plank-title {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #f6e6c0;
+  text-shadow:
+    0 2px 0 #000,
+    1px 1px 0 #000,
+    -1px 1px 0 #000;
+}
+
+.shop-v22 .shop-plank:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #0b0603;
+}
+
+.shop-v22 .shop-dice > span:first-child {
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.6));
+}
+
+@media (max-height: 760px) {
+  .shop-v22 .shop-row {
+    padding-top: 4px;
+  }
+
+  .shop-v22 .shop-counter-front {
+    padding-top: 12px;
+    padding-bottom: 6px;
+  }
+}
+
+.reduce-motion .shop-dust i,
+.reduce-motion .shop-smoke i,
+.reduce-motion .shop-good-art,
+.reduce-motion .shop-good-shadow,
+.reduce-motion .shop-good-glow,
+.reduce-motion .shop-pack-canvas,
+.reduce-motion .shop-pack-sparks i {
+  animation: none !important;
+}
+
+/* ---------- 2.2: a abertura do pacote em cena de cinema ---------- */
+.pack-cine {
+  gap: 10px;
+  padding-top: max(env(safe-area-inset-top), 12px);
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+}
+
+.pack-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse 60% 48% at 50% 46%, rgba(20, 10, 4, 0.55), rgba(0, 0, 0, 0.94) 72%);
+  animation: vignetteIn 260ms ease-out both;
+  transition: opacity 320ms ease-out;
+}
+
+.pack-cine.is-taking .pack-vignette {
+  opacity: 0.35;
+}
+
+@keyframes vignetteIn {
+  from {
+    opacity: 0;
+  }
+}
+
+.pack-cine-title {
+  font-size: 11px;
+  color: #ffd36b;
+  text-shadow:
+    0 2px 0 #000,
+    0 0 10px rgba(255, 200, 80, 0.35);
+}
+
+.pack-hero {
+  position: relative;
+  width: 176px;
+  height: 176px;
+}
+
+.pack-hero > span {
+  position: absolute;
+  inset: 0;
+}
+
+.pack-hero-shake {
+  animation:
+    heroIn 220ms cubic-bezier(0.2, 1.4, 0.4, 1) both,
+    packShake 0.08s linear 200ms infinite;
+}
+
+@keyframes heroIn {
+  from {
+    transform: scale(0.4) translateY(80px);
+    opacity: 0;
+  }
+}
+
+@keyframes packShake {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-4px, 2px) rotate(-2deg);
+  }
+  50% {
+    transform: translate(3px, -2px) rotate(2deg);
+  }
+  75% {
+    transform: translate(-2px, -1px) rotate(-1deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+.pack-half {
+  animation: packHalfL 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.pack-half-l {
+  clip-path: polygon(0 0, 54% 0, 46% 22%, 55% 41%, 45% 60%, 54% 80%, 47% 100%, 0 100%);
+}
+
+.pack-half-r {
+  clip-path: polygon(54% 0, 100% 0, 100% 100%, 47% 100%, 54% 80%, 45% 60%, 55% 41%, 46% 22%);
+  animation-name: packHalfR;
+}
+
+@keyframes packHalfL {
+  to {
+    transform: translate(-90px, 30px) rotate(-24deg);
+    opacity: 0;
+  }
+}
+
+@keyframes packHalfR {
+  to {
+    transform: translate(90px, 30px) rotate(24deg);
+    opacity: 0;
+  }
+}
+
+.pack-bit {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 6px;
+  height: 4px;
+  inset: auto;
+  background: #c89a5a;
+  box-shadow: inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+  animation: packBit 600ms cubic-bezier(0.15, 0.7, 0.3, 1) both;
+}
+
+.pack-hero-wood .pack-bit {
+  width: 8px;
+  height: 2px;
+  background: #b8864a;
+}
+
+.pack-hero-paper .pack-bit:nth-child(3n) {
+  background: #d8dce0;
+}
+
+@keyframes packBit {
+  from {
+    transform: translate(0, 0) rotate(0deg) scale(var(--bs, 1));
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--bx), var(--by)) rotate(var(--br)) scale(var(--bs, 1));
+    opacity: 0;
+  }
+}
+
+.pack-flash {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3;
+  background: #fff;
+  animation: packFlash 160ms ease-out both;
+  pointer-events: none;
+}
+
+@keyframes packFlash {
+  0% {
+    opacity: 0.95;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.pack-cine-hint {
+  font-size: 18px;
+  color: var(--color-bone-200);
+  text-shadow: 0 2px 0 #000;
+}
+
+.pack-cine .pack-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-width: 380px;
+  perspective: 600px;
+}
+
+.pack-cine .pack-option {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 0 4px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
+  animation: optionIn 460ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  animation-delay: calc(var(--i) * 110ms);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pack-cine .pack-option:nth-child(1) {
+  transform: rotateY(14deg);
+}
+
+.pack-cine .pack-option:nth-child(3) {
+  transform: rotateY(-14deg);
+}
+
+@keyframes optionIn {
+  from {
+    opacity: 0;
+    translate: 0 40px;
+    scale: 0.6;
+  }
+}
+
+.pack-option-float {
+  position: relative;
+  display: grid;
+  width: 96px;
+  height: 104px;
+  place-items: center;
+  animation: optionFloat 2.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.7s);
+}
+
+@keyframes optionFloat {
+  to {
+    transform: translateY(-7px);
+  }
+}
+
+.pack-aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--aura) 70%, transparent) 0, color-mix(in srgb, var(--aura) 28%, transparent) 38%, transparent 68%);
+  animation: auraPulse 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes auraPulse {
+  from {
+    transform: scale(0.88);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.pack-cine .pack-option.is-mythic .pack-aura {
+  animation-duration: 0.9s;
+}
+
+.pack-cine .pack-option-art {
+  position: relative;
+  display: block;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.6));
+}
+
+.pack-cine .pack-option.is-on .pack-option-float {
+  animation: none;
+  transform: translateY(-12px) scale(1.12);
+  transition: transform 160ms ease-out;
+}
+
+.pack-cine .pack-option.is-on .pack-aura {
+  inset: -14px;
+}
+
+.pack-cine .pack-option-name {
+  max-width: 100%;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.3;
+  text-align: center;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #000;
+  overflow-wrap: anywhere;
+}
+
+.pack-cine .pack-option.is-ash .pack-option-art,
+.pack-cine .pack-option.is-ash .pack-aura {
+  animation: ashOut 620ms ease-in both;
+}
+
+.pack-cine .pack-option.is-ash .rarity-badge,
+.pack-cine .pack-option.is-ash .pack-option-name,
+.pack-cine .pack-option.is-taken .rarity-badge,
+.pack-cine .pack-option.is-taken .pack-option-name {
+  transition: opacity 240ms ease-out;
+  opacity: 0;
+}
+
+.pack-cine .pack-option.is-taken .pack-aura {
+  transition: opacity 200ms ease-out;
+  opacity: 0;
+}
+
+@keyframes ashOut {
+  0% {
+    filter: grayscale(0) brightness(1);
+  }
+  40% {
+    filter: grayscale(1) brightness(0.55);
+    opacity: 1;
+  }
+  100% {
+    filter: grayscale(1) brightness(0.3);
+    transform: translateY(14px) scale(0.85);
+    opacity: 0;
+  }
+}
+
+.pack-ash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pack-ash i {
+  position: absolute;
+  left: calc(30% + var(--k) * 6%);
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  background: #8a8680;
+  animation: ashBit 700ms ease-out both;
+  animation-delay: calc(120ms + var(--k) * 25ms);
+}
+
+@keyframes ashBit {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(calc((var(--k) - 3.5) * 5px), calc(-30px - var(--k) * 4px));
+    opacity: 0;
+  }
+}
+
+.pack-note {
+  display: flex;
+  width: 100%;
+  max-width: 360px;
+  min-height: 70px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px 10px;
+  color: #2b1a0a;
+  clip-path: polygon(0 4%, 12% 0, 35% 3%, 58% 0, 80% 4%, 100% 0, 99% 50%, 100% 96%, 78% 100%, 55% 96%, 32% 100%, 10% 96%, 0 100%, 1% 50%);
+  rotate: -1deg;
+}
+
+.pack-note-name {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.pack-note-text {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+}
+
+.pack-cine.is-taking .pack-note,
+.pack-cine.is-taking .pack-take {
+  transition: opacity 200ms ease-out;
+  opacity: 0;
+}
+
+.reduce-motion .pack-cine *,
+.reduce-motion .pack-vignette {
+  animation: none !important;
+}
+
+.shop-v22 .shop-npc-wrap {
+  z-index: 10;
+}
+
+.shop-v22 .shop-pack-name,
+.shop-v22 .shop-pack .shop-price,
+.shop-v22 .shop-pack .shop-tag-sold {
+  position: relative;
+  z-index: 2;
+}
+
+.pack-cine .pack-option,
+.pack-cine .pack-option.is-on,
+.pack-cine .pack-option.is-mythic {
+  outline: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  transition: none;
+}
+
+.pack-cine .pack-option.is-on {
+  transform: none;
+}
+
+.pack-cine .pack-option:nth-child(1).is-on,
+.pack-cine .pack-option:nth-child(3).is-on {
+  transform: rotateY(0deg);
+}
+
+.pack-cine .pack-option-art {
+  height: auto;
+}
+
+.pack-vignette {
+  background: radial-gradient(ellipse 70% 55% at 50% 46%, rgba(12, 6, 2, 0.86), rgba(0, 0, 0, 0.97) 75%);
+}
+
+/* =====================================================================
+   Versão 2.2: o porão do Seu Tião (tijolo, canos, teias, foco de luz e
+   névoa), o caixote, o bilhete da fala e as moedas em arco (só transform)
+   ===================================================================== */
+.tiao-v22 {
+  background: #0a0605;
+}
+
+.tiao-v22 .tiao-stage {
+  position: relative;
+  flex: 1 0 auto;
+  min-height: 420px;
+  max-height: 600px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.tiao-v22 .tiao-stage::after {
+  display: none;
+}
+
+.tiao-cellar {
+  z-index: 0;
+}
+
+/* o foco de luz que desce da luminária do teto */
+.tiao-beam {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  z-index: 1;
+  width: 320px;
+  height: 92%;
+  margin-left: -160px;
+  pointer-events: none;
+  background: radial-gradient(ellipse 50% 100% at 50% 0, rgba(255, 226, 150, 0.26), rgba(255, 226, 150, 0.08) 55%, transparent 72%);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  animation: beamFlicker 5.5s steps(1) infinite;
+}
+
+@keyframes beamFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  61% {
+    opacity: 0.82;
+  }
+  62% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 0.88;
+  }
+  65% {
+    opacity: 1;
+  }
+}
+
+/* a névoa subindo do chão (duas camadas defasadas) */
+.tiao-fog {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  z-index: 2;
+  height: 46%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 30% 26% at 30% 80%, rgba(200, 196, 186, 0.16), transparent 70%),
+    radial-gradient(ellipse 34% 30% at 72% 74%, rgba(200, 196, 186, 0.13), transparent 70%),
+    radial-gradient(ellipse 26% 22% at 50% 92%, rgba(200, 196, 186, 0.18), transparent 70%);
+  animation: fogRise 9s ease-in-out infinite alternate;
+}
+
+.tiao-fog-b {
+  animation-duration: 12s;
+  animation-delay: -4s;
+  transform: scaleX(-1);
+  opacity: 0.8;
+}
+
+@keyframes fogRise {
+  from {
+    transform: translate(-4%, 6%);
+  }
+  to {
+    transform: translate(5%, -6%);
+  }
+}
+
+.tiao-fog-b {
+  animation-name: fogRiseB;
+}
+
+@keyframes fogRiseB {
+  from {
+    transform: scaleX(-1) translate(4%, 4%);
+  }
+  to {
+    transform: scaleX(-1) translate(-6%, -8%);
+  }
+}
+
+.tiao-v22 .tiao-head {
+  position: relative;
+  z-index: 4;
+}
+
+.tiao-v22 .tiao-sign {
+  border: 2px solid transparent;
+  border-image: var(--px-plank-pinho) 8 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+  padding: 6px 10px 7px;
+}
+
+.tiao-v22 .tiao-counter {
+  top: calc(max(env(safe-area-inset-top), 12px) + 4px);
+  right: 12px;
+  border: 2px solid transparent;
+  border-image: var(--px-plank-brass) 8 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.tiao-count {
+  display: inline-block;
+  transform-origin: 70% 50%;
+}
+
+.tiao-v22 .tiao-npc-wrap {
+  left: 50%;
+  bottom: 9%;
+  z-index: 3;
+  transform: translateX(-50%);
+  align-items: center;
+}
+
+.tiao-npc {
+  position: relative;
+  width: 144px;
+  height: 144px;
+  margin-bottom: -36px;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.6));
+  transform-origin: 50% 100%;
+  animation: npcBreathe 3.8s ease-in-out infinite;
+}
+
+/* o brilho piscando na moeda da mão dele */
+.tiao-coin-glint {
+  position: absolute;
+  left: 78%;
+  top: 70%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: radial-gradient(circle, rgba(255, 240, 170, 0.9), rgba(255, 220, 90, 0) 65%);
+  animation: glint 1.8s ease-in-out infinite;
+}
+
+@keyframes glint {
+  0%,
+  100% {
+    transform: scale(0.4);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+.tiao-crate {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.65));
+}
+
+/* a fala num bilhete de papel recortado em cima do caixote */
+.tiao-note-speech {
+  position: absolute;
+  top: calc(100% - 52px);
+  left: 50%;
+  translate: -50% 0;
+  width: max-content;
+  max-width: min(calc(100vw - 48px), 240px);
+  font-size: 18px;
+}
+
+.tiao-note-speech.speech-balloon {
+  color: #2b1a0a;
+  background-color: #d8c08a;
+  background-image: var(--px-kraft, none);
+  background-size: 96px 96px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+  clip-path: polygon(0 6%, 9% 0, 30% 5%, 52% 0, 74% 4%, 100% 0, 98% 45%, 100% 100%, 80% 95%, 58% 100%, 36% 95%, 14% 100%, 0 96%, 2% 50%);
+  rotate: -2deg;
+}
+
+.tiao-note-speech.speech-balloon::before,
+.tiao-note-speech.speech-balloon::after {
+  display: none;
+}
+
+/* moedas: o x anda reto (linear) e o y sobe e assenta (ease-out): o arco da moeda jogada */
+.tiao-v22 .tiao-lane {
+  position: absolute;
+  right: auto;
+  bottom: auto;
+  z-index: 6;
+  width: 0;
+  height: 0;
+}
+
+.tiao-v22 .tiao-coin-x {
+  left: 0;
+  top: 0;
+  height: 0;
+  animation-name: tiaoCoinX22;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+.tiao-v22 .tiao-coin-y {
+  top: 0;
+  left: 0;
+  translate: -50% -50%;
+  animation-name: tiaoCoinY22;
+  animation-timing-function: cubic-bezier(0.12, 0.9, 0.35, 1);
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+@keyframes tiaoCoinX22 {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--dx));
+    opacity: 0.3;
+  }
+}
+
+@keyframes tiaoCoinY22 {
+  0% {
+    transform: translateY(0) scale(0.8) rotate(0deg);
+  }
+  45% {
+    transform: translateY(calc(var(--dy) - 40px)) scale(1.2) rotate(300deg);
+  }
+  100% {
+    transform: translateY(var(--dy)) scale(1) rotate(540deg);
+  }
+}
+
+.tiao-v22 .tiao-stamp {
+  top: calc(max(env(safe-area-inset-top), 12px) + 64px);
+}
+
+.tiao-v22 .tiao-controls {
+  position: relative;
+  z-index: 3;
+  padding-top: 8px;
+}
+
+.tiao-v22 .shop-plank {
+  overflow: hidden;
+  min-height: 56px;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  box-shadow:
+    0 4px 0 #0b0603,
+    0 7px 8px rgba(0, 0, 0, 0.5);
+}
+
+.tiao-v22 .shop-plank > span {
+  position: relative;
+  z-index: 1;
+}
+
+.tiao-v22 .shop-plank-title {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #f6e6c0;
+  text-shadow:
+    0 2px 0 #000,
+    1px 1px 0 #000,
+    -1px 1px 0 #000;
+}
+
+.reduce-motion .tiao-beam,
+.reduce-motion .tiao-fog,
+.reduce-motion .tiao-npc,
+.reduce-motion .tiao-coin-glint {
+  animation: none !important;
+}
+
+.tiao-v22 .tiao-stage {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
+.tiao-v22 .tiao-npc {
+  width: 192px;
+  height: 192px;
+  margin-bottom: -48px;
+}
+
+.tiao-v22 .tiao-note-speech {
+  top: calc(100% - 70px);
+}
+
+/* =====================================================================
+   Versão 2.2: o Mercado Negro pintado (beco molhado, Corvo encapuzado,
+   forro do sobretudo em cetim, etiquetas encardidas, nichos e a placa)
+   ===================================================================== */
+.bm-v22 {
+  background: #07040a;
+}
+
+.bm-v22 .bm-head {
+  position: relative;
+  z-index: 6;
+}
+
+.bm-v22 .bm-cash {
+  border: 2px solid transparent;
+  border-image: var(--px-iron) 5 fill / 6px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+}
+
+.bm-v22 .bm-alley {
+  margin-top: calc(-1 * (max(env(safe-area-inset-top), 12px) + 44px));
+  padding-top: calc(max(env(safe-area-inset-top), 12px) + 44px);
+  min-height: 210px;
+  max-height: 290px;
+}
+
+.bm-alley-canvas {
+  z-index: 0;
+}
+
+.bm-v22 .bm-pipe {
+  display: none;
+}
+
+.bm-v22 .bm-drip-a,
+.bm-v22 .bm-drip-b {
+  left: calc(12% + 2px);
+  top: 70%;
+}
+
+/* o vermelho do letreiro lavando a parede, falhando junto com ele */
+.bm-neon-glow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  height: 60%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 70% at 30% 0, rgba(255, 42, 58, 0.22), transparent 70%);
+  animation: bmNeon 5.5s steps(1, end) infinite;
+}
+
+/* a garoa: riscos finos caindo (um gradiente repetido que desce) */
+.bm-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.35;
+  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(170, 190, 220, 0.35) 22px 23px, transparent 23px 47px);
+  background-size: 100% 120px;
+  animation: bmRain 0.7s linear infinite;
+}
+
+@keyframes bmRain {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -28px 120px;
+  }
+}
+
+.bm-v22 .bm-npc-wrap {
+  z-index: 7;
+  bottom: -6px;
+}
+
+.bm-v22 .bm-npc {
+  width: 144px;
+  height: 144px;
+  filter: drop-shadow(0 0 10px rgba(200, 20, 30, 0.35)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.7));
+}
+
+.bm-v22 .bm-fog {
+  z-index: 8;
+}
+
+/* o forro do sobretudo aberto */
+.bm-v22 .bm-coat {
+  overflow: hidden;
+  padding: 12px 22px 14px;
+  background: none;
+  border: 2px solid #050306;
+  border-radius: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+}
+
+.bm-coat-canvas {
+  z-index: 0;
+}
+
+.bm-v22 .bm-coat > :not(.painted-box) {
+  position: relative;
+  z-index: 1;
+}
+
+.bm-v22 .bm-coat-label {
+  color: #e8b0c8;
+  text-shadow: 0 1px 0 #000;
+}
+
+.bm-v22 .bm-good-btn {
+  position: relative;
+  padding-top: 12px;
+}
+
+/* a presilha de couro e o barbante */
+.bm-hook {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 14px;
+  height: 7px;
+  margin-left: -7px;
+  background: linear-gradient(180deg, #4a4250, #1a161e);
+  border: 1px solid #050306;
+  border-radius: 2px;
+}
+
+.bm-hook::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 1px;
+  height: 10px;
+  background: #c8a46a;
+}
+
+.bm-v22 .bm-good-art {
+  transform-origin: 50% -10px;
+  animation: bmSwing 3.4s ease-in-out infinite alternate;
+}
+
+.bm-v22 .bm-good:nth-child(2) .bm-good-art {
+  animation-delay: -1.2s;
+}
+
+.bm-v22 .bm-good:nth-child(3) .bm-good-art {
+  animation-delay: -2.3s;
+}
+
+@keyframes bmSwing {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+.bm-v22 .bm-tag {
+  color: #f0e0c8;
+  background-color: #4a3a2a;
+  background-image: var(--px-kraft-dark, none);
+  background-size: 96px 96px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 9px, 100% calc(100% - 2px), 80% 100%, 55% calc(100% - 3px), 30% 100%, 0 calc(100% - 2px), 0 9px);
+}
+
+.bm-v22 .bm-tag-rarity {
+  color: #b8f08a;
+}
+
+.bm-v22 .bm-good-desc {
+  color: #f0d8e4;
+  text-shadow: 0 1px 0 #000;
+}
+
+.bm-v22 .bm-niche {
+  position: relative;
+  width: 39px;
+  height: 36px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.bm-niche-px {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.bm-niche-relic {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -14px 0 0 -13px;
+}
+
+.bm-v22 .bm-pouch-label {
+  color: #f0c8dc;
+}
+
+.bm-v22 .shop-plank {
+  overflow: hidden;
+  min-height: 60px;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  box-shadow:
+    0 4px 0 #050306,
+    0 7px 8px rgba(0, 0, 0, 0.5);
+}
+
+.bm-v22 .shop-plank > span {
+  position: relative;
+  z-index: 1;
+}
+
+.bm-v22 .shop-plank-title {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #f6e6c0;
+  text-shadow:
+    0 2px 0 #000,
+    1px 1px 0 #000,
+    -1px 1px 0 #000;
+}
+
+.reduce-motion .bm-rain,
+.reduce-motion .bm-neon-glow,
+.reduce-motion .bm-v22 .bm-good-art {
+  animation: none !important;
+}
+
+/* =====================================================================
+   Versão 2.2: as entradas (só transform/opacity; uma vez, ao abrir a cena)
+   ===================================================================== */
+
+/* --- Loja: o toldo desenrola, a luz acende, o Valtinho sobe, a mercadoria assenta --- */
+.shop-v22 .shop-awning-canvas {
+  transform-origin: 50% 0;
+  animation: awningDrop 520ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes awningDrop {
+  from {
+    transform: scaleY(0.15);
+  }
+}
+
+.shop-v22 .shop-awning-inner {
+  animation: signDrop 460ms cubic-bezier(0.2, 1.4, 0.4, 1) 220ms both;
+}
+
+@keyframes signDrop {
+  from {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+/* o escuro da loja fechada, que some quando a lâmpada pega (piscando) */
+.shop-v22 .shop-backwall::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: #050302;
+  pointer-events: none;
+  animation: lightsOn 760ms steps(1, end) 160ms both;
+}
+
+@keyframes lightsOn {
+  0% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.25;
+  }
+  42% {
+    opacity: 0.85;
+  }
+  55% {
+    opacity: 0.1;
+  }
+  68% {
+    opacity: 0.5;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.shop-v22 .shop-npc-wrap {
+  animation: riseUp 520ms cubic-bezier(0.2, 1.3, 0.4, 1) 520ms both;
+}
+
+@keyframes riseUp {
+  from {
+    translate: 0 70px;
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.shop-row,
+.shop-counter-front,
+.shop-v22 .shop-controls {
+  animation: rowIn 420ms cubic-bezier(0.2, 1, 0.4, 1) both;
+}
+
+.shop-row-relics {
+  animation-delay: 300ms;
+}
+
+.shop-row-grife {
+  animation-delay: 380ms;
+}
+
+.shop-row-packs {
+  animation-delay: 460ms;
+}
+
+.shop-counter-front {
+  animation-delay: 540ms;
+}
+
+.shop-v22 .shop-controls {
+  animation-delay: 620ms;
+}
+
+@keyframes rowIn {
+  from {
+    translate: 0 24px;
+    opacity: 0;
+  }
+}
+
+/* a mercadoria cai no veludo e nas prateleiras, uma de cada vez */
+.shop-good-stage,
+.shop-v22 .shop-pack-art {
+  animation: goodDrop 460ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+.shop-v22 .shop-good:nth-child(1) .shop-good-stage {
+  animation-delay: 640ms;
+}
+
+.shop-v22 .shop-good:nth-child(2) .shop-good-stage {
+  animation-delay: 730ms;
+}
+
+.shop-v22 .shop-good:nth-child(3) .shop-good-stage {
+  animation-delay: 820ms;
+}
+
+.shop-v22 .shop-packs li:nth-child(1) .shop-pack-art {
+  animation-delay: 960ms;
+}
+
+.shop-v22 .shop-packs li:nth-child(2) .shop-pack-art {
+  animation-delay: 1060ms;
+}
+
+.shop-v22 .shop-packs li:nth-child(3) .shop-pack-art {
+  animation-delay: 1160ms;
+}
+
+@keyframes goodDrop {
+  from {
+    translate: 0 -34px;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.shop-v22 .shop-tag {
+  transform-origin: 50% 0;
+  animation: tagSwing 700ms ease-out 760ms both;
+}
+
+@keyframes tagSwing {
+  0% {
+    transform: rotate(-16deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  55% {
+    transform: rotate(7deg);
+  }
+  80% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* os bilhetes chegam e o alfinete crava */
+.shop-note {
+  animation: notePin 420ms cubic-bezier(0.2, 1.2, 0.4, 1) 860ms both;
+}
+
+.shop-grife-right .shop-note {
+  animation-delay: 960ms;
+}
+
+@keyframes notePin {
+  from {
+    transform: scale(1.18) rotate(-6deg);
+    opacity: 0;
+  }
+}
+
+.shop-v22 .shop-grife-tile {
+  animation: tileSlide 420ms cubic-bezier(0.2, 1.2, 0.4, 1) 920ms both;
+}
+
+.shop-v22 .shop-grife-right .shop-grife-tile {
+  animation-delay: 1020ms;
+}
+
+@keyframes tileSlide {
+  from {
+    translate: -26px 0;
+    opacity: 0;
+  }
+}
+
+/* --- Mercado Negro: o neon acende falhando, os olhos do Corvo primeiro, o sobretudo abre --- */
+.bm-v22 .bm-alley::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: #020103;
+  pointer-events: none;
+  animation: alleyDark 1100ms ease-out both;
+}
+
+@keyframes alleyDark {
+  0%,
+  35% {
+    opacity: 0.94;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bm-v22 .bm-neon {
+  animation:
+    neonOn 900ms steps(1, end) both,
+    bmNeon 5.5s steps(1, end) 900ms infinite;
+}
+
+@keyframes neonOn {
+  0% {
+    opacity: 0.08;
+  }
+  18% {
+    opacity: 1;
+  }
+  24% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  46% {
+    opacity: 0.2;
+  }
+  62%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.bm-v22 .bm-npc-wrap {
+  animation: corvoIn 900ms ease-out 300ms both;
+}
+
+@keyframes corvoIn {
+  from {
+    translate: 0 16px;
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+}
+
+.bm-v22 .bm-coat {
+  animation: coatOpen 560ms cubic-bezier(0.3, 1, 0.4, 1) 700ms both;
+}
+
+@keyframes coatOpen {
+  from {
+    clip-path: inset(0 48% 0 48%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.bm-v22 .bm-good {
+  animation: goodDrop 480ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+.bm-v22 .bm-good:nth-child(1) {
+  animation-delay: 1000ms;
+}
+
+.bm-v22 .bm-good:nth-child(2) {
+  animation-delay: 1110ms;
+}
+
+.bm-v22 .bm-good:nth-child(3) {
+  animation-delay: 1220ms;
+}
+
+.bm-v22 .bm-controls {
+  animation: rowIn 420ms cubic-bezier(0.2, 1, 0.4, 1) 900ms both;
+}
+
+/* --- Seu Tião: a luz do teto pega, o caixote cai com poeira, ele sobe atrás --- */
+.tiao-v22 .tiao-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: #030202;
+  pointer-events: none;
+  animation: lightsOn 760ms steps(1, end) 120ms both;
+}
+
+.tiao-v22 .tiao-head {
+  z-index: 10;
+}
+
+.tiao-v22 .tiao-counter {
+  z-index: 10;
+  animation: pocketIn 480ms cubic-bezier(0.2, 1.3, 0.4, 1) 500ms both;
+}
+
+@keyframes pocketIn {
+  from {
+    translate: 60px 0;
+    opacity: 0;
+  }
+}
+
+.tiao-crate {
+  animation: crateDrop 520ms cubic-bezier(0.35, 1.6, 0.5, 1) 520ms both;
+}
+
+@keyframes crateDrop {
+  from {
+    translate: 0 -60px;
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+/* a poeira levantando quando o caixote bate no chão */
+.tiao-crate::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -6px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(190, 180, 160, 0.5), rgba(190, 180, 160, 0) 70%);
+  opacity: 0;
+  animation: crateDust 700ms ease-out 760ms both;
+  pointer-events: none;
+}
+
+@keyframes crateDust {
+  0% {
+    transform: scale(0.4, 0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.4, 1.6) translateY(-6px);
+    opacity: 0;
+  }
+}
+
+.tiao-v22 .tiao-npc {
+  animation:
+    tiaoUp 560ms cubic-bezier(0.2, 1.2, 0.4, 1) 860ms both,
+    npcBreathe 3.8s ease-in-out 1.4s infinite;
+}
+
+@keyframes tiaoUp {
+  from {
+    translate: 0 80px;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.reduce-motion .shop-v22 *,
+.reduce-motion .shop-v22 .shop-backwall::after,
+.reduce-motion .bm-v22 .bm-alley::after,
+.reduce-motion .bm-v22 .bm-coat,
+.reduce-motion .bm-v22 .bm-good,
+.reduce-motion .bm-v22 .bm-npc-wrap,
+.reduce-motion .tiao-v22 .tiao-stage::before,
+.reduce-motion .tiao-crate,
+.reduce-motion .tiao-crate::after,
+.reduce-motion .tiao-v22 .tiao-npc,
+.reduce-motion .tiao-v22 .tiao-counter {
+  animation: none !important;
+}
+
+.reduce-motion .shop-v22 .shop-backwall::after,
+.reduce-motion .bm-v22 .bm-alley::after,
+.reduce-motion .tiao-v22 .tiao-stage::before {
+  opacity: 0;
+}
+
+.bm-v22 .bm-alley {
+  max-height: 340px;
+}
