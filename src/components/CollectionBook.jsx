@@ -71,8 +71,8 @@ function entryOf(kind, id, { known, unlocked, achievement, progress }) {
   }
   const rival = RIVALS[id];
   return {
-    icon: <RivalAvatar rival={rival} mood="idle" size={40} smoke={false} />,
-    big: <RivalAvatar rival={rival} mood="idle" size={52} smoke={known} />,
+    icon: <RivalAvatar rival={rival} mood="idle" size={40} smoke={false} bare={!known} />,
+    big: <RivalAvatar rival={rival} mood="idle" size={52} smoke={known} bare={!known} />,
     name: known ? rival.name : '???',
     rarity: null,
     text: known ? `${rival.title} · ${REGIONS[rival.region - 1]?.name ?? ''}${rival.boss ? ' · CHEFE' : ''}` : 'Ainda não apareceu na sua mesa.',

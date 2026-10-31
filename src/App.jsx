@@ -1528,7 +1528,6 @@ export default function App() {
         mood={mood}
         hurtKey={tioZeHurtKey}
         speech={speech}
-        hushSpeech={Boolean(selectedTile)}
         handRef={rivalHandRef}
         roundKey={`${state.run.match}:${state.round}`}
         press={press}

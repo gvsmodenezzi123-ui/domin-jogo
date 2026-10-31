@@ -208,7 +208,7 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
             <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={photo} smoke={false} />
           ) : node.boss ? (
             <span className="block map-silhouette">
-              <RivalAvatar rival={rival} mood="idle" size={photo} smoke={false} />
+              <RivalAvatar rival={rival} mood="idle" size={photo} smoke={false} bare />
             </span>
           ) : (
             <span className="map-node-lock font-pixel">?</span>
@@ -260,7 +260,7 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
     if (known) kind = node.boss ? 'CHEFE' : 'MESA';
     art = (
       <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
-        <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={46} smoke={known} />
+        <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={46} smoke={known} bare={!known} />
       </div>
     );
     title = known ? rival.name.toUpperCase() : '???';

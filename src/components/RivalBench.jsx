@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
@@ -36,7 +36,6 @@ function RivalBench({
   mood,
   hurtKey,
   speech,
-  hushSpeech = false,
   handRef,
   roundKey,
   press,
@@ -44,6 +43,32 @@ function RivalBench({
   numberCounts = null,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
+  // Versão 2.1: a fala nova espera a atual terminar (antes ela cortava a frase no meio toda
+  // vez que você jogava). Só a mais recente fica na fila.
+  const [talk, setTalk] = useState({ now: speech, next: null, busy: Boolean(speech) });
+  if (speech && speech.key !== talk.now?.key && speech.key !== talk.next?.key) {
+    setTalk(talk.busy ? { ...talk, next: speech } : { now: speech, next: null, busy: true });
+  }
+  const finishTalk = useCallback(() => setTalk((t) => (t.next ? { now: t.next, next: null, busy: true } : { ...t, busy: false })), []);
+  // 2.1: a régua das pedras nunca invade o bloco do retrato (polaroide de 64 px, corações e
+  // dinheiro): mede onde a faixa dos corações termina e a régua cabe no que sobra à direita
+  const statsRef = useRef(null);
+  const [room, setRoom] = useState(214);
+  useLayoutEffect(() => {
+    const el = statsRef.current;
+    const bench = el?.closest('.rival-bench');
+    if (!el || !bench || typeof ResizeObserver === 'undefined') return undefined;
+    const fit = () => {
+      const free = bench.getBoundingClientRect().right - el.getBoundingClientRect().right - 14;
+      setRoom(Math.max(96, Math.min(214, Math.floor(free))));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    ro.observe(bench);
+    return () => ro.disconnect();
+  }, []);
+  const rackWidth = Math.min(room, 18 + Math.max(3, hand.length) * 22);
   // boca do retrato abre e fecha enquanto a fala aparece no balão
   const [mouthOpen, setMouthOpen] = useState(false);
   return (
@@ -55,10 +80,10 @@ function RivalBench({
       <BotecoBackdrop scene="match" className="rival-bench-wall absolute inset-0" />
       <div className="relative h-24 w-full select-none overflow-hidden">
         {/* bloco fixo da esquerda */}
-        <div className="absolute left-0 top-0 flex h-24 w-40 flex-shrink-0 gap-1.5 pl-2 pt-2">
-          <div className="flex w-[60px] shrink-0 flex-col items-center">
+        <div className="absolute left-0 top-0 flex h-24 w-44 flex-shrink-0 gap-1.5 pl-2 pt-1.5">
+          <div className="flex w-[72px] shrink-0 flex-col items-center">
             <div className={`avatar-frame relative ${isTurn ? 'avatar-frame-active' : ''}`} data-rival-avatar>
-              {avatar ?? <RivalAvatar rival={rival} mood={mood} size={48} hurtKey={hurtKey} speaking={mouthOpen} />}
+              {avatar ?? <RivalAvatar rival={rival} mood={mood} size={64} hurtKey={hurtKey} speaking={mouthOpen} />}
             </div>
             <span className={`rival-status font-pixel ${thinking ? 'rival-status-on' : ''}`} role="status" aria-live="polite">
               {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
@@ -74,7 +99,7 @@ function RivalBench({
               {shortRivalName(rival.name)}
             </h2>
             {/* corações e dinheiro numa faixa escura só do tamanho deles */}
-            <div className="rival-stats">
+            <div ref={statsRef} className="rival-stats">
               <HeartsBar current={hearts} max={maxHearts} size={11} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
               <CoinCount value={coins} target="tioZe" className="text-[8px]" size={12} />
             </div>
@@ -97,7 +122,7 @@ function RivalBench({
 
         {/* mão do rival presa à direita: só a pedra jogada anima */}
         {/* Versão 2.0: as pedras do rival em pé numa régua de madeira, em cima da prateleira */}
-        <div className="rival-rack absolute right-1.5" style={{ width: Math.min(214, 18 + Math.max(3, hand.length) * 22) }}>
+        <div className="rival-rack absolute right-1.5" style={{ width: rackWidth }}>
           <span aria-hidden="true" className="rival-rack-back" />
           <RivalHand
             tiles={hand}
@@ -105,6 +130,7 @@ function RivalBench({
             foreseenId={foreseenId}
             roundKey={roundKey}
             containerRef={handRef}
+            room={rackWidth - 14}
             className="rival-rack-tiles absolute flex items-center justify-end"
           />
           <span aria-hidden="true" className="rival-rack-lip" />
@@ -114,15 +140,15 @@ function RivalBench({
 
       {/* fala: logo abaixo do cabeçalho, sobre o feltro, com a cauda subindo até o retrato
           (o retrato fica centrado em x = 38 px; o balão começa em 12 px) */}
-      {speech && (
+      {talk.now && (
         <RivalSpeech
-          key={speech.key}
-          text={speech.text}
+          key={talk.now.key}
+          text={talk.now.text}
           voice={rival.id}
           onMouth={setMouthOpen}
           tail="up"
           tailX={26}
-          hush={hushSpeech}
+          onFinish={finishTalk}
           className="speech-rival z-40"
         />
       )}

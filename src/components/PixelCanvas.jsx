@@ -2,7 +2,7 @@ import { memo, useLayoutEffect, useRef } from 'react';
 
 /** Desenhos já pintados, por chave (a pilha do dorme com 9 pedras é a mesma em toda a partida). */
 const cache = new Map();
-const CACHE_MAX = 64;
+const CACHE_MAX = 160;
 /** Pinturas grandes (a mesa inteira) ficam num cache à parte, de poucas: cada uma pesa centenas de KB. */
 const bigCache = new Map();
 const BIG_PIXELS = 20000;

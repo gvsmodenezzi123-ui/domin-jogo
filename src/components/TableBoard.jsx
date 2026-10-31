@@ -7,22 +7,18 @@ import NoMovesBanner from './NoMovesBanner.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
 import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
-import BotecoBackdrop, { SceneProp } from './BotecoBackdrop.jsx';
+import BotecoBackdrop from './BotecoBackdrop.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
 import {
   APRON_H,
-  ASHTRAY_SIZE,
   BONEYARD_SIZE,
-  GLASS_SIZE,
   LOCK_SIZE,
   RAIL_WOOD_W,
   TABLE_PX,
   paintApron,
   paintBoneyard,
-  paintCopoAmericano,
   paintLock,
   paintTablePlane,
-  paintTinAshtray,
 } from './art/tablePixels.js';
 
 /**
@@ -428,7 +424,7 @@ function TableBoard({
                       openEnd={tile.isOpenEnd}
                       shimmer={tile.isOpenEnd}
                       still={!tile.isOpenEnd}
-                      depth={tile.isDouble ? 5 : 4}
+                      depth={tile.isDouble ? 9 : 8}
                     />
                     {tile.isDouble && (!arriving || landed) && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
                     {spot && <span aria-hidden="true" className="ai-spot-ring pointer-events-none absolute" />}
@@ -504,16 +500,7 @@ function TableBoard({
           style={{ width: '100%', height: APRON_PX }}
         />
       )}
-      <div aria-hidden="true" className={`felt-props pointer-events-none absolute inset-0 ${toBottom ? 'is-far' : ''}`}>
-        <SceneProp name="caps" scale={2} className="felt-prop felt-prop-caps" />
-        <span className="felt-prop felt-prop-ashtray">
-          <PixelCanvas cacheKey="cinzeiro-lata" paint={paintTinAshtray} w={ASHTRAY_SIZE.w} h={ASHTRAY_SIZE.h} scale={TABLE_PX} />
-          <span className="ashtray-smoke" />
-        </span>
-        <span className="felt-prop felt-prop-glass">
-          <PixelCanvas cacheKey="copo-americano" paint={paintCopoAmericano} w={GLASS_SIZE.w} h={GLASS_SIZE.h} scale={TABLE_PX} />
-        </span>
-      </div>
+      {/* Versão 2.1: sem copo, cinzeiro e tampinhas em cima da mesa: ela fica só com o jogo */}
 
       {/* lâmpada pendurada: balança como pêndulo e o facho varre a mesa, clareando
           as pedras por onde passa; quando ela falha, a mesa inteira escurece */}

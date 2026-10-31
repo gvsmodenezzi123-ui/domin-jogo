@@ -42,6 +42,32 @@ const PIP_LAYOUT = Object.freeze({
   ],
 });
 
+/**
+ * Versão 2.1: a espessura da pedra. Em vez de uma faixa só embaixo, a lateral é feita de uma
+ * sombra de 1 px por pixel de altura, do tom claro da quina ao escuro da base, mais a linha
+ * preta do chão: a pedra ganha volume de verdade (e não parece papel em cima do feltro).
+ */
+const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const sideCache = new Map();
+function sideShadows(depth, top, bottom, floor) {
+  const key = `${depth}${top}${bottom}${floor}`;
+  let out = sideCache.get(key);
+  if (!out) {
+    const a = hexRgb(top);
+    const b = hexRgb(bottom);
+    const parts = [];
+    for (let i = 1; i <= depth; i += 1) {
+      const t = depth > 1 ? (i - 1) / (depth - 1) : 0;
+      const c = a.map((v, k) => Math.round(v + (b[k] - v) * t));
+      parts.push(`0 ${i}px 0 rgb(${c.join(',')})`);
+    }
+    parts.push(`0 ${depth + 1}px 0 ${floor}`);
+    out = parts.join(',');
+    sideCache.set(key, out);
+  }
+  return out;
+}
+
 /** Manchas de envelhecimento estáveis por pedra (sem aleatoriedade no render). */
 function stainFor(values) {
   const seed = (values[0] * 7 + values[1] * 13 + 3) % 17;
@@ -162,11 +188,10 @@ function DominoTile({
           'linear-gradient(150deg, #f4f6f8 0%, #cfd4da 38%, #9aa1a8 72%, #7d848b 100%)',
         ].join(','),
         boxShadow: [
-          'inset 1px 1px 0 rgba(255,255,255,.95)',
-          'inset -1px -1px 0 rgba(40,44,50,.55)',
+          'inset 2px 2px 0 rgba(255,255,255,.9)',
+          'inset -2px -2px 0 rgba(40,44,50,.5)',
           'inset 0 0 0 1px rgba(60,66,74,.35)',
-          `0 ${depth}px 0 #5d636a`,
-          `0 ${depth + 1}px 0 #24272b`,
+          sideShadows(depth, '#b8bec4', '#4a5056', '#16181b'),
           'var(--cast)',
         ].join(','),
       }
@@ -178,11 +203,10 @@ function DominoTile({
           'linear-gradient(150deg, #2b2724 0%, #1c1917 45%, #0f0d0c 100%)',
         ].join(','),
         boxShadow: [
-          'inset 1px 1px 0 rgba(255,255,255,.16)',
-          'inset -1px -1px 0 rgba(0,0,0,.75)',
+          'inset 2px 2px 0 rgba(255,255,255,.14)',
+          'inset -2px -2px 0 rgba(0,0,0,.7)',
           'inset 0 0 0 1px rgba(120,113,108,.35)',
-          `0 ${depth}px 0 #0c0a09`,
-          `0 ${depth + 1}px 0 #000`,
+          sideShadows(depth, '#3a3430', '#0a0908', '#000000'),
           'var(--cast)',
         ].join(','),
       }
@@ -196,11 +220,11 @@ function DominoTile({
           'linear-gradient(150deg, #f3e9c9 0%, #e2d1a2 42%, #c9b47c 100%)',
         ].join(','),
         boxShadow: [
-          'inset 1px 1px 0 rgba(255,251,236,.9)',
-          'inset -1px -1px 0 rgba(96,70,30,.6)',
-          'inset 0 0 0 1px rgba(58,40,16,.28)',
-          `0 ${depth}px 0 #6f5a33`,
-          `0 ${depth + 1}px 0 #2a1f10`,
+          'inset 2px 2px 0 rgba(255,251,236,.85)',
+          'inset -2px -2px 0 rgba(96,70,30,.5)',
+          'inset 0 0 0 1px rgba(58,40,16,.3)',
+          // a lateral de osso: clara na quina, escura na base (a espessura da pedra)
+          sideShadows(depth, '#d4c08e', '#6a5530', '#1e160a'),
           // sombra no pano: cai para o lado oposto da lâmpada (components/tileLighting.js)
           'var(--cast)',
         ].join(','),

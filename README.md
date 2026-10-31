@@ -172,6 +172,24 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.1: rostos novos, talismãs novos e o HUD do desenho
+
+- **Retratos dos rivais em 64×64** (antes 40×40), pintados por código (`art/portraitPixels.js`,
+  uma ficha por rival em `art/portraitSpecs.js`): rosto com volume e três tons de pele, luz de
+  recorte, contorno, a parede de cada um atrás e o objeto de cada personagem (o botijão do
+  Tonho, o taco do Baiano, a bola de cristal da Madama Sofia...). A foto enche a polaroide
+  inteira (64 px no banco do rival), com os 4 humores e a boca falando.
+- **Os 58 talismãs repintados em 32×32** (`art/relicPixels.js`): materiais com quatro tons e
+  brilho (ouro, aço, vidro, osso, couro...), contorno colorido e a sombrinha no chão. O mítico
+  ganha faísca e o necrótico, uma névoa roxa. Na partida eles flutuam e tremem quando disparam.
+- **HUD do jogador como no desenho:** dica, leque, a fileira das fichas, vida no meio e o
+  dinheiro embaixo dela, os dois pulsando devagar como LED. O menu fica no canto.
+- **COMPRAR e PASSAR** só aparecem quando nada encaixa, e o PASSAR só depois de comprar 1 pedra.
+- **Pedras com relevo:** a lateral tem espessura de verdade e os pontos são furos cavados.
+- **Mesa limpa:** saíram o copo, o cinzeiro e as tampinhas de cima do feltro.
+- **Falas inteiras:** a fala nova espera a atual terminar (antes cada jogada cortava a frase).
+- Os SVGs antigos dos rivais e dos talismãs saíram do pacote: o `app.js` ficou menor.
+
 ### 2.0.1: a mesa até o pé da tela, sem barra de botões
 
 - A mesa desce até o pé da tela e a sua mão fica deitada nela, em leque, logo acima da beirada

@@ -6,7 +6,7 @@ const UNIT = 18;
 const GAP = 4;
 /** Quanto tempo a pedra que saiu continua na vaga (some enquanto a cópia voa até a mesa). */
 const LEAVE_MS = 420;
-/** Largura disponível para a fileira (px): acima disso as vagas se aproximam. */
+/** Largura disponível para a fileira (px, padrão): acima disso as vagas se aproximam. */
 const ROOM = 200;
 
 /**
@@ -47,7 +47,7 @@ function reconcile(prev, tiles, roundKey) {
  * pedra que sai anima (a cópia dela voa até a mesa); as outras não andam.
  * Pedras reveladas (Olho de Vidro, Espelho) aparecem de frente.
  */
-export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, className = '' }) {
+export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, room = ROOM, className = '' }) {
   const [book, setBook] = useState(() => reconcile(null, tiles, roundKey));
   const next = reconcile(book, tiles, roundKey);
   if (next !== book) setBook(next);
@@ -72,7 +72,8 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
 
   const used = [...Object.values(view.slots), ...Object.values(view.leaving).map((l) => l.slot)];
   const maxSlot = used.length ? Math.max(...used) : 0;
-  const step = Math.min(UNIT + GAP, ROOM / (maxSlot + 1));
+  // a última vaga (a mais à esquerda) ainda cabe inteira na régua
+  const step = maxSlot ? Math.min(UNIT + GAP, (room - UNIT - 2) / maxSlot) : UNIT + GAP;
 
   const render = (tile, slot, leavingTile) => {
     const revealed = !leavingTile && revealedIds.has(tile.id);

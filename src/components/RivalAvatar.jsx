@@ -1,25 +1,35 @@
-import { ART_EMBER, RIVAL_ART } from './artRegistry.js';
+import PixelCanvas from './PixelCanvas.jsx';
+import { PORTRAIT_PX, paintPortrait } from './art/portraitPixels.js';
+import { PORTRAIT_EMBER, PORTRAITS } from './art/portraitSpecs.js';
 
 /** Atraso de cada baforada (s): três defasadas fazem a fumaça subir sem parar. */
 const PUFF_DELAYS = [0, 0.7, 1.4];
 
 /** De onde sai a fumaça agora (px dentro do retrato), ou null se ele não fuma / o cigarro caiu. */
 function emberSpot(rival, mood, size) {
-  const ember = ART_EMBER[rival.art];
+  const ember = PORTRAIT_EMBER[rival.art];
   if (!ember || !ember.moods.includes(mood)) return null;
   return { x: (ember.x / ember.grid) * size, y: (ember.y / ember.grid) * size };
 }
 
+/** Ampliado menos de 1,5× na tela (em pixels do aparelho), o retrato fica suave em vez de serrilhado. */
+function crisp(px) {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  return px * dpr >= PORTRAIT_PX * 1.5 || px % PORTRAIT_PX === 0;
+}
+
 /**
- * Retrato 40x40 do rival (ArtSprites.jsx) no humor do momento, com `size` px
- * (ou `pixel` × 16, a medida antiga). A boca abre enquanto ele fala
- * (`speaking`); a key troca a cada dano para a animação de impacto rodar de
- * novo. Quem fuma (Tio Zé, Comendador) solta fumaça da brasa.
+ * Versão 2.1: o retrato do rival em 64×64 (art/portraitPixels.js), pintado com a parede de
+ * cada um atrás, para encher a foto da polaroide inteira, com `size` px (ou `pixel` × 16, a
+ * medida antiga). A boca abre enquanto ele fala (`speaking`); a key troca a cada dano para a
+ * animação de impacto rodar de novo. Quem fuma (Tio Zé, Comendador) solta fumaça da brasa.
+ * `bare` pinta só a figura, sem a parede (a silhueta de quem você ainda não conheceu).
  */
-export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hurtKey, smoke = true, speaking = false }) {
+export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hurtKey, smoke = true, speaking = false, bare = false }) {
   const px = size ?? pixel * 16;
-  const Art = RIVAL_ART[rival.art];
+  const spec = PORTRAITS[rival.art] ?? PORTRAITS.tioZe;
   const ember = smoke ? emberSpot(rival, mood, px) : null;
+  const open = Boolean(speaking) && mood !== 'hurt';
   return (
     <span
       key={hurtKey}
@@ -28,7 +38,15 @@ export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hur
       className={`relative block ${mood === 'hurt' ? 'animate-avatar-hit' : ''}`}
       style={{ width: px, height: px }}
     >
-      {Art && <Art className="block h-full w-full" mood={mood} isSpeaking={speaking} />}
+      <PixelCanvas
+          cacheKey={`retrato-${rival.art}-${mood}-${open ? 1 : 0}${bare ? '-so' : ''}`}
+          paint={() => paintPortrait(spec, mood, open, bare)}
+          w={PORTRAIT_PX}
+          h={PORTRAIT_PX}
+          scale={px / PORTRAIT_PX}
+          className="rival-portrait block"
+          style={crisp(px) ? undefined : { imageRendering: 'auto' }}
+        />
       {ember &&
         PUFF_DELAYS.map((delay) => (
           <span

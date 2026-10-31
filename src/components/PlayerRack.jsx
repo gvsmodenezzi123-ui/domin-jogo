@@ -73,58 +73,14 @@ function passButtonText(rule) {
 }
 
 /**
- * Versão 1.4: a linha de talismãs desce degraus até caber, direto no DOM e antes de pintar
- * (data-fit, estilos em index.css): 0 rótulos inteiros · 1 rótulos curtos e botões menores ·
- * 2 sem os botões dos poderes (o talismã que brilha vira o botão). Sem estado do React: medir
- * e trocar o degrau não re-renderiza nada.
+ * Seus talismãs, soltos no feltro no canto de baixo à esquerda (2 colunas), flutuando; quando
+ * um dispara, ele treme. Os poderes prontos (Relógio, Canivete, Grampo) viram botões na fileira
+ * das ações, e o toque no talismã que brilha também usa o poder.
  */
-function fitRelicRow(row) {
-  for (const step of ['0', '1', '2']) {
-    row.dataset.fit = step;
-    if (row.scrollWidth <= row.clientWidth + 1) return;
-  }
-}
-
-/**
- * Sua hotbar de talismãs, o DESFAZER do Relógio e o atalho do DEV. Versão 2.0: os talismãs
- * ficam soltos no feltro, logo acima do leque; o menu desceu para o canto de baixo e o som
- * mora nas opções do menu.
- */
-const RelicRow = memo(function RelicRow({
-  relics,
-  relicSlots,
-  relicFlashes,
-  spentRelics,
-  canUndo,
-  onUndo,
-  canCanivete = false,
-  onCanivete,
-  canGrampo = false,
-  onGrampo,
-  devUnlocked,
-  onOpenDev,
-  press,
-}) {
+const RelicRow = memo(function RelicRow({ relics, relicSlots, relicFlashes, spentRelics, canUndo, onUndo, canCanivete = false, onCanivete, canGrampo = false, onGrampo, press }) {
   const ready = readyRelics(canUndo, canCanivete, canGrampo);
   const abilities = (canUndo ? 1 : 0) + (canCanivete ? 1 : 0) + (canGrampo ? 1 : 0);
-  // Versão 1.4: os botões dos poderes tentam caber na linha (ver fitRelicRow). O toque rápido
-  // no talismã que brilha também usa o poder, e é o caminho quando os botões não cabem.
-  const rowRef = useRef(null);
-  const fitKey = `${ready.join(',')}|${relics.length}|${relicSlots}|${devUnlocked ? 1 : 0}`;
-  useLayoutEffect(() => {
-    const row = rowRef.current;
-    if (!row) return undefined;
-    fitRelicRow(row);
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    let width = row.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (row.clientWidth === width) return;
-      width = row.clientWidth;
-      fitRelicRow(row);
-    });
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [fitKey]);
+  // o toque rápido no talismã que brilha também usa o poder (além do botão na fileira das ações)
   const tapRelic = useCallback(
     (id) => {
       if (id === 'relogio' && canUndo) onUndo();
@@ -134,11 +90,12 @@ const RelicRow = memo(function RelicRow({
     [canUndo, canCanivete, canGrampo, onUndo, onCanivete, onGrampo],
   );
   return (
-    <div ref={rowRef} className="relic-row flex h-[34px] items-center gap-2 px-3 pt-1">
+    <div className="relic-row player-relics">
       <Hotbar
         relics={relics}
         slots={relicSlots}
-        size={30}
+        cols={Math.min(2, Math.max(1, relicSlots))}
+        size={26}
         flashes={relicFlashes}
         spent={spentRelics}
         ready={ready}
@@ -147,29 +104,6 @@ const RelicRow = memo(function RelicRow({
         bare
         label="Seus talismãs"
       />
-      <div className="relic-row-tools ml-auto flex items-center gap-2">
-        {canUndo && (
-          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onUndo}>
-            <span className="lbl-full">DESFAZER</span>
-            <span className="lbl-short">VOLTAR</span>
-          </button>
-        )}
-        {canCanivete && (
-          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
-            CANIVETE
-          </button>
-        )}
-        {canGrampo && (
-          <button type="button" data-tone="brass" className="btn-pixel btn-mini relic-ability" onClick={onGrampo} aria-label="Grampo: esconder uma bucha no fundo do dorme">
-            GRAMPO
-          </button>
-        )}
-        {devUnlocked && (
-          <button type="button" className="dev-chip" onClick={onOpenDev} aria-label="Abrir painel de testes">
-            DEV
-          </button>
-        )}
-      </div>
     </div>
   );
 });
@@ -274,7 +208,7 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
               values={[tile.a, tile.b]}
               orientation="vertical"
               unit={unit}
-              depth={3}
+              depth={6}
               selected={selected}
               power={power}
               enhancement={tile.enhancement}
@@ -339,10 +273,10 @@ const DISCARD_LABELS = { skip: 'PULAR', confirm: 'DESCARTAR' };
 
 /**
  * Versão 2.0: sem barra de botões. Joga-se tocando na pedra e depois na ponta da mesa; comprar
- * é tocar no dorme. As fichas de COMPRAR e PASSAR só sobem (animadas) quando são o caminho:
- * sem pedra que encaixe, a de comprar; sem compra possível, a de passar. O passe estratégico
- * (dava para jogar e você prefere passar, pagando) fica num risco de giz discreto. No modo de
- * escolha (Giz, Canivete, Grampo) sobem as duas fichas da escolha.
+ * é tocar no dorme. Versão 2.1: os botões só sobem (animados) quando você não tem jogada:
+ * COMPRAR enquanto der para comprar, PASSAR só depois da 1ª compra (ou se o dorme não deixar
+ * comprar). No modo de escolha (Giz, Canivete, Grampo) sobem as duas fichas da escolha; os
+ * poderes prontos dos talismãs aparecem aqui também.
  */
 const ActionChips = memo(function ActionChips({
   discardMode,
@@ -356,10 +290,15 @@ const ActionChips = memo(function ActionChips({
   draw,
   drawsThisTurn,
   showPass,
-  strategicPass,
   canPass,
   passRule,
   onPass,
+  canUndo = false,
+  onUndo,
+  canCanivete = false,
+  onCanivete,
+  canGrampo = false,
+  onGrampo,
 }) {
   const drawState = usePresence(showDraw);
   const passState = usePresence(showPass);
@@ -406,9 +345,19 @@ const ActionChips = memo(function ActionChips({
           <span className="chip-cost">{passRule?.fiado ? 'FIADO' : passRule?.cost > 0 ? `$${passRule.cost}` : 'A VEZ'}</span>
         </button>
       )}
-      {strategicPass && passState === 'out' && drawState === 'out' && (
-        <button type="button" data-tut="pass" className="pass-link font-term" disabled={!canPass} onClick={onPass} aria-label={passButtonText(passRule)}>
-          passar · {passRule?.fiado ? 'fiado' : passRule?.cost > 0 ? `$${passRule.cost}` : 'grátis'}
+      {canUndo && (
+        <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onUndo}>
+          DESFAZER
+        </button>
+      )}
+      {canCanivete && (
+        <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
+          CANIVETE
+        </button>
+      )}
+      {canGrampo && (
+        <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onGrampo} aria-label="Grampo: esconder uma bucha no fundo do dorme">
+          GRAMPO
         </button>
       )}
     </div>
@@ -482,31 +431,20 @@ function PlayerRack({
   }, [onZoneHeight]);
   const noPlay = playableIds.size === 0;
   const myTurn = isTurn && !discardMode;
-  // no treino, a ficha que a aula aponta aparece mesmo apagada (o anel da aula precisa dela)
+  // sem jogada: COMPRAR enquanto der; PASSAR só depois de comprar (ou sem compra possível).
+  // No treino, o botão que a aula aponta aparece mesmo apagado (o anel da aula precisa dele).
   const showDraw = myTurn && ((canDraw && (noPlay || tutorialAction === 'draw')) || tutorialFocus === 'draw');
-  const showPass = myTurn && ((canPass && (noPlay || tutorialAction === 'pass')) || (tutorialFocus === 'pass' && noPlay));
-  const strategicPass = myTurn && ((canPass && !noPlay && tutorialAction !== 'pass') || (tutorialFocus === 'pass' && !noPlay));
+  const showPass =
+    myTurn && ((canPass && (noPlay || tutorialAction === 'pass') && (drawsThisTurn > 0 || !canDraw || tutorialAction === 'pass')) || tutorialFocus === 'pass');
   return (
     <section
       ref={zoneRef}
       className={`player-zone absolute inset-x-0 bottom-0 z-20 ${isTurn ? 'is-turn' : ''} ${frame ? `player-frame player-frame-${frame}` : ''}`}
       aria-label="Sua mão"
     >
-      <RelicRow
-        relics={relics}
-        relicSlots={relicSlots}
-        relicFlashes={relicFlashes}
-        spentRelics={spentRelics}
-        canUndo={canUndo}
-        onUndo={onUndo}
-        canCanivete={canCanivete}
-        onCanivete={onCanivete}
-        canGrampo={canGrampo}
-        onGrampo={onGrampo}
-        devUnlocked={devUnlocked}
-        onOpenDev={onOpenDev}
-        press={press}
-      />
+      <p className="player-hint font-term" aria-live="polite">
+        {hint}
+      </p>
 
       <HandFan
         hand={hand}
@@ -520,13 +458,34 @@ function PlayerRack({
         rivalName={rivalName}
       />
 
-      <p className="player-hint font-term" aria-live="polite">
-        {hint}
-      </p>
+      {/* a fileira das ações: os botões só sobem quando são o caminho */}
+      <div className="player-actions">
+        <ActionChips
+          discardMode={discardMode}
+          pickLabels={pickLabels}
+          hasSelection={Boolean(selectedId)}
+          onSkipDiscard={onSkipDiscard}
+          onDiscard={onDiscard}
+          showDraw={showDraw}
+          canDraw={canDraw}
+          onDraw={onDraw}
+          draw={draw}
+          drawsThisTurn={drawsThisTurn}
+          showPass={showPass}
+          canPass={canPass}
+          passRule={passRule}
+          onPass={onPass}
+          canUndo={canUndo}
+          onUndo={onUndo}
+          canCanivete={canCanivete}
+          onCanivete={onCanivete}
+          canGrampo={canGrampo}
+          onGrampo={onGrampo}
+        />
+      </div>
 
-      {/* o pé da mesa: corações e dinheiro à esquerda, as fichas que sobem no meio, o menu à direita */}
-      <div className="player-bar">
-        {/* Versão 2.0: a vida grande, solta no feltro (sem tábua atrás); com 1 ou 2 corações ela pulsa */}
+      {/* a vida no meio, grande e solta no feltro, pulsando como LED; o dinheiro logo embaixo */}
+      <div className="player-life-row">
         <button
           type="button"
           className={`player-life ${hearts <= 2 ? 'is-low' : ''}`}
@@ -537,26 +496,34 @@ function PlayerRack({
             <HeartsBar current={hearts} max={maxHearts} pixel={maxHearts <= 6 ? 3 : 2} label={`Você: ${hearts} de ${maxHearts} corações`} />
           </span>
         </button>
-        <CoinCount value={coins} target="player" className="player-coins" />
-        <div className="player-bar-mid">
-          <ActionChips
-            discardMode={discardMode}
-            pickLabels={pickLabels}
-            hasSelection={Boolean(selectedId)}
-            onSkipDiscard={onSkipDiscard}
-            onDiscard={onDiscard}
-            showDraw={showDraw}
-            canDraw={canDraw}
-            onDraw={onDraw}
-            draw={draw}
-            drawsThisTurn={drawsThisTurn}
-            showPass={showPass}
-            strategicPass={strategicPass}
-            canPass={canPass}
-            passRule={passRule}
-            onPass={onPass}
-          />
-        </div>
+      </div>
+      <div className="player-coins-row">
+        <span className="coins-led">
+          <CoinCount value={coins} target="player" className="player-coins" />
+        </span>
+      </div>
+
+      <RelicRow
+        relics={relics}
+        relicSlots={relicSlots}
+        relicFlashes={relicFlashes}
+        spentRelics={spentRelics}
+        canUndo={canUndo}
+        onUndo={onUndo}
+        canCanivete={canCanivete}
+        onCanivete={onCanivete}
+        canGrampo={canGrampo}
+        onGrampo={onGrampo}
+        press={press}
+      />
+
+      {/* o canto: o menu (e o atalho do DEV em cima dele) */}
+      <div className="player-corner">
+        {devUnlocked && (
+          <button type="button" className="dev-chip" onClick={onOpenDev} aria-label="Abrir painel de testes">
+            DEV
+          </button>
+        )}
         {onOpenMenu && (
           <button type="button" onClick={onOpenMenu} className="icon-btn hud-icon player-menu" aria-label="Menu">
             <MenuGlyph size={18} />

@@ -22,7 +22,7 @@ const MIN_VISIBLE_MS = 2400;
  * `hush` (Patch 0.6.3): some na hora, sem esperar (na mesa, quando você escolhe uma pedra,
  * para o balão não cobrir as pontas onde ela pode entrar).
  */
-export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX = 24, linger = true, hush = false, className = '', style }) {
+export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX = 24, linger = true, hush = false, onFinish, className = '', style }) {
   const [shown, setShown] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [bornAt] = useState(() => performance.now());
@@ -44,9 +44,12 @@ export default function RivalSpeech({ text, voice, onMouth, tail = 'up', tailX =
   useEffect(() => {
     if (!done || !linger) return undefined;
     const wait = Math.max(LINGER_MS, MIN_VISIBLE_MS - (performance.now() - bornAt));
-    const timer = setTimeout(() => setLeaving(true), wait);
+    const timer = setTimeout(() => {
+      setLeaving(true);
+      onFinish?.();
+    }, wait);
     return () => clearTimeout(timer);
-  }, [done, linger, bornAt]);
+  }, [done, linger, bornAt, onFinish]);
 
   return (
     <div

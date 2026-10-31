@@ -1,8 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { RELICS } from '../../data/relics.js';
-import { RIVALS } from '../../data/rivals.js';
-import { ART_EMBER, RELIC_ART, RIVAL_ART } from '../artRegistry.js';
 import { CanecaChoppIcon, DadoViciadoIcon, OlhoVidroIcon, TioZeAvatar } from '../HighDensitySprites.jsx';
 import { RetroCard } from '../RetroCard.jsx';
 
@@ -15,32 +12,6 @@ describe('sprites de alta densidade', () => {
     }
   });
 
-  it('os 40 talismãs e os 19 rivais têm arte própria (40x40; o Dono da Noite em 48x48)', () => {
-    const relicArt = new Set();
-    for (const relic of Object.values(RELICS)) {
-      expect(RELIC_ART[relic.art], relic.id).toBeTruthy();
-      relicArt.add(RELIC_ART[relic.art]);
-    }
-    expect(relicArt.size).toBe(Object.keys(RELICS).length);
-    const rivalArt = new Set();
-    for (const rival of Object.values(RIVALS)) {
-      expect(RIVAL_ART[rival.art], rival.id).toBeTruthy();
-      rivalArt.add(RIVAL_ART[rival.art]);
-      // todo retrato desenha os 4 humores e a boca falando, em 40x40 (o secreto em 48x48)
-      const grid = rival.secret ? 48 : 40;
-      for (const mood of ['idle', 'thinking', 'smug', 'hurt']) {
-        const Art = RIVAL_ART[rival.art];
-        const html = renderToStaticMarkup(<Art className="w-12 h-12" mood={mood} isSpeaking={mood === 'idle'} />);
-        expect(html, `${rival.id}.${mood}`).toContain(`viewBox="0 0 ${grid} ${grid}"`);
-      }
-    }
-    expect(rivalArt.size).toBe(Object.keys(RIVALS).length);
-    expect(RELICS.caneca.art).toBe('canecaChopp');
-    expect(RELICS.dadoViciado.art).toBe('dadoViciado');
-    expect(RELICS.olhoDeVidro.art).toBe('olhoVidro');
-    expect(RIVALS.tioZe.art).toBe('tioZe');
-  });
-
   it('Tio Zé: boca abre falando, cigarro cai quando ferido (e a fumaça para)', () => {
     const closed = renderToStaticMarkup(<TioZeAvatar />);
     const open = renderToStaticMarkup(<TioZeAvatar isSpeaking />);
@@ -48,7 +19,6 @@ describe('sprites de alta densidade', () => {
     expect(closed).not.toContain('fill="#220b0b"');
     expect(renderToStaticMarkup(<TioZeAvatar mood="hurt" />)).not.toContain('#ea580c'); // brasa
     expect(closed).toContain('#ea580c');
-    expect(ART_EMBER.tioZe.moods).not.toContain('hurt');
   });
 });
 

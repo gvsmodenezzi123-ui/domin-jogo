@@ -136,7 +136,7 @@ export const TUTORIAL_STEPS = Object.freeze([
     id: 'pass',
     expect: tap,
     focus: 'pass',
-    pages: ['Depois de comprar, passar a vez é de graça (o risco de giz aqui embaixo). Sem comprar, custa $3. Mas agora não: essa pedra serve!'],
+    pages: ['Sem jogada, depois de comprar aparece o PASSAR: passar fica de graça. Mas agora não: essa pedra serve!'],
   }),
   step({
     id: 'drawnPlay',
