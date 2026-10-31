@@ -12712,3 +12712,520 @@
     display: none;
   }
 }
+
+/* =====================================================================================
+   Versão 2.0 (2ª leva): a mesa até o pé da tela, a mão deitada nela, sem barra de botões
+   (PlayerRack.jsx: .player-zone por cima da mesa; TableBoard reserva a faixa da mão)
+   ===================================================================================== */
+.player-zone {
+  --bar-h: 50px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.player-zone button,
+.player-zone [data-hand-tile],
+.player-zone .relic-row > * {
+  pointer-events: auto;
+}
+
+/* os talismãs soltos no feltro, logo acima do leque */
+.player-zone .relic-row {
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* a dica a giz no feltro, entre o leque e a beirada */
+.player-hint {
+  min-height: 18px;
+  padding: 0 12px 2px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.05;
+  color: #efe8d2;
+  text-shadow:
+    0 1px 0 #000,
+    0 0 6px rgba(0, 0, 0, 0.85);
+}
+
+/* a beirada de perto da mesa: corações e dinheiro, as fichas que sobem, o menu */
+.player-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--bar-h);
+  /* a beirada de perto da mesa ficou para fora da tela: só o feltro atrás da vida */
+  padding: 2px 10px max(env(safe-area-inset-bottom), 12px);
+  pointer-events: auto;
+  background: none;
+}
+
+.player-life {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* os corações grandes, com contorno preto e um brilho vermelho para saltar do feltro */
+.life-hearts {
+  display: inline-flex;
+  filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000)
+    drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 5px rgba(255, 70, 60, 0.55));
+}
+
+.life-hearts > span {
+  gap: 3px;
+}
+
+.player-life.is-low .life-hearts {
+  animation: lifeBeat 900ms ease-in-out infinite;
+  transform-origin: 0 50%;
+}
+
+@keyframes lifeBeat {
+  0%,
+  60%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.12);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.08);
+  }
+}
+
+.reduce-motion .player-life.is-low .life-hearts {
+  animation: none;
+}
+
+.player-coins {
+  flex: none;
+  font-size: 11px;
+  text-shadow:
+    0 2px 0 #000,
+    1px 0 0 #000,
+    -1px 0 0 #000,
+    0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.player-bar-mid {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.player-menu.icon-btn {
+  flex: none;
+  min-width: 40px;
+  min-height: 36px;
+}
+
+/* as fichas de COMPRAR / PASSAR: sobem de trás da beirada quando são o caminho e descem depois */
+.action-chips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-pixel.btn-chip {
+  min-height: 38px;
+  min-width: 92px;
+  padding: 4px 12px 6px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.px-skins .btn-pixel.btn-chip {
+  border-image-width: 10px;
+  padding: 4px 12px 7px;
+}
+
+.btn-chip .chip-cost {
+  font-size: 7px;
+  opacity: 0.9;
+}
+
+.chip-in {
+  animation: chipIn 320ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+.chip-leaving {
+  animation: chipOut 200ms ease-in both;
+  pointer-events: none;
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes chipOut {
+  to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+}
+
+.reduce-motion .chip-in,
+.reduce-motion .chip-leaving {
+  animation: none;
+}
+
+/* o passe estratégico (dava para jogar): um risco de giz discreto, sem ficha */
+.pass-link {
+  padding: 4px 6px;
+  font-size: 16px;
+  line-height: 1;
+  color: rgba(240, 232, 210, 0.72);
+  background: none;
+  border: 0;
+  text-decoration: underline dotted rgba(240, 232, 210, 0.5);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  animation: chipIn 320ms ease-out both;
+}
+
+.pass-link:active {
+  color: #ffd36b;
+}
+
+/* o enfeite da moldura equipada vira um friso em cima da beirada */
+.player-zone.player-frame::before {
+  top: auto;
+  bottom: calc(var(--bar-h) + max(env(safe-area-inset-bottom), 4px) - 2px);
+  z-index: 1;
+}
+
+/* o dorme vira botão: tocar compra; quando é o caminho, ele chama com o friso de giz pulsando */
+.boneyard-pile.is-callable {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.boneyard-pile.is-callable:active .boneyard-stack-px {
+  transform: translateY(2px) scale(0.97);
+}
+
+.boneyard-pile.is-urge::after {
+  content: '';
+  position: absolute;
+  inset: -6px -4px;
+  border: 2px dashed rgba(255, 214, 110, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(255, 200, 80, 0.55);
+  pointer-events: none;
+  animation: urgePulse 1.1s ease-in-out infinite;
+}
+
+.reduce-motion .boneyard-pile.is-urge::after {
+  animation: none;
+}
+
+.boneyard-steps {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.boneyard-steps i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(240, 244, 238, 0.22);
+}
+
+.boneyard-steps i.is-used {
+  background: #f2f4ee;
+}
+
+/* a soma das pontas a giz, embaixo do dorme */
+.ends-sum {
+  position: absolute;
+  z-index: 7;
+  top: 82px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 7px 5px;
+  color: #f2f4ee;
+  background: rgba(20, 26, 23, 0.85);
+  border: 2px solid #4a2a12;
+  pointer-events: none;
+}
+
+.px-skins .ends-sum {
+  border: 2px solid transparent;
+  border-image: var(--px-slate) 6 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+}
+
+.ends-sum-label {
+  font-size: 5px;
+  color: #b8c2b8;
+}
+
+.ends-sum-value {
+  font-size: 11px;
+  animation: boneyard-pop 260ms ease-out;
+}
+
+.ends-sum.is-five .ends-sum-value {
+  color: #ffd36b;
+}
+
+/* os objetos de cima da mesa vão para o lado de lá (a beirada de perto é da sua mão) */
+.felt-25d .felt-props.is-far .felt-prop-glass {
+  left: 4px;
+  right: auto;
+  top: 6px;
+  bottom: auto;
+  transform: scale(0.78);
+  transform-origin: 0 0;
+}
+
+.felt-25d .felt-props.is-far .felt-prop-ashtray {
+  left: -10px;
+  top: 30%;
+  bottom: auto;
+  transform: scale(0.82);
+  transform-origin: 0 50%;
+}
+
+.felt-25d .felt-props.is-far .felt-prop-caps {
+  left: auto;
+  right: -2px;
+  top: 34%;
+}
+
+/* ---------- o HUD do rival: plaquinha entalhada, faixa dos corações e a régua das pedras ---------- */
+.px-skins .rival-plate {
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-image: none;
+  filter: none;
+}
+
+.rival-nameplate {
+  position: relative;
+  padding: 4px 8px 5px;
+  color: #fff1d2;
+  background: #6a3e1e;
+  border: 2px solid #1a0c04;
+  text-shadow:
+    0 2px 0 #1a0a03,
+    1px 1px 0 #1a0a03,
+    -1px 1px 0 #1a0a03;
+}
+
+.px-skins .rival-nameplate {
+  border: 2px solid transparent;
+  border-image: var(--px-plank-pinho) 8 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* os dois barbantes que penduram a plaquinha */
+.rival-nameplate::before,
+.rival-nameplate::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  width: 1px;
+  height: 8px;
+  background: rgba(220, 200, 160, 0.7);
+}
+
+.rival-nameplate::before {
+  left: 8px;
+  transform: rotate(14deg);
+}
+
+.rival-nameplate::after {
+  right: 8px;
+  transform: rotate(-14deg);
+}
+
+.rival-bench-active .rival-nameplate {
+  filter: drop-shadow(0 0 5px rgba(255, 120, 90, 0.8)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+
+.rival-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 4px;
+  background: rgba(8, 5, 3, 0.62);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 170, 0.12);
+}
+
+.rival-rack {
+  top: 16px;
+  height: 52px;
+  transition: width 300ms ease-out;
+}
+
+.rival-rack-back,
+.rival-rack-lip {
+  position: absolute;
+  inset-inline: 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.rival-rack-back {
+  top: 14px;
+  bottom: 10px;
+  background: linear-gradient(180deg, #1c0e05, #4a2a12);
+  border: 2px solid #0b0705;
+}
+
+.px-skins .rival-rack-back {
+  border: 2px solid transparent;
+  border-image: var(--px-rack-back) 6 fill / 9px / 0 round;
+  background: none;
+}
+
+.rival-rack-tiles {
+  left: 6px;
+  right: 8px;
+  top: 0;
+  height: 44px;
+}
+
+.rival-rack-lip {
+  bottom: 0;
+  height: 20px;
+  z-index: 2;
+  background: linear-gradient(180deg, #c88a4a 0 2px, #7a4a24 2px, #4a2a12);
+  border: 2px solid #0b0705;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.55));
+}
+
+.px-skins .rival-rack-lip {
+  border: 2px solid transparent;
+  border-image: var(--px-rack-lip) 6 fill / 9px / 0 round;
+  background: none;
+}
+
+/* a pedra voando do dorme até o leque: sai virada (as costas por cima), faz o arco, desvira de
+   lado e assenta com um quiquinho (PlayerRack.jsx: useEnterFromDorme mede o caminho) */
+.hand-enter {
+  position: relative;
+}
+
+.deal-back {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  border-radius: 3px;
+  background: var(--px-tile-back, #2e2219) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  box-shadow: 0 2px 0 #120b06;
+  pointer-events: none;
+}
+
+.hand-enter.from-dorme {
+  animation: fromDorme 620ms cubic-bezier(0.3, 0.7, 0.35, 1) both;
+  will-change: transform, opacity;
+}
+
+.hand-enter.from-dorme .deal-back {
+  animation: dealUnflip 620ms linear both;
+  animation-delay: inherit;
+}
+
+@keyframes fromDorme {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--from-x, 0), var(--from-y, -120px), 0) rotate(var(--from-r, 0deg)) scale(0.45);
+  }
+  8% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate3d(calc(var(--from-x, 0) * 0.35), calc(var(--from-y, -120px) * 0.35 - 34px), 0) rotate(calc(var(--from-r, 0deg) * 0.3)) scale(0.86);
+  }
+  64% {
+    transform: translate3d(0, -14px, 0) scale(0.12, 0.96);
+  }
+  72% {
+    transform: translate3d(0, -6px, 0) scale(1.02);
+  }
+  86% {
+    transform: translate3d(0, 3px, 0) scale(1.03, 0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dealUnflip {
+  0%,
+  64% {
+    opacity: 1;
+  }
+  65%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.reduce-motion .hand-enter.from-dorme,
+.reduce-motion .hand-enter.from-dorme .deal-back {
+  animation: none;
+}
+
+.boneyard-cost {
+  margin-top: 2px;
+  font-size: 6px;
+  color: #ffd36b;
+}
+
+.boneyard-cost.is-free {
+  color: #9fe08a;
+}
+
+/* celular estreito: a vida encolhe um pouco para caber a ficha e o menu na mesma linha */
+@media (max-width: 370px) {
+  .life-hearts {
+    zoom: 0.8;
+  }
+  .btn-pixel.btn-chip {
+    min-width: 80px;
+    padding-inline: 8px;
+  }
+}

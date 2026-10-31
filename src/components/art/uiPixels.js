@@ -526,6 +526,108 @@ export function paintDust(seed = 12) {
   return b;
 }
 
+
+// ---------------------------------------------------------------------------
+// Versão 2.0 (2ª leva): a régua de dominó do rival e a beirada de perto da mesa
+// ---------------------------------------------------------------------------
+
+const RACK_WOOD = { hi: hex('#c88a4a'), mid: hex('#7a4a24'), lo: hex('#4a2a12'), deep: hex('#1c0e05'), grain: hex('#5e3618') };
+
+/** A frente da régua (40×14, fatias de 6): o sarrafo de madeira que segura as pedras em pé. */
+export const RACK_SLICE = 6;
+export function paintRackLip(seed = 31) {
+  const W = 40;
+  const H = 14;
+  const b = buffer(W, H);
+  const r = rngOf(seed);
+  const n = wrapNoise(28, 2, 4, r);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      if ((x === 0 || x === W - 1) && (y === 0 || y === H - 1)) continue;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) {
+        b.put(x, y, INK);
+        continue;
+      }
+      let c;
+      if (y === 1) c = mix(RACK_WOOD.hi, hex('#ffe2b0'), 0.35);
+      else if (y === 2) c = RACK_WOOD.hi;
+      else if (y >= H - 3) c = y === H - 2 ? RACK_WOOD.deep : RACK_WOOD.lo;
+      else {
+        const g = Math.sin(y * 1.9 + Math.sin(((x - 6 + 56) * Math.PI * 2) / 28) * 1.2 + n(x + 22, 0) * 2.5);
+        c = g > 0.8 ? mix(RACK_WOOD.mid, RACK_WOOD.grain, 0.6) : RACK_WOOD.mid;
+        c = shift(c, Math.round((r() - 0.5) * 5));
+      }
+      b.put(x, y, clampRgb(c));
+    }
+  }
+  // cantoneiras de latão nas pontas
+  for (const x0 of [1, W - 5]) {
+    b.rect(x0, 1, 4, H - 2, hex('#8a6214'));
+    b.rect(x0, 1, 4, 1, hex('#fff0a8'));
+    b.rect(x0 + 1, 2, 2, H - 4, hex('#d9a531'));
+    b.put(x0 + 1, 5, hex('#3a2808'));
+  }
+  return b;
+}
+
+/** O fundo da régua (40×20, fatias de 6): a tábua inclinada atrás das pedras, mais escura em cima. */
+export function paintRackBack(seed = 32) {
+  const W = 40;
+  const H = 20;
+  const b = buffer(W, H);
+  const r = rngOf(seed);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      if ((x === 0 || x === W - 1) && (y === 0 || y === H - 1)) continue;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) {
+        b.put(x, y, INK);
+        continue;
+      }
+      let c;
+      if (y === 1) c = RACK_WOOD.mid;
+      else if (x === 1) c = RACK_WOOD.mid;
+      else if (x === W - 2) c = RACK_WOOD.deep;
+      else c = shift(mix(RACK_WOOD.deep, RACK_WOOD.lo, 0.3 + (y / H) * 0.5), Math.round((r() - 0.5) * 6));
+      b.put(x, y, clampRgb(c));
+    }
+  }
+  return b;
+}
+
+/** A beirada de perto da mesa (48×24, fatias de 8): onde ficam os corações e o menu. */
+export const NEAR_RAIL_SLICE = 8;
+export function paintNearRail(seed = 33) {
+  const W = 48;
+  const H = 24;
+  const b = buffer(W, H);
+  const r = rngOf(seed);
+  const n = wrapNoise(32, 8, 4, r);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      let c;
+      if (y === 0) c = hex('#050302');
+      else if (y === 1) c = mix(RACK_WOOD.hi, hex('#ffe2b0'), 0.3);
+      else if (y === 2) c = RACK_WOOD.hi;
+      else if (y === 3) c = mix(RACK_WOOD.hi, RACK_WOOD.mid, 0.5);
+      else {
+        const g = Math.sin(y * 1.4 + Math.sin(((x - 8 + 64) * Math.PI * 2) / 32) * 1.4 + n(x + 24, y) * 3);
+        c = g > 0.8 ? mix(RACK_WOOD.mid, RACK_WOOD.grain, 0.55) : g < -0.86 ? mix(RACK_WOOD.mid, RACK_WOOD.hi, 0.15) : RACK_WOOD.mid;
+        c = mix(shift(c, Math.round((r() - 0.5) * 5)), RACK_WOOD.lo, Math.min(0.5, (y - 4) / 30));
+      }
+      b.put(x, y, clampRgb(c));
+    }
+  }
+  // losangos de madrepérola nos cantos (repetem só nas fatias dos cantos)
+  for (const dx of [5, W - 6]) {
+    b.put(dx, 6, hex('#e8f0ec'));
+    b.put(dx - 1, 7, hex('#c8d8d0'));
+    b.put(dx + 1, 7, hex('#c8d8d0'));
+    b.put(dx, 7, hex('#ffffff'));
+    b.put(dx, 8, hex('#9ab0a8'));
+  }
+  return b;
+}
+
 function toDataUrl(painted) {
   const canvas = document.createElement('canvas');
   canvas.width = painted.w;
@@ -551,6 +653,9 @@ export function installPixelSkins() {
     root.setProperty('--px-niche', toDataUrl(paintNiche()));
     root.setProperty('--px-niche-lock', toDataUrl(paintNicheLock()));
     root.setProperty('--px-dust', toDataUrl(paintDust()));
+    root.setProperty('--px-rack-lip', toDataUrl(paintRackLip()));
+    root.setProperty('--px-rack-back', toDataUrl(paintRackBack()));
+    root.setProperty('--px-near-rail', toDataUrl(paintNearRail()));
     document.documentElement.classList.add('px-skins');
   } catch {
     // sem canvas: o HUD fica com os degradês de sempre

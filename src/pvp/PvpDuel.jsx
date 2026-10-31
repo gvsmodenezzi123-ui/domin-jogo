@@ -56,6 +56,8 @@ function inspectInfo(payload, oppName) {
 export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onToggleMute, onIntent, onMenu, onNextRound, onFinish, frame = null }) {
   const view = duel.view;
   const [selectedId, setSelectedId] = useState(null);
+  // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
+  const [handZone, setHandZone] = useState(0);
   const [tableAnim, setTableAnim] = useState(null);
   const [inspect, setInspect] = useState(null);
   const { items: floatItems, push: pushFloat, done: floatDone, clear: clearFloats } = useFloats();
@@ -357,10 +359,17 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
           noMoves={forcedMine}
           boneyardCount={view.boneyard.length}
           tableMod={null}
+          handZone={handZone}
+          endsSum={ends ? ends.left + ends.right : null}
+          canDraw={canDraw && !pickMode}
+          drawUrge={canDraw && !pickMode && playableIds.size === 0}
+          onDraw={handleDraw}
+          drawsUsed={isPlayerTurn ? view.drawsThisTurn : 0}
+          drawCost={canDraw ? (draw?.cost?.type === 'free' ? 'GRÁTIS' : draw?.cost?.type === 'coins' ? `$${draw.cost.amount}` : draw?.cost ? `${draw.cost.amount}♥` : null) : null}
         />
-      </div>
 
       <PlayerRack
+        onZoneHeight={setHandZone}
         hand={hand}
         selectedId={selectedTile?.id ?? null}
         playableIds={playableIds}
@@ -405,6 +414,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         knownIds={null}
         rivalName={opp.name}
       />
+      </div>
 
       <NetBadge link={link} ping={ping} place="duel" />
       {myHurtKey > 0 && <div key={myHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}

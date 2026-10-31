@@ -40,14 +40,31 @@ const APRON_PX = APRON_H * TABLE_PX;
  * beirada de baixo, com a perspectiva proporcional à altura da mesa (PERSPECTIVE × altura).
  * Para o fundo do feltro chegar no alto da tela, o plano é mais alto que a área (planeHeight).
  */
-const TILT = 24;
-const PERSPECTIVE = 2.2;
+const TILT = 36;
+const PERSPECTIVE = 1.9;
+/**
+ * Versão 2.0.1: a mesa mais deitada e mais larga que a tela: na beirada de perto ela tem
+ * WIDEN × a largura da tela, então do meio para baixo o aro já saiu pelos lados e só o feltro
+ * aparece; lá no fundo ela afina e mostra o aro e a sala.
+ */
+const WIDEN = 1.38;
+/** Faixa de cima da tela (px) que é do dorme, da soma e dos selos: as pedras ficam abaixo dela. */
+const HUD_TOP_PX = 124;
+/** Quanto da mesa passa do pé da tela (a beirada de perto fica para fora, como quem está sentado nela). */
+const NEAR_HIDE = 44;
 const SIN = Math.sin((TILT * Math.PI) / 180);
 const COS = Math.cos((TILT * Math.PI) / 180);
 /** Altura do plano inclinado que, projetada, ocupa `height` px da tela. */
 const planeHeightFor = (height) => Math.round((height * PERSPECTIVE) / (PERSPECTIVE * COS - SIN));
-/** Parte do alto do plano reservada ao dorme e aos selos (as pedras ficam abaixo dela). */
-const HUD_TOP_SHARE = 0.2;
+/**
+ * Versão 2.0: quanto do plano (a partir da beirada de perto) fica embaixo de `screen` px da
+ * tela, numa mesa que projeta `room` px de altura: a faixa da sua mão, que as pedras da mesa
+ * não podem invadir. Mesma conta da perspectiva: d = S·P / (P·cos − S·sen).
+ */
+const planeSpanFor = (screen, room) => {
+  const P = room * PERSPECTIVE;
+  return Math.max(0, Math.round((screen * P) / (P * COS - screen * SIN)));
+};
 /** Folga visual entre pedras vizinhas, em px do mundo (antes da câmera). */
 const TILE_INSET = 1.5;
 const B = BASE_UNIT_PX;
@@ -58,14 +75,21 @@ const B = BASE_UNIT_PX;
  * lâmpada fica no meio). Com 3 ou menos o número fica âmbar; vazio, vermelho. Cada
  * compra dá um pulinho no número.
  */
-const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
+const BoneyardPile = memo(function BoneyardPile({ count, hidden = null, canDraw = false, urge = false, onDraw, drawsUsed = 0, cost = null }) {
   // Fumaça Densa (Patch 0.9.4): o dorme some na fumaça (nem a pilha nem o número aparecem);
   // versão 1.4, Geraldo Coveiro ('cova'): as pedras ficam enterradas, viradas, sem o número
   // Versão 2.0: a pilha é pixel art (art/tablePixels.js) e baixa uma pedra a cada compra
   const tone = hidden === 'smoke' ? 'is-smoke' : hidden === 'cova' ? 'is-cova' : count === 0 ? 'is-empty' : count <= 3 ? 'is-low' : '';
   if (hidden === 'smoke') {
+    const SmokeTag = canDraw ? 'button' : 'div';
     return (
-      <div className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`} role="status" aria-label="Dorme escondido pela fumaça">
+      <SmokeTag
+        type={canDraw ? 'button' : undefined}
+        onClick={canDraw ? onDraw : undefined}
+        className={`boneyard-pile absolute z-[7] ${canDraw ? 'is-callable' : 'pointer-events-none'} ${urge ? 'is-urge' : ''} ${tone}`}
+        role={canDraw ? undefined : 'status'}
+        aria-label={canDraw ? 'Comprar do dorme (escondido pela fumaça)' : 'Dorme escondido pela fumaça'}
+      >
         <span className="boneyard-smoke" aria-hidden="true">
           <TableModIcon icon="smoke" className="h-9 w-9" />
         </span>
@@ -73,15 +97,20 @@ const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
           <span className="boneyard-count font-pixel text-shadow-pixel">?</span>
           <span className="boneyard-label font-pixel">FUMAÇA</span>
         </span>
-      </div>
+      </SmokeTag>
     );
   }
   const shown = hidden === 'cova' ? 7 : count;
+  const label = hidden === 'cova' ? 'Dorme enterrado: a quantidade não aparece' : count === 0 ? 'Dorme vazio' : `Dorme: ${count} ${count === 1 ? 'pedra restante' : 'pedras restantes'}`;
+  // Versão 2.0: tocar no dorme compra (a pedra voa da pilha para a sua mão)
+  const Tag = canDraw ? 'button' : 'div';
   return (
-    <div
-      className={`boneyard-pile pointer-events-none absolute z-[7] ${tone}`}
-      role="status"
-      aria-label={hidden === 'cova' ? 'Dorme enterrado: a quantidade não aparece' : count === 0 ? 'Dorme vazio' : `Dorme: ${count} ${count === 1 ? 'pedra restante' : 'pedras restantes'}`}
+    <Tag
+      type={canDraw ? 'button' : undefined}
+      onClick={canDraw ? onDraw : undefined}
+      className={`boneyard-pile absolute z-[7] ${canDraw ? 'is-callable' : 'pointer-events-none'} ${urge ? 'is-urge' : ''} ${tone}`}
+      role={canDraw ? undefined : 'status'}
+      aria-label={canDraw ? `Comprar do dorme (${label})` : label}
     >
       <span key={shown} className="boneyard-stack-px" aria-hidden="true">
         <PixelCanvas cacheKey={`dorme-${Math.min(14, shown)}`} paint={() => paintBoneyard(shown)} w={BONEYARD_SIZE.w} h={BONEYARD_SIZE.h} scale={1.5} />
@@ -91,8 +120,28 @@ const BoneyardPile = memo(function BoneyardPile({ count, hidden = null }) {
           {hidden === 'cova' ? '?' : count}
         </span>
         <span className="boneyard-label font-pixel">{hidden === 'cova' ? 'COVA' : count === 0 ? 'VAZIO' : 'DORME'}</span>
+        {/* na sua vez, quanto custa a próxima compra */}
+        {cost && <span className={`boneyard-cost font-pixel ${cost === 'GRÁTIS' ? 'is-free' : ''}`}>{cost}</span>}
+        {/* as 3 compras do turno, a giz */}
+        <span className="boneyard-steps" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <i key={i} className={i < drawsUsed ? 'is-used' : ''} />
+          ))}
+        </span>
       </span>
-    </div>
+    </Tag>
+  );
+});
+
+/** Versão 2.0: a soma das pontas a giz, numa lousinha no canto da mesa (embaixo do dorme). */
+const EndsSum = memo(function EndsSum({ sum }) {
+  if (sum === null || sum === undefined) return null;
+  const five = sum > 0 && sum % 5 === 0;
+  return (
+    <span data-tut="sum" className={`ends-sum font-pixel ${five ? 'is-five' : ''}`} aria-label={`Soma das pontas: ${sum}`}>
+      <span className="ends-sum-label">PONTAS</span>
+      <span key={sum} className="ends-sum-value">Σ{sum}</span>
+    </span>
   );
 });
 
@@ -231,12 +280,34 @@ function TableBoard({
   tableMod = null,
   boneyardHidden = false,
   rivalRule = null,
+  // Versão 2.0: a mesa vai até o pé da tela; a sua mão fica deitada nela, na faixa de baixo
+  handZone = 0,
+  endsSum = null,
+  canDraw = false,
+  drawUrge = false,
+  onDraw,
+  drawsUsed = 0,
+  drawCost = null,
 }) {
   const [areaRef, size] = useElementSize();
   // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
   const [roomRef, room] = useElementSize();
-  const planeHeight = room.height > APRON_PX ? planeHeightFor(room.height - APRON_PX) : 0;
-  const hudTop = Math.round(planeHeight * HUD_TOP_SHARE);
+  // com a mão em cima da mesa (handZone), a mesa desce até o pé da tela e a saia não aparece
+  const toBottom = handZone > 0;
+  // a mesa toda (com a mão em cima) passa NEAR_HIDE px do pé da tela; sem a mão, termina na saia
+  const apron = toBottom ? -NEAR_HIDE : APRON_PX;
+  const span = room.height - apron; // altura da tela que o plano cobre, da beirada de perto ao fundo
+  const planeHeight = span > 0 && room.height > 0 ? planeHeightFor(span) : 0;
+  const reserve = toBottom && room.height > 0 ? planeSpanFor(Math.min(handZone, room.height * 0.6) + NEAR_HIDE, span) : 0;
+  // a mesa é mais larga que a tela; a área das pedras fica só na parte que aparece: a largura
+  // visível na altura da beirada de cima da sua mão (onde a perspectiva aumenta mais)
+  const planeWidth = Math.round(room.width * WIDEN);
+  const persp = span * PERSPECTIVE;
+  const nearScale = persp > 0 ? persp / (persp + reserve * SIN) : 1;
+  const areaWidth = Math.max(120, Math.min(planeWidth - BOARD_PADDING * 2, Math.round(room.width / nearScale) - 16));
+  const areaSide = Math.round((planeWidth - areaWidth) / 2);
+  // o dorme e a soma ocupam o alto da tela: no plano, isso é a faixa a partir do fundo da mesa
+  const hudTop = span > HUD_TOP_PX ? Math.max(0, planeHeight - planeSpanFor(span - HUD_TOP_PX, span)) : 0;
   // a lâmpada ilumina as pedras (mesa e mão) enquanto a mesa estiver na tela
   const feltRef = useRef(null);
   useEffect(() => startTileLighting(feltRef.current), []);
@@ -275,7 +346,7 @@ function TableBoard({
   const feltVars = felt ? { '--felt-light': felt.light, '--felt-mid': felt.mid, '--felt-dark': felt.dark } : undefined;
   // Versão 2.0: a mesa inteira pintada em pixel art (aro de madeira com volume, tabela e feltro gasto)
   const mahogany = decor.includes('mahogany');
-  const planeW = room.width > 0 ? planePixels(room.width) : 0;
+  const planeW = room.width > 0 ? planePixels(planeWidth) : 0;
   const planeH = planeHeight > 0 ? planePixels(planeHeight) : 0;
   const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${mahogany ? 'mogno' : 'pinho'}`;
 
@@ -293,11 +364,17 @@ function TableBoard({
 
       {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}
       <div
-        className="table-plane absolute inset-x-0"
+        className="table-plane absolute"
         style={
           planeHeight
-            ? { bottom: APRON_PX, height: planeHeight, transform: `perspective(${Math.round((room.height - APRON_PX) * PERSPECTIVE)}px) rotateX(${TILT}deg)` }
-            : { top: 0, bottom: 0 }
+            ? {
+                left: Math.round((room.width - planeWidth) / 2),
+                width: planeWidth,
+                bottom: apron,
+                height: planeHeight,
+                transform: `perspective(${Math.round(persp)}px) rotateX(${TILT}deg)`,
+              }
+            : { top: 0, bottom: 0, left: 0, right: 0 }
         }
       >
         {planeW > 0 && (
@@ -316,7 +393,7 @@ function TableBoard({
         <div className={`atmo-layer atmo-${atmosphere} pointer-events-none absolute inset-0`} />
         <div className="felt-vignette pointer-events-none absolute inset-0" />
 
-      <div ref={areaRef} className="absolute" style={{ inset: BOARD_PADDING, zIndex: 3 }}>
+      <div ref={areaRef} className="absolute" style={{ top: BOARD_PADDING, left: areaSide, right: areaSide, bottom: BOARD_PADDING + reserve, zIndex: 3 }}>
         {size.width > 0 && (
           <div
             className="board-world absolute left-0 top-0"
@@ -371,6 +448,7 @@ function TableBoard({
                   {active && (
                     <button
                       type="button"
+                      data-tut-side={side}
                       onClick={() => onPlaySide?.(side)}
                       aria-label={`Jogar na ponta ${SIDE_LABEL[side]}`}
                       className="slot-ghost absolute z-20"
@@ -416,7 +494,7 @@ function TableBoard({
       {/* o que ficou em cima da beirada, de pé (fora do plano): tampinhas, cinzeiro com o
           cigarro soltando fumaça e o copo americano. Ficam nos cantos de perto, fora do jogo. */}
       {/* a frente da mesa: a saia de madeira, com as cantoneiras de latão */}
-      {planeW > 0 && (
+      {planeW > 0 && !toBottom && (
         <PixelCanvas
           cacheKey={`saia-${planeW}-${mahogany ? 'mogno' : 'pinho'}`}
           paint={() => paintApron(planeW, { mahogany })}
@@ -426,7 +504,7 @@ function TableBoard({
           style={{ width: '100%', height: APRON_PX }}
         />
       )}
-      <div aria-hidden="true" className="felt-props pointer-events-none absolute inset-0">
+      <div aria-hidden="true" className={`felt-props pointer-events-none absolute inset-0 ${toBottom ? 'is-far' : ''}`}>
         <SceneProp name="caps" scale={2} className="felt-prop felt-prop-caps" />
         <span className="felt-prop felt-prop-ashtray">
           <PixelCanvas cacheKey="cinzeiro-lata" paint={paintTinAshtray} w={ASHTRAY_SIZE.w} h={ASHTRAY_SIZE.h} scale={TABLE_PX} />
@@ -444,7 +522,18 @@ function TableBoard({
 
       <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
 
-      {boneyardCount !== null && <BoneyardPile count={boneyardCount} hidden={tableMod === 'fumacaDensa' ? 'smoke' : boneyardHidden ? 'cova' : null} />}
+      {boneyardCount !== null && (
+        <BoneyardPile
+          count={boneyardCount}
+          hidden={tableMod === 'fumacaDensa' ? 'smoke' : boneyardHidden ? 'cova' : null}
+          canDraw={canDraw}
+          urge={drawUrge}
+          onDraw={onDraw}
+          drawsUsed={drawsUsed}
+          cost={drawCost}
+        />
+      )}
+      <EndsSum sum={endsSum} />
       <TableModSeal id={tableMod} />
       <RivalRuleSeal rule={rivalRule} shifted={Boolean(tableModifierOf(tableMod))} />
 

@@ -172,6 +172,29 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.0.1: a mesa até o pé da tela, sem barra de botões
+
+- A mesa desce até o pé da tela e a sua mão fica deitada nela, em leque, logo acima da beirada
+  de perto. As pedras do jogo não passam da faixa da mão (`TableBoard` reserva a altura que o
+  `PlayerRack` mede), então nada vaza para fora da mesa.
+- **Sem barra de botões:**
+  - Jogar é tocar na pedra e depois na ponta da mesa. A vaga pontilhada é o alvo e a dica avisa.
+  - Comprar é tocar no dorme. A lousinha dele mostra quanto custa a próxima compra e as 3
+    compras do turno.
+  - A ficha de COMPRAR só sobe, animada, quando nada encaixa. A de PASSAR só sobe quando não
+    dá mais para comprar.
+  - O passe estratégico (podendo jogar, pagando) virou um risco de giz discreto.
+- **Pedras saindo do dorme:** na mão nova e em cada compra, a pedra sai do dorme virada, faz o
+  arco, desvira de lado e assenta no leque com o estalo.
+- **Pé da tela:** a vida fica grande no canto de baixo à esquerda, sem nada atrás (contorno
+  preto e brilho vermelho; com 1 ou 2 corações ela pulsa). O dinheiro fica ao lado e o menu no
+  canto direito. O botão de som saiu; o volume fica nas opções do menu.
+- **Mesa e talismãs:** a soma das pontas (Σ) foi para uma lousinha embaixo do dorme, e os seus
+  talismãs ficam soltos no feltro, acima do leque.
+- **HUD do rival:** o nome fica entalhado numa plaquinha pendurada, com os corações e o dinheiro
+  numa faixa escura. As pedras dele ficam em pé numa régua de madeira em cima da prateleira, que
+  encolhe conforme ele joga.
+
 ### Mesa em perspectiva (`TableBoard.jsx`, `art/tablePixels.js`)
 
 - O plano da mesa tomba 24° (`perspective` + `rotateX` no CSS, acelerado pela GPU). As pedras, as

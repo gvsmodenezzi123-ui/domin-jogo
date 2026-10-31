@@ -31,3 +31,5 @@ export function computeFan(count, width, { baseUnit = 44, minUnit = 32, angle = 
 
 /** Versão 1.5: intervalo da cascata da mão (ms entre uma pedra e a seguinte). */
 export const DEAL_STEP_MS = 60;
+/** Versão 2.0: quanto a pedra leva do dorme até assentar no leque (o estalo sai aí). */
+export const DEAL_LAND_MS = 520;

@@ -12,7 +12,7 @@ import { BottleCapIcon } from './art/MetaArt.jsx';
 import { useCopyFeedback } from './useCopyFeedback.js';
 
 /** Versão que vai no resumo copiado. */
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 
 /** Uma casa do placar a giz: o rótulo miúdo em cima, o número grande embaixo. */
 function Cell({ label, children, wide = false }) {

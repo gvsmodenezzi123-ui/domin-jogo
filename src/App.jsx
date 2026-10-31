@@ -21,7 +21,7 @@ import ScreenVeil from './components/ScreenTransition.jsx';
 import { useSceneTransition } from './components/useSceneTransition.js';
 import Shop from './components/Shop.jsx';
 import TableBoard from './components/TableBoard.jsx';
-import { DEAL_STEP_MS } from './components/handFan.js';
+import { DEAL_LAND_MS, DEAL_STEP_MS } from './components/handFan.js';
 import { PACKS } from './data/packs.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
 import { kickLamp } from './components/lampKick.js';
@@ -225,6 +225,15 @@ function shake(element, strength = 6, duration = 380) {
  */
 const COMBO = { player: 0, tioZe: 0, scored: { player: false, tioZe: false } };
 
+/** Versão 2.0: quanto custa a próxima compra, a giz na lousinha do dorme. */
+function drawCostLabel(draw) {
+  const cost = draw?.cost;
+  if (!cost) return null;
+  if (cost.type === 'free') return 'GRÁTIS';
+  if (cost.type === 'coins') return `$${cost.amount}`;
+  return `${cost.amount}♥`;
+}
+
 /** Som e tremida para cada evento emitido pelo reducer (`offset`: espera o voo da pedra). */
 function runEventFx(ev, shell, table, offset = 0) {
   const at = (fn, extra = 0) => setTimeout(fn, offset + (FX_DELAY[ev.type] ?? 0) + extra);
@@ -235,8 +244,8 @@ function runEventFx(ev, shell, table, offset = 0) {
       COMBO.scored = { player: false, tioZe: false };
       // a mão chega em cascata (PlayerRack): um toque de pedra no feltro para cada uma, com o
       // tom subindo, e a vibração em cascata junto (Versão 2.0: o estalo sai quando a pedra assenta)
-      for (let i = 0; i < 7; i += 1) at(() => sound.playDealTick(i), 190 + i * DEAL_STEP_MS);
-      at(() => haptic(Array.from({ length: 13 }, (_, i) => (i % 2 ? DEAL_STEP_MS - 9 : 9))), 190);
+      for (let i = 0; i < 7; i += 1) at(() => sound.playDealTick(i), DEAL_LAND_MS + i * DEAL_STEP_MS);
+      at(() => haptic(Array.from({ length: 13 }, (_, i) => (i % 2 ? DEAL_STEP_MS - 9 : 9))), DEAL_LAND_MS);
       break;
     case 'tilePlaced':
       // o som e a tremida saem no pouso do voo (App: stagePlay)
@@ -523,6 +532,8 @@ function seenNow(state) {
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const [selectedId, setSelectedId] = useState(null);
+  // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
+  const [handZone, setHandZone] = useState(0);
   const [muted, setMuted] = useState(() => sound.isMuted);
   const [settings, setSettings] = useState(loadSettings);
   const [collection, setCollection] = useState(loadCollection);
@@ -1525,6 +1536,7 @@ export default function App() {
       />
       {state.tutorial && <div className="tut-spacer shrink-0" aria-hidden="true" />}
 
+      <div className="match-stage relative flex min-h-0 flex-1 flex-col">
       <TableBoard
         board={state.board}
         roundKey={`${state.run.match}:${state.round}`}
@@ -1543,9 +1555,19 @@ export default function App() {
         tableMod={state.tableMod}
         boneyardHidden={boneyardHidden}
         rivalRule={rivalRule}
+        handZone={handZone}
+        endsSum={ends ? ends.left + ends.right : null}
+        canDraw={canDraw && !pickMode}
+        drawUrge={canDraw && !pickMode && playableIds.size === 0}
+        onDraw={handleDraw}
+        drawsUsed={isPlayerTurn ? state.drawsThisTurn : 0}
+        drawCost={canDraw ? drawCostLabel(draw) : null}
       />
 
       <PlayerRack
+        onZoneHeight={setHandZone}
+        tutorialAction={tutorialExpect?.type ?? null}
+        tutorialFocus={tutorialStep?.focus ?? null}
         hand={hand}
         selectedId={selectedTile?.id ?? null}
         playableIds={playableIds}
@@ -1590,6 +1612,7 @@ export default function App() {
         knownIds={knownIds}
         rivalName={rival.name}
       />
+      </div>
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
 

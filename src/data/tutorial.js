@@ -14,7 +14,7 @@
  *             { type: 'end' }                          fim: COMEÇAR A RUN (ou VOLTAR, revendo)
  *   focus   o que o anel de destaque mostra: 'hearts' | 'hand' | 'sum' | 'coins' | 'draw' |
  *           'pass' | 'boneyard' | 'relic:<id>' | 'tile:<id>' (nos passos de jogar, o anel
- *           segue sozinho: a pedra e, depois de escolhida, o botão da ponta certa)
+ *           segue sozinho: a pedra e, depois de escolhida, a vaga da ponta certa na mesa)
  *   nudge   o que ele diz se você escolher a ponta errada
  *   enter   o que acontece ao chegar no passo: { grant: idDoTalismã } | { round: 2 }
  *   card    'intro' | 'end': o passo vira um cartão no meio da tela, com botão
@@ -81,7 +81,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   step({
     id: 'open',
     expect: play('6-6', 'root'),
-    pages: ['A maior é a sua: a [6|6]. Toque nela e depois em ABRIR MESA.'],
+    pages: ['A maior é a sua: a [6|6]. Toque nela e depois no meio da mesa, na vaga pontilhada.'],
   }),
   step({
     id: 'rivalMatch',
@@ -105,7 +105,7 @@ export const TUTORIAL_STEPS = Object.freeze([
     expect: tap,
     focus: 'coins',
     mood: 'smug',
-    pages: ['$3 no bolso! A soma das pontas (o Σ) fica ali do lado das suas moedas. Fique sempre de olho nela.'],
+    pages: ['$3 no bolso! Suas moedas ficam aqui embaixo, e a soma das pontas (o Σ) fica na lousinha embaixo do dorme. Fique sempre de olho nela.'],
   }),
   step({
     id: 'rivalBlock',
@@ -124,19 +124,19 @@ export const TUTORIAL_STEPS = Object.freeze([
     id: 'draw',
     expect: Object.freeze({ type: 'draw' }),
     focus: 'draw',
-    pages: ['A 1ª compra de cada turno é de graça. Toque em COMPRAR.'],
+    pages: ['A 1ª compra de cada turno é de graça. Toque em COMPRAR (ou direto no dorme).'],
   }),
   step({
     id: 'ladder',
     expect: tap,
     focus: 'draw',
-    pages: ['Veio o [1|0], que serve no 1! Repare no botão: a 2ª compra do turno já custa $3, e a 3ª custa um coração.'],
+    pages: ['Veio o [1|0], que serve no 1! Repare na ficha: a 2ª compra do turno já custa $3, e a 3ª custa um coração.'],
   }),
   step({
     id: 'pass',
     expect: tap,
     focus: 'pass',
-    pages: ['Depois de comprar, PASSAR a vez fica de graça. Passar podendo jogar custa $3. Mas agora não: essa pedra serve!'],
+    pages: ['Depois de comprar, passar a vez é de graça (o risco de giz aqui embaixo). Sem comprar, custa $3. Mas agora não: essa pedra serve!'],
   }),
   step({
     id: 'drawnPlay',
@@ -159,7 +159,7 @@ export const TUTORIAL_STEPS = Object.freeze([
     id: 'side',
     expect: play('0-5', 'right'),
     nudge: 'Na outra ponta! Na DIREITA fecha 5 + 5 = 10.',
-    pages: ['Na DIREITA ficam 5 e 5: dez! Toque na [5|0] e escolha DIR >.'],
+    pages: ['Na DIREITA ficam 5 e 5: dez! Toque na [5|0] e depois na ponta da direita.'],
   }),
   step({
     id: 'rivalLast',

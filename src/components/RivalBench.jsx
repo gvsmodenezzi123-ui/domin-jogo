@@ -64,17 +64,18 @@ function RivalBench({
               {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
             </span>
           </div>
-          <div className="rival-plate flex w-[90px] min-w-0 flex-col gap-1">
-            {/* Versão 2.0: o nome curto ("JUVENAL C."), sem reticências; o inteiro fica para o leitor de tela */}
+          <div className="rival-plate flex min-w-0 flex-col items-start gap-1">
+            {/* Versão 2.0: o nome curto ("JUVENAL C."), sem reticências, entalhado numa plaquinha de
+                madeira pendurada na parede; o nome inteiro fica para o leitor de tela */}
             <h2
-              className={`rival-name whitespace-nowrap font-pixel leading-none text-bone-50 text-shadow-pixel ${shortRivalName(rival.name).length > 10 ? 'text-[7px]' : 'text-[8px]'}`}
+              className={`rival-name rival-nameplate whitespace-nowrap font-pixel leading-none ${shortRivalName(rival.name).length > 10 ? 'text-[7px]' : 'text-[8px]'}`}
               aria-label={rival.name}
             >
               {shortRivalName(rival.name)}
             </h2>
-            <HeartsBar current={hearts} max={maxHearts} size={11} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
-            {/* o dorme saiu daqui no 0.7.0: agora fica grande no canto da mesa (TableBoard) */}
-            <div className="flex items-center gap-2">
+            {/* corações e dinheiro numa faixa escura só do tamanho deles */}
+            <div className="rival-stats">
+              <HeartsBar current={hearts} max={maxHearts} size={11} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
               <CoinCount value={coins} target="tioZe" className="text-[8px]" size={12} />
             </div>
             <Hotbar relics={relics} size={20} cols={4} flashes={flashes} press={press} owner="tioZe" bare label={`Talismãs de ${rival.name}`} />
@@ -95,14 +96,19 @@ function RivalBench({
         )}
 
         {/* mão do rival presa à direita: só a pedra jogada anima */}
-        <RivalHand
-          tiles={hand}
-          revealedIds={revealedIds}
-          foreseenId={foreseenId}
-          roundKey={roundKey}
-          containerRef={handRef}
-          className="absolute right-2 top-4 flex h-16 w-[200px] items-center justify-end"
-        />
+        {/* Versão 2.0: as pedras do rival em pé numa régua de madeira, em cima da prateleira */}
+        <div className="rival-rack absolute right-1.5" style={{ width: Math.min(214, 18 + Math.max(3, hand.length) * 22) }}>
+          <span aria-hidden="true" className="rival-rack-back" />
+          <RivalHand
+            tiles={hand}
+            revealedIds={revealedIds}
+            foreseenId={foreseenId}
+            roundKey={roundKey}
+            containerRef={handRef}
+            className="rival-rack-tiles absolute flex items-center justify-end"
+          />
+          <span aria-hidden="true" className="rival-rack-lip" />
+        </div>
 
       </div>
 

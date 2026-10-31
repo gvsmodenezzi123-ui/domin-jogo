@@ -1,10 +1,11 @@
-import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
 import { DEAL_STEP_MS, computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
-import { CoinGlyph, EyeGlyph, MenuGlyph, SpeakerGlyph } from './UiGlyphs.jsx';
+import { CoinGlyph, EyeGlyph, MenuGlyph } from './UiGlyphs.jsx';
+import { prefersReducedMotion } from './motion.js';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -71,58 +72,6 @@ function passButtonText(rule) {
   return rule.cost > 0 ? `PASSAR A VEZ ($${rule.cost})` : 'PASSAR A VEZ';
 }
 
-function PassLabel({ rule }) {
-  if (rule?.reason === 'coins') {
-    return (
-      <>
-        <span className="block text-[8px] leading-snug">SALDO INSUFICIENTE</span>
-        <span className="pass-note block text-brass-300">(${rule.cost ?? 3})</span>
-      </>
-    );
-  }
-  return (
-    <>
-      <span className="block">PASSAR</span>
-      <span className="block">A VEZ{rule?.cost > 0 ? ` ($${rule.cost})` : ''}</span>
-      {rule?.fiado && <span className="pass-note block text-brass-300">FIADO</span>}
-      {rule?.reason === 'mustDraw' && <span className="pass-note block text-bone-200">COMPRE ANTES</span>}
-      {rule?.reason === 'mustPlay' && <span className="pass-note block text-bone-200">PROIBIDO</span>}
-    </>
-  );
-}
-
-const SIDE_BUTTON = {
-  left: '< ESQ',
-  right: 'DIR >',
-  root: 'ABRIR',
-};
-
-/** Cabeçalho da sua mão: VOCÊ (3 toques abrem o DEV), corações, soma das pontas e moedas. */
-const PlayerHud = memo(function PlayerHud({ onSecretTap, hearts, maxHearts, sum, coins }) {
-  const sumIsFive = sum !== null && sum > 0 && sum % 5 === 0;
-  return (
-    <div className="flex items-center justify-between gap-2 px-3 pt-2">
-      <div className="flex items-center gap-2">
-        {/* 3 toques seguidos aqui abrem o painel DEV */}
-        <button type="button" onClick={onSecretTap} className="hud-nameplate font-pixel text-[10px] text-bone-50 text-shadow-pixel" aria-label="Você">
-          VOCÊ
-        </button>
-        <span data-tut="hearts">
-          <HeartsBar current={hearts} max={maxHearts} pixel={2} label={`Você: ${hearts} de ${maxHearts} corações`} />
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        {sum !== null && (
-          <span data-tut="sum" className={`hud-slate font-pixel text-[9px] ${sumIsFive ? 'text-brass-300 is-five' : 'text-bone-300'}`} aria-label={`Soma das pontas: ${sum}`}>
-            Σ{sum}
-          </span>
-        )}
-        <CoinCount value={coins} target="player" />
-      </div>
-    </div>
-  );
-});
-
 /**
  * Versão 1.4: a linha de talismãs desce degraus até caber, direto no DOM e antes de pintar
  * (data-fit, estilos em index.css): 0 rótulos inteiros · 1 rótulos curtos e botões menores ·
@@ -137,8 +86,9 @@ function fitRelicRow(row) {
 }
 
 /**
- * Sua hotbar de talismãs, o DESFAZER do Relógio, o atalho do DEV e (desde o 0.6.2) o som e
- * o menu da partida, que saíram de cima da mão do rival.
+ * Sua hotbar de talismãs, o DESFAZER do Relógio e o atalho do DEV. Versão 2.0: os talismãs
+ * ficam soltos no feltro, logo acima do leque; o menu desceu para o canto de baixo e o som
+ * mora nas opções do menu.
  */
 const RelicRow = memo(function RelicRow({
   relics,
@@ -153,9 +103,6 @@ const RelicRow = memo(function RelicRow({
   onGrampo,
   devUnlocked,
   onOpenDev,
-  muted,
-  onToggleMute,
-  onOpenMenu,
   press,
 }) {
   const ready = readyRelics(canUndo, canCanivete, canGrampo);
@@ -222,22 +169,6 @@ const RelicRow = memo(function RelicRow({
             DEV
           </button>
         )}
-        {onToggleMute && (
-          <button
-            type="button"
-            onClick={onToggleMute}
-            className="icon-btn icon-btn-sm hud-icon"
-            aria-label={muted ? 'Ligar som e música' : 'Desligar som e música'}
-            aria-pressed={muted}
-          >
-            <SpeakerGlyph muted={muted} size={16} />
-          </button>
-        )}
-        {onOpenMenu && (
-          <button type="button" onClick={onOpenMenu} className="icon-btn icon-btn-sm hud-icon" aria-label="Menu">
-            <MenuGlyph size={16} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -251,6 +182,64 @@ const READY = Object.freeze(
 const readyRelics = (undo, canivete, grampo) => READY[(undo ? 1 : 0) + (canivete ? 2 : 0) + (grampo ? 4 : 0)];
 
 /**
+ * Versão 2.0: a pedra entra na mão saindo do dorme. As que montam juntas (a mão nova da rodada)
+ * saem em cascata, uma a cada DEAL_STEP_MS; a que monta sozinha (a compra) sai na hora. O
+ * caminho é medido no DOM antes de pintar (do centro da pilha até a vaga no leque) e vira as
+ * variáveis da animação; sem dorme na tela, a pedra cai do alto como antes.
+ */
+const entryBatch = { at: 0, n: 0 };
+
+function useEnterFromDorme(x, angle) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReducedMotion()) return;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - entryBatch.at > 40) {
+      entryBatch.at = now;
+      entryBatch.n = 0;
+    } else entryBatch.n += 1;
+    const delay = Math.min(entryBatch.n, 9) * DEAL_STEP_MS;
+    el.style.animationDelay = `${delay}ms`;
+    const pile = document.querySelector('.boneyard-pile');
+    if (!pile) {
+      el.style.setProperty('--deal-x', `${-x}px`);
+      el.style.setProperty('--deal-r', `${-angle}deg`);
+      el.classList.add('animate-deal-fall');
+      return;
+    }
+    const a = el.getBoundingClientRect();
+    const b = pile.getBoundingClientRect();
+    const dx = b.left + b.width * 0.35 - (a.left + a.width / 2);
+    const dy = b.top + b.height * 0.45 - (a.top + a.height / 2);
+    // a vaga está girada no leque: o caminho é desfeito da rotação dela
+    const rad = (-angle * Math.PI) / 180;
+    el.style.setProperty('--from-x', `${Math.round(dx * Math.cos(rad) - dy * Math.sin(rad))}px`);
+    el.style.setProperty('--from-y', `${Math.round(dx * Math.sin(rad) + dy * Math.cos(rad))}px`);
+    el.style.setProperty('--from-r', `${-angle + 90}deg`);
+    el.classList.add('from-dorme');
+    // a classe sai quando a animação acaba (se a pedra mudar de lugar no leque, não repete)
+    const done = () => el.classList.remove('from-dorme');
+    el.addEventListener('animationend', done, { once: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na entrada da pedra
+  }, []);
+  return ref;
+}
+
+/** Mantém um elemento montado por `ms` depois de sumir, para ele sair animado. */
+function usePresence(show, ms = 220) {
+  const [state, setState] = useState(show ? 'in' : 'out');
+  if (show && state !== 'in') setState('in');
+  if (!show && state === 'in') setState('leaving');
+  useEffect(() => {
+    if (state !== 'leaving') return undefined;
+    const timer = setTimeout(() => setState('out'), ms);
+    return () => clearTimeout(timer);
+  }, [state, ms]);
+  return state;
+}
+
+/**
  * Uma pedra do leque. Só ela re-renderiza quando muda (selecionar outra pedra não
  * redesenha a mão inteira). A selecionada brilha e anima o material; as em repouso
  * ficam em gradiente estático.
@@ -258,6 +247,7 @@ const readyRelics = (undo, canivete, grampo) => READY[(undo ? 1 : 0) + (canivete
 const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, selected, active, playable, discardMode, known, onSelectTile, press, rivalName }) {
   const power = selected && tile.a === tile.b && !discardMode;
   const handleClick = useCallback(() => onSelectTile(tile), [onSelectTile, tile]);
+  const enterRef = useEnterFromDorme(x, angle);
   return (
     <div
       data-hand-tile={tile.id}
@@ -274,12 +264,10 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
       }}
     >
       <div className={`hand-float ${selected ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
-        {/* Versão 1.5: a mão chega em cascata (o estalo de cada uma toca no App). Versão 2.0: cada
-            pedra cai do centro da mesa, inclinada em 2.5D, uma a cada 60 ms, e assenta no leque */}
-        <div
-          className="animate-deal-fall"
-          style={{ animationDelay: `${Math.min(index, 7) * DEAL_STEP_MS}ms`, '--deal-x': `${-x}px`, '--deal-r': `${-angle}deg` }}
-        >
+        {/* Versão 2.0: a pedra sai do dorme, virada, voa até o leque e desvira ao assentar (na
+            mão nova, uma a cada 60 ms; na compra, só a comprada). Ver useEnterFromDorme. */}
+        <div ref={enterRef} className="hand-enter">
+          <span aria-hidden="true" className="deal-back" />
           {/* a key troca ao selecionar bucha: a tremidinha roda de novo a cada toque */}
           <div key={power ? 'power' : 'idle'} className={power ? 'animate-power-wiggle' : ''}>
             <DominoTile
@@ -350,82 +338,80 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
 const DISCARD_LABELS = { skip: 'PULAR', confirm: 'DESCARTAR' };
 
 /**
- * COMPRAR · JOGAR · PASSAR A VEZ e a escada de compras. No modo de escolha de pedra os
- * botões viram PULAR · DESCARTAR (Giz) ou CANCELAR · VIRAR BUCHA (Canivete).
+ * Versão 2.0: sem barra de botões. Joga-se tocando na pedra e depois na ponta da mesa; comprar
+ * é tocar no dorme. As fichas de COMPRAR e PASSAR só sobem (animadas) quando são o caminho:
+ * sem pedra que encaixe, a de comprar; sem compra possível, a de passar. O passe estratégico
+ * (dava para jogar e você prefere passar, pagando) fica num risco de giz discreto. No modo de
+ * escolha (Giz, Canivete, Grampo) sobem as duas fichas da escolha.
  */
-const ActionBar = memo(function ActionBar({
+const ActionChips = memo(function ActionChips({
   discardMode,
   pickLabels = DISCARD_LABELS,
   hasSelection,
   onSkipDiscard,
   onDiscard,
+  showDraw,
   canDraw,
   onDraw,
   draw,
   drawsThisTurn,
-  selectedSides,
-  onPlay,
-  isTurn,
+  showPass,
+  strategicPass,
   canPass,
   passRule,
   onPass,
-  urgeDraw = false,
 }) {
-  return (
-    <>
-      {discardMode ? (
-        <div className="action-wood grid grid-cols-[1fr_1.4fr] gap-2 px-3 pt-1.5">
-          <button type="button" className="btn-pixel" onClick={onSkipDiscard}>
-            {pickLabels.skip}
-          </button>
-          <button type="button" data-tone="brass" className="btn-pixel" disabled={!hasSelection} onClick={onDiscard}>
-            {pickLabels.confirm}
-          </button>
-        </div>
-      ) : (
-        <div className="action-wood grid grid-cols-[1fr_1.1fr_1fr] gap-2 px-3 pt-1.5">
-          <button type="button" data-tut="draw" className={`btn-pixel flex flex-col items-center justify-center gap-1 ${urgeDraw ? 'btn-urge' : ''}`} disabled={!canDraw} onClick={onDraw}>
-            <span>COMPRAR</span>
-            <span className="text-[8px] text-bone-200">
-              <DrawCost draw={draw} />
-            </span>
-            <span className="sr-only">{`Compra ${drawsThisTurn + 1} de 3 neste turno`}</span>
-          </button>
-
-          <div className="flex gap-2">
-            {selectedSides.length > 0 ? (
-              selectedSides.map((side) => (
-                <button key={side} type="button" data-tone="play" data-tut-side={side} className="btn-pixel btn-urge flex-1" onClick={() => onPlay(side)}>
-                  {selectedSides.length === 1 ? (side === 'root' ? 'ABRIR MESA' : 'JOGAR') : SIDE_BUTTON[side]}
-                </button>
-              ))
-            ) : (
-              <div className="btn-placeholder flex flex-1 items-center justify-center text-center font-pixel text-[8px] leading-relaxed text-bone-400">
-                {isTurn ? 'TOQUE NUMA PEDRA' : 'AGUARDE'}
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            data-tone="blood"
-            data-tut="pass"
-            className="btn-pixel flex flex-col items-center justify-center"
-            disabled={!canPass}
-            onClick={onPass}
-            aria-label={passButtonText(isTurn ? passRule : null)}
-          >
-            <PassLabel rule={isTurn ? passRule : null} />
-          </button>
-        </div>
-      )}
-
-      <div className="flex justify-center gap-1.5 pt-2" aria-hidden="true">
-        {[0, 1, 2].map((i) => (
-          <span key={i} className={`draw-step ${isTurn && i < drawsThisTurn ? 'draw-step-used' : ''}`} />
-        ))}
+  const drawState = usePresence(showDraw);
+  const passState = usePresence(showPass);
+  if (discardMode) {
+    return (
+      <div className="action-chips">
+        <button type="button" className="btn-pixel btn-chip chip-in" onClick={onSkipDiscard}>
+          {pickLabels.skip}
+        </button>
+        <button type="button" data-tone="brass" className="btn-pixel btn-chip chip-in" disabled={!hasSelection} onClick={onDiscard}>
+          {pickLabels.confirm}
+        </button>
       </div>
-    </>
+    );
+  }
+  return (
+    <div className="action-chips">
+      {drawState !== 'out' && (
+        <button
+          type="button"
+          data-tut="draw"
+          className={`btn-pixel btn-chip btn-urge chip-${drawState}`}
+          disabled={!canDraw || drawState === 'leaving'}
+          onClick={onDraw}
+        >
+          <span className="chip-title">COMPRAR</span>
+          <span className="chip-cost">
+            <DrawCost draw={draw} />
+          </span>
+          <span className="sr-only">{`Compra ${drawsThisTurn + 1} de 3 neste turno`}</span>
+        </button>
+      )}
+      {passState !== 'out' && (
+        <button
+          type="button"
+          data-tone="blood"
+          data-tut="pass"
+          className={`btn-pixel btn-chip chip-${passState} ${showDraw ? '' : 'btn-urge'}`}
+          disabled={!canPass || passState === 'leaving'}
+          onClick={onPass}
+          aria-label={passButtonText(passRule)}
+        >
+          <span className="chip-title">PASSAR</span>
+          <span className="chip-cost">{passRule?.fiado ? 'FIADO' : passRule?.cost > 0 ? `$${passRule.cost}` : 'A VEZ'}</span>
+        </button>
+      )}
+      {strategicPass && passState === 'out' && drawState === 'out' && (
+        <button type="button" data-tut="pass" className="pass-link font-term" disabled={!canPass} onClick={onPass} aria-label={passButtonText(passRule)}>
+          passar · {passRule?.fiado ? 'fiado' : passRule?.cost > 0 ? `$${passRule.cost}` : 'grátis'}
+        </button>
+      )}
+    </div>
   );
 });
 
@@ -445,8 +431,6 @@ function PlayerRack({
   playableIds,
   isTurn,
   onSelectTile,
-  selectedSides,
-  onPlay,
   draw,
   drawsThisTurn,
   canDraw,
@@ -457,7 +441,6 @@ function PlayerRack({
   hearts,
   maxHearts,
   coins,
-  endsSum = null,
   hint,
   discardMode = false,
   pickLabels = DISCARD_LABELS,
@@ -477,21 +460,38 @@ function PlayerRack({
   onGrampo,
   devUnlocked = false,
   onOpenDev,
-  muted = false,
-  onToggleMute,
   onOpenMenu,
   press,
   knownIds,
   rivalName = 'o rival',
+  onZoneHeight,
+  tutorialAction = null,
+  tutorialFocus = null,
 }) {
+  // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
+  // a altura dela para as pedras do jogo não entrarem embaixo do leque
+  const zoneRef = useRef(null);
+  useLayoutEffect(() => {
+    const el = zoneRef.current;
+    if (!el || !onZoneHeight) return undefined;
+    onZoneHeight(Math.round(el.getBoundingClientRect().height));
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => onZoneHeight(Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onZoneHeight]);
+  const noPlay = playableIds.size === 0;
+  const myTurn = isTurn && !discardMode;
+  // no treino, a ficha que a aula aponta aparece mesmo apagada (o anel da aula precisa dela)
+  const showDraw = myTurn && ((canDraw && (noPlay || tutorialAction === 'draw')) || tutorialFocus === 'draw');
+  const showPass = myTurn && ((canPass && (noPlay || tutorialAction === 'pass')) || (tutorialFocus === 'pass' && noPlay));
+  const strategicPass = myTurn && ((canPass && !noPlay && tutorialAction !== 'pass') || (tutorialFocus === 'pass' && !noPlay));
   return (
     <section
-      className={`player-hand relative z-20 shrink-0 ${isTurn ? 'player-hand-active' : ''} ${frame ? `player-frame player-frame-${frame}` : ''}`}
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 10px)' }}
+      ref={zoneRef}
+      className={`player-zone absolute inset-x-0 bottom-0 z-20 ${isTurn ? 'is-turn' : ''} ${frame ? `player-frame player-frame-${frame}` : ''}`}
       aria-label="Sua mão"
     >
-      <PlayerHud onSecretTap={onSecretTap} hearts={hearts} maxHearts={maxHearts} sum={endsSum} coins={coins} />
-
       <RelicRow
         relics={relics}
         relicSlots={relicSlots}
@@ -505,9 +505,6 @@ function PlayerRack({
         onGrampo={onGrampo}
         devUnlocked={devUnlocked}
         onOpenDev={onOpenDev}
-        muted={muted}
-        onToggleMute={onToggleMute}
-        onOpenMenu={onOpenMenu}
         press={press}
       />
 
@@ -523,28 +520,49 @@ function PlayerRack({
         rivalName={rivalName}
       />
 
-      <p className="min-h-[20px] px-3 pt-1.5 text-center font-term text-[17px] leading-tight text-bone-200" aria-live="polite">
+      <p className="player-hint font-term" aria-live="polite">
         {hint}
       </p>
 
-      <ActionBar
-        discardMode={discardMode}
-        pickLabels={pickLabels}
-        hasSelection={Boolean(selectedId)}
-        onSkipDiscard={onSkipDiscard}
-        onDiscard={onDiscard}
-        canDraw={canDraw}
-        onDraw={onDraw}
-        draw={draw}
-        drawsThisTurn={drawsThisTurn}
-        selectedSides={selectedSides}
-        onPlay={onPlay}
-        isTurn={isTurn}
-        canPass={canPass}
-        passRule={passRule}
-        onPass={onPass}
-        urgeDraw={isTurn && canDraw && !discardMode && playableIds.size === 0}
-      />
+      {/* o pé da mesa: corações e dinheiro à esquerda, as fichas que sobem no meio, o menu à direita */}
+      <div className="player-bar">
+        {/* Versão 2.0: a vida grande, solta no feltro (sem tábua atrás); com 1 ou 2 corações ela pulsa */}
+        <button
+          type="button"
+          className={`player-life ${hearts <= 2 ? 'is-low' : ''}`}
+          onClick={onSecretTap}
+          aria-label={`Você: ${hearts} de ${maxHearts} corações`}
+        >
+          <span data-tut="hearts" className="life-hearts">
+            <HeartsBar current={hearts} max={maxHearts} pixel={maxHearts <= 6 ? 3 : 2} label={`Você: ${hearts} de ${maxHearts} corações`} />
+          </span>
+        </button>
+        <CoinCount value={coins} target="player" className="player-coins" />
+        <div className="player-bar-mid">
+          <ActionChips
+            discardMode={discardMode}
+            pickLabels={pickLabels}
+            hasSelection={Boolean(selectedId)}
+            onSkipDiscard={onSkipDiscard}
+            onDiscard={onDiscard}
+            showDraw={showDraw}
+            canDraw={canDraw}
+            onDraw={onDraw}
+            draw={draw}
+            drawsThisTurn={drawsThisTurn}
+            showPass={showPass}
+            strategicPass={strategicPass}
+            canPass={canPass}
+            passRule={passRule}
+            onPass={onPass}
+          />
+        </div>
+        {onOpenMenu && (
+          <button type="button" onClick={onOpenMenu} className="icon-btn hud-icon player-menu" aria-label="Menu">
+            <MenuGlyph size={18} />
+          </button>
+        )}
+      </div>
     </section>
   );
 }

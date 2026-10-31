@@ -137,10 +137,10 @@ export function buildPlayerHint({
     if (sides.length === 2) {
       const ends = getOpenEnds(state.board);
       return ends.left === ends.right
-        ? 'Encaixa dos dois lados. Escolha a ponta.'
-        : 'Encaixa nas duas pontas! Escolha o lado.';
+        ? 'Encaixa dos dois lados. Toque na ponta da mesa.'
+        : 'Encaixa nas duas pontas! Toque no lado da mesa.';
     }
-    return 'Toque no JOGAR ou na vaga pontilhada da mesa.';
+    return 'Agora toque na vaga pontilhada da mesa.';
   }
   if (playableCount > 0 && passRule?.reason === 'mustPlay') return 'Toque de recolher: tem pedra que encaixa, é jogar.';
   if (playableCount > 0) return `Sua vez. ${playableCount} pedra${playableCount > 1 ? 's' : ''} encaixa${playableCount > 1 ? 'm' : ''}.`;
