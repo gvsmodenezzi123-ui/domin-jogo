@@ -5,9 +5,9 @@ import { PvpToast } from '../pvp/PvpScreens.jsx';
 import { copyText, roomLink } from '../pvp/share.js';
 import { createPeerTransport } from '../pvp/transport.js';
 import { useSecondsLeft } from '../pvp/useNow.js';
-import TableLobby, { TableRules, tableNote } from './TableLobby.jsx';
+import TableLobby, { TableRules } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
-import { TABLE_FACES } from './seats.js';
+import { TABLE_FACES, tableNote } from './seats.js';
 import { formatTableId, tablePeerId } from './tableProtocol.js';
 import { createTableSession } from './tableSession.js';
 
@@ -114,23 +114,19 @@ function TableMenu({ playing, host, muted, onToggleMute, onResume, onQuit }) {
  */
 export default function TableOnline({ role, code, me, config = null, onExit, muted, onToggleMute }) {
   const [face, setFace] = useState(loadFace);
-  const [session, setSession] = useState(null);
+  // a sessão vale para esta roda (o PvpApp troca a key a cada roda nova)
+  const [session] = useState(() =>
+    createTableSession({ role, code, me: { id: me.id, name: me.name, face: loadFace() }, transport: createPeerTransport({ role, code, hostPeerId: tablePeerId(code) }), config }),
+  );
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const transport = createPeerTransport({ role, code, hostPeerId: tablePeerId(code) });
-    const s = createTableSession({ role, code, me: { id: me.id, name: me.name, face: loadFace() }, transport, config });
-    setSession(s);
-    s.start();
-    return () => s.destroy();
-    // a sessão vale para esta roda (o código e o papel); trocar de nome não religa
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, code]);
+    session.start();
+    return () => session.destroy();
+  }, [session]);
 
-  const empty = { subscribe: () => () => {}, getSnapshot: () => null };
-  const store = session ?? empty;
-  const snap = useSyncExternalStore(store.subscribe, store.getSnapshot, () => null);
+  const snap = useSyncExternalStore(session.subscribe, session.getSnapshot, () => null);
 
   const tap = () => {
     sound.init();

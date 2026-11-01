@@ -43,3 +43,6 @@ export function plateName(name) {
   const up = String(name ?? '').toUpperCase();
   return up.length > 9 ? `${up.slice(0, 8)}.` : up;
 }
+
+/** "Mão de 6 pedras · dorme de 4. A vez gira no sentido anti-horário." */
+export const tableNote = (seats) => `Mão de ${seats === 4 ? 6 : 7} pedras · dorme de ${seats === 4 ? 4 : seats === 3 ? 7 : 14}. A vez gira no sentido anti-horário.`;

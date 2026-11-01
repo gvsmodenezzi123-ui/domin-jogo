@@ -132,8 +132,10 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
     let tileId = null;
     for (const ev of view.events) {
       if (ev.type === 'roundStart') {
-        clearFloats();
-        setCallout(null);
+        later(() => {
+          clearFloats();
+          setCallout(null);
+        }, 0);
         sound.playDealTick?.();
       }
       if (ev.type === 'play') {
@@ -257,7 +259,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const totalMs = clock?.totalMs ?? 30000;
   const turnKey = `${view.round}:${actor}:${clock?.deadline ?? 0}`;
   // o anel conta o tempo que faltava quando a vez começou (fixo durante a vez, para não pular)
-  const turnMs = useStableValue(clock?.deadline ? Math.max(0, clock.deadline - Date.now()) : totalMs, turnKey);
+  const turnMs = useStableValue(clock?.deadline ? Math.max(0, clock.deadline - now) : totalMs, turnKey);
   const clockMine = actor === me && !(tableAnim && tableAnim.by !== me);
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);

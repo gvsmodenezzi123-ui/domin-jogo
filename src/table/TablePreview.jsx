@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { sound } from '../engine/audioSynth.js';
-import TableLobby, { TableRules, tableNote } from './TableLobby.jsx';
+import TableLobby, { TableRules } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
-import { TABLE_FACES } from './seats.js';
+import { TABLE_FACES, tableNote } from './seats.js';
 import { useLocalTable } from './useLocalTable.js';
 
 /** Quem senta nas cadeiras de bot da mesa local. */
