@@ -27,6 +27,8 @@ import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/til
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import IntroScene from './intro/IntroScene.jsx';
+import DangerFx from './components/DangerFx.jsx';
+import { dangerOf } from './engine/danger.js';
 import PvpApp from './pvp/PvpApp.jsx';
 import { parseRoomInput } from './pvp/protocol.js';
 import { parseTableInput } from './table/tableProtocol.js';
@@ -1515,6 +1517,9 @@ export default function App() {
   const ends = getOpenEnds(state.board);
   const roundFinished = ['roundOver', 'matchWon', 'gameOver', 'runWon'].includes(state.phase);
   const rivalThinking = playing && state.turn === 'tioZe' && !pending && !tableAnim;
+  // versão 2.5: encurralado (ele por uma pedra, você no último coração): coração de fundo e borda vermelha
+  const danger = dangerOf({ myHearts: state.hearts.player, rivals: [{ id: 'tioZe', name: rival.name, count: state.hands.tioZe.length }] });
+  const dangerOn = playing && !state.tutorial && !menuOpen && !devOpen && !showBossIntro;
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
@@ -1544,6 +1549,7 @@ export default function App() {
         roundKey={`${state.run.match}:${state.round}`}
         press={press}
         numberCounts={numberCounts}
+        danger={dangerOn && danger.reason === 'last' ? danger.level : 0}
       />
       {state.tutorial && <div className="tut-spacer shrink-0" aria-hidden="true" />}
 
@@ -1627,6 +1633,7 @@ export default function App() {
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
 
+      <DangerFx danger={danger} myHearts={state.hearts.player} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
 
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}

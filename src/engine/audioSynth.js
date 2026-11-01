@@ -48,6 +48,15 @@ const DUCK_RELEASE = 0.35;
 const PRIORITY = { music: 0, voice: 1, sfx: 2 };
 
 /**
+ * Versão 2.5: o coração de fundo quando você está encurralado (nível 1 a 3). Batimentos por
+ * minuto (o CSS da silhueta vermelha usa o mesmo ritmo), força de cada batida e quanto a
+ * trilha abaixa por baixo dele.
+ */
+export const HEARTBEAT_BPM = Object.freeze([0, 66, 92, 124]);
+const HEART_PEAK = [0, 0.3, 0.42, 0.56];
+const HEART_DUCK = [1, 0.85, 0.62, 0.42];
+
+/**
  * Patch 0.9.0: dentro da música, quem cede a vaga primeiro quando a polifonia estoura (menor
  * = mais descartável): chimbal antes do sino, do arpejo e do bumbo; a harmonia e o baixo por
  * último. Tudo abaixo de PRIORITY.voice: efeito e fala sempre passam na frente da trilha.
@@ -567,6 +576,10 @@ export class SoundEngine {
     this.currentTrack = null;
     this.isPlayingMusic = false;
     this.tension = false;
+    // versão 2.5: o coração de fundo (nível 0 a 3) e quanto a trilha abaixa por causa dele
+    this.heartLevel = 0;
+    this.heartTimer = null;
+    this.dangerDuck = 1;
     this.noiseBuffer = null;
     this.stopSpeech = null;
     // grafo
@@ -624,7 +637,37 @@ export class SoundEngine {
   musicLevel() {
     if (this.isMuted) return 0;
     if (this.ctx && this.ctx.currentTime < this.musicHoldUntil) return 0;
-    return this.musicVolume * (TRACKS[this.seq?.name]?.level ?? 1);
+    return this.musicVolume * (TRACKS[this.seq?.name]?.level ?? 1) * this.dangerDuck;
+  }
+
+  /**
+   * Versão 2.5: encurralado. Liga (ou acelera, ou desliga com 0) o coração batendo de fundo:
+   * "tum-tum" grave a cada batida, mais rápido e mais forte a cada nível, e a trilha abaixa
+   * um pouco por baixo. Fica abaixo dos efeitos na polifonia (as pedras e os golpes passam
+   * na frente) e acima das notas da música.
+   */
+  setHeartbeat(level = 0) {
+    const next = Math.max(0, Math.min(3, Math.floor(Number(level) || 0)));
+    if (next === this.heartLevel) return;
+    this.heartLevel = next;
+    if (this.heartTimer) clearInterval(this.heartTimer);
+    this.heartTimer = null;
+    this.dangerDuck = HEART_DUCK[next];
+    if (this.musicBus && this.ctx) this.rampMusic(this.musicLevel(), 0.6);
+    if (!next || typeof window === 'undefined') return;
+    const beat = () => this.heartThump(this.heartLevel);
+    beat();
+    this.heartTimer = setInterval(beat, Math.round(60000 / HEARTBEAT_BPM[next]));
+  }
+
+  /** Uma batida do coração de fundo: o "tum" e o "tum" mais fraco logo depois, com peso embaixo. */
+  heartThump(level) {
+    if (!level || this.isMuted || !this.ready()) return;
+    const peak = HEART_PEAK[level];
+    const gap = level >= 3 ? 0.15 : 0.18;
+    this.tone({ type: 'triangle', freq: 76, freqEnd: 40, peak, dur: 0.15, attack: 0.006, priority: PRIORITY.voice });
+    this.tone({ type: 'sine', freq: 52, freqEnd: 34, peak: peak * 0.7, dur: 0.12, attack: 0.008, delay: 0.005, priority: PRIORITY.voice });
+    this.tone({ type: 'triangle', freq: 66, freqEnd: 36, peak: peak * 0.72, dur: 0.14, attack: 0.006, delay: gap, priority: PRIORITY.voice });
   }
 
   /** Volume das OPÇÕES (0–1). */

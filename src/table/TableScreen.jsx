@@ -11,6 +11,8 @@ import { getOpenEnds, getValidSides } from '../engine/dominoLogic.js';
 import { haptic } from '../engine/progress.js';
 import { shake } from '../pvp/duelFx.js';
 import { useNow, useSecondsLeft } from '../pvp/useNow.js';
+import DangerFx from '../components/DangerFx.jsx';
+import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
 import TableResult from './TableResult.jsx';
 import { bubbleText, colorOf, seatsFrom } from './seats.js';
@@ -250,6 +252,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       color: colorOf(view, s.id),
       isTurn: playing && view.turn === s.id && !(flying && flying.by === s.id),
       smug: batedor === s.id,
+      danger: playing && s.alive && (view.handCounts[s.id] ?? 0) === 1,
       ping: link && !link.lost ? link.ping : null,
       lostLeft: link?.lost && link.graceEndsAt ? Math.max(0, Math.ceil((link.graceEndsAt - now) / 1000)) : null,
     };
@@ -273,6 +276,9 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const ends = getOpenEnds(view.board);
   const hint = hintFor({ view, me, opts, selected: selectedTile, names });
   const showResult = !playing && !flying;
+  // versão 2.5: encurralado (alguém por uma pedra, você no último coração)
+  const danger = dangerOf({ myHearts: mine.hearts, rivals: ordered.slice(1).filter((s) => s.alive).map((s) => ({ id: s.id, name: s.name, count: view.handCounts[s.id] ?? 0 })) });
+  const dangerOn = playing && mine.alive;
 
   return (
     <div
@@ -370,6 +376,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       </div>
 
       {myHurt > 0 && <div key={myHurt} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+      <DangerFx danger={danger} myHearts={mine.hearts} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
       {showResult && <TableResult view={view} me={me} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>

@@ -42,7 +42,7 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
   const compactHearts = variant === 'third' && maxHearts > 5;
   return (
     <div
-      className={`seat seat-${variant} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''}`}
+      className={`seat seat-${variant} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''} ${seat.danger && !out ? 'is-danger' : ''}`}
       style={{ '--seat': seat.color }}
       data-seat={seat.id}
       aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}

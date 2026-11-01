@@ -7,6 +7,7 @@ import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
 import { shortRivalName } from '../engine/rivalInfo.js';
+import { HEARTBEAT_BPM } from '../engine/audioSynth.js';
 
 /**
  * O outro lado da mesa, com o layout TRAVADO (nada aqui muda de tamanho
@@ -41,6 +42,7 @@ function RivalBench({
   press,
   avatar = null,
   numberCounts = null,
+  danger = 0,
 }) {
   const revealedIds = new Set(revealed.map((t) => t.id));
   // Versão 2.1: a fala nova espera a atual terminar (antes ela cortava a frase no meio toda
@@ -124,6 +126,8 @@ function RivalBench({
         {/* Versão 2.0: as pedras do rival em pé numa régua de madeira, em cima da prateleira */}
         <div className="rival-rack absolute right-1.5" style={{ width: rackWidth }}>
           <span aria-hidden="true" className="rival-rack-back" />
+          {/* versão 2.5: a última pedra dele brilha em vermelho no ritmo do coração */}
+          {danger > 0 && <span key={danger} aria-hidden="true" className="rival-rack-danger" style={{ '--beat': `${Math.round(60000 / HEARTBEAT_BPM[danger])}ms` }} />}
           <RivalHand
             tiles={hand}
             revealedIds={revealedIds}

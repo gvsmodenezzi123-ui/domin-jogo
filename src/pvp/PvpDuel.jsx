@@ -21,6 +21,8 @@ import { canUseCanivete, canUseGrampo, drawAvailabilityFor, endMarksFor, passAva
 import { actorOf } from './duelHost.js';
 import { deriveRelicFlashes, hurtKeyOf, procOrigin, runEventFx, shake, tileName } from './duelFx.js';
 import NetBadge from './NetBadge.jsx';
+import DangerFx from '../components/DangerFx.jsx';
+import { dangerOf } from '../engine/danger.js';
 import PvpRoundResult from './PvpRoundResult.jsx';
 import { useSecondsLeft } from './useNow.js';
 
@@ -306,6 +308,9 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
   const roundFinished = !playing;
+  // versão 2.5: encurralado (o outro por uma pedra, você no último coração)
+  const danger = dangerOf({ myHearts: view.hearts.player, rivals: [{ id: 'tioZe', name: opp.name, count: view.hands.tioZe.length }] });
+  const dangerOn = playing && !duel.result;
 
   return (
     <div
@@ -332,6 +337,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         handRef={rivalHandRef}
         roundKey={roundKey}
         press={press}
+        danger={dangerOn && danger.reason === 'last' ? danger.level : 0}
       />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
@@ -418,6 +424,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
 
       <NetBadge link={link} ping={ping} place="duel" />
       {myHurtKey > 0 && <div key={myHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+      <DangerFx danger={danger} myHearts={view.hearts.player} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
       {minePending?.type === 'drawChoice' && !locked && (
         <DrawChoice

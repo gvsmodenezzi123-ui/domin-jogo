@@ -16395,3 +16395,281 @@
 .table-lobby .scene-fit {
   justify-content: center;
 }
+
+/* ======================================================================================
+   Versão 2.5: encurralado (o rival por uma pedra, você no último coração)
+   ====================================================================================== */
+.danger-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  overflow: hidden;
+}
+/* a silhueta vermelha: escurece e avermelha as bordas, o miolo da mesa fica limpo */
+.danger-vignette,
+.danger-edge {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
+}
+.danger-vignette {
+  background: radial-gradient(ellipse 78% 68% at 50% 50%, transparent 46%, rgba(110, 0, 4, 0.5) 74%, rgba(40, 0, 2, 0.95) 100%);
+  opacity: 0.2;
+  animation: dangerBeat1 var(--beat) linear infinite;
+}
+/* o filete vivo de sangue na moldura, que dá o "tum" junto com o som */
+.danger-edge {
+  box-shadow:
+    inset 0 0 26px 6px rgba(225, 20, 20, 0.75),
+    inset 0 0 3px 2px rgba(255, 60, 40, 0.8);
+  opacity: 0;
+  animation: dangerEdge1 var(--beat) linear infinite;
+}
+@keyframes dangerBeat1 {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  9% {
+    opacity: 0.34;
+  }
+  20% {
+    opacity: 0.24;
+  }
+  30% {
+    opacity: 0.3;
+  }
+  55% {
+    opacity: 0.2;
+  }
+}
+@keyframes dangerEdge1 {
+  0%,
+  55%,
+  100% {
+    opacity: 0;
+  }
+  9% {
+    opacity: 0.35;
+  }
+  30% {
+    opacity: 0.22;
+  }
+}
+.danger-l2 .danger-vignette {
+  animation-name: dangerBeat2;
+}
+.danger-l2 .danger-edge {
+  animation-name: dangerEdge2;
+}
+@keyframes dangerBeat2 {
+  0%,
+  100% {
+    opacity: 0.36;
+  }
+  9% {
+    opacity: 0.62;
+  }
+  20% {
+    opacity: 0.42;
+  }
+  30% {
+    opacity: 0.54;
+  }
+  55% {
+    opacity: 0.36;
+  }
+}
+@keyframes dangerEdge2 {
+  0%,
+  55%,
+  100% {
+    opacity: 0.08;
+  }
+  9% {
+    opacity: 0.7;
+  }
+  30% {
+    opacity: 0.45;
+  }
+}
+.danger-l3 .danger-vignette {
+  animation-name: dangerBeat3;
+}
+.danger-l3 .danger-edge {
+  animation-name: dangerEdge3;
+}
+@keyframes dangerBeat3 {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  10% {
+    opacity: 0.88;
+  }
+  22% {
+    opacity: 0.62;
+  }
+  32% {
+    opacity: 0.8;
+  }
+  58% {
+    opacity: 0.55;
+  }
+}
+@keyframes dangerEdge3 {
+  0%,
+  58%,
+  100% {
+    opacity: 0.2;
+  }
+  10% {
+    opacity: 1;
+  }
+  32% {
+    opacity: 0.7;
+  }
+}
+.reduce-motion .danger-vignette,
+.reduce-motion .danger-edge {
+  animation: none;
+}
+.reduce-motion .danger-l1 .danger-vignette {
+  opacity: 0.24;
+}
+.reduce-motion .danger-l2 .danger-vignette {
+  opacity: 0.45;
+}
+.reduce-motion .danger-l3 .danger-vignette {
+  opacity: 0.65;
+}
+.reduce-motion .danger-l2 .danger-edge,
+.reduce-motion .danger-l3 .danger-edge {
+  opacity: 0.4;
+}
+
+/* o aviso que entra quando o perigo sobe */
+.danger-banner {
+  position: absolute;
+  z-index: 46;
+  left: 50%;
+  top: 31%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 7px 12px 6px;
+  text-align: center;
+  background: rgba(20, 2, 2, 0.82);
+  box-shadow:
+    0 0 0 2px #7a0d0d,
+    0 0 18px rgba(200, 20, 20, 0.55),
+    0 4px 0 #000;
+  translate: -50% -50%;
+  pointer-events: none;
+  animation: dangerBanner 2300ms ease-out forwards;
+}
+.danger-banner b {
+  font-size: 13px;
+  font-weight: 400;
+  color: #ff5a4a;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 2px 0 #2a0000,
+    2px 2px 0 #2a0000;
+}
+.danger-banner-l3 b {
+  font-size: 15px;
+  color: #ff3b2e;
+}
+.danger-banner span {
+  font-size: 17px;
+  line-height: 1;
+  color: #f4dcd2;
+}
+@keyframes dangerBanner {
+  0% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  16% {
+    transform: scale(1.03);
+  }
+  22% {
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.98) translateY(-6px);
+  }
+}
+.reduce-motion .danger-banner {
+  animation: dangerBannerFade 2300ms linear forwards;
+}
+@keyframes dangerBannerFade {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* a pedra que falta para ele bater: brilha em vermelho na régua (solo e duelo) e na cadeira (roda) */
+.rival-rack-danger {
+  position: absolute;
+  inset: -4px -6px;
+  z-index: 0;
+  border-radius: 6px;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255, 40, 30, 0.55), transparent 70%);
+  opacity: 0.4;
+  animation: dangerTile var(--beat, 650ms) ease-out infinite;
+  pointer-events: none;
+}
+.seat-half.is-danger .seat-fan,
+.seat-third.is-danger .seat-fan {
+  position: relative;
+}
+.seat.is-danger .seat-fan::before {
+  content: '';
+  position: absolute;
+  inset: -4px -6px;
+  border-radius: 5px;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255, 40, 30, 0.6), transparent 70%);
+  animation: dangerTile 650ms ease-out infinite;
+  pointer-events: none;
+}
+.seat.is-danger .seat-fan-tile {
+  box-shadow:
+    inset 0 0 0 1px rgba(160, 20, 10, 0.9),
+    0 0 4px rgba(255, 60, 40, 0.9);
+}
+@keyframes dangerTile {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  12% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.5;
+  }
+}
+.reduce-motion .rival-rack-danger,
+.reduce-motion .seat.is-danger .seat-fan::before {
+  animation: none;
+  opacity: 0.7;
+}

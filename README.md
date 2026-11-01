@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.5: encurralado
+
+- Quando um rival está por uma pedra (ou você no último coração), a mesa avisa: o coração bate
+  de fundo (`sound.setHeartbeat`, tum-tum grave que fica abaixo dos efeitos e acima da música,
+  com a trilha abaixando um pouco) e a borda da tela pulsa em vermelho no mesmo ritmo.
+- Três níveis (`engine/danger.js`): PRESSÃO (rival com 2 pedras, ou você no último coração,
+  66 bpm), ÚLTIMA PEDRA (rival com 1 pedra, 92 bpm) e ENCURRALADO (rival com 1 pedra e você com
+  até 2 corações, ou seja, uma batida pode te derrubar, 124 bpm).
+- Ao subir para ÚLTIMA PEDRA ou ENCURRALADO entra um aviso com o nome de quem pode bater e o
+  celular vibra uma vez; a pedra que falta para ele brilha em vermelho na régua (ou na cadeira,
+  na roda).
+- Vale no solo, no duelo 1×1 e na roda de 2 a 4. Para com o menu aberto, no fim da rodada e na
+  aula do Vô Juca. Só opacidade anima; com animação reduzida, a silhueta fica parada.
+
 ### 2.4: a roda online de 2 a 4
 
 - No MESA ONLINE, além do DUELO 1×1, a RODA DE 2 A 4: quem abre recebe um código
