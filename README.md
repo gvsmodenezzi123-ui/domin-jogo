@@ -172,6 +172,23 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.3: a abertura no modelo novo
+
+- A mesma história e o mesmo tempo (os sons continuam batendo), mas desenhada com os pintores
+  do jogo (`src/intro/sprites.jsx`):
+  - na rua, o Seu Tião novo atrás do caixote vermelho, a moeda pintada e o Corvo de capuz na
+    janela;
+  - na cortina, a mão com volume, pintada em 2×;
+  - no bar, o Valtinho, o retrato do Comendador e as polaroides novas, e o Tio Zé em 64×64
+    (pisca, fala e ergue a bucha) com as pedras dele em pé;
+  - a mesa com o feltro pintado, as pedras com espessura, o dorme da partida e o balão de
+    papel da mesa;
+  - no close da bucha, as pedras de osso com pontos cavados e o pino de latão, a mão
+    repintada e o dorme estremecendo. Sem copo, cinzeiro e tampinhas.
+- Os personagens são desenhados na resolução da tela (`cam.blitScaled` em `stage.js`), então
+  o retrato de 64 não perde detalhe na grade da cena.
+- Os SVGs antigos dos rivais saíram de vez do pacote (a abertura era a última a usar).
+
 ### 2.2: a Loja do Valtinho, o Mercado Negro e o Seu Tião repintados
 
 - **Tudo pintado por código** (`art/shopPixels.js`, fundos no tamanho da tela pelo

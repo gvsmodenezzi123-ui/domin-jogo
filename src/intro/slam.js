@@ -1,8 +1,14 @@
 // Cena 4: o close da bucha. A mão do Tio Zé desce com o [6|6] e bate no feltro: quadro de
-// impacto, tremor, as outras pedras pulam, as tampinhas saltam, a cerveja respinga, a poeira
-// sobe e a lâmpada balança. A luz falha duas vezes e apaga.
-import { clamp, easeIn, ellipse, hash, makeCanvas, mix, pix, poly, rect, rimLight, silhouette, span } from './core.js';
+// impacto, tremor, as outras pedras pulam, o dorme estremece, a poeira sobe e a lâmpada
+// balança. A luz falha duas vezes e apaga.
+//
+// Versão 2.3: no modelo novo do jogo: o feltro pintado com a luz da lâmpada, as pedras de osso
+// com espessura, chanfro, pontos cavados e o pino de latão (pintadas em 2× e desenhadas na
+// resolução da tela), o dorme da partida e a mão com volume. Sem copo, cinzeiro e tampinhas.
+import { clamp, easeIn, ellipse, hash, makeCanvas, mix, pix, rect, rimLight, silhouette, span } from './core.js';
 import { fill, glow, glowEllipse, makeCamera, vignette, withRoll } from './stage.js';
+import { paintKit } from '../components/art/botecoScene.js';
+import { spriteKit } from '../components/art/relicPixels.js';
 
 export const SLAM_LEN = 1.0;
 /** O instante da batida, dentro da cena. */
@@ -47,46 +53,67 @@ const PIPS = {
   ],
 };
 
-/** Pedra grande, de cima: marfim com chanfro, divisória e pintas fundas. */
+/** As pedras e a mão são pintadas em 2× (o detalhe aparece na tela). */
+const RES = 2;
+
+/** Buffer dos pintores → <canvas>. */
+function canvasOf(b) {
+  const c = makeCanvas(b.w, b.h);
+  c.getContext('2d').putImageData(new ImageData(b.data, b.w, b.h), 0, 0);
+  return c;
+}
+
+/**
+ * Pedra grande, de cima (em 2×): osso com o degradê da luz, o chanfro claro em cima e à
+ * esquerda, a espessura embaixo (a lateral), o veio do osso, a divisória cavada com o pino de
+ * latão e os pontos fundos (sombra em cima, a borda clara embaixo).
+ */
 function tileArt(a, b, vertical) {
-  const w = vertical ? HALF : HALF * 2;
-  const h = vertical ? HALF * 2 : HALF;
-  const c = makeCanvas(w + 2, h + 3);
-  const g = pix(c);
-  // espessura (a lateral da pedra aparece embaixo)
-  rect(g, 1, 3, w, h, '#8a7a5a');
-  rect(g, 0, 0, w, h, '#efe6cf');
-  for (let y = 0; y < h; y += 1) rect(g, 0, y, w, 1, mix('#fbf5e6', '#ded2b2', y / h));
-  rect(g, 0, 0, w, 1, '#ffffff');
-  rect(g, 0, 0, 1, h, '#fffaf0');
-  rect(g, w - 1, 0, 1, h, '#c4b590');
-  rect(g, 0, h - 1, w, 1, '#b8a882');
-  rect(g, 0, h, w, 3, '#6a5a3e');
-  rect(g, 0, h, w, 1, '#a08e6a');
-  // divisória com o rebite no meio
-  if (vertical) rect(g, 3, HALF - 1, w - 6, 2, '#8a7a5a');
-  else rect(g, HALF - 1, 3, 2, h - 6, '#8a7a5a');
-  rect(g, vertical ? w / 2 - 1 : HALF - 1, vertical ? HALF - 1 : h / 2 - 1, 2, 2, '#c8a23a');
+  const w = (vertical ? HALF : HALF * 2) * RES;
+  const h = (vertical ? HALF * 2 : HALF) * RES;
+  const depth = 3 * RES;
+  const buf = paintKit.buffer(w + 2, h + depth + 2);
+  const k = spriteKit.kit(buf);
+  const bone = spriteKit.mat('#e8dcbc');
+  const side = spriteKit.mat('#a8906a');
+  // a lateral (espessura) e o tampo
+  k.box(1, depth, w, h, side, { r: 6, light: -0.35 });
+  k.box(1, 1, w, h, bone, { r: 6, light: 0.25 });
+  // o degradê da luz e o veio do osso
+  k.each(2, 2, w - 1, h - 1, (x, y) => {
+    if (!k.solid(x, y)) return null;
+    const vein = Math.sin(x * 0.11 + Math.sin(y * 0.05) * 3 + y * 0.02);
+    if (vein > 0.94) return spriteKit.shade(bone, -0.15, x, y);
+    return null;
+  });
+  // a divisória cavada e o pino
+  const half = HALF * RES;
+  if (vertical) {
+    k.line(8, half, w - 7, half, bone.deep);
+    k.line(8, half + 1, w - 7, half + 1, bone.sp, 0.8);
+  } else {
+    k.line(half, 8, half, h - 7, bone.deep);
+    k.line(half + 1, 8, half + 1, h - 7, bone.sp, 0.8);
+  }
+  k.ell(vertical ? w / 2 + 1 : half + 1, vertical ? half + 1 : h / 2 + 1, 3, 3, spriteKit.mat('#c9962e'));
+  // os pontos cavados
+  const pipAt = (cx, cy) => {
+    k.ell(cx, cy, 4.2, 4.2, spriteKit.mat('#2a1d14'), { flat: true, light: -0.6, spec: false });
+    k.ell(cx - 0.5, cy - 0.8, 3, 2.6, spriteKit.mat('#140c06'), { flat: true, light: -0.3, spec: false });
+    k.line(cx - 2, cy + 3.5, cx + 2, cy + 3.5, bone.sp, 0.9);
+  };
   const face = (ox, oy, n) => {
-    for (const [px, py] of PIPS[n]) {
-      const cx = ox + 6 + px * 7;
-      const cy = oy + 6 + py * 7;
-      rect(g, cx, cy, 4, 4, '#2a1d14');
-      rect(g, cx + 1, cy - 1, 2, 1, '#2a1d14');
-      rect(g, cx + 1, cy + 4, 2, 1, '#5a4a36');
-      rect(g, cx - 1, cy + 1, 1, 2, '#2a1d14');
-      rect(g, cx + 4, cy + 1, 1, 2, '#5a4a36');
-      rect(g, cx + 2, cy + 2, 1, 1, '#4a3a2a');
-    }
+    for (const [px, py] of PIPS[n]) pipAt(ox + (6 + px * 7 + 2) * RES, oy + (6 + py * 7 + 2) * RES);
   };
   if (vertical) {
-    face(0, 0, a);
-    face(0, HALF, b);
+    face(1, 1, a);
+    face(1, half + 1, b);
   } else {
-    face(0, 0, a);
-    face(HALF, 0, b);
+    face(1, 1, a);
+    face(half + 1, 1, b);
   }
-  return c;
+  spriteKit.outline(buf, paintKit.hex('#140c06'), 0.85);
+  return canvasOf(buf);
 }
 
 function feltArt() {
@@ -95,172 +122,120 @@ function feltArt() {
   g.translate(-WORLD.ox, -WORLD.oy);
   // o escuro do outro lado da mesa (o paletó do Tio Zé)
   rect(g, -40, -40, 260, 60, '#0d0a08');
-  // a borda de madeira do lado de lá
-  rect(g, -40, 14, 260, 10, '#5a341a');
-  rect(g, -40, 14, 260, 2, '#7a4a26');
-  rect(g, -40, 23, 260, 2, '#2a170a');
-  // feltro
+  // a borda de mogno do lado de lá, com o friso aceso
+  rect(g, -40, 14, 260, 10, '#4a2410');
+  rect(g, -40, 14, 260, 1, '#c8844a');
+  rect(g, -40, 15, 260, 1, '#7a3c1c');
+  rect(g, -40, 23, 260, 2, '#1a0a04');
+  for (let x = -36; x < 220; x += 17) rect(g, x, 18, 8, 1, '#5a2c14');
+  // o feltro: miolo claro debaixo da lâmpada, escurecendo, fiapos e manchas antigas
+  const tones = ['#142212', '#24381e', '#3a5a30', '#5a7a46'];
   for (let y = 25; y < 360; y += 1) {
     for (let x = -40; x < 220; x += 1) {
       const d = Math.hypot((x - 90) / 170, (y - 170) / 230);
-      const base = mix('#3a6b48', '#16301f', clamp(d));
       const n = hash(x * 17 + y * 5, 1);
-      rect(g, x, y, 1, 1, n > 0.82 ? mix(base, '#000000', 0.12) : n < 0.1 ? mix(base, '#ffffff', 0.05) : base);
+      const v = 1.05 - d * 1.5 + (n - 0.5) * 0.3;
+      let col = v > 0.62 ? tones[3] : v > 0.18 ? tones[2] : v > -0.3 ? tones[1] : tones[0];
+      if (n > 0.975) col = mix(col, '#a8c088', 0.3);
+      rect(g, x, y, 1, 1, col);
     }
   }
-  // fiapos do feltro
-  for (let i = 0; i < 120; i += 1) {
+  // fiapos e a queimadura de cigarro antiga
+  for (let i = 0; i < 90; i += 1) {
     const x = -40 + hash(i, 2) * 260;
     const y = 25 + hash(i, 3) * 335;
-    rect(g, x, y, 2, 1, '#2a4f36');
+    rect(g, x, y, 2, 1, '#2a4a26');
   }
-  // copo americano de cerveja (de cima, um pouco inclinado)
-  ellipse(g, 22, 86, 15, 5, '#1a1208');
-  rect(g, 8, 46, 28, 40, '#c88a22');
-  for (let x = 8; x < 36; x += 4) rect(g, x, 50, 2, 34, '#d89a2a');
-  rect(g, 9, 48, 2, 36, '#f8d27a');
-  rect(g, 33, 48, 2, 36, '#8a5a14');
-  ellipse(g, 22, 46, 14, 5, '#f4efe2');
-  ellipse(g, 22, 45, 12, 3.5, '#ffffff');
-  ellipse(g, 22, 86, 14, 4, '#a8701e');
-  // cinzeiro com o cigarro
-  ellipse(g, 156, 60, 18, 7, '#6a6e76');
-  ellipse(g, 156, 59, 14, 5, '#2a2c30');
-  rect(g, 146, 56, 20, 3, '#f4ece1');
-  rect(g, 166, 56, 3, 3, '#ea580c');
-  rect(g, 168, 57, 1, 1, '#fef08a');
-  // monte de compra (pedras viradas) à direita
-  for (let i = 0; i < 5; i += 1) {
-    const x = 176 + (i % 2) * 18 + Math.floor(hash(i, 4) * 4);
-    const y = 96 + i * 30 + Math.floor(hash(i, 5) * 6);
-    rect(g, x + 1, y + 2, 16, 30, '#0c0805');
-    rect(g, x, y, 16, 30, '#2a1a12');
-    rect(g, x, y, 16, 1, '#4a3424');
-    rect(g, x + 6, y + 13, 4, 4, '#7a5a3a');
-  }
+  ellipse(g, 30, 250, 3, 2, '#1a1208');
+  rect(g, 29, 249, 2, 1, '#3a2a14');
+  for (let a = 0; a < Math.PI * 2; a += 0.2) rect(g, Math.round(140 + Math.cos(a) * 9), Math.round(268 + Math.sin(a) * 4), 1, 1, '#2a4022');
   return c;
 }
 
-/** Tampinhas e moedas da aposta (pulam na batida). */
-const BETS = [
-  [44, 244, 'cap', '#c8382e'],
-  [58, 252, 'cap', '#c8a23a'],
-  [72, 240, 'coin', '#e8c04a'],
-  [96, 256, 'cap', '#3a8a4a'],
-  [110, 244, 'coin', '#e8c04a'],
-  [124, 254, 'cap', '#c8382e'],
-  [30, 262, 'coin', '#d8b03a'],
-  [140, 240, 'cap', '#c8a23a'],
-];
-
-function betArt(kind, col) {
-  const c = makeCanvas(10, 8);
-  const g = pix(c);
-  if (kind === 'cap') {
-    ellipse(g, 5, 4, 5, 3.5, mix(col, '#000000', 0.35));
-    ellipse(g, 5, 3.5, 4, 2.6, col);
-    ellipse(g, 5, 3.5, 2.4, 1.4, mix(col, '#ffffff', 0.25));
-    for (let i = 0; i < 6; i += 1) rect(g, 1 + i * 1.6, 6, 1, 1, mix(col, '#000000', 0.5));
-  } else {
-    ellipse(g, 5, 4, 4.5, 3, '#8a6a1a');
-    ellipse(g, 5, 3.5, 4, 2.4, col);
-    rect(g, 3, 2, 2, 1, '#fff4c0');
-  }
-  return c;
-}
-
-/** A mão do Tio Zé vindo de cima (manga escura, punho da camisa), dedos apertando a pedra. */
+/**
+ * A mão do Tio Zé vindo de cima (em 2×): a manga escura com as dobras, o punho da camisa com a
+ * abotoadura, as costas da mão com volume e os tendões, os dedos apertando a pedra, o polegar
+ * por fora e o anel de ouro. A luz da lâmpada pega na beira esquerda.
+ */
+const HAND = { w: 44, h: 122 };
 function handArt() {
-  const W = 44;
-  const H = 122;
-  const c = makeCanvas(W, H);
-  const g = pix(c);
-  // manga do paletó
-  poly(
-    g,
+  const W = HAND.w * RES;
+  const H = HAND.h * RES;
+  const buf = paintKit.buffer(W, H);
+  const k = spriteKit.kit(buf);
+  const suit = spriteKit.mat('#2a2622');
+  const shirt = spriteKit.mat('#5a524a');
+  const skin = spriteKit.mat('#c88a5a');
+  // a manga do paletó, com as dobras
+  k.poly(
     [
-      [9, 0],
-      [35, 0],
-      [34, 76],
-      [10, 76],
+      [18, 0],
+      [70, 0],
+      [68, 152],
+      [20, 152],
     ],
-    '#1c1917',
+    suit,
+    { light: (x) => 0.25 - (x - 18) * 0.014 },
   );
-  rect(g, 10, 0, 3, 76, '#36312c');
-  rect(g, 29, 0, 5, 76, '#100e0d');
-  for (let y = 12; y < 76; y += 16) rect(g, 13, y, 15, 1, '#141210');
-  // punho da camisa com a abotoadura
-  rect(g, 9, 74, 27, 7, '#e7e5e4');
-  rect(g, 9, 74, 27, 1, '#ffffff');
-  rect(g, 9, 80, 27, 1, '#a8a29e');
-  rect(g, 30, 76, 3, 2, '#c8a23a');
-  // costas da mão (mais larga que o punho)
-  const skin = '#c8895a';
-  const lit = '#e3a676';
-  const shade = '#9a6038';
-  poly(
-    g,
+  for (let y = 24; y < 150; y += 30) {
+    k.line(26, y, 58, y - 6, suit.deep, 0.9);
+    k.line(26, y + 1, 58, y - 5, suit.hi, 0.35);
+  }
+  // o punho da camisa e a abotoadura
+  k.box(18, 146, 54, 16, shirt, { r: 2 });
+  k.ell(60, 154, 3, 2.5, spriteKit.mat('#c9962e'));
+  // as costas da mão (mais larga que o punho)
+  k.poly(
     [
-      [10, 81],
-      [35, 81],
-      [38, 92],
-      [37, 101],
-      [7, 101],
-      [6, 90],
+      [20, 160],
+      [70, 160],
+      [76, 182],
+      [74, 202],
+      [14, 202],
+      [12, 180],
     ],
     skin,
+    { bevel: true, light: (x, y) => 0.35 - (x - 12) * 0.012 - (y - 160) * 0.008 },
   );
-  rect(g, 11, 82, 18, 3, lit);
-  rect(g, 33, 84, 4, 16, shade);
-  for (const vx of [16, 22, 28]) rect(g, vx, 88, 1, 9, shade);
-  // nós dos dedos
+  for (const vx of [32, 44, 56]) k.line(vx, 174, vx - 1, 196, skin.lo, 0.7);
+  // os nós dos dedos
+  for (let i = 0; i < 4; i += 1) k.ell(22 + i * 14, 199, 6, 3.5, skin, { light: 0.2, spec: false });
+  // os dedos apontando para nós, apertando a pedra (curtos: vêm na nossa direção)
   for (let i = 0; i < 4; i += 1) {
-    rect(g, 8 + i * 7, 98, 6, 3, lit);
-    rect(g, 8 + i * 7, 101, 6, 1, shade);
+    const x = 22 + i * 14;
+    const len = [30, 34, 32, 24][i];
+    k.bar(x, 200, x, 200 + len, 12, skin, { light: 0.05 });
+    k.line(x - 4, 200 + len * 0.45, x + 4, 200 + len * 0.45, skin.lo, 0.7);
+    k.ell(x, 200 + len - 2, 4, 3, spriteKit.mat('#e8c0a0'), { flat: true, light: 0.3, spec: false });
   }
-  // dedos apontando para nós, apertando a pedra (curtos: vêm na nossa direção)
-  for (let i = 0; i < 4; i += 1) {
-    const x = 8 + i * 7;
-    const len = [15, 17, 16, 12][i];
-    rect(g, x, 102, 6, len, skin);
-    rect(g, x, 102, 1, len, lit);
-    rect(g, x + 5, 102, 1, len, shade);
-    rect(g, x + 1, 102 + len - 3, 4, 2, '#e8c0a0');
-    rect(g, x + 1, 102 + len, 4, 1, shade);
-  }
-  // polegar por fora, à esquerda
-  poly(
-    g,
-    [
-      [8, 86],
-      [3, 96],
-      [1, 108],
-      [5, 110],
-      [8, 100],
-    ],
-    skin,
-  );
-  rect(g, 1, 106, 4, 2, '#e8c0a0');
-  // anel de ouro
-  rect(g, 29, 104, 6, 2, '#e8c04a');
-  rect(g, 29, 104, 6, 1, '#fff0a0');
+  // o polegar por fora, à esquerda
+  k.bar(16, 172, 6, 214, 12, skin, { light: 0.2 });
+  k.ell(6, 214, 4.5, 3.5, spriteKit.mat('#e8c0a0'), { flat: true, light: 0.3, spec: false });
+  // o anel de ouro no anelar
+  k.box(58, 208, 13, 5, spriteKit.mat('#d8a838'), { r: 1 });
+  k.px(60, 208, paintKit.hex('#fff6c0'));
+  spriteKit.outline(buf, paintKit.hex('#0c0806'), 0.85);
+  const c = canvasOf(buf);
   const rim = rimLight(c, '#ffd8a0', [[-1, 0]]);
+  const g = c.getContext('2d');
   g.globalAlpha = 0.55;
   g.drawImage(rim, 0, 0);
   g.globalAlpha = 1;
   return c;
 }
 
-export function buildSlam() {
+export function buildSlam(sprites = {}) {
   const felt = feltArt();
   const t24 = tileArt(2, 4, false);
   const t46 = tileArt(4, 6, false);
   const t66 = tileArt(6, 6, true);
   const hand = handArt();
-  const bets = BETS.map(([, , kind, col]) => betArt(kind, col));
+  const dorme = sprites.boneyard ?? null;
   const t66White = silhouette(t66, '#ffffff');
   const handWhite = silhouette(hand, '#ffffff');
   const frame = makeCanvas(WORLD.w, WORLD.h);
+  /** Tamanho na arte de cada peça pintada em 2×. */
+  const size = (c) => [c.width / RES, c.height / RES];
 
   const draw = (F) => {
     const { out, t } = F;
@@ -283,7 +258,8 @@ export function buildSlam() {
     const tileY = t < SLAM_HIT ? -120 + fallK * (137 + 120) : 137;
     const lift = span(t, SLAM_HIT + 0.2, SLAM_HIT + 0.6);
     const handY = tileY - 104 - lift * 20;
-    const hop = t > SLAM_HIT && t < SLAM_HIT + 0.12 ? Math.round(Math.sin(((t - SLAM_HIT) / 0.12) * Math.PI) * 3) : 0;
+    const hop = t > SLAM_HIT && t < SLAM_HIT + 0.12 ? Math.sin(((t - SLAM_HIT) / 0.12) * Math.PI) * 3 : 0;
+    const jiggle = t > SLAM_HIT && t < SLAM_HIT + 0.2 ? Math.sin(((t - SLAM_HIT) / 0.2) * Math.PI * 3) * 1.2 : 0;
 
     const g = pix(frame);
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -292,49 +268,17 @@ export function buildSlam() {
     g.translate(-WORLD.ox, -WORLD.oy);
     // sombras das pedras no feltro
     g.globalAlpha = 0.45;
-    rect(g, -27, 152, 104, 28, '#0a140d');
+    rect(g, -27, 153, 104, 28, '#0a140d');
     const near = clamp(1 - (137 - tileY) / 160);
-    g.globalAlpha = 0.45 * near;
     const grow = Math.round((1 - near) * 6);
-    rect(g, 79 - grow, 140 - grow, 26 + grow * 2, 54 + grow * 2, '#0a140d');
-    g.globalAlpha = 1;
-    // a fileira [2|4][4|6] (pula na batida)
-    g.drawImage(t24, -29, 150 - hop);
-    g.drawImage(t46, 24, 150 - hop);
-    // apostas
-    BETS.forEach(([x, y], i) => {
-      const jump = t > SLAM_HIT ? Math.max(0, Math.sin(((t - SLAM_HIT) / (0.18 + hash(i, 9) * 0.08)) * Math.PI)) * (4 + hash(i, 8) * 5) : 0;
-      const live = t > SLAM_HIT && t < SLAM_HIT + 0.26;
-      g.drawImage(bets[i], x + (live ? Math.round((hash(i, 7) - 0.5) * 3 * span(t, SLAM_HIT, SLAM_HIT + 0.2)) : 0), y - Math.round(live ? jump : 0));
-    });
-    // a bucha
-    g.drawImage(t66, 77, Math.round(tileY));
-    // a mão em cima da pedra
-    if (handY > -200) g.drawImage(hand, 68, Math.round(handY));
-    // poeira saindo de baixo da pedra
-    if (t > SLAM_HIT) {
-      const pk = span(t, SLAM_HIT, SLAM_HIT + 0.5);
-      for (let i = 0; i < 46; i += 1) {
-        const ang = hash(i, 11) * Math.PI * 2;
-        const dist = (10 + hash(i, 12) * 34) * Math.sqrt(pk);
-        const x = 90 + Math.cos(ang) * (13 + dist);
-        const y = 163 + Math.sin(ang) * (26 + dist * 0.7) - pk * 8;
-        g.globalAlpha = (1 - pk) * 0.8;
-        rect(g, x, y, hash(i, 13) > 0.6 ? 2 : 1, 1, hash(i, 14) > 0.5 ? '#c8c2b0' : '#8a947e');
-      }
-      // respingo da cerveja
-      for (let i = 0; i < 12; i += 1) {
-        const k = span(t, SLAM_HIT + 0.02, SLAM_HIT + 0.38);
-        if (k <= 0 || k >= 1) continue;
-        const vx = (hash(i, 21) - 0.5) * 30;
-        const vy = -20 - hash(i, 22) * 24;
-        const x = 22 + vx * k;
-        const y = 44 + vy * k + 60 * k * k;
-        g.globalAlpha = 1 - k;
-        rect(g, x, y, 1, 1, hash(i, 23) > 0.4 ? '#fff6dc' : '#f0b040');
-      }
-      g.globalAlpha = 1;
+    // a sombra da bucha chegando: macia (três camadas), aperta quando ela encosta
+    for (let i = 0; i < 3; i += 1) {
+      g.globalAlpha = 0.2 * near;
+      rect(g, 79 - grow - i, 141 - grow - i, 26 + (grow + i) * 2, 54 + (grow + i) * 2, '#06100a');
     }
+    g.globalAlpha = 0.25;
+    rect(g, 118, 72, 58, 8, '#06100a');
+    g.globalAlpha = 1;
     g.setTransform(1, 0, 0, 1, 0, 0);
 
     // a lâmpada balançando depois da batida: a mancha de luz vai e vem
@@ -345,6 +289,30 @@ export function buildSlam() {
     withRoll(out, F, cam.roll, () => {
       cam.blit(out, frame, WORLD.ox, WORLD.oy);
       const sc = cam.scale(1);
+      // Versão 2.3: as pedras, o dorme e a mão na resolução da tela
+      cam.blitScaled(out, t24, -29, 150 - hop, ...size(t24));
+      cam.blitScaled(out, t46, 24, 150 - hop, ...size(t46));
+      if (dorme) cam.blitScaled(out, dorme, 122 + jiggle, 34 - Math.abs(jiggle), 54, 40);
+      cam.blitScaled(out, t66, 77, tileY, ...size(t66));
+      if (handY > -200) cam.blitScaled(out, hand, 68, handY, HAND.w, HAND.h);
+      // poeira saindo de baixo da pedra
+      if (t > SLAM_HIT) {
+        const [ox0, oy0] = cam.toScreen(0, 0);
+        out.save();
+        out.translate(ox0, oy0);
+        out.scale(sc, sc);
+        const pk = span(t, SLAM_HIT, SLAM_HIT + 0.5);
+        for (let i = 0; i < 46; i += 1) {
+          const ang = hash(i, 11) * Math.PI * 2;
+          const dist = (10 + hash(i, 12) * 34) * Math.sqrt(pk);
+          const x = 90 + Math.cos(ang) * (13 + dist);
+          const y = 163 + Math.sin(ang) * (26 + dist * 0.7) - pk * 8;
+          out.globalAlpha = (1 - pk) * 0.8;
+          rect(out, x, y, hash(i, 13) > 0.6 ? 2 : 1, 1, hash(i, 14) > 0.5 ? '#c8c2b0' : '#8a947e');
+        }
+        out.globalAlpha = 1;
+        out.restore();
+      }
       // tudo fora da luz fica bem escuro
       const [lx, ly] = cam.toScreen(92 + swing, 150);
       out.save();
@@ -387,8 +355,8 @@ export function buildSlam() {
     // quadro de impacto: silhuetas brancas no preto (2 quadros)
     if (!F.reduced && t >= SLAM_HIT && t < SLAM_HIT + 0.034) {
       fill(out, F, '#000', 1);
-      cam.blit(out, t66White, 77, 137);
-      cam.blit(out, handWhite, 68, handY);
+      cam.blitScaled(out, t66White, 77, 137, ...size(t66White));
+      cam.blitScaled(out, handWhite, 68, handY, HAND.w, HAND.h);
     } else if (!F.reduced && t >= SLAM_HIT + 0.034 && t < SLAM_HIT + 0.12) {
       fill(out, F, '#fff4dc', 0.5 * (1 - (t - SLAM_HIT - 0.034) / 0.086), 'lighter');
     }

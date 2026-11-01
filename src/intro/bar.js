@@ -3,6 +3,12 @@
 // AMANHÃ, o relógio marcando 1h47, o rádio tocando, o retrato do Comendador, as fotos do Tonho,
 // da Cida e do Beto e a TV no canto. Debaixo da lâmpada, na fumaça, o Tio Zé ergue os olhos:
 // "Senta, menino. A mesa tá posta." — e levanta a bucha de seis.
+//
+// Versão 2.3: no modelo novo do jogo. O Tio Zé, o Valtinho, o Comendador e as fotos são os
+// retratos 64×64 (desenhados na resolução da tela, com o detalhe deles), a mesa tem o feltro
+// pintado com a luz da lâmpada, as pedras têm espessura e pontos cavados, o dorme é o mesmo
+// da partida e a fala é o balão de papel da mesa. Copo, garrafa, cinzeiro e tampinhas saíram
+// da mesa (como na partida).
 import {
   bands,
   boxBlur,
@@ -43,14 +49,20 @@ const FRONT = { ox: 130, oy: 240, w: 70, h: 140, depth: 0.72 };
 
 const WALL_FLOOR = 196;
 const LAMP = { x: 138, y: 140 };
-const TIO = { x: 117, y: 183 };
-const VALTINHO = { x: 18, y: 103 };
+/** O Tio Zé: o retrato de 64 ocupa 48×48 pixels de arte (U = 0,75 pixel de arte por pixel dele). */
+const TIO = { x: 113, y: 175, size: 48 };
+const U = TIO.size / 64;
+const VALTINHO = { x: 16, y: 98, size: 52 };
 
 // ---------------------------------------------------------------------------------
 
+/** O fundo é pintado em 2× (os retratos da parede ficam nítidos); o resto é a mesma arte. */
+const BACK_RES = 2;
+
 function backArt(sprites) {
-  const c = makeCanvas(BACK.w, BACK.h);
+  const c = makeCanvas(BACK.w * BACK_RES, BACK.h * BACK_RES);
   const g = pix(c);
+  g.scale(BACK_RES, BACK_RES);
   g.translate(-BACK.ox, -BACK.oy);
   // teto de tábua com as vigas
   rect(g, -60, -50, 300, 72, '#1e130b');
@@ -133,26 +145,29 @@ function backArt(sprites) {
   line(g, cx, cy, cx + Math.sin(hourA) * 5, cy - Math.cos(hourA) * 5, '#1a120c', 1);
   line(g, cx, cy, cx + Math.sin(minA) * 7.5, cy - Math.cos(minA) * 7.5, '#1a120c', 1);
   rect(g, cx, cy, 1, 1, '#7a1f14');
-  // o retrato do Comendador na parede, em moldura dourada
-  rect(g, 136, 30, 44, 44, '#7a5418');
-  rect(g, 136, 30, 44, 1, '#e2b84a');
-  rect(g, 136, 30, 1, 44, '#c8962e');
-  rect(g, 179, 30, 1, 44, '#4a3008');
-  rect(g, 136, 73, 44, 1, '#4a3008');
-  g.drawImage(sprites.comendador, 138, 32);
-  rect(g, 148, 76, 20, 5, '#c8962e');
-  rect(g, 149, 77, 18, 3, '#6a4a14');
-  // mural de fotos (Tonho, Cida, Beto) com percevejo vermelho
+  // o retrato do Comendador na parede (o retrato do jogo, com a parede vermelha e a moldura de ouro)
+  rect(g, 136, 28, 40, 40, '#3a2808');
+  rect(g, 137, 29, 38, 38, '#c9962e');
+  rect(g, 137, 29, 38, 1, '#ffe08a');
+  rect(g, 137, 29, 1, 38, '#e2b84a');
+  rect(g, 174, 29, 1, 38, '#5a3c08');
+  rect(g, 137, 66, 38, 1, '#5a3c08');
+  g.drawImage(sprites.comendador, 140, 32, 32, 32);
+  rect(g, 146, 70, 20, 5, '#c8962e');
+  rect(g, 147, 71, 18, 3, '#6a4a14');
+  // mural de fotos (Tonho, Cida, Beto): polaroides com percevejo vermelho
   sprites.photos.forEach((photo, i) => {
-    const px = 104 + i * 11;
-    const py = 88 + (i % 2) * 5;
-    rect(g, px, py, 14, 17, '#e9e2d0');
-    rect(g, px, py + 16, 14, 1, '#a89e88');
+    const px = 102 + i * 13;
+    const py = 86 + (i % 2) * 5;
+    rect(g, px + 1, py + 1, 16, 20, 'rgba(0,0,0,0.45)');
+    rect(g, px, py, 16, 20, '#efe8d6');
+    rect(g, px, py + 19, 16, 1, '#a89e88');
     g.save();
     g.imageSmoothingEnabled = true;
-    g.drawImage(photo, 4, 4, 32, 32, px + 1, py + 1, 12, 12);
+    g.drawImage(photo, 0, 0, 64, 64, px + 1, py + 1, 14, 14);
     g.restore();
-    rect(g, px + 6, py - 1, 2, 2, '#c8261d');
+    rect(g, px + 7, py - 1, 2, 2, '#c8261d');
+    rect(g, px + 7, py - 1, 1, 1, '#ff8a7a');
   });
   // o rádio na prateleira de canto
   rect(g, 186, 106, 34, 3, '#5a341a');
@@ -271,107 +286,109 @@ function midArt() {
     rect(g, 30 + i * 5, 146, 4, 1, '#5a6e74');
   }
 
-  // ---- a mesa de feltro verde debaixo da lâmpada
-  poly(
-    g,
-    [
-      [92, 222],
-      [186, 222],
-      [194, 250],
-      [84, 250],
-    ],
-    '#5a341a',
-  );
-  poly(
-    g,
-    [
-      [95, 224],
-      [183, 224],
-      [190, 248],
-      [88, 248],
-    ],
-    '#2f5a3c',
-  );
-  // feltro: miolo mais claro e a textura
-  for (let i = 0; i < 260; i += 1) {
-    const x = 92 + hash(i, 31) * 96;
-    const y = 225 + hash(i, 32) * 22;
-    rect(g, x, y, 1, 1, hash(i, 33) > 0.5 ? '#36654a' : '#284f34');
-  }
-  rect(g, 84, 250, 110, 9, '#4a2a14');
-  rect(g, 84, 250, 110, 1, '#6e4222');
-  rect(g, 90, 259, 5, 50, '#3a2010');
-  rect(g, 183, 259, 5, 50, '#2a170a');
-  // pedras na mesa: a fileira deitada [2|4][4|6] e o monte de compra
-  const tileFlat = (x, y, a, b) => {
-    rect(g, x, y + 1, 14, 5, '#1a1208');
-    rect(g, x, y, 14, 5, '#efe6cf');
-    rect(g, x, y, 14, 1, '#fffaf0');
-    rect(g, x + 7, y, 1, 5, '#8a7a5a');
-    const pip = (px, py) => rect(g, px, py, 1, 1, '#2a1d14');
-    const face = (ox, n) => {
-      const P = {
-        1: [[3, 2]],
-        2: [
-          [1, 1],
-          [5, 3],
-        ],
-        4: [
-          [1, 1],
-          [5, 1],
-          [1, 3],
-          [5, 3],
-        ],
-        6: [
-          [1, 1],
-          [3, 1],
-          [5, 1],
-          [1, 3],
-          [3, 3],
-          [5, 3],
-        ],
-      }[n];
-      for (const [px, py] of P) pip(x + ox + px, y + py);
-    };
-    face(0, a);
-    face(7, b);
-  };
-  tileFlat(106, 239, 2, 4);
-  tileFlat(121, 239, 4, 6);
-  for (let i = 0; i < 6; i += 1) {
-    const x = 160 + (i % 3) * 7 + Math.floor(hash(i, 41) * 2);
-    const y = 228 + Math.floor(i / 3) * 6;
-    rect(g, x, y + 1, 6, 4, '#120c06');
-    rect(g, x, y, 6, 4, '#2a1a12');
-    rect(g, x, y, 6, 1, '#4a3424');
-    rect(g, x + 2, y + 1, 2, 2, '#7a5a3a');
-  }
-  // apostas: tampinhas e moedas na beira
-  for (const [x, y, col] of [
-    [96, 244, '#c8a23a'],
-    [100, 246, '#c8382e'],
-    [93, 247, '#c8a23a'],
-    [168, 244, '#d8b84a'],
-    [172, 246, '#c8382e'],
-  ]) {
-    ellipse(g, x, y, 2, 1.2, col);
-    rect(g, x - 1, y - 1, 1, 1, '#fff0b0');
-  }
-  // copo americano de cerveja e a garrafa
-  rect(g, 95, 214, 6, 10, '#7a6a3a');
-  rect(g, 95, 214, 6, 2, '#f4efe2');
-  rect(g, 96, 217, 4, 7, '#d89a2a');
-  rect(g, 96, 218, 1, 5, '#f8d27a');
-  rect(g, 95, 222, 6, 1, '#a8701e');
-  rect(g, 103, 200, 5, 22, '#4a2a0e');
-  rect(g, 104, 194, 3, 6, '#4a2a0e');
-  rect(g, 104, 193, 3, 1, '#c8a23a');
-  rect(g, 103, 208, 5, 6, '#d8c89a');
-  rect(g, 104, 202, 1, 18, '#8a5a24');
-  // cinzeiro
-  ellipse(g, 176, 226, 6, 2, '#5a5e66');
-  ellipse(g, 176, 225.5, 4.5, 1.3, '#2a2c30');
+  // ---- a mesa debaixo da lâmpada: feltro pintado (a luz da lâmpada no meio, fiapos, uma
+  // queimadura de cigarro) e a borda de mogno com o friso aceso
+  drawTable(g);
   return c;
+}
+
+/** Feltro em perspectiva: miolo claro onde a lâmpada bate, escurecendo para as beiradas. */
+const FELT = { hi: '#5a7a46', mid: '#3a5a30', lo: '#24381e', deep: '#142212' };
+
+function drawTable(g) {
+  // a borda de madeira (tampo) e a espessura
+  poly(
+    g,
+    [
+      [91, 221],
+      [187, 221],
+      [195, 251],
+      [83, 251],
+    ],
+    '#3a1c0c',
+  );
+  poly(
+    g,
+    [
+      [92, 221],
+      [186, 221],
+      [187, 223],
+      [91, 223],
+    ],
+    '#a8683a',
+  );
+  // o feltro, pixel a pixel
+  for (let y = 224; y < 248; y += 1) {
+    const k = (y - 224) / 24;
+    const x0 = Math.round(95 - k * 7);
+    const x1 = Math.round(183 + k * 7);
+    for (let x = x0; x < x1; x += 1) {
+      const d = Math.hypot((x - 138) / 52, (y - 236) / 16);
+      const n = hash(x * 31 + y * 17, 5);
+      const v = 0.75 - d * 0.95 + (n - 0.5) * 0.28;
+      let col = v > 0.42 ? FELT.hi : v > 0.02 ? FELT.mid : v > -0.38 ? FELT.lo : FELT.deep;
+      if (n > 0.965) col = mix(col, '#a8c088', 0.35); // fiapo claro
+      rect(g, x, y, 1, 1, col);
+    }
+  }
+  // queimadura de cigarro e a mancha de copo antiga
+  rect(g, 171, 241, 2, 1, '#1a1208');
+  rect(g, 172, 240, 1, 1, '#3a2a14');
+  for (let a = 0; a < Math.PI * 2; a += 0.35) rect(g, Math.round(103 + Math.cos(a) * 4), Math.round(230 + Math.sin(a) * 1.5), 1, 1, '#2a4022');
+  // a frente da borda (mogno) com o friso de luz e a sombra embaixo
+  rect(g, 83, 250, 112, 9, '#4a2410');
+  rect(g, 83, 250, 112, 1, '#c8844a');
+  rect(g, 83, 251, 112, 1, '#7a3c1c');
+  rect(g, 83, 258, 112, 1, '#1a0a04');
+  for (let x = 86; x < 192; x += 13) rect(g, x, 253, 6, 1, '#5a2c14');
+  rect(g, 90, 259, 5, 50, '#3a2010');
+  rect(g, 90, 259, 1, 50, '#6a3a1c');
+  rect(g, 183, 259, 5, 50, '#2a170a');
+  // a fileira de pedras deitada na mesa: [2|4][4|6] com espessura e pontos cavados
+  flatTile(g, 106, 238, 2, 4);
+  flatTile(g, 121, 238, 4, 6);
+}
+
+const PIPS5 = {
+  1: [[3, 2]],
+  2: [
+    [1, 1],
+    [5, 3],
+  ],
+  4: [
+    [1, 1],
+    [5, 1],
+    [1, 3],
+    [5, 3],
+  ],
+  6: [
+    [1, 1],
+    [3, 1],
+    [5, 1],
+    [1, 3],
+    [3, 3],
+    [5, 3],
+  ],
+};
+
+/** Pedra deitada de 14×5 vista de cima, com a lateral (espessura) e os pontos fundos. */
+function flatTile(g, x, y, a, b) {
+  rect(g, x + 1, y + 2, 14, 6, 'rgba(0,0,0,0.5)'); // sombra no feltro
+  rect(g, x, y + 5, 14, 2, '#a8946a'); // a lateral (espessura)
+  rect(g, x, y + 6, 14, 1, '#6a5838');
+  rect(g, x, y, 14, 5, '#ece2c6');
+  rect(g, x, y, 14, 1, '#fffaf0');
+  rect(g, x, y, 1, 5, '#f8f0dc');
+  rect(g, x + 13, y, 1, 5, '#cdbf98');
+  rect(g, x + 7, y, 1, 5, '#8a7a5a');
+  rect(g, x + 8, y, 1, 5, '#f4ecd6');
+  const face = (ox, n) => {
+    for (const [px, py] of PIPS5[n]) {
+      rect(g, x + ox + px, y + py, 1, 1, '#1e140c');
+    }
+  };
+  face(0, a);
+  face(7, b);
 }
 
 function frontArt() {
@@ -411,89 +428,136 @@ function drawSmoke(g, t, x0, y0) {
   g.globalAlpha = 1;
 }
 
-const SUIT = '#1c1917';
-const SUIT_LIT = '#3a3530';
-const SKIN = '#c8895a';
-const SKIN_DARK = '#a46d42';
-const SKIN_LIT = '#e8b080';
+const SUIT = '#2a2622';
+const SUIT_LIT = '#4e463e';
+const SUIT_DEEP = '#100d0a';
+const SKIN = '#c88a5a';
+const SKIN_DARK = '#9a6038';
+const SKIN_LIT = '#eab082';
 
-/** Manga do paletó de (x0,y0) a (x1,y1), grossa, com a luz da lâmpada na beira de cima. */
-function sleeve(g, x0, y0, x1, y1, w) {
-  line(g, x0, y0, x1, y1, SUIT, w);
-  line(g, x0, y0, x1, y1 - 1, SUIT_LIT, 1);
+/** O encosto da cadeira dele, atrás (na arte da cena). */
+function drawTioChair(g) {
+  const { x, y, size } = TIO;
+  rect(g, x + 1, y + 10, 4, size - 12, '#3a200e');
+  rect(g, x + 1, y + 10, 1, size - 12, '#7a4a26');
+  rect(g, x + size - 5, y + 10, 4, size - 12, '#2a170a');
+  rect(g, x, y + 8, size, 4, '#4a2a14');
+  rect(g, x, y + 8, size, 1, '#8a5a30');
 }
 
-function handAt(g, x, y) {
-  rect(g, x - 1, y - 1, 2, 5, '#e7e5e4');
-  rect(g, x + 1, y, 6, 5, SKIN);
-  rect(g, x + 1, y, 6, 1, SKIN_LIT);
-  rect(g, x + 6, y + 1, 1, 4, SKIN_DARK);
-  rect(g, x + 2, y + 4, 4, 1, SKIN_DARK);
-  rect(g, x + 3, y + 1, 1, 3, SKIN_DARK);
+/** Pinta em "pixels do retrato" (U de arte), alinhado ao Tio Zé: braços e mãos com a mesma densidade dele. */
+const pp = (g, x, y, w, h, color) => {
+  g.fillStyle = color;
+  g.fillRect(TIO.x + x * U, TIO.y + y * U, w * U, h * U);
+};
+
+/** Braço: a manga grossa (com a quina de cima acesa pela lâmpada) de um ponto ao outro. */
+function arm(g, pts, w) {
+  const path = (lw, color, dy = 0) => {
+    g.beginPath();
+    pts.forEach(([px, py], i) => {
+      const X = TIO.x + px * U;
+      const Y = TIO.y + (py + dy) * U;
+      if (i) g.lineTo(X, Y);
+      else g.moveTo(X, Y);
+    });
+    g.lineWidth = lw * U;
+    g.strokeStyle = color;
+    g.stroke();
+  };
+  g.save();
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  path(w + 1.5, SUIT_DEEP);
+  path(w, SUIT);
+  path(1.5, SUIT_LIT, -w / 2 + 1.2);
+  g.restore();
 }
 
-/** O Tio Zé à mesa: cadeira atrás, retrato do jogo, as pedras dele em pé e os braços apoiados. */
-function drawTio(g, sprite, breathe, raise) {
-  const { x, y } = TIO;
-  // encosto da cadeira dele aparecendo dos lados
-  rect(g, x + 2, y + 8, 3, 32, '#3a200e');
-  rect(g, x + 35, y + 8, 3, 32, '#3a200e');
-  rect(g, x + 1, y + 7, 38, 3, '#4a2a14');
-  rect(g, x + 1, y + 7, 38, 1, '#7a4a26');
-  g.drawImage(sprite, x, y - breathe);
-  // as pedras dele em pé (vemos as costas)
-  for (let i = 0; i < 5; i += 1) {
-    const tx = x + 11 + i * 4;
-    rect(g, tx, y + 44, 4, 9, '#2a1a12');
-    rect(g, tx, y + 44, 4, 1, '#5a4030');
-    rect(g, tx, y + 44, 1, 9, '#3e2a1c');
-    rect(g, tx + 1, y + 48, 2, 1, '#6a5038');
+/** Mão (vista de cima, dedos para a frente), em pixels do retrato. */
+function hand(g, x, y, flip = false) {
+  pp(g, x - 1, y - 1, 10, 8, '#1a100a');
+  pp(g, x, y, 8, 6, SKIN);
+  pp(g, x, y, 8, 1, SKIN_LIT);
+  pp(g, flip ? x : x + 7, y + 1, 1, 5, SKIN_DARK);
+  for (const fx of [1, 3, 5]) pp(g, x + fx + 1, y + 2, 1, 4, SKIN_DARK);
+  pp(g, flip ? x + 7 : x - 1, y + 2, 2, 3, SKIN);
+  pp(g, x + 1, y + 5, 6, 1, SKIN_DARK);
+}
+
+/** As pedras dele em pé na beira da mesa (vemos as costas de ébano, com o chanfro). */
+function standingTiles(g) {
+  for (let i = 0; i < 6; i += 1) {
+    const tx = 17 + i * 5.2;
+    pp(g, tx - 0.5, 64.5, 5, 15, '#0a0604');
+    pp(g, tx, 65, 4, 14, '#2e1c12');
+    pp(g, tx, 65, 4, 1, '#8a6a48');
+    pp(g, tx, 65, 1, 14, '#5a4030');
+    pp(g, tx + 3, 66, 1, 13, '#140c08');
+    pp(g, tx + 1, 70, 2, 2, '#c8a040');
   }
+}
+
+/** A bucha [6|6] erguida (osso com a lateral e os pontos cavados). */
+function raisedBucha(g, x, y) {
+  pp(g, x - 1, y - 1, 12, 23, '#140c06');
+  pp(g, x, y, 10, 21, '#ece2c6');
+  pp(g, x, y, 10, 1, '#ffffff');
+  pp(g, x, y, 1, 21, '#fff6e2');
+  pp(g, x + 8, y + 1, 2, 20, '#bba878');
+  pp(g, x + 1, y + 10, 8, 1, '#8a7a5a');
+  for (const [px, py] of [
+    [2, 2],
+    [2, 5],
+    [2, 7],
+    [6, 2],
+    [6, 5],
+    [6, 7],
+    [2, 12],
+    [2, 15],
+    [2, 17],
+    [6, 12],
+    [6, 15],
+    [6, 17],
+  ]) {
+    pp(g, x + px, y + py, 2, 2, '#1e140c');
+    pp(g, x + px, y + py + 2, 2, 0.5, '#fffaf0');
+  }
+}
+
+/** O Tio Zé na frente da mesa: as pedras dele, os braços e as mãos (e a bucha, quando ergue). */
+function drawTioFront(g, raise) {
+  standingTiles(g);
   // braço do lado esquerdo da tela: ombro → cotovelo → mão nas pedras
-  sleeve(g, x + 9, y + 34, x + 5, y + 48, 6);
-  sleeve(g, x + 5, y + 48, x + 10, y + 52, 5);
-  handAt(g, x + 10, y + 49);
-  // o outro: em repouso, ou erguendo a bucha [6|6] mostrando as pintas
-  const ex = x + 36;
-  const ey = y + 48;
-  sleeve(g, x + 31, y + 34, ex, ey, 6);
-  const hx = Math.round(x + 25 + raise * 14);
-  const hy = Math.round(y + 51 - raise * 30);
-  sleeve(g, ex, ey, hx + 3, hy + 3, 5);
-  if (raise > 0.05) {
-    const tx = hx;
-    const ty = hy - 13;
-    rect(g, tx, ty, 7, 14, '#f4ecd8');
-    rect(g, tx, ty, 7, 1, '#ffffff');
-    rect(g, tx + 6, ty, 1, 14, '#c4b590');
-    rect(g, tx + 1, ty + 7, 5, 1, '#8a7a5a');
-    for (const [px, py] of [
-      [1, 1],
-      [1, 3],
-      [1, 5],
-      [4, 1],
-      [4, 3],
-      [4, 5],
-      [1, 8],
-      [1, 10],
-      [1, 12],
-      [4, 8],
-      [4, 10],
-      [4, 12],
-    ])
-      rect(g, tx + px, ty + py, 2, 1, '#2a1d14');
-  }
-  handAt(g, hx, hy);
+  arm(g, [
+    [17, 55],
+    [11, 68],
+    [17, 74],
+  ], 8);
+  hand(g, 15, 71);
+  // o outro: em repouso, ou erguendo a bucha [6|6] para a gente ver
+  const hx = 41 + raise * 16;
+  const hy = 71 - raise * 43;
+  arm(g, [
+    [47, 55],
+    [53 + raise * 4, 68 - raise * 18],
+    [hx + 4, hy + 3],
+  ], 8);
+  if (raise > 0.05) raisedBucha(g, hx - 1, hy - 21);
+  hand(g, hx, hy, true);
 }
 
 export function buildBar(sprites) {
   const back = backArt(sprites);
-  const backBlur = boxBlur(copyCanvas(back), 1.6, 3);
+  const backBlur = boxBlur(copyCanvas(back), 1.6 * BACK_RES, 3);
   const mid = midArt();
   const front = frontArt();
   const frontBlur = boxBlur(copyCanvas(front, 4), 2, 3);
   const frame = makeCanvas(MID.w, MID.h);
-  const valtinho = { open: tint(sprites.valtinho.open, '#ffd8a8', 0.35), blink: tint(sprites.valtinho.blink, '#ffd8a8', 0.35) };
+  const valtinho = { open: tint(sprites.valtinho.open, '#ffd8a8', 0.3), blink: tint(sprites.valtinho.blink, '#ffd8a8', 0.3) };
+  const dorme = tint(sprites.boneyard, '#ffd8a8', 0.2);
+  const warm = (c) => tint(c, '#ffd0a0', 0.22);
+  const tio = Object.fromEntries(Object.entries(sprites.tio).map(([k, c]) => [k, warm(c)]));
   const lampSprite = sprites.lamp;
 
   /** Câmera: entra pela porta e desliza até o Tio Zé. */
@@ -513,13 +577,14 @@ export function buildBar(sprites) {
   };
 
   const tioSprite = (t) => {
-    if (t < LOOK_AT) return sprites.tio.idle;
+    if (t > 0.62 && t < 0.72) return tio.blink;
+    if (t < LOOK_AT) return tio.idle;
     const typed = Math.floor((t - SPEECH_AT) / SPEECH_CHAR);
     if (t >= SPEECH_AT && typed < SPEECH.length) {
       const ch = SPEECH[typed] ?? ' ';
-      if (!' .,'.includes(ch) && typed % 2 === 0) return sprites.tio.talk;
+      if (!' .,'.includes(ch) && typed % 2 === 0) return tio.talk;
     }
-    return sprites.tio.smug;
+    return tio.smug;
   };
 
   const draw = (F) => {
@@ -533,24 +598,11 @@ export function buildBar(sprites) {
     g.clearRect(0, 0, frame.width, frame.height);
     g.drawImage(mid, 0, 0);
     g.translate(-MID.ox, -MID.oy);
-    // Valtinho atrás do balcão, pano no copo
+    // a cadeira do Tio Zé (atrás dele)
+    drawTioChair(g);
     const vBlink = (t > 0.55 && t < 0.66) || (t > 2.1 && t < 2.2);
-    g.save();
-    g.beginPath();
-    g.rect(-50, -50, 280, 200);
-    g.clip();
-    g.drawImage(vBlink ? valtinho.blink : valtinho.open, VALTINHO.x, VALTINHO.y);
-    g.restore();
-    const wipe = t * 7;
-    rect(g, 36 + Math.round(Math.cos(wipe) * 2), 138 + Math.round(Math.sin(wipe) * 1), 6, 8, '#7a8e94');
-    rect(g, 36 + Math.round(Math.cos(wipe) * 2), 138 + Math.round(Math.sin(wipe) * 1), 6, 1, '#c8dadf');
-    rect(g, 34 + Math.round(Math.cos(wipe + 1) * 3), 142 + Math.round(Math.sin(wipe + 1) * 2), 5, 4, '#e8e2d2');
-    // Tio Zé (respirando), a cadeira dele, as pedras em pé e os braços na mesa
-    const breathe = Math.round(Math.sin(t * 2.6) * 0.5 + 0.5);
+    const breathe = Math.sin(t * 2.6) * 0.5 + 0.5;
     const raise = easeOut(span(t, RAISE_AT, RAISE_AT + 0.4));
-    drawTio(g, tioSprite(t), breathe, raise);
-    // fumaça do cigarro dele
-    drawSmoke(g, t, TIO.x + 36, TIO.y + 26 - breathe);
     // lâmpada (o mesmo abajur da tela inicial)
     rect(g, LAMP.x, -50, 1, LAMP.y - 20 + 50, '#120b06');
     g.drawImage(lampSprite, LAMP.x - 20, LAMP.y - 20);
@@ -571,8 +623,8 @@ export function buildBar(sprites) {
     withRoll(out, F, cam.roll, () => {
       const sc = cam.scale(1);
       // fundo: parede (vai desfocando quando a câmera para no Tio Zé)
-      cam.blit(out, back, BACK.ox, BACK.oy, BACK.depth);
-      cam.blit(out, backBlur, BACK.ox, BACK.oy, BACK.depth, focus * 0.85);
+      cam.blitScaled(out, back, BACK.ox, BACK.oy, BACK.w, BACK.h, BACK.depth);
+      cam.blitScaled(out, backBlur, BACK.ox, BACK.oy, BACK.w, BACK.h, BACK.depth, focus * 0.85, true);
       // a TV piscando e o mostrador do rádio
       const tvFlick = 0.5 + 0.5 * wobble(t * 6, 7);
       const [tx, ty] = cam.toScreen(216, 40, BACK.depth);
@@ -606,6 +658,37 @@ export function buildBar(sprites) {
       const [px, py] = cam.toScreen(LAMP.x, 236);
       glowEllipse(out, px, py, sc * 56, sc * 16, 'rgba(255,220,160,0.7)', 0.5 * flick);
       glow(out, bx0, by0, sc * 34, 'rgba(255,236,190,0.95)', 0.85 * flick);
+      // Versão 2.3: os personagens na resolução da tela (o retrato de 64 com o detalhe dele)
+      // o Valtinho atrás do balcão, cortado na altura do tampo
+      {
+        const [cx0, cy0] = cam.toScreen(-50, -50);
+        const [cx1, cy1] = cam.toScreen(230, 150);
+        out.save();
+        out.beginPath();
+        out.rect(cx0, cy0, cx1 - cx0, cy1 - cy0);
+        out.clip();
+        cam.blitScaled(out, vBlink ? valtinho.blink : valtinho.open, VALTINHO.x, VALTINHO.y, VALTINHO.size, VALTINHO.size);
+        out.restore();
+      }
+      // o Tio Zé respirando, o dorme na mesa e, na frente, as pedras dele, os braços e as mãos
+      cam.blitScaled(out, tioSprite(t), TIO.x, TIO.y - breathe * U, TIO.size, TIO.size);
+      cam.blitScaled(out, dorme, 158, 216, 28, 20);
+      {
+        const [ox0, oy0] = cam.toScreen(0, 0);
+        const k = cam.scale(1);
+        out.save();
+        out.translate(ox0, oy0);
+        out.scale(k, k);
+        // o copo e o paninho do Valtinho (na frente dele)
+        const wipe = t * 7;
+        rect(out, 36 + Math.round(Math.cos(wipe) * 2), 138 + Math.round(Math.sin(wipe) * 1), 6, 8, '#7a8e94');
+        rect(out, 36 + Math.round(Math.cos(wipe) * 2), 138 + Math.round(Math.sin(wipe) * 1), 6, 1, '#c8dadf');
+        rect(out, 34 + Math.round(Math.cos(wipe + 1) * 3), 142 + Math.round(Math.sin(wipe + 1) * 2), 5, 4, '#e8e2d2');
+        drawTioFront(out, raise);
+        // a fumaça do cigarro dele (sai da brasa, no canto da boca)
+        drawSmoke(out, t, TIO.x + 46 * U, TIO.y + 38 * U - breathe * U);
+        out.restore();
+      }
       // poeira dançando no facho
       out.save();
       out.globalCompositeOperation = 'lighter';
@@ -643,7 +726,7 @@ export function buildBar(sprites) {
   return { draw, camera };
 }
 
-/** Balão de fala igual ao da mesa (veludo escuro, borda de osso/âmbar), com a fala letra a letra. */
+/** Balão de fala igual ao da mesa (papel pautado, borda de tinta), com a fala letra a letra. */
 function speech(g, F, cam, t) {
   if (t < SPEECH_AT - 0.05) return;
   const typed = clamp(Math.floor((t - SPEECH_AT) / SPEECH_CHAR) + 1, 0, SPEECH.length);
@@ -658,34 +741,38 @@ function speech(g, F, cam, t) {
   const widths = lines.map((l) => g.measureText(l).width);
   const bw = Math.max(...widths) + pad * 2;
   const bh = fontSize * 2.05 + pad * 1.6;
-  const [mx, my] = cam.toScreen(TIO.x + 20, TIO.y + 2);
+  const [mx, my] = cam.toScreen(TIO.x + 24, TIO.y + 2);
   const x = Math.max(unit * 6, Math.min(F.W - bw - unit * 6, mx - bw * 0.62));
   const y = my - bh - unit * 12;
   g.translate(x + bw / 2, y + bh);
   g.scale(0.85 + 0.15 * appear, 0.85 + 0.15 * appear);
   g.translate(-(x + bw / 2), -(y + bh));
   g.globalAlpha = appear;
-  // sombra, fundo, borda
+  // Versão 2.3: o balão de papel da mesa (pautado, borda de tinta marrom, sombra embaixo)
   g.fillStyle = 'rgba(0,0,0,0.55)';
-  g.fillRect(x, y + unit * 2, bw, bh);
-  g.fillStyle = 'rgba(24,24,27,0.95)';
+  g.fillRect(x + unit, y + unit * 2.5, bw, bh);
+  g.fillStyle = '#eadcbc';
   g.fillRect(x, y, bw, bh);
-  g.strokeStyle = '#d9b56a';
-  g.lineWidth = Math.max(1.5, unit * 0.7);
+  g.fillStyle = 'rgba(120,90,50,0.14)';
+  for (let ly = y + pad * 0.7 + fontSize * 0.98; ly < y + bh - 2; ly += fontSize) g.fillRect(x + unit, ly, bw - unit * 2, Math.max(1, unit * 0.45));
+  g.strokeStyle = '#4a3418';
+  g.lineWidth = Math.max(1.5, unit * 0.9);
   g.strokeRect(x, y, bw, bh);
   // rabicho em degraus apontando para a boca
   const tx = Math.min(x + bw - unit * 8, Math.max(x + unit * 8, mx));
-  g.fillStyle = '#d9b56a';
+  g.fillStyle = '#4a3418';
   for (let i = 0; i < 4; i += 1) g.fillRect(tx - unit * (4 - i), y + bh + unit * i * 1.2, unit * (8 - i * 2), unit * 1.3);
-  g.fillStyle = '#18181b';
-  for (let i = 0; i < 3; i += 1) g.fillRect(tx - unit * (3 - i), y + bh - unit * 0.3 + unit * i * 1.2, unit * (6 - i * 2), unit * 1.2);
+  g.fillStyle = '#eadcbc';
+  for (let i = 0; i < 3; i += 1) g.fillRect(tx - unit * (3 - i), y + bh - unit * 0.5 + unit * i * 1.2, unit * (6 - i * 2), unit * 1.2);
   // nome
   g.font = `${Math.round(unit * 4.6)}px "Press Start 2P", monospace`;
-  g.fillStyle = '#e9b44a';
+  g.fillStyle = '#1a0a03';
+  g.fillText('TIO ZÉ', x + pad * 0.6 + unit * 0.5, y - unit * 1.7);
+  g.fillStyle = '#ffd36b';
   g.fillText('TIO ZÉ', x + pad * 0.6, y - unit * 2.2);
   // texto digitado
   g.font = `${fontSize}px VT323, ui-monospace, monospace`;
-  g.fillStyle = '#f4ecd2';
+  g.fillStyle = '#2a1a0a';
   g.textBaseline = 'top';
   let left = typed;
   lines.forEach((l, i) => {

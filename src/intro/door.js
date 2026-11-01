@@ -3,6 +3,8 @@
 // entra (a luz estoura em branco-âmbar e abre no boteco).
 import { bands, boxBlur, clamp, copyCanvas, easeOut, hash, makeCanvas, mix, pix, poly, rect, rimLight, silhouette, smooth, span, text5 } from './core.js';
 import { beam, fill, glow, glowEllipse, makeCamera, vignette, withRoll } from './stage.js';
+import { paintKit } from '../components/art/botecoScene.js';
+import { spriteKit } from '../components/art/relicPixels.js';
 
 export const DOOR_LEN = 0.8;
 
@@ -110,81 +112,75 @@ function insideArt() {
   return c;
 }
 
-/** A nossa mão direita (manga do casaco), vista por trás e contra a luz: escura, com o contorno aceso. */
+/**
+ * A nossa mão direita (manga do casaco), vista por trás e contra a luz. Versão 2.3: pintada em
+ * 2× com o kit dos talismãs (dedos com volume, nós, as costas da mão, o polegar, a manga com as
+ * dobras) e o contorno aceso pela luz quente de dentro do boteco.
+ */
+const HAND_RES = 2;
 function handArt() {
-  const W = 42;
-  const H = 80;
-  const c = makeCanvas(W, H);
-  const g = pix(c);
-  const skin = '#4e2c1d';
-  const mid = '#63392a';
-  const gapCol = '#2c170e';
-  // dedos: indicador, médio, anelar, mindinho (x, topo, largura)
-  const fingers = [
-    [10, 7, 5],
-    [16, 3, 5],
-    [22, 6, 5],
-    [28, 13, 4],
-  ];
-  for (const [x, top, w] of fingers) {
-    rect(g, x + 1, top, w - 2, 1, skin);
-    rect(g, x, top + 1, w, 34 - top, skin);
-    rect(g, x + 1, top + 1, w - 2, 2, mid);
-    rect(g, x + 1, top + Math.round((34 - top) * 0.42), w - 2, 1, gapCol);
-    rect(g, x + w, top + 3, 1, 32 - top, gapCol);
+  const W = 42 * HAND_RES;
+  const H = 80 * HAND_RES;
+  const b = paintKit.buffer(W, H);
+  const k = spriteKit.kit(b);
+  const skin = spriteKit.mat('#5e3626');
+  const sleeveMat = spriteKit.mat('#1e2232', { cool: true });
+  // a manga do casaco (atrás de tudo) com as dobras
+  k.poly(
+    [
+      [18, 100],
+      [68, 97],
+      [80, 160],
+      [8, 160],
+    ],
+    sleeveMat,
+    { light: (x, y) => -0.15 - (x - 40) * 0.008 - (y - 100) * 0.004 },
+  );
+  for (const [x0, y0, x1, y1] of [
+    [22, 118, 48, 112],
+    [16, 136, 54, 128],
+    [30, 150, 70, 142],
+  ]) {
+    k.line(x0, y0, x1, y1, sleeveMat.deep, 0.9);
+    k.line(x0, y0 + 1, x1, y1 + 1, sleeveMat.hi, 0.4);
   }
-  // costas da mão, arredondada, estreitando no punho
-  poly(
-    g,
+  // o punho do casaco
+  k.poly(
     [
-      [9, 32],
-      [33, 32],
-      [34, 42],
-      [31, 52],
-      [12, 53],
-      [8, 44],
+      [18, 98],
+      [68, 95],
+      [69, 104],
+      [18, 107],
     ],
-    skin,
+    spriteKit.mat('#141724', { cool: true }),
+    { bevel: true },
   );
-  for (let i = 0; i < 4; i += 1) rect(g, 11 + i * 6, 33, 3, 1, mid);
-  rect(g, 18, 40, 1, 9, mid);
-  rect(g, 24, 39, 1, 10, mid);
-  // polegar saindo para a esquerda
-  poly(
-    g,
-    [
-      [10, 46],
-      [4, 36],
-      [2, 28],
-      [5, 26],
-      [9, 32],
-      [13, 41],
-    ],
-    skin,
-  );
-  rect(g, 3, 28, 2, 2, mid);
-  // manga do casaco
-  poly(
-    g,
-    [
-      [10, 50],
-      [33, 49],
-      [39, 80],
-      [5, 80],
-    ],
-    '#1b1f2e',
-  );
-  rect(g, 10, 50, 23, 3, '#12141f');
-  for (let y = 58; y < 80; y += 7) rect(g, 9 + (y % 4), y, 22, 1, '#141725');
+  // o polegar saindo para a esquerda
+  k.bar(26, 92, 9, 58, 11, skin, { light: -0.15 });
+  // as costas da mão
+  k.ell(41, 78, 25, 22, skin, { light: -0.25, spec: false });
+  // os quatro dedos (indicador, médio, anelar, mindinho), abertos para afastar as fitas
+  for (const [x, top, w, lean] of [
+    [22, 16, 10, -2],
+    [34, 8, 10, 0],
+    [46, 13, 10, 1],
+    [57, 28, 8, 3],
+  ]) {
+    k.bar(x + lean, top, x, 70, w, skin, { light: -0.2 });
+    // as dobras dos dedos e os nós
+    k.line(x - w / 2 + 2, top + (70 - top) * 0.38, x + w / 2 - 2, top + (70 - top) * 0.38, skin.deep, 0.8);
+    k.line(x - w / 2 + 2, 66, x + w / 2 - 2, 66, skin.lo, 0.7);
+    k.ell(x, 70, w / 2 - 1, 2.5, skin, { light: 0.1, spec: false });
+  }
+  // os tendões nas costas da mão
+  for (const x of [30, 41, 51]) k.line(x, 74, x - 2 + (x - 41) * 0.15, 92, skin.lo, 0.7);
+  spriteKit.outline(b, paintKit.hex('#0c0604'), 0.85);
+  const c = makeCanvas(W, H);
+  c.getContext('2d').putImageData(new ImageData(b.data, W, H), 0, 0);
   // contorno aceso pela luz de dentro do boteco
-  const rim = rimLight(c, '#e8925a', [
-    [0, -1],
-    [-1, 0],
-    [1, 0],
-  ]);
-  g.drawImage(rim, 0, 0);
-  const rim2 = rimLight(c, '#ffe0b0', [[0, -1]]);
-  g.drawImage(rim2, 0, 0);
+  const g = c.getContext('2d');
+  g.drawImage(rimLight(c, '#e8925a', [[0, -1], [-1, 0], [1, 0]]), 0, 0);
+  g.drawImage(rimLight(c, '#ffe0b0', [[0, -1]]), 0, 0);
   return c;
 }
 
@@ -201,7 +197,7 @@ export function buildDoor() {
   const wall = wallArt();
   const inside = insideArt();
   const hand = handArt();
-  const handGlow = boxBlur(copyCanvas(silhouette(hand, '#ffb070'), 8), 3, 3);
+  const handGlow = boxBlur(copyCanvas(silhouette(hand, '#ffb070'), 8 * HAND_RES), 3 * HAND_RES, 3);
   const strips = STRIP_COLORS.map(stripArt);
   const order = Array.from({ length: STRIPS }, (_, i) => Math.floor(hash(i, 5) * STRIP_COLORS.length));
   const frame = makeCanvas(WORLD.w, WORLD.h);
@@ -283,8 +279,8 @@ export function buildDoor() {
       out.fillRect(0, ty, F.W, sc * 160);
       out.restore();
       // a mão (bem perto da câmera), contra a luz: um halo quente em volta
-      cam.glowBlit(out, handGlow, H.x - 21 - 8, H.y - 4 - 8, 0.86, 0.9);
-      cam.blit(out, hand, H.x - 21, H.y - 4, 0.86);
+      cam.glowBlit(out, handGlow, H.x - 21 - 8, H.y - 4 - 8, 0.86, 0.9, 1 / HAND_RES);
+      cam.blitScaled(out, hand, H.x - 21, H.y - 4, 42, 80, 0.86);
     });
     vignette(out, F, 0.8);
     // entrando: estoura a luz

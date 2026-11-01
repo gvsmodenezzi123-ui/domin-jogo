@@ -56,6 +56,25 @@ export function makeCamera(F, { fx = DESIGN_W / 2, fy = DESIGN_H / 2, f = 0, rol
       g.drawImage(canvas, x, y, w, h);
       g.globalAlpha = 1;
     },
+    /**
+     * Versão 2.3: desenha um canvas de qualquer resolução ocupando `w × h` pixels de arte (os
+     * retratos de 64 ficam com o detalhe deles na tela, sem passar pela grade da cena).
+     */
+    blitScaled(g, canvas, ox, oy, w, h, depth = 1, alpha = 1, smooth = false) {
+      if (alpha <= 0) return;
+      const L = at(depth);
+      const x = W / 2 + (ox - L.cx) * L.sc + shakeX;
+      const y = H / 2 + (oy - L.cy) * L.sc + shakeY;
+      const sw = w * L.sc;
+      const sh = h * L.sc;
+      if (x > W || y > H || x + sw < 0 || y + sh < 0) return;
+      const was = g.imageSmoothingEnabled;
+      g.imageSmoothingEnabled = smooth;
+      g.globalAlpha = alpha;
+      g.drawImage(canvas, Math.round(x), Math.round(y), Math.round(sw), Math.round(sh));
+      g.globalAlpha = 1;
+      g.imageSmoothingEnabled = was;
+    },
     /** Desenha um canvas já borrado (brilho), liso e aditivo. */
     glowBlit(g, canvas, ox, oy, depth = 1, alpha = 1, scale = 1) {
       if (alpha <= 0.002) return;

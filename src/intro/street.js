@@ -41,7 +41,12 @@ const DOOR = { x: 71, y: 203, w: 38, h: 59 };
 const SIGN = { x: 24, y: 150, w: 132, h: 30 };
 /** Onde o tubo de neon fica (canto do canvas do tubo). */
 const NEON_AT = { x: 31, y: 153 };
-const TIAO_AT = { x: 110, y: 220 };
+/** Versão 2.3: o Seu Tião (retrato de 64) atrás do caixote vermelho, e a mão com a moeda. */
+const TIAO = { x: 117, y: 218, size: 34 };
+const CRATE = { x: 115, y: 244, w: 36, h: 21 };
+const TIAO_HAND = { x: TIAO.x + (50 / 64) * TIAO.size, y: TIAO.y + (45 / 64) * TIAO.size };
+/** O Corvo novo (capuz) na janela: os olhos dele caem onde o brilho vermelho acende. */
+const CORVO = { x: 105 + 6.8, y: 84 + 4.2, size: 37.3 };
 const CORVO_AT = { x: 105, y: 84 };
 const CORVO_WINDOW = { x: 120, y: 87, w: 16, h: 38 };
 
@@ -232,7 +237,7 @@ function azulejo(g, x0, y0, w, h, dim = 1) {
 }
 
 /** A fachada inteira, a calçada e a rua (sem nada que acenda). */
-function mainArt(sprites) {
+function mainArt() {
   const c = makeCanvas(MAIN.w, MAIN.h);
   const g = pix(c);
   g.translate(-MAIN.ox, -MAIN.oy);
@@ -500,8 +505,7 @@ function mainArt(sprites) {
   rect(g, 41, 266, 3, 4, '#3a2418');
   rect(g, 66, 266, 3, 4, '#3a2418');
 
-  // ---- Seu Tião no engradado, à direita da porta
-  g.drawImage(tint(sprites.tiao, '#9aa6c8', 0.55), TIAO_AT.x, TIAO_AT.y);
+  // ---- Seu Tião no engradado, à direita da porta: desenhado na resolução da tela (buildStreet)
 
   // tampinhas largadas na calçada (a moeda da meta)
   for (const [x, y] of [
@@ -633,12 +637,15 @@ export function buildStreet(sprites) {
   const sky = skyArt(false);
   const skyFlash = skyArt(true);
   const hill = hillArt();
-  const base = mainArt(sprites);
+  const base = mainArt();
   const post = postArt();
   const interior = doorInteriorArt();
   const neon = neonArt();
   const wetMask = maskArt();
-  const corvo = { open: tint(sprites.corvo.open, '#2a2a3a', 1), blink: tint(sprites.corvo.blink, '#2a2a3a', 1) };
+  const corvo = { open: tint(sprites.corvo.open, '#3a3448', 0.85), blink: tint(sprites.corvo.blink, '#3a3448', 0.85) };
+  const tiaoNight = tint(sprites.tiao, '#9aa6c8', 0.5);
+  const crateNight = tint(sprites.crate, '#9aa6c8', 0.5);
+  const coinSprite = sprites.coin;
 
   // fontes de luz (para o brilho borrado e para o reflexo no chão)
   const emitWarm = makeCanvas(MAIN.w, MAIN.h);
@@ -810,23 +817,12 @@ export function buildStreet(sprites) {
     g.drawImage(base, 0, 0);
     g.translate(-MAIN.ox, -MAIN.oy);
     drawLitWindow(g);
-    // o Corvo na fresta da janela escura
-    g.save();
-    g.beginPath();
-    g.rect(CORVO_WINDOW.x, CORVO_WINDOW.y, CORVO_WINDOW.w, CORVO_WINDOW.h);
-    g.clip();
+    // o Corvo na fresta da janela escura (desenhado depois, na resolução da tela)
     const blink = (t > 1.55 && t < 1.66) || t < 0.85;
-    g.drawImage(blink ? corvo.blink : corvo.open, CORVO_AT.x, CORVO_AT.y);
-    g.restore();
     // a folha fechada da veneziana por cima da metade direita da janela
     rect(g, 136, 87, 10, 38, '#2c4a34');
     for (let y = 89; y < 124; y += 2) rect(g, 137, y, 8, 1, '#1f3526');
     rect(g, 136, 87, 1, 38, '#3d6346');
-    // olhos do Corvo (acendem depois do relâmpago)
-    if (!blink) {
-      rect(g, CORVO_AT.x + 21, CORVO_AT.y + 20, 2, 1, '#ff2a2a');
-      rect(g, CORVO_AT.x + 28, CORVO_AT.y + 20, 2, 1, '#ff2a2a');
-    }
     // porta: luz quente com a cortina de fitas
     g.drawImage(interior, DOOR.x, DOOR.y);
     drawStrips(g, t);
@@ -840,14 +836,8 @@ export function buildStreet(sprites) {
     drawAberto(g, t, t > 0.9);
     drawBunting(g, t);
     drawWires(g, t);
-    // a moeda do Seu Tião: sobe girando e volta para a mão
+    // a moeda do Seu Tião: sobe girando e volta para a mão (desenhada depois, na resolução da tela)
     const coinT = span(t, 1.0, 1.62);
-    if (coinT > 0 && coinT < 1) {
-      const cx = TIAO_AT.x + 40 + coinT * 1;
-      const cy = TIAO_AT.y + 23 - Math.sin(coinT * Math.PI) * 20;
-      const spin = Math.floor(t * 22) % 3;
-      rect(g, cx, cy, spin === 1 ? 1 : 2, 2, spin === 2 ? '#fff2a0' : '#e8b830');
-    }
     // pingos caindo da marquise e do ar-condicionado
     for (let i = 0; i < 9; i += 1) {
       const x = [44, 48, 30, 64, 96, 120, 140, 150, 26][i];
@@ -925,6 +915,29 @@ export function buildStreet(sprites) {
       glow(out, mx, my, cam.scale(SKY.depth) * 34, 'rgba(160,170,230,0.5)', 0.55);
       cam.blit(out, hill, HILL.ox, HILL.oy, HILL.depth);
       cam.blit(out, frame, MAIN.ox, MAIN.oy, MAIN.depth);
+      // Versão 2.3: o Corvo de capuz na fresta da janela, com os olhos vermelhos
+      {
+        const [wx0, wy0] = cam.toScreen(CORVO_WINDOW.x, CORVO_WINDOW.y);
+        const [wx1, wy1] = cam.toScreen(CORVO_WINDOW.x + CORVO_WINDOW.w, CORVO_WINDOW.y + CORVO_WINDOW.h);
+        out.save();
+        out.beginPath();
+        out.rect(wx0, wy0, wx1 - wx0, wy1 - wy0);
+        out.clip();
+        cam.blitScaled(out, blink ? corvo.blink : corvo.open, CORVO.x, CORVO.y, CORVO.size, CORVO.size);
+        out.restore();
+      }
+      // o Seu Tião atrás do caixote vermelho, balançando de leve
+      const bob = Math.round(Math.sin(t * 2.4) * 0.5 + 0.5) * 0.5;
+      cam.blitScaled(out, tiaoNight, TIAO.x, TIAO.y - bob, TIAO.size, TIAO.size);
+      cam.blitScaled(out, crateNight, CRATE.x, CRATE.y, CRATE.w, CRATE.h);
+      // a moeda girando no ar (achata e volta: o giro)
+      if (coinT > 0 && coinT < 1) {
+        const cxw = TIAO_HAND.x + coinT * 1;
+        const cyw = TIAO_HAND.y - Math.sin(coinT * Math.PI) * 20;
+        const turn = Math.abs(Math.cos(t * 22));
+        const cw = 3.2 * Math.max(0.2, turn);
+        cam.blitScaled(out, coinSprite, cxw - cw / 2, cyw - 1.6, cw, 3.2);
+      }
 
       const sc = cam.scale(1);
       // brilho do neon (borrado) e a luz vermelha que ele joga na parede e no chão
@@ -949,7 +962,7 @@ export function buildStreet(sprites) {
       }
       // brilho da moeda no alto
       if (coinT > 0.35 && coinT < 0.65) {
-        const [cx, cy] = cam.toScreen(TIAO_AT.x + 41, TIAO_AT.y + 23 - Math.sin(coinT * Math.PI) * 20);
+        const [cx, cy] = cam.toScreen(TIAO_HAND.x, TIAO_HAND.y - Math.sin(coinT * Math.PI) * 20);
         glow(out, cx, cy, sc * 6, 'rgba(255,230,140,0.9)', 0.9);
         out.save();
         out.globalCompositeOperation = 'lighter';
