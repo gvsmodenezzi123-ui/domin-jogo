@@ -15440,3 +15440,839 @@
 .bm-v22 .bm-alley {
   max-height: 340px;
 }
+
+/* ======================================================================================
+   Versão 2.4: a mesa de 2 a 4 (bancada de cadeiras, saguão, resultado e pódio)
+   ====================================================================================== */
+
+/* ---------- a bancada: uma cadeira por rival, na ordem de jogo ---------- */
+.seat-bench .seat-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 6px 4px;
+  height: 96px;
+}
+.seat-bench-third .seat-row {
+  height: 116px;
+  padding-top: 8px;
+}
+.seat-slot {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* a seta entre as cadeiras: quem joga depois de quem */
+.seat-arrow {
+  align-self: center;
+  flex: 0 0 8px;
+  height: 10px;
+  margin-right: 2px;
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(244, 236, 210, 0.55) 45% 62%, transparent 62%) top / 100% 50% no-repeat,
+    linear-gradient(45deg, transparent 0 45%, rgba(244, 236, 210, 0.55) 45% 62%, transparent 62%) bottom / 100% 50% no-repeat;
+  image-rendering: pixelated;
+  opacity: 0.8;
+}
+.seat {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.seat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: var(--seat);
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+  pointer-events: none;
+}
+.seat.is-turn::before {
+  opacity: 0.13;
+}
+.seat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--seat);
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+  pointer-events: none;
+}
+.seat.is-turn::after {
+  opacity: 0.85;
+}
+.seat-wide,
+.seat-half {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.seat-third {
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 2px 3px;
+}
+.seat-photo-col {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.seat-wide .seat-photo-col {
+  width: 72px;
+}
+.seat-half .seat-photo-col {
+  width: 56px;
+}
+.seat-photo {
+  position: relative;
+}
+.rival-bench .seat-third .avatar-frame {
+  padding: 2px 2px 6px;
+  transform: rotate(-2deg);
+}
+.rival-bench .seat-third .avatar-frame::before {
+  top: -4px;
+  height: 7px;
+}
+.seat-slot:nth-child(even) .avatar-frame {
+  transform: rotate(2.5deg);
+}
+.seat.is-turn .avatar-frame {
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 12px var(--seat);
+}
+/* o anel do cronômetro: o contorno da polaroide se apaga no tempo da vez */
+.seat-ring {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  overflow: visible;
+  pointer-events: none;
+}
+.seat-ring rect {
+  fill: none;
+  stroke: var(--seat);
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  animation: seatRing var(--ring-ms, 30000ms) linear forwards;
+}
+@keyframes seatRing {
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+.seat-hit {
+  animation: seatHit 360ms steps(6, end);
+}
+@keyframes seatHit {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-3px, 1px);
+  }
+  40% {
+    transform: translate(3px, -1px);
+  }
+  60% {
+    transform: translate(-2px, 0);
+  }
+  80% {
+    transform: translate(2px, 1px);
+  }
+}
+.seat-tag {
+  position: absolute;
+  z-index: 3;
+  right: -4px;
+  bottom: -3px;
+  padding: 1px 2px;
+  font-family: var(--font-pixel);
+  font-size: 5px;
+  color: #1a0f06;
+  background: #e8d9a8;
+  box-shadow: 0 1px 0 #000;
+}
+.seat-secs {
+  position: absolute;
+  z-index: 3;
+  left: -5px;
+  top: -5px;
+  min-width: 15px;
+  padding: 2px 2px 1px;
+  font-size: 6px;
+  line-height: 1;
+  text-align: center;
+  color: #1a0f06;
+  background: var(--seat);
+  box-shadow:
+    0 0 0 1px #1a0f06,
+    0 1px 0 #000;
+}
+.seat-secs.is-urgent {
+  color: #fff6dc;
+  background: #c0392b;
+  animation: netBlink 0.5s steps(2, end) infinite;
+}
+.reduce-motion .seat-secs.is-urgent {
+  animation: none;
+}
+.seat-ping {
+  position: absolute;
+  z-index: 3;
+  right: -2px;
+  top: -2px;
+  width: 5px;
+  height: 5px;
+  background: #6fdc6f;
+  box-shadow: 0 0 0 1px #0a0603;
+}
+.seat-ping.is-slow {
+  background: #f0b64a;
+}
+.seat-status {
+  height: 9px;
+  margin-top: 2px;
+  font-size: 6px;
+  line-height: 9px;
+  color: var(--seat);
+  white-space: nowrap;
+}
+.seat-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 6px;
+}
+.seat-third .seat-info {
+  align-items: center;
+  gap: 3px;
+  padding-top: 2px;
+}
+.seat-plate.rival-nameplate {
+  font-size: 7px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.seat-half .seat-plate.rival-nameplate {
+  padding: 3px 6px 4px;
+  font-size: 6px;
+}
+.seat-third .seat-plate.rival-nameplate {
+  padding: 3px 5px 3px;
+  font-size: 6px;
+}
+.seat-third .seat-plate.rival-nameplate::before,
+.seat-third .seat-plate.rival-nameplate::after {
+  display: none;
+}
+.seat.is-turn .seat-plate.rival-nameplate {
+  filter: drop-shadow(0 0 4px var(--seat)) drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+.seat-stats.rival-stats {
+  gap: 4px;
+  padding: 2px 4px;
+}
+.seat-third .seat-stats.rival-stats {
+  gap: 3px;
+  padding: 1px 3px;
+}
+.seat-coins {
+  font-size: 7px;
+}
+.seat-third .seat-coins {
+  font-size: 6px;
+}
+.seat-hearts-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 6px;
+  color: #f4ecd2;
+}
+/* as pedras na mão, de costas */
+.seat-fan {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  min-height: 11px;
+}
+.seat-wide .seat-fan {
+  position: absolute;
+  z-index: 1;
+  right: 4px;
+  top: 50%;
+  translate: 0 -50%;
+  gap: 2px;
+  padding: 4px 5px 5px;
+  background: rgba(8, 5, 3, 0.55);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 170, 0.1);
+}
+.seat-fan-tile {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 1.5px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px),
+    linear-gradient(180deg, #efe4c6, #cdbd94);
+  box-shadow:
+    inset 0 0 0 1px rgba(60, 38, 18, 0.55),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.seat-fan-n {
+  margin-left: 2px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  font-weight: 400;
+  color: #e8d9a8;
+}
+/* o balão da última jogada, embaixo da cadeira, por cima do feltro */
+.seat-bubble {
+  position: absolute;
+  z-index: 40;
+  left: 50%;
+  bottom: -12px;
+  padding: 3px 5px 3px;
+  font-size: 6px;
+  line-height: 1;
+  white-space: nowrap;
+  color: #1a0f06;
+  background: #f4ecd2;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px #1a0f06,
+    0 2px 0 rgba(0, 0, 0, 0.6);
+  translate: -50% 0;
+  animation: seatBubble 260ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  pointer-events: none;
+}
+.seat-bubble::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 6px;
+  height: 4px;
+  translate: -50% 0;
+  background: #f4ecd2;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.seat-wide .seat-bubble {
+  left: 40px;
+}
+.seat-bubble.is-strong {
+  color: #fff6dc;
+  background: var(--seat);
+  text-shadow: 0 1px 0 #1a0f06;
+}
+.seat-bubble.is-strong::before {
+  background: var(--seat);
+}
+@keyframes seatBubble {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+/* quem saiu: em cinza, com o X de giz e a colocação na plaquinha */
+.seat.is-out .seat-photo-in,
+.seat.is-out .seat-stats {
+  filter: grayscale(1) brightness(0.55);
+}
+.seat.is-out .seat-plate.rival-nameplate {
+  filter: grayscale(0.6) brightness(0.8);
+}
+.seat-chalk {
+  position: absolute;
+  z-index: 2;
+  inset: 2px 2px 6px;
+  width: calc(100% - 4px);
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+.seat-chalk path {
+  fill: none;
+  stroke: #f2eedf;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6));
+  animation: chalkDraw 260ms ease-out forwards;
+}
+.seat-chalk path + path {
+  animation-delay: 220ms;
+}
+@keyframes chalkDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.seat.is-lost .seat-photo-in {
+  filter: brightness(0.6);
+}
+.reduce-motion .seat-ring rect,
+.reduce-motion .seat-hit,
+.reduce-motion .seat-bubble {
+  animation: none;
+}
+.reduce-motion .seat-chalk path {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+
+/* ---------- a mesa: relógio na cor de quem joga, a etiqueta e o grito do fim da rodada ---------- */
+.table-clock:not(.pvp-clock-mine):not(.pvp-clock-urgent) {
+  color: var(--who);
+  border-color: var(--who);
+}
+.pvp-final-tag.table-tag {
+  top: 6px;
+  bottom: auto;
+  left: 8px;
+  translate: none;
+  color: rgba(244, 236, 210, 0.55);
+}
+.table-callout {
+  position: absolute;
+  z-index: 26;
+  left: 50%;
+  top: 30%;
+  translate: -50% -50%;
+  padding: 6px 10px 7px;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--who);
+  text-shadow:
+    0 3px 0 #120806,
+    2px 2px 0 #120806,
+    -2px 2px 0 #120806;
+  animation: tableCallout 1500ms ease-out both;
+  pointer-events: none;
+}
+@keyframes tableCallout {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-8deg);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.2) rotate(3deg);
+  }
+  24% {
+    transform: scale(1) rotate(-2deg);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) rotate(-2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.94) rotate(-2deg);
+  }
+}
+.reduce-motion .table-callout {
+  animation: none;
+  opacity: 0;
+}
+
+/* ---------- fim da rodada: uma linha por cadeira ---------- */
+.table-res-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  text-align: left;
+}
+.table-res-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 22px 30px 54px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 3px;
+  background: rgba(0, 0, 0, 0.28);
+  border-left: 3px solid var(--seat);
+  border-radius: 2px;
+}
+.table-res-row.is-me {
+  background: rgba(255, 230, 170, 0.08);
+}
+.table-res-row.is-out {
+  opacity: 0.6;
+}
+.table-res-face {
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.table-res-row.is-out .table-res-face {
+  filter: grayscale(1);
+}
+.table-res-who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.table-res-who b {
+  font-size: 7px;
+  font-weight: 400;
+  color: #f4ecd2;
+}
+.table-res-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.table-res-none {
+  font-size: 15px;
+  line-height: 1;
+  color: #b8ab8a;
+}
+.table-res-pts {
+  font-size: 7px;
+  color: #e8d9a8;
+  text-align: right;
+}
+.table-res-dmg {
+  font-size: 8px;
+  color: #8a7f68;
+  text-align: center;
+}
+.table-res-dmg.is-hit {
+  color: #ff8c7a;
+}
+.table-res-hearts {
+  display: flex;
+  justify-content: flex-end;
+}
+.table-res-place {
+  font-size: 7px;
+  color: #b8ab8a;
+}
+
+/* ---------- pódio ---------- */
+.table-podium-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.table-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 92px;
+}
+.table-step-photo.avatar-frame {
+  padding: 3px 3px 8px;
+  background: linear-gradient(180deg, #f6f2e6, #e3dcc8);
+  border: 0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.65);
+  transform: rotate(-3deg);
+}
+.table-step.is-1st .table-step-photo.avatar-frame {
+  transform: rotate(2deg);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 16px rgba(255, 200, 80, 0.55);
+}
+.table-step-name {
+  font-size: 7px;
+  color: #f4ecd2;
+  white-space: nowrap;
+}
+.table-step.is-me .table-step-name {
+  color: #ffd36b;
+}
+.table-step-block {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  padding-top: 7px;
+  font-size: 12px;
+  color: #1a0f06;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 2px, transparent 2px),
+    var(--seat);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 3px 0 #000;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.table-step.is-1st .table-step-block {
+  height: 58px;
+}
+.table-step.is-2nd .table-step-block {
+  height: 40px;
+}
+.table-step.is-3rd .table-step-block {
+  height: 28px;
+}
+.table-podium-4th {
+  margin-top: 10px;
+  font-size: 7px;
+  color: #b8ab8a;
+}
+.table-podium-4th::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  background: var(--seat);
+  vertical-align: 0;
+}
+
+/* ---------- saguão: a mesa vista de cima com as cadeiras em volta ---------- */
+.table-lobby {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 38%, rgba(255, 190, 110, 0.12), transparent 70%),
+    #0d0907;
+}
+.lobby-fit {
+  height: 100%;
+  overflow: hidden;
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+  padding: max(env(safe-area-inset-top), 10px) 16px max(env(safe-area-inset-bottom), 14px);
+}
+.lobby-head {
+  display: flex;
+  justify-content: center;
+}
+.lobby-sign {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px 8px;
+  font-size: 12px;
+  color: #fff1d2;
+  background: #6a3e1e;
+  border: 2px solid #1a0c04;
+  text-shadow: 0 2px 0 #1a0a03;
+}
+.px-skins .lobby-sign {
+  border: 2px solid transparent;
+  border-image: var(--px-plank-pinho) 8 fill / 9px / 0 round;
+  background: none;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+.lobby-code {
+  font-size: 6px;
+  color: #e8c98a;
+  letter-spacing: 0.12em;
+}
+.lobby-table {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  height: 268px;
+  margin: 12px auto 0;
+}
+.lobby-felt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 104px;
+  translate: -50% -50%;
+  border-radius: 46% / 50%;
+  background:
+    radial-gradient(ellipse at 50% 40%, #5a2a2c, #2a1314 75%);
+  box-shadow:
+    0 0 0 9px #4a2c16,
+    0 0 0 11px #1a0c04,
+    0 10px 18px rgba(0, 0, 0, 0.7);
+}
+/* o sentido da vez: a seta curva anti-horária pintada no feltro */
+.lobby-turn {
+  position: absolute;
+  inset: 18px 30px;
+  border: 2px dashed rgba(244, 236, 210, 0.3);
+  border-radius: 50%;
+}
+.lobby-turn::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  border: 5px solid transparent;
+  border-bottom: 7px solid rgba(244, 236, 210, 0.45);
+  translate: 0 -70%;
+}
+.lobby-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 96px;
+  translate: -50% -50%;
+}
+.lobby-seat.at-bottom {
+  left: 50%;
+  top: 87%;
+}
+.lobby-seat.at-top {
+  left: 50%;
+  top: 14%;
+}
+.lobby-seat.at-left {
+  left: 14%;
+  top: 50%;
+}
+.lobby-seat.at-right {
+  left: 86%;
+  top: 50%;
+}
+.lobby-photo.avatar-frame {
+  position: relative;
+  padding: 3px 3px 8px;
+  background: linear-gradient(180deg, #f6f2e6, #e3dcc8);
+  border: 0;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 0 2px var(--seat);
+  transform: rotate(-3deg);
+}
+.lobby-seat.at-right .lobby-photo.avatar-frame,
+.lobby-seat.at-top .lobby-photo.avatar-frame {
+  transform: rotate(3deg);
+}
+.lobby-order {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  font-size: 6px;
+  color: #1a0f06;
+  background: var(--seat);
+  box-shadow: 0 0 0 1px #1a0f06;
+}
+.lobby-seat-name {
+  font-size: 7px;
+  color: #f4ecd2;
+  white-space: nowrap;
+}
+.lobby-ready {
+  padding: 2px 4px;
+  font-size: 5px;
+  color: #10220f;
+  background: #6fdc6f;
+  box-shadow: 0 1px 0 #000;
+}
+.lobby-face-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 5px;
+  color: #e8c98a;
+}
+.lobby-arrow {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  color: #f4ecd2;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(244, 236, 210, 0.25);
+}
+.lobby-seat.is-empty {
+  opacity: 0.55;
+}
+.lobby-chair {
+  width: 44px;
+  height: 52px;
+  border: 2px dashed rgba(244, 236, 210, 0.35);
+  border-radius: 3px;
+}
+.lobby-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  margin: 14px auto 0;
+}
+.lobby-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lobby-opt-label {
+  font-size: 7px;
+  color: #e8c98a;
+  white-space: nowrap;
+}
+.lobby-chips {
+  display: flex;
+  gap: 4px;
+}
+.lobby-chip {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 8px;
+  color: #e9dcb4;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(244, 236, 210, 0.22);
+}
+.lobby-chip.is-on {
+  color: #1a0f06;
+  background: #f0b64a;
+  box-shadow:
+    inset 0 0 0 1px #1a0f06,
+    0 2px 0 #000;
+}
+.lobby-note {
+  font-size: 15px;
+  line-height: 1.1;
+  color: #b8ab8a;
+  text-align: center;
+}
+.lobby-start {
+  max-width: 340px;
+  margin: 14px auto 0;
+}

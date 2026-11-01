@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.4 (em andamento): mesas online de 2 a 4
+
+- `src/table/tableEngine.js`: o motor da mesa de N cadeiras, à parte do `gameReducer` (o solo e
+  o duelo 1×1 não mudam). Mão de 7 com 2 ou 3 jogadores e de 6 com 4; a vez gira pela ordem das
+  cadeiras; a batida fere os outros vivos (ou só a mão mais pesada); na tranca, a menor soma
+  escapa; quem zera sai e o último vivo vence. `viewFor` monta o espelho de cada cadeira (a
+  própria mão e só o número das outras).
+- O HUD da mesa: `SeatBench` (uma cadeira por rival, na ordem de jogo, com a vez, o anel do
+  cronômetro, o balão da última jogada e o X de giz de quem saiu), `TableScreen`, o resultado
+  de cada rodada, o pódio e o saguão (`TableLobby`). Por enquanto roda com bots
+  (`TablePreview`), sem rede; o online em estrela entra na próxima fase.
+
 ### 2.3: a abertura no modelo novo
 
 - A mesma história e o mesmo tempo (os sons continuam batendo), mas desenhada com os pintores
