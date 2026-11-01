@@ -54,6 +54,8 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const [selectedId, setSelectedId] = useState(null);
   const [handZone, setHandZone] = useState(0);
   const [tableAnim, setTableAnim] = useState(null);
+  // a última jogada que já começou a voar (até lá, a pedra nova fica escondida na mesa)
+  const [stagedSeq, setStagedSeq] = useState(view.seq);
   const [hits, setHits] = useState({});
   const [myHurt, setMyHurt] = useState(0);
   const [callout, setCallout] = useState(null);
@@ -95,6 +97,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       }
       pendingPlay.current = null;
       setTableAnim({ key, tileId: ev.tileId, by: ev.by, stage: 'flight' });
+      setStagedSeq((n) => Math.max(n, key));
       const double = ev.tileId.split('-')[0] === ev.tileId.split('-')[1];
       cancelFlight.current = flyTile({
         tileId: ev.tileId,
@@ -140,7 +143,9 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       }
       if (ev.type === 'play') {
         tileId = ev.tileId;
-        stagePlay(ev, view.seq);
+        // o voo começa no próximo tique (o estado da animação muda fora do corpo do efeito)
+        const key = view.seq;
+        later(() => stagePlay(ev, key), 0);
         offset = ev.by === me ? PLAYER_FLIGHT_MS : RIVAL_FLIGHT_MS;
       }
       if (ev.type === 'draw') later(() => sound.playDraw(), 40);
@@ -185,7 +190,10 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   }, [view.seq, view.events, me, stagePlay, pushFloat, clearFloats, later, coinTarget]);
 
   const playing = view.phase === 'playing';
-  const myTurn = playing && view.turn === me && !tableAnim;
+  // a pedra que acabou de chegar pela rede e ainda vai voar conta como "voando" desde já
+  const playEv = view.events.find((e) => e.type === 'play');
+  const flying = tableAnim ?? (playEv && view.seq > stagedSeq ? { key: view.seq, tileId: playEv.tileId, by: playEv.by, stage: 'flight' } : null);
+  const myTurn = playing && view.turn === me && !flying;
   const optsNow = turnOptions(view, me);
   const opts = useStableValue(optsNow, `${view.seq}:${me}`);
   const hand = view.hands[me] ?? NONE;
@@ -240,7 +248,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       ...s,
       count: view.handCounts[s.id] ?? 0,
       color: colorOf(view, s.id),
-      isTurn: playing && view.turn === s.id && !(tableAnim && tableAnim.by === s.id),
+      isTurn: playing && view.turn === s.id && !(flying && flying.by === s.id),
       smug: batedor === s.id,
       ping: link && !link.lost ? link.ping : null,
       lostLeft: link?.lost && link.graceEndsAt ? Math.max(0, Math.ceil((link.graceEndsAt - now) / 1000)) : null,
@@ -260,11 +268,11 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const turnKey = `${view.round}:${actor}:${clock?.deadline ?? 0}`;
   // o anel conta o tempo que faltava quando a vez começou (fixo durante a vez, para não pular)
   const turnMs = useStableValue(clock?.deadline ? Math.max(0, clock.deadline - now) : totalMs, turnKey);
-  const clockMine = actor === me && !(tableAnim && tableAnim.by !== me);
+  const clockMine = actor === me && !(flying && flying.by !== me);
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
   const hint = hintFor({ view, me, opts, selected: selectedTile, names });
-  const showResult = !playing && !tableAnim;
+  const showResult = !playing && !flying;
 
   return (
     <div
@@ -294,14 +302,14 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           roundKey={`mesa:${view.round}`}
           playableSides={selectedSides}
           onPlaySide={handlePlaySide}
-          dimmed={!playing && !tableAnim}
+          dimmed={!playing && !flying}
           previewDouble={Boolean(selectedTile && selectedTile.a === selectedTile.b)}
           frameRef={tableRef}
           endMarks={NO_MARKS}
           felt={TABLE_FELT}
           decor={NONE}
           atmosphere="boteco"
-          incoming={tableAnim}
+          incoming={flying}
           noMoves={exhausted}
           boneyardCount={view.boneyardCount}
           tableMod={null}
