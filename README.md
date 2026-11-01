@@ -172,17 +172,25 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
-### 2.4 (em andamento): mesas online de 2 a 4
+### 2.4: a roda online de 2 a 4
 
+- No MESA ONLINE, além do DUELO 1×1, a RODA DE 2 A 4: quem abre recebe um código
+  ("RODA-8B2KQ", ou o link com `?roda=`), os outros entram por ele e o saguão mostra a mesa vista
+  de cima com as cadeiras, os rostos (retratos 64×64) e o PRONTO. O anfitrião escolhe as regras
+  ali mesmo (cadeiras, quem a batida fere, corações, tempo) e completa as vazias com bots.
 - `src/table/tableEngine.js`: o motor da mesa de N cadeiras, à parte do `gameReducer` (o solo e
   o duelo 1×1 não mudam). Mão de 7 com 2 ou 3 jogadores e de 6 com 4; a vez gira pela ordem das
   cadeiras; a batida fere os outros vivos (ou só a mão mais pesada); na tranca, a menor soma
-  escapa; quem zera sai e o último vivo vence. `viewFor` monta o espelho de cada cadeira (a
-  própria mão e só o número das outras).
+  escapa; quem zera sai e o último vivo vence. `viewFor` monta o espelho de cada cadeira.
+- `src/table/tableSession.js`: a rede em estrela pelo mesmo PeerJS do duelo. O anfitrião roda
+  o motor, confere cada jogada e manda a cada um só a própria mão; joga pelos bots e, quando o
+  relógio zera, pela cadeira da vez. Quem cai tem 60 s para voltar (o relógio joga por ele);
+  depois é W.O. Se o anfitrião sai, a roda acaba.
 - O HUD da mesa: `SeatBench` (uma cadeira por rival, na ordem de jogo, com a vez, o anel do
-  cronômetro, o balão da última jogada e o X de giz de quem saiu), `TableScreen`, o resultado
-  de cada rodada, o pódio e o saguão (`TableLobby`). Por enquanto roda com bots
-  (`TablePreview`), sem rede; o online em estrela entra na próxima fase.
+  cronômetro, os segundos, o balão da última jogada, o ping e o X de giz de quem saiu), o fim de
+  cada rodada (todos tocam em PRÓXIMA RODADA, ou ela começa sozinha em 25 s) e o pódio.
+- TREINAR COM BOTS: a mesma mesa sem internet. Nesta versão a roda é direto na mesa, sem loja
+  e sem talismãs (eles entram quando cada efeito tiver a regra de alvo para vários rivais).
 
 ### 2.3: a abertura no modelo novo
 

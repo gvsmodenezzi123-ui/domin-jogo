@@ -29,6 +29,7 @@ import TitleScreen from './components/TitleScreen.jsx';
 import IntroScene from './intro/IntroScene.jsx';
 import PvpApp from './pvp/PvpApp.jsx';
 import { parseRoomInput } from './pvp/protocol.js';
+import { parseTableInput } from './table/tableProtocol.js';
 import { loadSavedTable } from './pvp/controller.js';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
@@ -133,8 +134,18 @@ function linkedRoom() {
   }
 }
 
-/** O jogo abre direto numa mesa online (o link ?mesa= ou uma mesa guardada)? */
-const startsOnline = () => Boolean(linkedRoom() || loadSavedTable());
+/** Versão 2.4: o link de uma roda de 2 a 4 (?roda=8B2KQ) abre o modo online já na roda. */
+function linkedTable() {
+  try {
+    const roda = new URLSearchParams(window.location.search).get('roda');
+    return roda ? parseTableInput(roda) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** O jogo abre direto numa mesa online (o link ?mesa= / ?roda= ou uma mesa guardada)? */
+const startsOnline = () => Boolean(linkedRoom() || linkedTable() || loadSavedTable());
 
 /** Onde a tela inicial tem o logo e a lâmpada: o último quadro da abertura casa com eles. */
 function titleTarget() {
@@ -580,7 +591,7 @@ export default function App() {
   const [titlePick, setTitlePick] = useState(false);
   // Patch PvP: a mesa online por cima de tudo ({ room } ou null); o solo fica parado na tela inicial
   // (uma mesa guardada — a página recarregou no meio da partida — também volta direto para ela)
-  const [online, setOnline] = useState(() => (linkedRoom() ? { room: linkedRoom() } : loadSavedTable() ? { room: null } : null));
+  const [online, setOnline] = useState(() => (linkedRoom() ? { room: linkedRoom() } : linkedTable() ? { room: null, table: linkedTable() } : loadSavedTable() ? { room: null } : null));
   // Patch 0.6.1: corte de cena (fade 350 ms para o preto, troca, 350 ms de volta)
   const { stage: veilStage, go: cutTo } = useSceneTransition();
   // Patch 0.7.0: fila dos avisos de conquista (um por vez, no alto da tela)
@@ -1333,6 +1344,7 @@ export default function App() {
           muted={muted}
           onToggleMute={toggleMute}
           initialRoom={online.room ?? null}
+          initialTable={online.table ?? null}
           onExit={() => {
             setOnline(null);
             if (sound.ctx) sound.playTrack(REGIONS[0].music);

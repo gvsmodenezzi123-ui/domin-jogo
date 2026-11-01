@@ -29,7 +29,7 @@ function MiniTiles({ tiles }) {
   );
 }
 
-function Podium({ view, me, names, onRematch, onLeave }) {
+function Podium({ view, me, names, onRematch, onLeave, canRematch }) {
   const ranked = view.seats.slice().sort((a, b) => (a.place ?? 9) - (b.place ?? 9));
   const won = view.winner === me;
   const step = { 1: 'is-1st', 2: 'is-2nd', 3: 'is-3rd', 4: 'is-4th' };
@@ -65,9 +65,13 @@ function Podium({ view, me, names, onRematch, onLeave }) {
               SAIR
             </button>
           )}
-          <button type="button" data-tone="play" className="btn-pixel flex-[2]" onClick={onRematch}>
-            REVANCHE
-          </button>
+          {canRematch ? (
+            <button type="button" data-tone="play" className="btn-pixel flex-[2]" onClick={onRematch}>
+              REVANCHE
+            </button>
+          ) : (
+            <p className="table-wait font-term flex-[2]">O anfitrião decide a revanche.</p>
+          )}
         </div>
       </div>
     </div>
@@ -78,14 +82,17 @@ function Podium({ view, me, names, onRematch, onLeave }) {
  * Versão 2.4: o fim de cada rodada da mesa de 2 a 4 (quem bateu ou como trancou, o que sobrou
  * na mão de cada um, o dano e os corações) e, no fim da partida, o pódio do 1º ao 4º.
  */
-export default function TableResult({ view, me, onNextRound, onRematch, onLeave }) {
+export default function TableResult({ view, me, ready = null, canRematch = true, onNextRound, onRematch, onLeave }) {
   const names = Object.fromEntries(view.seats.map((s) => [s.id, s.id === me ? 'Você' : s.name]));
-  if (view.phase === 'matchOver') return <Podium view={view} me={me} names={names} onRematch={onRematch} onLeave={onLeave} />;
+  if (view.phase === 'matchOver') return <Podium view={view} me={me} names={names} onRematch={onRematch} onLeave={onLeave} canRematch={canRematch} />;
   const r = view.result;
   if (!r) return null;
   const mine = r.kind === 'batida' ? r.by === me : r.spared.includes(me) && Object.keys(r.damage).length > 0;
   const rows = seatsFrom(view.seats, me);
   const sub = subtitle({ ...r, by: r.by === me ? 'me' : r.by }, names);
+  // online: você já tocou em PRÓXIMA RODADA? e quem falta (as pessoas vivas; bots não esperam)
+  const sent = Boolean(ready?.includes(me));
+  const waiting = ready ? view.seats.filter((s) => s.alive && !s.bot && s.id !== me && !ready.includes(s.id)) : [];
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="table-round-title">
       <div className={`${mine ? 'chalkboard' : 'overlay-card'} round-card table-round w-full max-w-[360px] overflow-hidden px-4 py-5 text-center`}>
@@ -119,10 +126,10 @@ export default function TableResult({ view, me, onNextRound, onRematch, onLeave 
           })}
         </ul>
 
-        <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onNextRound}>
-          PRÓXIMA RODADA
+        <button type="button" data-tone="play" className="btn-pixel mt-4 w-full" onClick={onNextRound} disabled={sent}>
+          {sent ? `ESPERANDO ${waiting.length ? waiting.map((s) => plateName(s.name)).join(', ') : 'A MESA'}` : 'PRÓXIMA RODADA'}
         </button>
-        <p className="mt-2 font-term text-sm text-bone-400">A mesa acaba quando sobrar um.</p>
+        <p className="mt-2 font-term text-sm text-bone-400">{ready ? 'Começa quando todos tocarem (ou sozinha em 25 s).' : 'A mesa acaba quando sobrar um.'}</p>
       </div>
     </div>
   );

@@ -9,7 +9,11 @@ export const SEAT_COLORS = Object.freeze(['#f0b64a', '#5cc4b8', '#e4694c', '#b49
 /** Os rostos que a mesa oferece (retratos 64×64 do jogo), na ordem do seletor do saguão. */
 export const TABLE_FACES = Object.freeze(['marquinhos', 'neide', 'baiano', 'sofia', 'zeca', 'odete', 'carlinhos', 'bigode', 'cida', 'fausto', 'genesio', 'tonho']);
 
-export const colorOf = (state, id) => SEAT_COLORS[Math.max(0, state.seats.findIndex((s) => s.id === id)) % SEAT_COLORS.length];
+/** A cor da cadeira vem do número dela ("s2" → a 3ª cor), igual no saguão e na mesa (mesmo com cadeira vazia no meio). */
+export function colorOf(state, id) {
+  const n = /^s\d$/.test(String(id)) ? Number(String(id).slice(1)) : Math.max(0, state.seats.findIndex((s) => s.id === id));
+  return SEAT_COLORS[n % SEAT_COLORS.length];
+}
 
 /** As cadeiras na ordem de jogo a partir de `me` (você primeiro, depois quem joga em seguida). */
 export function seatsFrom(seats, me) {

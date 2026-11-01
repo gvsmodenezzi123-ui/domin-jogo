@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { sound } from '../engine/audioSynth.js';
-import TableLobby from './TableLobby.jsx';
+import TableLobby, { TableRules, tableNote } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
+import { TABLE_FACES } from './seats.js';
 import { useLocalTable } from './useLocalTable.js';
 
 /** Quem senta nas cadeiras de bot da mesa local. */
 const BOTS = Object.freeze([
-  { id: 's1', name: 'Neide', face: 'neide', bot: true },
-  { id: 's2', name: 'Baiano', face: 'baiano', bot: true },
-  { id: 's3', name: 'Sofia', face: 'sofia', bot: true },
+  { id: 's1', name: 'Neide', face: 'neide', bot: true, ready: true },
+  { id: 's2', name: 'Baiano', face: 'baiano', bot: true, ready: true },
+  { id: 's3', name: 'Sofia', face: 'sofia', bot: true, ready: true },
 ]);
 
 function LocalTable({ seats, seed, hearts, rule, onLeave, muted, onToggleMute }) {
@@ -31,43 +32,70 @@ function LocalTable({ seats, seed, hearts, rule, onLeave, muted, onToggleMute })
 }
 
 /**
- * Versão 2.4: a mesa de 2 a 4 com bots, sem rede. Serve de prévia do HUD (o saguão e a mesa)
- * e é a base do treino offline; o online da fase 3 troca os bots por pessoas.
+ * Versão 2.4: a mesa de 2 a 4 com bots, sem internet (o TREINAR COM BOTS do modo online, e a
+ * prévia do HUD). A mesa online troca os bots por pessoas.
  */
-export default function TablePreview() {
-  const [count, setCount] = useState(4);
-  const [myFace, setMyFace] = useState('marquinhos');
-  const [rule, setRule] = useState('todos');
-  const [hearts, setHearts] = useState(5);
+export default function TablePreview({ onExit = null, muted: mutedProp, onToggleMute: toggleProp }) {
+  const [config, setConfig] = useState({ seats: 4, batida: 'todos', hearts: 5, turn: 30 });
+  const [myFace, setMyFace] = useState(TABLE_FACES[0]);
   const [game, setGame] = useState(null);
-  const [muted, setMuted] = useState(() => Boolean(sound.isMuted));
+  const [mutedLocal, setMutedLocal] = useState(() => Boolean(sound.isMuted));
+  const muted = mutedProp ?? mutedLocal;
 
   const start = () => {
     sound.init();
     sound.playClick();
-    const seats = [{ id: 's0', name: 'Você', face: myFace }, ...BOTS.slice(0, count - 1)];
+    const seats = [{ id: 's0', name: 'Você', face: myFace }, ...BOTS.slice(0, config.seats - 1)];
     setGame({ seats, seed: (Date.now() & 0xffffff) >>> 0, key: Date.now() });
   };
   const toggleMute = () => {
+    if (toggleProp) {
+      toggleProp();
+      return;
+    }
     sound.init();
-    setMuted(sound.toggleMute());
+    setMutedLocal(sound.toggleMute());
+  };
+  const face = (dir) => {
+    sound.playClick();
+    const at = TABLE_FACES.indexOf(myFace);
+    setMyFace(TABLE_FACES[(at + dir + TABLE_FACES.length) % TABLE_FACES.length]);
   };
 
   if (game) {
-    return <LocalTable key={game.key} seats={game.seats} seed={game.seed} hearts={hearts} rule={rule} onLeave={() => setGame(null)} muted={muted} onToggleMute={toggleMute} />;
+    return <LocalTable key={game.key} seats={game.seats} seed={game.seed} hearts={config.hearts} rule={config.batida} onLeave={() => setGame(null)} muted={muted} onToggleMute={toggleMute} />;
   }
+  const slots = [{ id: 's0', name: 'Você', face: myFace, ready: true }, ...BOTS.slice(0, config.seats - 1)];
   return (
     <TableLobby
-      count={count}
-      setCount={setCount}
-      myFace={myFace}
-      setMyFace={setMyFace}
-      bots={BOTS}
-      rule={rule}
-      setRule={setRule}
-      hearts={hearts}
-      setHearts={setHearts}
-      onStart={start}
+      title={`MESA DE ${config.seats}`}
+      code="TREINO COM BOTS"
+      slots={slots}
+      you="s0"
+      onFace={face}
+      options={
+        <TableRules
+          config={config}
+          turn={false}
+          onChange={(next) => {
+            sound.playClick();
+            setConfig(next);
+          }}
+        />
+      }
+      note={tableNote(config.seats)}
+      footer={
+        <>
+          <button type="button" data-tone="play" className="btn-pixel lobby-start w-full" onClick={start}>
+            SENTAR E JOGAR
+          </button>
+          {onExit && (
+            <button type="button" className="text-action lobby-back" onClick={onExit}>
+              VOLTAR
+            </button>
+          )}
+        </>
+      }
     />
   );
 }

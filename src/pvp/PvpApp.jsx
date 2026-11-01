@@ -24,6 +24,9 @@ import { DisconnectOverlay, PvpEnd, PvpMaletaWait, PvpMenu, PvpToast, PvpWaiting
 import { cleanName, generateRoomCode, parseRoomInput } from './protocol.js';
 import { createSession } from './session.js';
 import { createPeerTransport } from './transport.js';
+import TableOnline from '../table/TableOnline.jsx';
+import TablePreview from '../table/TablePreview.jsx';
+import { parseTableInput } from '../table/tableProtocol.js';
 
 const ME_KEY = 'buxaria:pvp:me';
 
@@ -101,7 +104,7 @@ function makeTable(me, role, code, restore = null, room = null) {
   return createController({ session, restore });
 }
 
-export default function PvpApp({ settings, onSettings, muted, onToggleMute, onExit, initialRoom = null }) {
+export default function PvpApp({ settings, onSettings, muted, onToggleMute, onExit, initialRoom = null, initialTable = null }) {
   const [me, setMe] = useState(loadMe);
   const [saved, setSaved] = useState(() => loadSavedTable());
   const [ctl, setCtl] = useState(() => {
@@ -112,6 +115,8 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
   const [notice, setNotice] = useState(null);
   const [inspect, setInspect] = useState(null);
   const [joinError, setJoinError] = useState(null);
+  // versão 2.4: a roda de 2 a 4 ({ role, code } online, ou { practice: true } com bots)
+  const [roda, setRoda] = useState(null);
   // o duelo acabou: a última rodada fica na mesa até tocar em FIM DA NOITE (a mesa nova zera)
   const [endSeen, setEndSeen] = useState(null);
   const { stage: veilStage, go: cutTo } = useSceneTransition();
@@ -191,6 +196,25 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     }
     begin('guest', code);
   };
+  const createTable = () => {
+    tap();
+    setJoinError(null);
+    setRoda({ role: 'host', code: generateRoomCode(deviceRandom), key: Date.now() });
+  };
+  const joinTable = (typed) => {
+    tap();
+    const code = parseTableInput(typed);
+    if (!code) {
+      setJoinError('Esse código não parece de roda: são 5 letras e números (ex.: RODA-8B2KQ).');
+      return;
+    }
+    setJoinError(null);
+    setRoda({ role: 'guest', code, key: Date.now() });
+  };
+  const practice = () => {
+    tap();
+    setRoda({ practice: true, key: Date.now() });
+  };
   const rejoin = () => {
     tap();
     if (saved) begin(saved.role, saved.code, saved);
@@ -259,6 +283,21 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     </>
   );
 
+  // --- roda de 2 a 4 (versão 2.4) ----------------------------------------------
+  if (roda && !ctl) {
+    const back = () => setRoda(null);
+    return (
+      <div className="app-shell h-full">
+        {roda.practice ? (
+          <TablePreview key={roda.key} onExit={back} muted={muted} onToggleMute={onToggleMute} />
+        ) : (
+          <TableOnline key={roda.key} role={roda.role} code={roda.code} me={{ id: me.id, name: cleanName(me.name) || 'Jogador' }} onExit={back} muted={muted} onToggleMute={onToggleMute} />
+        )}
+        {veil}
+      </div>
+    );
+  }
+
   // --- lobby ---------------------------------------------------------------
   if (!net || net.stage === 'lobby') {
     return (
@@ -269,6 +308,10 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
           snap={net}
           code={net?.code ?? null}
           initialJoin={initialRoom ?? ''}
+          initialTable={initialTable ?? ''}
+          onCreateTable={createTable}
+          onJoinTable={joinTable}
+          onPractice={practice}
           saved={saved}
           onCreate={create}
           onJoin={join}

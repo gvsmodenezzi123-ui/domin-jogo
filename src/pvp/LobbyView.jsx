@@ -5,6 +5,7 @@ import { DEFAULT_ROOM, RARITY_LABEL, ROOM_OPTIONS, describeRoom, sanitizeRoom } 
 import NetBadge from './NetBadge.jsx';
 import { webrtcAvailable } from './peerLoader.js';
 import { ROOM_LENGTH, ROOM_PREFIX, formatRoomId, maskRoomInput } from './protocol.js';
+import { TABLE_PREFIX, maskTableInput } from '../table/tableProtocol.js';
 import { copyText, roomLink } from './share.js';
 
 const ERRORS = {
@@ -92,8 +93,28 @@ const SITE_URL = PRIVACY_URL.replace(/privacy\.html$/, '');
  *   sentar à mesa..." e o COPIAR LINK/ID; SENTAR EM UMA MESA → o campo com máscara e o PUXAR CADEIRA.
  * O indicador de conexão fica no canto.
  */
-export default function LobbyView({ name, onName, snap = null, code = null, initialJoin = '', saved = null, onCreate, onJoin, onRejoin, onCancel, onBack, onTap }) {
+export default function LobbyView({
+  name,
+  onName,
+  snap = null,
+  code = null,
+  initialJoin = '',
+  initialTable = '',
+  saved = null,
+  onCreate,
+  onJoin,
+  onRejoin,
+  onCancel,
+  onBack,
+  onTap,
+  onCreateTable,
+  onJoinTable,
+  onPractice,
+}) {
   const [typed, setTyped] = useState(() => maskRoomInput(initialJoin));
+  // versão 2.4: o modo online tem o duelo 1×1 e a roda de 2 a 4 (cada um com o seu código)
+  const [mode, setMode] = useState(() => (initialTable ? 'roda' : 'duelo'));
+  const [typedTable, setTypedTable] = useState(() => maskTableInput(initialTable));
   const [copied, setCopied] = useState(false);
   // prévia em iframe isolado (ex.: um artifact) bloqueia o WebRTC: avisa antes de tentar
   const [direct] = useState(webrtcAvailable);
@@ -105,6 +126,8 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
   const error = snap?.error ? (ERRORS[snap.error] ?? ERRORS.network) : null;
   const nameOk = name.trim().length > 0;
   const joinOk = typed.length === ROOM_LENGTH && nameOk;
+  const joinTableOk = typedTable.length === ROOM_LENGTH && nameOk;
+  const roda = mode === 'roda' && !busy;
   const link = code ? roomLink(code) : null;
 
   const copy = async () => {
@@ -122,8 +145,35 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
       <div className="pvp-lobby-inner relative z-[3] flex w-full max-w-[360px] flex-1 flex-col">
         <h1 className="pvp-title">
           MESA ONLINE
-          <span>Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.</span>
+          <span>
+            {roda
+              ? 'De 2 a 4 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
+              : 'Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.'}
+          </span>
         </h1>
+
+        {!busy && !setup && (
+          <div className="pvp-seg pvp-mode" role="radiogroup" aria-label="Tipo de mesa">
+            {[
+              ['duelo', 'DUELO 1×1'],
+              ['roda', 'RODA DE 2 A 4'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={mode === id}
+                className={`pvp-seg-btn ${mode === id ? 'is-on' : ''}`}
+                onClick={() => {
+                  onTap?.();
+                  setMode(id);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <label className="pvp-field">
           <span className="pvp-field-label">SEU APELIDO NA MESA</span>
@@ -140,7 +190,7 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
           />
         </label>
 
-        {!busy && !direct && (
+        {!busy && !direct && !roda && (
           <div className="pvp-room-card" role="alert">
             <span className="pvp-field-label">A MESA ONLINE NÃO ABRE AQUI</span>
             <p className="pvp-hint">Esta página não deixa fazer conexão direta entre aparelhos (WebRTC), então a mesa online não abre nela. Jogue pelo site ou pelo app do Buxaria:</p>
@@ -148,6 +198,72 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
               {SITE_URL.replace(/^https:\/\//, '').replace(/\/$/, '')}
             </a>
           </div>
+        )}
+
+        {roda && (
+          <>
+            {direct ? (
+              <>
+                <button
+                  type="button"
+                  data-tone="play"
+                  className="btn-pixel pvp-btn"
+                  disabled={!nameOk}
+                  onClick={() => {
+                    onTap?.();
+                    onCreateTable();
+                  }}
+                >
+                  ABRIR UMA RODA
+                  <span className="pvp-btn-note">As regras você escolhe no saguão</span>
+                </button>
+                <p className="pvp-or" aria-hidden="true">
+                  ou
+                </p>
+                <div className="pvp-join">
+                  <span className="pvp-field-label">ENTRAR NUMA RODA</span>
+                  <label className="pvp-room-input">
+                    <span className="pvp-room-prefix" aria-hidden="true">
+                      {TABLE_PREFIX}
+                    </span>
+                    <input
+                      className="pvp-input pvp-input-room"
+                      type="text"
+                      inputMode="text"
+                      value={typedTable}
+                      onChange={(e) => setTypedTable(maskTableInput(e.target.value))}
+                      placeholder="_____"
+                      maxLength={ROOM_LENGTH + TABLE_PREFIX.length}
+                      aria-label="Digite o código da roda"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      enterKeyHint="go"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && joinTableOk) onJoinTable(typedTable);
+                      }}
+                    />
+                  </label>
+                  <button type="button" className="btn-pixel pvp-btn" disabled={!joinTableOk} onClick={() => onJoinTable(typedTable)}>
+                    PUXAR CADEIRA (CONECTAR)
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="pvp-hint">Esta página não deixa fazer conexão direta entre aparelhos (WebRTC): a roda online abre no site ou no app. Aqui dá para treinar com bots.</p>
+            )}
+            <button
+              type="button"
+              className="text-action pvp-practice"
+              onClick={() => {
+                onTap?.();
+                onPractice();
+              }}
+            >
+              TREINAR COM BOTS (SEM INTERNET)
+            </button>
+          </>
         )}
 
         {!busy && direct && setup && (
@@ -170,7 +286,7 @@ export default function LobbyView({ name, onName, snap = null, code = null, init
           />
         )}
 
-        {!busy && direct && !setup && (
+        {!busy && direct && !setup && !roda && (
           <>
             {saved && (
               <button type="button" data-tone="brass" className="btn-pixel pvp-btn" onClick={onRejoin}>

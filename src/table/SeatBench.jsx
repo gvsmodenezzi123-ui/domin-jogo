@@ -59,12 +59,18 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
           )}
           {seat.isTurn && !out && turnLeft != null && <span className={`seat-secs font-pixel ${turnLeft <= 10 ? 'is-urgent' : ''}`}>{turnLeft}</span>}
           {out && <ChalkX />}
+          {!out && seat.lostLeft != null && (
+            <span className="seat-lost font-pixel" role="status" aria-label={`${seat.name} caiu: ${seat.lostLeft} segundos para voltar`}>
+              CAIU
+              <b>{seat.lostLeft}s</b>
+            </span>
+          )}
           {seat.bot && !out && <span className="seat-tag">BOT</span>}
           {!seat.bot && seat.ping != null && !out && <span className={`seat-ping ${seat.ping > 250 ? 'is-slow' : ''}`} aria-label={`ping ${seat.ping} ms`} />}
         </div>
         {variant !== 'third' && (
           <span className={`seat-status font-pixel ${seat.isTurn && !out ? 'is-on' : ''}`} role="status">
-            {out ? '' : seat.lostLeft != null ? `CAIU ${seat.lostLeft}s` : seat.isTurn ? (seat.bot ? <span className="thinking-dots">PENSANDO</span> : 'JOGANDO') : ''}
+            {out ? '' : seat.lostLeft != null ? 'SEM SINAL' : seat.isTurn ? (seat.bot ? <span className="thinking-dots">PENSANDO</span> : 'JOGANDO') : ''}
           </span>
         )}
       </div>
@@ -84,7 +90,6 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
           <CoinCount value={seat.coins} target={seat.id} className="seat-coins" size={L.coin} />
         </div>
         {!out && variant !== 'wide' && <TileFan id={seat.id} count={seat.count} size={L.tile} max={L.maxTiles} />}
-        {variant === 'third' && seat.lostLeft != null && <span className="seat-status font-pixel is-on">CAIU {seat.lostLeft}s</span>}
       </div>
 
       {/* com um rival só, as pedras dele ficam na régua à direita, como no duelo */}

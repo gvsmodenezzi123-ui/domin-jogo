@@ -1,12 +1,13 @@
 // Patch PvP: o link da mesa e o COPIAR LINK/ID.
 
 /** O link que abre a mesa direto (só quando a página tem endereço de verdade). */
-export function roomLink(code) {
+export function roomLink(code, param = 'mesa') {
   try {
     const { protocol, hostname, origin, pathname } = window.location;
     const framed = window.self !== window.top;
     if (framed || !/^https?:$/.test(protocol) || hostname === 'localhost' || hostname === '127.0.0.1') return null;
-    return `${origin}${pathname}?mesa=${code}`;
+    // versão 2.4: a roda de 2 a 4 usa ?roda= (o duelo continua no ?mesa=)
+    return `${origin}${pathname}?${param}=${code}`;
   } catch {
     return null;
   }

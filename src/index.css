@@ -15838,7 +15838,33 @@
   }
 }
 .seat.is-lost .seat-photo-in {
-  filter: brightness(0.6);
+  filter: grayscale(0.8) brightness(0.5);
+}
+/* quem caiu: o carimbo com a contagem dos 60 s por cima da foto */
+.seat-lost {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 46%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px 2px;
+  font-size: 6px;
+  line-height: 1;
+  color: #fff1d2;
+  background: rgba(150, 30, 20, 0.92);
+  box-shadow:
+    0 0 0 1px #1a0806,
+    0 2px 0 #000;
+  translate: -50% -50%;
+  rotate: -6deg;
+  pointer-events: none;
+}
+.seat-lost b {
+  font-weight: 400;
+  font-size: 7px;
 }
 .reduce-motion .seat-ring rect,
 .reduce-motion .seat-hit,
@@ -16274,5 +16300,98 @@
 }
 .lobby-start {
   max-width: 340px;
-  margin: 14px auto 0;
+}
+
+/* ---------- 2.4: a roda online (modo no lobby, saguão com código, bots e PRONTO) ---------- */
+.pvp-mode {
+  margin: 4px 0 12px;
+}
+.pvp-mode .pvp-seg-btn {
+  min-height: 32px;
+  font-size: 8px;
+}
+.pvp-practice {
+  margin-top: 14px;
+  align-self: center;
+}
+.lobby-copy {
+  display: block;
+  margin: 8px auto 0;
+  padding: 6px 10px;
+  font-size: 7px;
+  color: #1a0f06;
+  background: #d9a946;
+  box-shadow:
+    inset 0 0 0 1px #1a0f06,
+    0 2px 0 #000;
+}
+.lobby-mini {
+  padding: 4px 6px;
+  font-size: 6px;
+  color: #e9dcb4;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(244, 236, 210, 0.35);
+}
+.lobby-ready.is-wait {
+  color: #2a1a06;
+  background: #e8c98a;
+}
+.lobby-seat.is-lost .lobby-photo {
+  filter: grayscale(1) brightness(0.6);
+}
+.lobby-seat .seat-tag {
+  right: -6px;
+  bottom: -2px;
+}
+.lobby-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 340px;
+  margin: 12px auto 0;
+}
+.lobby-foot .lobby-start {
+  margin: 0;
+}
+.lobby-back.text-action {
+  padding: 8px 12px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 220, 180, 0.7);
+}
+.pvp-practice.text-action {
+  padding: 8px 12px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: #e9dcb4;
+}
+.lobby-chip:disabled:not(.is-on) {
+  opacity: 0.45;
+}
+.lobby-chip.is-on:disabled {
+  opacity: 0.9;
+}
+.lobby-opts + .lobby-note,
+.lobby-table + .lobby-note {
+  margin-top: 8px;
+}
+.table-wait {
+  align-self: center;
+  font-size: 15px;
+  line-height: 1.1;
+  color: #b8ab8a;
+}
+/* o saguão ocupa a tela inteira (o .app-shell sozinho volta para position: relative) */
+.table-lobby.app-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+}
+/* telas altas: o saguão fica no meio, não colado no topo */
+.table-lobby .scene-fit {
+  justify-content: center;
 }

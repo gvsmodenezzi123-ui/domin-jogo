@@ -10,7 +10,7 @@ import { sound } from '../engine/audioSynth.js';
 import { getOpenEnds, getValidSides } from '../engine/dominoLogic.js';
 import { haptic } from '../engine/progress.js';
 import { shake } from '../pvp/duelFx.js';
-import { useSecondsLeft } from '../pvp/useNow.js';
+import { useNow, useSecondsLeft } from '../pvp/useNow.js';
 import SeatBench from './SeatBench.jsx';
 import TableResult from './TableResult.jsx';
 import { bubbleText, colorOf, seatsFrom } from './seats.js';
@@ -50,7 +50,7 @@ function hintFor({ view, me, opts, selected, names }) {
  * quantas pedras têm. `onIntent` recebe as ações do motor ({ type: 'PLAY' | 'DRAW' | 'PASS' }).
  * Serve para a mesa local com bots e, na fase 3, para a mesa online (o espelho vem da rede).
  */
-export default function TableScreen({ view, me, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null }) {
+export default function TableScreen({ view, me, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
   const [selectedId, setSelectedId] = useState(null);
   const [handZone, setHandZone] = useState(0);
   const [tableAnim, setTableAnim] = useState(null);
@@ -230,13 +230,20 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const mine = ordered[0];
   const lastBy = view.events.find((e) => e.type === 'play' || e.type === 'draw' || e.type === 'pass')?.by ?? null;
   const batedor = view.result?.kind === 'batida' ? view.result.by : null;
-  const benchNow = ordered.slice(1).map((s) => ({
-    ...s,
-    count: view.handCounts[s.id] ?? 0,
-    color: colorOf(view, s.id),
-    isTurn: playing && view.turn === s.id && !(tableAnim && tableAnim.by === s.id),
-    smug: batedor === s.id,
-  }));
+  // online: quem caiu (contagem dos 60 s) e o ping de cada um
+  const now = useNow();
+  const benchNow = ordered.slice(1).map((s) => {
+    const link = links?.[s.id];
+    return {
+      ...s,
+      count: view.handCounts[s.id] ?? 0,
+      color: colorOf(view, s.id),
+      isTurn: playing && view.turn === s.id && !(tableAnim && tableAnim.by === s.id),
+      smug: batedor === s.id,
+      ping: link && !link.lost ? link.ping : null,
+      lostLeft: link?.lost && link.graceEndsAt ? Math.max(0, Math.ceil((link.graceEndsAt - now) / 1000)) : null,
+    };
+  });
   const bench = useStableValue(benchNow, JSON.stringify(benchNow));
   const bubbleNow = useMemo(() => {
     if (batedor && batedor !== me) return { seat: batedor, text: 'BATEU!', key: `b${view.seq}`, strong: true };
@@ -354,7 +361,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
 
       {myHurt > 0 && <div key={myHurt} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
       <FloatingTexts items={floatItems} onDone={floatDone} />
-      {showResult && <TableResult view={view} me={me} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
+      {showResult && <TableResult view={view} me={me} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );
 }

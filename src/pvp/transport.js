@@ -40,10 +40,12 @@ const TAKEN_RETRY_MS = 3000;
  * Transporte PeerJS. `role` 'host' (o ID no servidor é o da sala) ou 'guest' (ID aleatório,
  * conecta no da sala). `keepId`: o anfitrião voltando de uma página recarregada insiste no ID.
  */
-export function createPeerTransport({ role, code, keepId = false, random = Math.random, options = peerServerOptions(), load = loadPeerJs, schedule = (fn, ms) => setTimeout(fn, ms) }) {
+export function createPeerTransport({ role, code, keepId = false, random = Math.random, options = peerServerOptions(), load = loadPeerJs, schedule = (fn, ms) => setTimeout(fn, ms), hostPeerId = null }) {
   const ev = emitter();
   const conns = new Map();
-  const myId = role === 'host' ? peerIdOf(code) : guestPeerId(random);
+  // versão 2.4: a mesa de 2 a 4 usa outro ID de anfitrião (uma "RODA-" não atende quem procura uma "MESA-")
+  const hostPeer = hostPeerId ?? peerIdOf(code);
+  const myId = role === 'host' ? hostPeer : guestPeerId(random);
   let peer = null;
   let PeerClass = null;
   let nextId = 1;
@@ -122,7 +124,7 @@ export function createPeerTransport({ role, code, keepId = false, random = Math.
         /* já fechou */
       }
     }
-    wire(peer.connect(peerIdOf(code), { reliable: true }));
+    wire(peer.connect(hostPeer, { reliable: true }));
   }
 
   return {
