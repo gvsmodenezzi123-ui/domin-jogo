@@ -875,6 +875,12 @@ export default function App() {
   const balloon = balloonInfo ? { ...balloonInfo, rect: inspect.rect } : null;
 
   const playing = state.phase === 'playing';
+  // versão 2.5: encurralado (ele por uma pedra, você no último coração): coração de fundo e borda vermelha
+  const myHeartsNow = state.hearts.player;
+  const rivalTilesNow = state.hands.tioZe.length;
+  const rivalNameNow = rival.name;
+  const danger = dangerOf({ myHearts: myHeartsNow, rivals: [{ id: 'tioZe', name: rivalNameNow, count: rivalTilesNow }] });
+  const dangerOn = playing && !state.tutorial && !menuOpen && !devOpen && !showBossIntro;
   const pending = playing ? state.pending : null;
   const discardMode = pending?.type === 'discard';
   // Canivete Suíço: escolher a pedra que vira bucha usa o mesmo leque do descarte do Giz
@@ -1517,9 +1523,6 @@ export default function App() {
   const ends = getOpenEnds(state.board);
   const roundFinished = ['roundOver', 'matchWon', 'gameOver', 'runWon'].includes(state.phase);
   const rivalThinking = playing && state.turn === 'tioZe' && !pending && !tableAnim;
-  // versão 2.5: encurralado (ele por uma pedra, você no último coração): coração de fundo e borda vermelha
-  const danger = dangerOf({ myHearts: state.hearts.player, rivals: [{ id: 'tioZe', name: rival.name, count: state.hands.tioZe.length }] });
-  const dangerOn = playing && !state.tutorial && !menuOpen && !devOpen && !showBossIntro;
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
@@ -1633,7 +1636,7 @@ export default function App() {
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
 
-      <DangerFx danger={danger} myHearts={state.hearts.player} active={dangerOn} />
+      <DangerFx danger={danger} myHearts={myHeartsNow} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
 
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
