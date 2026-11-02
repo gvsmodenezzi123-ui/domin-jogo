@@ -33,8 +33,10 @@ function PixelCanvas({ cacheKey, paint, w, h, scale = 2, className = '', style }
   useLayoutEffect(() => {
     const canvas = ref.current;
     if (!canvas || typeof ImageData === 'undefined') return;
-    canvas.width = w;
-    canvas.height = h;
+    // versão 2.6.1: só troca o tamanho quando ele muda (trocar apaga e realoca o canvas, mesmo
+    // com o mesmo valor); a pintura nova cobre todos os pixels, inclusive a transparência
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
     canvas.getContext('2d')?.putImageData(imageOf(cacheKey, paint, w, h), 0, 0);
     // a função de pintura muda a cada render; a chave é o que diz se o desenho mudou
     // eslint-disable-next-line react-hooks/exhaustive-deps

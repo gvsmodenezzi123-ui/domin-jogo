@@ -2212,57 +2212,42 @@
 }
 
 @keyframes realTavernFlicker {
+  /* versão 2.6.1: a lâmpada tremula de leve; antes ela apagava (0.1) e a mesa piscava preta */
   0%,
+  11.9%,
+  13.2%,
+  14.8%,
+  46.5%,
+  70.8%,
+  76.8%,
+  88%,
+  89.2%,
   100% {
     opacity: 1;
   }
-  11.9% {
-    opacity: 1;
-  }
   12.4% {
-    opacity: 0.3;
-  }
-  13.2% {
-    opacity: 1;
+    opacity: 0.82;
   }
   14% {
-    opacity: 0.5;
-  }
-  14.8% {
-    opacity: 1;
-  }
-  45% {
     opacity: 0.9;
   }
-  46.5% {
-    opacity: 1;
-  }
-  70.8% {
-    opacity: 1;
+  45% {
+    opacity: 0.96;
   }
   71.4% {
-    opacity: 0.1;
+    opacity: 0.78;
   }
   74.6% {
-    opacity: 0.12;
+    opacity: 0.8;
   }
   75.2% {
-    opacity: 0.85;
+    opacity: 0.94;
   }
   75.9% {
-    opacity: 0.25;
-  }
-  76.8% {
-    opacity: 1;
-  }
-  88% {
-    opacity: 1;
+    opacity: 0.84;
   }
   88.5% {
-    opacity: 0.45;
-  }
-  89.2% {
-    opacity: 1;
+    opacity: 0.88;
   }
 }
 
@@ -2881,29 +2866,15 @@
   100% {
     opacity: 1;
   }
-  12.4% {
-    opacity: 0.55;
-  }
-  14% {
-    opacity: 0.7;
-  }
-  45% {
-    opacity: 0.95;
-  }
-  71.4% {
-    opacity: 0.42;
-  }
+  12.4%,
+  71.4%,
   74.6% {
-    opacity: 0.44;
+    opacity: 0.86;
   }
-  75.2% {
-    opacity: 0.9;
-  }
-  75.9% {
-    opacity: 0.52;
-  }
+  14%,
+  75.9%,
   88.5% {
-    opacity: 0.65;
+    opacity: 0.92;
   }
 }
 
@@ -11620,8 +11591,8 @@
   transform-origin: 50% 100%;
   will-change: transform;
   backface-visibility: hidden;
-  /* a sombra da mesa no chão, embaixo e dos lados */
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.7));
+  /* versão 2.6.1: sem filter (drop-shadow num plano em 3D refazia a sombra da mesa inteira a
+     cada pedra e piscava no Safari); a sombra no chão é uma box-shadow parada na pintura */
 }
 
 /* Versão 2.0: a mesa é pintada (TableBoard: .table-surface-px); a quina e a marca de copo
@@ -11633,6 +11604,7 @@
 
 .table-surface-px {
   border-radius: 4px;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.7);
 }
 
 /* o fundo da mesa (longe da lâmpada) mais escuro: profundidade */
@@ -17089,4 +17061,101 @@
 .reduce-motion .sweep-wait,
 .reduce-motion .sweep-wait-dots::after {
   animation: none;
+}
+
+/* =====================================================================================
+   Versão 2.6.1: estabilidade visual da mesa
+   ===================================================================================== */
+/* a mesa é uma ilha: o que muda fora (balão, moedas, dica) não relayouta nem repinta o feltro,
+   e o tamanho dela vem só do pai (flex), nunca do conteúdo */
+.tableboard-viewport {
+  contain: layout paint size;
+}
+/* camadas que se mexem ficam na GPU o tempo todo (não sobem e descem de camada a cada pancada) */
+.board-world,
+.lamp-kick,
+.boneyard-stack-px {
+  backface-visibility: hidden;
+  will-change: transform;
+}
+/* as pedras ficam presas abaixo da faixa do HUD: nada sobe na lâmpada, no balão ou no dorme */
+.board-clip {
+  overflow: hidden;
+  pointer-events: none;
+}
+.board-clip > * {
+  pointer-events: auto;
+}
+
+/* o dorme num bloco só: a pilha e o número na mesma placa, com moldura */
+.felt-25d .boneyard-pile {
+  top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px 4px 5px;
+  gap: 5px;
+  font: inherit;
+  color: inherit;
+  background: linear-gradient(180deg, rgba(30, 18, 10, 0.9), rgba(12, 7, 4, 0.92));
+  border: 2px solid #4a2a12;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 204, 120, 0.22),
+    0 3px 0 rgba(0, 0, 0, 0.55),
+    0 6px 10px rgba(0, 0, 0, 0.35);
+  filter: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.felt-25d .boneyard-pile.is-low {
+  box-shadow:
+    inset 0 0 0 1px rgba(242, 184, 75, 0.6),
+    0 3px 0 rgba(0, 0, 0, 0.55),
+    0 6px 10px rgba(0, 0, 0, 0.35);
+}
+.felt-25d .boneyard-info {
+  align-self: stretch;
+  justify-content: center;
+  padding: 0 0 0 7px;
+  background: none;
+  border: 0;
+  border-left: 1px solid rgba(240, 204, 120, 0.25);
+}
+.felt-25d .boneyard-pile .boneyard-stack-px canvas {
+  display: block;
+}
+.felt-25d .ends-sum {
+  top: 74px;
+}
+/* na pele de pixel, a placa toda é a lousa (antes só o número tinha a lousa e a pilha ficava solta) */
+.px-skins .felt-25d .boneyard-pile {
+  border: 2px solid transparent;
+  border-image: var(--px-slate) 6 fill / 9px / 0 round;
+  border-radius: 0;
+  background: none;
+  padding: 4px 8px 4px 6px;
+  image-rendering: pixelated;
+}
+.px-skins .felt-25d .boneyard-info {
+  border: 0;
+  border-image: none;
+  border-left: 1px solid rgba(240, 244, 238, 0.2);
+  padding: 0 0 0 7px;
+}
+
+/* o balão do rival: largura fixa (até 180 px) com quebra de linha, sem chegar na lâmpada do meio
+   (a lâmpada tem 64 px; o balão começa em 12 px e para 8 px antes dela) */
+.speech-balloon.speech-rival {
+  width: min(180px, calc(50vw - 52px));
+  max-width: 180px;
+  white-space: pre-wrap;
+  font-size: 19px;
+}
+
+/* ÚLTIMA PEDRA! / ENCURRALADO!: logo abaixo do card do rival, no alto (não cobre o meio da mesa).
+   O DangerFx mede o fim do cabeçalho do rival e põe o aviso ali (--banner-top). */
+.danger-banner {
+  top: var(--banner-top, 104px);
+  translate: -50% 0;
+  transform-origin: 50% 0;
 }

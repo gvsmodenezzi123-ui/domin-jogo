@@ -12,7 +12,7 @@
  * escrita repintava a sombra e o brilho das pedras (a mesa medida dava ~38 pinturas por segundo
  * com a mesa parada). Agora as variáveis só mudam quando entra ou sai pedra (mesa ou mão) ou a
  * tela muda de tamanho; o balanço da lâmpada continua no facho e na mancha de luz (transform, na
- * GPU) e as falhas escurecem a mesa inteira (.room-flicker, opacity).
+ * GPU) e as falhas só tremulam o facho de leve (versão 2.6.1: a película preta saiu).
  */
 
 /** Distância (px) em que a direção da luz satura. */

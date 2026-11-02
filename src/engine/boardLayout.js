@@ -10,7 +10,8 @@
  * a serpentina da sua metade, sempre dentro do feltro:
  *
  *   1. base: do centro para a borda;
- *   2. lateral: sobe pela margem, no máximo 3 pedras (Versão 1.5: MAX_VERTICAL_CHAIN);
+ *   2. lateral: sobe pela margem, no máximo 3 pedras (Versão 1.5: MAX_VERTICAL_CHAIN; na
+ *      2.6.1 a trava vale sempre: a 4ª pedra é obrigada a deitar, ver turnsOnly);
  *   3. dobra 90° para DENTRO, em direção ao centro;
  *   4. se ainda precisar: sobe em zigue-zague, deitando a cada 3 pedras (a serpente).
  *
@@ -257,13 +258,15 @@ function hasWayOut(cand, ctx, level, depth) {
  * Último recurso (correntes enormes, ~1% das rodadas): o espaço livre do feltro
  * mais perto da ponta. A corrente segue a partir dessa pedra.
  */
-function emergencyPlacement(cursor, double, ctx) {
+function emergencyPlacement(cursor, double, ctx, capped = false) {
   const fallback = candidates(cursor, double, ctx.turnMap)[0];
   const { x0, x1, y0, y1 } = ctx.world;
   let best = null;
+  // travada (3 subindo), só vale o espaço em que a pedra fica deitada na linha
+  const shapes = capped ? [!double] : [true, false];
   for (let y = y0; y <= y1 - 1 + EPS; y += 0.5) {
     for (let x = x0; x <= x1 - 1 + EPS; x += 0.5) {
-      for (const wide of [true, false]) {
+      for (const wide of shapes) {
         const rect = { x, y, w: wide ? 2 : 1, h: wide ? 1 : 2 };
         if (rect.x + rect.w > x1 + EPS || rect.y + rect.h > y1 + EPS) continue;
         if (ctx.placed.some((o) => rectsOverlap(rect, o))) continue;
@@ -325,11 +328,25 @@ function serpentPlacement(cursor, double, ctx) {
   return null;
 }
 
+/**
+ * Versão 2.6.1, a trava: com 3 pedras seguidas subindo (ou descendo), a próxima é obrigada a
+ * deitar, em qualquer nível de tolerância, para o lado que tiver espaço. Antes a trava só
+ * valia dentro da metade do ramo e, sem espaço ali, a corrente seguia subindo (até 10 pedras
+ * em coluna, invadindo a lâmpada e a prateleira).
+ */
+function turnsOnly(list, cursor, ctx) {
+  if (ctx.vertRun < MAX_VERTICAL_CHAIN || axisOf(cursor.d) !== 'vertical') return list;
+  return list.filter((cand) => cand.lineAxis === 'horizontal');
+}
+
 /** Melhor posição para a pedra, do nível mais confortável ao último recurso. */
 function choosePlacement(cursor, double, ctx) {
   const serpent = serpentPlacement(cursor, double, ctx);
-  if (serpent) return serpent;
-  const list = candidates(cursor, double, ctx.turnMap);
+  if (serpent && !(ctx.vertRun >= MAX_VERTICAL_CHAIN && serpent.lineAxis !== 'horizontal')) return serpent;
+  const capped = ctx.vertRun >= MAX_VERTICAL_CHAIN && axisOf(cursor.d) === 'vertical';
+  // travada, a pedra pode dobrar para qualquer um dos dois lados
+  const all = capped ? [...candidates(cursor, double, ctx.turnMap), ...candidates(cursor, double, ctx.counterMap).slice(1)] : candidates(cursor, double, ctx.turnMap);
+  const list = turnsOnly(all, cursor, ctx);
   for (const level of LEVELS) {
     const valid = list.filter((cand) => isValid(cand, ctx, level));
     if (!valid.length) continue;
@@ -339,10 +356,10 @@ function choosePlacement(cursor, double, ctx) {
   }
   // beco: tenta encostar na ponta virando para o outro lado, ainda conectada
   const lastLevel = LEVELS[LEVELS.length - 1];
-  const counter = candidates(cursor, double, ctx.counterMap).slice(1);
+  const counter = turnsOnly(candidates(cursor, double, ctx.counterMap).slice(1), cursor, ctx);
   const escape = counter.find((cand) => isValid(cand, ctx, lastLevel));
   if (escape) return escape;
-  return emergencyPlacement(cursor, double, ctx);
+  return emergencyPlacement(cursor, double, ctx, capped);
 }
 
 /** Valores [primeiro, segundo] na orientação real da pedra (esq/dir ou cima/baixo). */

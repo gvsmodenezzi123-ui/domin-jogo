@@ -172,6 +172,31 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.6.1: mesa estável
+
+- Sem a tela piscando preta: a causa era a película preta das falhas da lâmpada (`.room-flicker`)
+  cobrindo a mesa inteira, a cada pedra que assentava (a 50%) e numa queda de luz a cada 7 s (até
+  54%, quase meio segundo). Num teste de 40 s, 11% dos quadros saíam escurecidos; agora nenhum. A
+  lâmpada continua balançando na pancada e o facho tremula de leve (no mínimo 78%), sem apagar.
+- A mesa não repinta à toa: o dorme trocava de `<div>` para `<button>` a cada vez de jogar e
+  remontava a pintura da pilha (20 remontagens em 40 s, agora 0); o `PixelCanvas` só troca o
+  tamanho do canvas quando ele muda (o retrato do rival realocava o canvas ~10 vezes por segundo);
+  a sombra da mesa saiu do `filter` (num plano em 3D ela era refeita a cada pedra). O feltro é
+  `contain: layout paint size` (`.tableboard-viewport`) e as camadas que se mexem (as pedras, a
+  lâmpada, a pilha) ficam na GPU o tempo todo.
+- A serpente travada de verdade: no máximo 3 pedras seguidas na vertical, e a 4ª é obrigada a
+  deitar (para o lado que tiver espaço), em qualquer situação (`boardLayout.turnsOnly`). Antes a
+  trava só valia dentro da metade do ramo: num sorteio de 4.000 mesas, 1 ramo em 4 passava de 3,
+  com até 10 pedras em coluna. E as pedras ficam presas abaixo da faixa do HUD (`.board-clip`):
+  nada sobe na lâmpada, no balão ou no dorme.
+- A mesa quase de frente: perspectiva de 800 px e 8° (antes 36°), sem o trapézio de pista de
+  boliche; as pedras do fundo ficam quase do tamanho das de perto e a moldura de madeira aparece
+  dos dois lados lá no alto. A faixa das pedras começa logo abaixo do HUD e desce até a sua mão.
+- HUD: o aviso ÚLTIMA PEDRA! / ENCURRALADO! fica logo abaixo do card do rival, no alto (não cobre
+  mais o meio da mesa); o balão do rival tem largura fixa (até 180 px, com quebra de linha) e para
+  antes da lâmpada; o dorme virou um bloco só (a pilha e o número na mesma lousa), encostado à
+  direita com 12 px de respiro da moldura de madeira.
+
 ### 2.6: a hora da batida
 
 - A última pedra agora assenta de verdade: quando alguém bate (ou tranca), a mesa segura acesa

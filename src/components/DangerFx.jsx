@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { HEARTBEAT_BPM, sound } from '../engine/audioSynth.js';
 import { dangerBanner } from '../engine/danger.js';
 import { haptic } from '../engine/progress.js';
@@ -29,6 +29,16 @@ export default function DangerFx({ danger, myHearts, active = true }) {
   useEffect(() => {
     if (seen.key > 0) haptic([30, 70, 30]);
   }, [seen.key]);
+  // versão 2.6.1: o aviso fica logo abaixo do card do rival (o cabeçalho de cima), não no meio
+  // da mesa: mede onde o cabeçalho termina e escreve direto no estilo (sem re-render)
+  const bannerRef = useRef(null);
+  useLayoutEffect(() => {
+    const el = bannerRef.current;
+    const bench = document.querySelector('.rival-bench');
+    const box = el?.offsetParent?.getBoundingClientRect();
+    if (!el || !bench || !box) return;
+    el.style.setProperty('--banner-top', `${Math.round(bench.getBoundingClientRect().bottom - box.top + 6)}px`);
+  }, [seen.key]);
 
   if (!level) return null;
   const beat = `${Math.round(60000 / HEARTBEAT_BPM[level])}ms`;
@@ -39,7 +49,7 @@ export default function DangerFx({ danger, myHearts, active = true }) {
         <span key={`e${level}`} className="danger-edge" />
       </div>
       {seen.banner && (
-        <p key={seen.key} className={`danger-banner danger-banner-l${level}`} role="status">
+        <p key={seen.key} ref={bannerRef} className={`danger-banner danger-banner-l${level}`} role="status">
           <b className="font-pixel">{seen.banner.title}</b>
           <span className="font-term">{seen.banner.line}</span>
         </p>
