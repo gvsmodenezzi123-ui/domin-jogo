@@ -28,7 +28,21 @@ export function gainCoins(state, who, amount, source) {
   if (amount <= 0) return state;
   const coins = { ...state.coins, [who]: state.coins[who] + amount };
   const stats = who === 'player' ? { ...state.stats, coinsEarned: state.stats.coinsEarned + amount } : state.stats;
-  return emit({ ...state, coins, stats }, { type: 'coins', who, amount, source });
+  const next = who === 'player' ? recordEarning({ ...state, coins, stats }, source, amount) : { ...state, coins, stats };
+  return emit(next, { type: 'coins', who, amount, source });
+}
+
+/**
+ * Versão 2.6: o caderninho da partida. Cada moeda que entra no seu bolso durante a mesa fica
+ * anotada pela origem (múltiplo de 5, pedra de ouro, cada talismã, o prêmio...), com quantas
+ * vezes rendeu. O placar da mesa vencida mostra isso linha a linha (engine/matchTally.js).
+ * Zera a cada partida (createMatchFx); fora da mesa (sem matchFx) não anota.
+ */
+export function recordEarning(state, source, amount) {
+  if (!state.matchFx || amount <= 0 || !source) return state;
+  const earned = state.matchFx.earned ?? {};
+  const prev = earned[source] ?? { amount: 0, count: 0 };
+  return { ...state, matchFx: { ...state.matchFx, earned: { ...earned, [source]: { amount: prev.amount + amount, count: prev.count + 1 } } } };
 }
 
 export function loseCoins(state, who, amount, source) {

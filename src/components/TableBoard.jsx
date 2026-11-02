@@ -284,6 +284,9 @@ function TableBoard({
   onDraw,
   drawsUsed = 0,
   drawCost = null,
+  // versão 2.6: a hora da batida: a última pedra brilha na cor de quem venceu
+  finaleId = null,
+  finaleTone = 'player',
 }) {
   const [areaRef, size] = useElementSize();
   // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
@@ -406,11 +409,12 @@ function TableBoard({
               const spot = arriving && incoming.stage === 'spot';
               const landed = arriving && incoming.stage === 'landed';
               const entry = arriving ? '' : tile.isDouble ? 'animate-tile-slam' : 'animate-tile-drop';
+              const fin = finaleId === tile.id;
               return (
                 <div
                   key={tile.id}
                   data-tile-id={tile.id}
-                  className={`board-tile absolute ${spot ? 'z-20' : tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'}`}
+                  className={`board-tile absolute ${spot || fin ? 'z-20' : tile.isOpenEnd ? 'z-10 scale-110' : 'z-0'}`}
                   // voando: a pedra real espera escondida; a cópia (tileFlight.js) chega aqui
                   style={flying ? { ...box, visibility: 'hidden' } : box}
                 >
@@ -428,6 +432,7 @@ function TableBoard({
                     />
                     {tile.isDouble && (!arriving || landed) && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
                     {spot && <span aria-hidden="true" className="ai-spot-ring pointer-events-none absolute" />}
+                    {fin && <span aria-hidden="true" className={`finale-ring is-${finaleTone} pointer-events-none absolute`} />}
                   </div>
                 </div>
               );

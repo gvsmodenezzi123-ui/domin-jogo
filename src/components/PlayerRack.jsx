@@ -235,27 +235,40 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
 });
 
 /** O leque da sua mão. Não depende de moedas, dica nem botões: muda só com a mão e a seleção. */
-const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName }) {
+const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '' }) {
   const [areaRef, width] = useWidth();
-  const { unit, spots } = computeFan(hand.length, width);
+  // Versão 2.6: a pedra jogada continua na vaga dela (levantada, como estava) até a cópia do
+  // voo levantar dali; só então o leque fecha o buraco. Antes ela sumia, piscava na mesa e
+  // "voltava" para a mão no 1º quadro do voo.
+  const [order, setOrder] = useState(() => hand.map((t) => t.id));
+  let shown = hand;
+  if (leaving && !hand.some((t) => t.id === leaving.id)) {
+    const at = order.indexOf(leaving.id);
+    shown = [...hand];
+    shown.splice(at >= 0 ? Math.min(at, hand.length) : hand.length, 0, leaving);
+  }
+  const shownKey = shown.map((t) => t.id).join(',');
+  if (order.join(',') !== shownKey) setOrder(shown.map((t) => t.id));
+  const { unit, spots } = computeFan(shown.length, width);
   const active = isTurn || discardMode;
   return (
     <div ref={areaRef} data-tut="hand" className="relative mx-1" style={{ height: FAN_HEIGHT }}>
-      {hand.map((tile, i) => {
+      {shown.map((tile, i) => {
         const spot = spots[i];
         if (!spot) return null;
+        const going = leaving?.id === tile.id;
         return (
           <HandSlot
-            key={tile.id}
+            key={`${dealKey}:${tile.id}`}
             tile={tile}
             index={i}
             x={spot.x}
             drop={spot.drop}
             angle={spot.angle}
             unit={unit}
-            selected={tile.id === selectedId}
+            selected={going || tile.id === selectedId}
             active={active}
-            playable={active && playableIds.has(tile.id)}
+            playable={!going && active && playableIds.has(tile.id)}
             discardMode={discardMode}
             known={Boolean(knownIds?.has(tile.id))}
             onSelectTile={onSelectTile}
@@ -264,7 +277,7 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
           />
         );
       })}
-      {hand.length === 0 && <p className="absolute inset-x-0 bottom-10 text-center font-term text-lg text-bone-300">Sem pedras.</p>}
+      {shown.length === 0 && <p className="absolute inset-x-0 bottom-10 text-center font-term text-lg text-bone-300">Sem pedras.</p>}
     </div>
   );
 });
@@ -416,6 +429,8 @@ function PlayerRack({
   onZoneHeight,
   tutorialAction = null,
   tutorialFocus = null,
+  leaving = null,
+  dealKey = '',
 }) {
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
@@ -456,6 +471,8 @@ function PlayerRack({
         onSelectTile={onSelectTile}
         press={press}
         rivalName={rivalName}
+        leaving={leaving}
+        dealKey={dealKey}
       />
 
       {/* a fileira das ações: os botões só sobem quando são o caminho */}

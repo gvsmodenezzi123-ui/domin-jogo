@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { coinBurst } from './juice.js';
 import { prefersReducedMotion } from './motion.js';
 import { REGIONS } from '../data/campaign.js';
-import { modeBadge, modeOf } from '../data/difficulty.js';
+import { modeBadge } from '../data/difficulty.js';
 import { challengeOf } from '../data/meta.js';
 import { getRelic } from '../data/relics.js';
 import { currentNode } from '../engine/campaignMap.js';
@@ -13,6 +13,7 @@ import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import VictoryModal from './VictoryModal.jsx';
+import MatchTally from './MatchTally.jsx';
 import { sound } from '../engine/audioSynth.js';
 
 /** Versão 1.5: intervalo entre um coração trincando e o seguinte (ms). */
@@ -85,9 +86,6 @@ const TRANCA_REASON = {
   bloqueio: 'Ninguém encaixa e o dorme secou.',
   forcada: 'Forçada pelo painel DEV.',
 };
-
-/** Depois de vencer a partida o mapa abre sozinho (ou no botão). */
-const AUTO_MAP_MS = 4200;
 
 /** "REGIÃO 2 · ANDAR 4" do nó da mesa atual. */
 function nodeLabel(state) {
@@ -174,16 +172,9 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   const secretWon = runWon && rival.id === 'donoDaNoite';
   const where = nodeLabel(state);
 
-  useEffect(() => {
-    if (!matchWon || !autoContinue) return undefined;
-    const timer = setTimeout(onContinue, AUTO_MAP_MS);
-    return () => clearTimeout(timer);
-  }, [matchWon, autoContinue, onContinue]);
-
-  const prizeShown = useCountUp(matchWon || runWon ? (result?.prize ?? 0) : 0, 1000);
+  const prizeShown = useCountUp(runWon ? (result?.prize ?? 0) : 0, 1000);
   if (!result) return null;
   const runOver = phase === 'gameOver';
-  const heal = result.heal ?? 0;
   const playerWon = result.winner === 'player';
   const tie = !result.winner;
   const subtitle = subtitleFor(result, rival);
@@ -192,39 +183,18 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   const name = rival.name.toUpperCase();
 
   return (
-    <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="round-title">
+    <div
+      className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4"
+      // versão 2.6: a mesa já segurou a hora da batida; o placar entra logo
+      style={{ animationDelay: '90ms' }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="round-title"
+    >
       <div
         className={`${matchWon ? 'chalkboard round-card max-h-[94%] py-5' : runWon || runOver ? 'run-end-card flex max-h-[97%] flex-col py-4' : 'overlay-card round-card max-h-[94%] py-5'} w-full ${runWon || runOver ? 'max-w-[380px]' : 'max-w-[360px]'} overflow-hidden px-4 text-center`}
       >
-        {matchWon && (
-          <>
-            <KnockedOut rival={rival} />
-            <p className="chalk-dim font-pixel text-[8px]">
-              {rival.boss ? `CHEFE DA REGIÃO ${currentNode(state)?.region ?? ''} DERROTADO` : `${where} VENCIDO`}
-            </p>
-            <h2 id="round-title" className="chalk-text mt-2 font-pixel text-[15px] leading-snug">
-              VOCÊ QUEBROU {name}
-            </h2>
-            <p className="chalk-text mt-2 font-term text-xl">
-              {KIND_TITLE[result.kind]} {subtitle}
-            </p>
-            <div className="chalk-line mx-auto mt-3" aria-hidden="true" />
-            <div className="mt-2 flex items-center justify-center gap-2 font-pixel text-[10px]">
-              <span className="chalk-text">PRÊMIO</span>
-              <CoinCount value={`${prizeShown}`} className="chalk-coins text-[14px]" size={18} />
-            </div>
-            <p className="chalk-dim mt-1 font-term text-base">Saldo: ${coins.player}</p>
-            <div className="mt-2 flex items-center justify-center gap-2 font-pixel text-[9px] text-[#ff8c7a]">
-              {/* Peças Prateadas: o chefe também só devolve 1 coração */}
-              <span>{rival.boss && !modeOf(state.mode).healPerTable ? 'CURA COMPLETA' : heal > 0 ? `+${heal}` : 'VIDA CHEIA'}</span>
-              <HeartsBar current={hearts.player} max={state.maxHearts.player} pixel={2} label={`Seus corações: ${hearts.player}`} />
-            </div>
-            <button type="button" data-tone="play" className="btn-pixel mt-5 w-full" onClick={onContinue}>
-              {rival.boss ? 'SUBIR PARA A PRÓXIMA REGIÃO' : 'VOLTAR AO MAPA'}
-            </button>
-            <div className="loading-bar mt-2" style={{ animationDuration: `${AUTO_MAP_MS}ms` }} aria-hidden="true" />
-          </>
-        )}
+        {matchWon && <MatchTally state={state} rival={rival} kindTitle={KIND_TITLE[result.kind]} subtitle={subtitle} onContinue={onContinue} autoContinue={autoContinue} />}
 
         {/* Patch 0.9.2: o fim da run virou a lousa da tentativa (RunSummaryBoard) */}
         {runOver && (

@@ -59,7 +59,7 @@ import {
   resolveTranca,
   tileId as canonicalId,
 } from './dominoLogic.js';
-import { cheatDeath, countBought, directDamage, emit, gainCoins, loseCoins, patchFx, proc } from './effects.js';
+import { cheatDeath, countBought, directDamage, emit, gainCoins, loseCoins, patchFx, proc, recordEarning } from './effects.js';
 import {
   applyBatidaDamage,
   canUndo,
@@ -137,6 +137,8 @@ export function createMatchFx() {
     bicarbUsed: bySeat(false, false), // Bicarbonato de Sódio (1x por partida)
     cucoUsed: bySeat(false, false), // Ampulheta Rachada (1x por partida)
     stolen: bySeat(null, null), // talismã desligado pelo Valtinho Renegado na partida
+    // versão 2.6: o que entrou no seu bolso nesta partida, por origem (o placar da mesa vencida)
+    earned: {},
   };
 }
 
@@ -790,7 +792,9 @@ function playTile(state, { actor, tileId, side }) {
     if (tax) bonus = Math.max(0, bonus - tax);
     const coins = { ...next.coins, [actor]: next.coins[actor] + bonus };
     const stats = actor === 'player' ? { ...next.stats, coinsEarned: next.stats.coinsEarned + bonus } : next.stats;
-    next = emit({ ...next, coins, stats }, {
+    next = { ...next, coins, stats };
+    if (actor === 'player') next = recordEarning(next, 'five', bonus);
+    next = emit(next, {
       type: 'bonus5',
       by: actor,
       sum: wetFive ? wetSum : endsSum(board),

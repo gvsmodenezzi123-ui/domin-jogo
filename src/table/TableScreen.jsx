@@ -8,14 +8,17 @@ import { centerOf, useFloats } from '../components/useFloats.js';
 import { useStableHandler, useStableValue } from '../components/useStable.js';
 import { sound } from '../engine/audioSynth.js';
 import { getOpenEnds, getValidSides } from '../engine/dominoLogic.js';
+import { leavingTileOf } from '../components/finale.js';
+import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/tableSweep.js';
 import { haptic } from '../engine/progress.js';
+import { prefersReducedMotion } from '../components/motion.js';
 import { shake } from '../pvp/duelFx.js';
 import { useNow, useSecondsLeft } from '../pvp/useNow.js';
 import DangerFx from '../components/DangerFx.jsx';
 import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
 import TableResult from './TableResult.jsx';
-import { bubbleText, colorOf, seatsFrom } from './seats.js';
+import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { turnOptions } from './tableEngine.js';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
@@ -26,12 +29,15 @@ const LANDED_MS = 280;
 const FORCED_PASS_MS = 1100;
 /** Quanto tempo a foto fica com a cara de dor depois do golpe. */
 const HIT_MS = 900;
+/** Versão 2.6: a hora da batida (a mesa segura acesa antes do placar da rodada). */
+const FINALE_MS = 1500;
 
 /** O feltro da mesa de 2 a 4: bordô de carteado, para não confundir com o duelo. */
 const TABLE_FELT = Object.freeze({ light: '#5a2a2c', mid: '#43201f', dark: '#2a1314' });
 const NO_PRESS = () => ({});
 const NONE = [];
 const NO_MARKS = Object.freeze({});
+
 
 function hintFor({ view, me, opts, selected, names }) {
   if (view.phase !== 'playing') return '';
@@ -52,12 +58,24 @@ function hintFor({ view, me, opts, selected, names }) {
  * quantas pedras têm. `onIntent` recebe as ações do motor ({ type: 'PLAY' | 'DRAW' | 'PASS' }).
  * Serve para a mesa local com bots e, na fase 3, para a mesa online (o espelho vem da rede).
  */
+/**
+ * Versão 2.6: o dano da rodada embaixo do grito (não tem mais placar entre as rodadas):
+ * "VOCÊ −1♥ · NEIDE −1♥", ou "NINGUÉM SANGRA" no empate da tranca.
+ */
+function damageLine(result, seats, me) {
+  const hurt = Object.entries(result.damage ?? {}).filter(([, d]) => d > 0);
+  if (!hurt.length) return 'NINGUÉM SANGRA';
+  const shown = hurt.slice(0, 3).map(([id, d]) => `${id === me ? 'VOCÊ' : plateName(seats.find((s) => s.id === id)?.name ?? '')} −${d}♥`);
+  return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
+}
+
 export default function TableScreen({ view, me, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
   const [selectedId, setSelectedId] = useState(null);
   const [handZone, setHandZone] = useState(0);
   const [tableAnim, setTableAnim] = useState(null);
   // a última jogada que já começou a voar (até lá, a pedra nova fica escondida na mesa)
   const [stagedSeq, setStagedSeq] = useState(view.seq);
+  const [finaleDone, setFinaleDone] = useState(null);
   const [hits, setHits] = useState({});
   const [myHurt, setMyHurt] = useState(0);
   const [callout, setCallout] = useState(null);
@@ -87,13 +105,13 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       cancelFlight.current?.();
       const rival = ev.by !== me;
       let from = null;
-      let fromEl = null;
+      // versão 2.6: a sua pedra fica no leque até a cópia levantar (o voo esconde a original)
+      const fromEl = rival ? null : document.querySelector(`[data-hand-tile="${ev.tileId}"]`);
       if (rival) {
         const fan = document.querySelector(`[data-seat-fan="${ev.by}"]`);
-        fromEl = fan?.lastElementChild ?? document.querySelector(`[data-seat-photo="${ev.by}"]`);
-        const r = fromEl?.getBoundingClientRect();
+        const src = fan?.lastElementChild ?? document.querySelector(`[data-seat-photo="${ev.by}"]`);
+        const r = src?.getBoundingClientRect();
         if (r) from = { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.max(14, r.width), h: Math.max(26, r.height), angle: 0 };
-        fromEl = null;
       } else if (pendingPlay.current?.tileId === ev.tileId) {
         from = pendingPlay.current.from;
       }
@@ -140,6 +158,9 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         later(() => {
           clearFloats();
           setCallout(null);
+          // a rodada nova: as pedras das cadeiras saem do dorme (as suas saem sozinhas)
+          cancelSweep();
+          dealRivalsFromDorme();
         }, 0);
         sound.playDealTick?.();
       }
@@ -166,7 +187,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         const text = r.kind === 'batida' ? (r.batida === 'cruzada' ? 'CRUZADA!' : r.batida === 'bucha' ? 'BATEU DE BUCHA!' : r.batida === 'duasPontas' ? 'NAS DUAS PONTAS!' : 'BATEU!') : 'TRANCOU!';
         later(() => {
           sound[r.kind === 'tranca' ? 'playLock' : 'playTileSlam'](true);
-          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null });
+          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null, sub: damageLine(r, view.seats, me) });
         }, offset + 260);
       }
       if (ev.type === 'damage') {
@@ -275,7 +296,32 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
   const hint = hintFor({ view, me, opts, selected: selectedTile, names });
-  const showResult = !playing && !flying;
+  // versão 2.6: a hora da batida: a mesa segura acesa com a última pedra brilhando antes do placar
+  const finaleKey = !playing && !flying && view.phase !== 'lobby' ? `${view.round}:${view.phase}` : null;
+  useEffect(() => {
+    if (!finaleKey) return undefined;
+    const id = setTimeout(() => setFinaleDone(finaleKey), prefersReducedMotion() ? 500 : FINALE_MS);
+    return () => clearTimeout(id);
+  }, [finaleKey]);
+  const finaleHold = Boolean(finaleKey) && finaleDone !== finaleKey;
+  const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
+  // versão 2.6: entre as rodadas não tem placar: a mesa varre para o dorme e você fica pronto
+  // sozinho (na roda online a rodada sai quando todos estiverem); o pódio fica para o fim
+  const showResult = finaleOver && view.phase === 'matchOver';
+  const sweepKey = finaleOver && view.phase === 'roundOver' ? finaleKey : null;
+  const autoNext = useStableHandler(() => onNextRound?.({ auto: true }));
+  useEffect(() => {
+    if (!sweepKey) return undefined;
+    let live = true;
+    sweepToDorme({ onTick: (i) => sound.playDealTick(i), onShuffle: () => sound.playShuffle() }).then(() => {
+      if (live) autoNext();
+    });
+    return () => {
+      live = false;
+    };
+  }, [sweepKey, autoNext]);
+  const waitingFor =
+    view.phase === 'roundOver' && ready?.includes(me) ? view.seats.filter((s) => s.alive && !s.bot && s.id !== me && !ready.includes(s.id)).map((s) => plateName(s.name)) : [];
   // versão 2.5: encurralado (alguém por uma pedra, você no último coração)
   const danger = dangerOf({ myHearts: mine.hearts, rivals: ordered.slice(1).filter((s) => s.alive).map((s) => ({ id: s.id, name: s.name, count: view.handCounts[s.id] ?? 0 })) });
   const dangerOn = playing && mine.alive;
@@ -308,7 +354,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           roundKey={`mesa:${view.round}`}
           playableSides={selectedSides}
           onPlaySide={handlePlaySide}
-          dimmed={!playing && !flying}
+          dimmed={showResult}
           previewDouble={Boolean(selectedTile && selectedTile.a === selectedTile.b)}
           frameRef={tableRef}
           endMarks={NO_MARKS}
@@ -316,6 +362,8 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           decor={NONE}
           atmosphere="boteco"
           incoming={flying}
+          finaleId={finaleHold && playEv ? playEv.tileId : null}
+          finaleTone={view.result?.kind === 'batida' && view.result.by === me ? 'player' : 'enemy'}
           noMoves={exhausted}
           boneyardCount={view.boneyardCount}
           tableMod={null}
@@ -367,10 +415,13 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           press={NO_PRESS}
           knownIds={null}
           rivalName="os rivais"
+          leaving={flying?.by === me && flying.stage === 'flight' ? leavingTileOf(view.board, flying.tileId) : null}
+          dealKey={`mesa:${view.round}`}
         />
         {callout && (
           <p key={callout.key} className="table-callout font-pixel" style={{ '--who': callout.by ? colorOf(view, callout.by) : '#f4ecd2' }} aria-live="polite">
             {callout.text}
+            {callout.sub && <span className="finale-sub">{callout.sub}</span>}
           </p>
         )}
       </div>
@@ -378,6 +429,12 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       {myHurt > 0 && <div key={myHurt} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
       <DangerFx danger={danger} myHearts={mine.hearts} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
+      {waitingFor.length > 0 && (
+        <p className="sweep-wait font-pixel" aria-live="polite">
+          ESPERANDO {waitingFor.join(', ')}
+          <span className="sweep-wait-dots" aria-hidden="true" />
+        </p>
+      )}
       {showResult && <TableResult view={view} me={me} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );

@@ -350,8 +350,9 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
         onToggleMute={onToggleMute}
         onIntent={(intent) => ctl.session.duelIntent(intent)}
         onMenu={openMenu}
-        onNextRound={() => {
-          tap();
+        onNextRound={(opts) => {
+          // a rodada nova sai sozinha depois da varrida (sem o clique)
+          if (opts?.auto !== true) tap();
           ctl.session.nextRound();
         }}
         onFinish={() => {

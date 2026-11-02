@@ -2165,6 +2165,33 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 2637, peak: 0.06, dur: 0.5, delay: 1.45, partials: [[1, 1], [2.4, 0.3]] });
   }
 
+  /**
+   * Versão 2.6: o carimbo VENCIDO batendo na foto do rival: o ar cortando, a pancada seca do
+   * cabo de madeira na mesa e o papel estalando embaixo.
+   */
+  playStampSlam() {
+    this.duck();
+    this.noise({ freq: 1800, filter: 'highpass', q: 0.7, peak: 0.16, dur: 0.07, attack: 0.04 });
+    this.tone({ type: 'sine', freq: 120, freqEnd: 42, peak: 0.7, dur: 0.24, delay: 0.08 });
+    this.noise({ freq: 650, filter: 'lowpass', q: 0.9, peak: 0.36, dur: 0.1, delay: 0.08 });
+    this.tone({ type: 'triangle', freq: 196, freqEnd: 150, peak: 0.16, dur: 0.08, delay: 0.085 });
+    this.noise({ freq: 3600, filter: 'bandpass', q: 3, peak: 0.08, dur: 0.05, delay: 0.14 });
+  }
+
+  /** Versão 2.6: o dorme embaralhando entre as rodadas: as pedras de osso batendo umas nas outras. */
+  playShuffle() {
+    [0, 0.045, 0.1, 0.14, 0.2, 0.235, 0.29, 0.33].forEach((delay, i) => {
+      this.noise({ freq: i % 2 ? 2400 : 3100, filter: 'bandpass', q: 5, peak: 0.12 + (i % 3) * 0.02, dur: 0.025, delay });
+    });
+    this.tone({ type: 'triangle', freq: 330, freqEnd: 260, peak: 0.05, dur: 0.06, delay: 0.34 });
+  }
+
+  /** Versão 2.6: cada linha do placar da mesa vencida (o tim sobe meio tom a cada linha) e o giz riscando. */
+  playTallyLine(step = 0) {
+    this.noise({ freq: 4200, filter: 'bandpass', q: 1.4, peak: 0.05, dur: 0.05 });
+    this.playCoinTing(4 + step * 2);
+  }
+
   /** Entrada do Valtinho Renegado: a porta de aço descendo (chacoalho), o estrondo no chão e subindo de novo. */
   playShutterSlam() {
     for (let i = 0; i < 8; i += 1) this.noise({ freq: 1800 - i * 120, filter: 'bandpass', q: 2, peak: 0.12, dur: 0.035, delay: i * 0.045 });

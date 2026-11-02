@@ -79,7 +79,7 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
     const revealed = !leavingTile && revealedIds.has(tile.id);
     return (
       <div
-        key={tile.id}
+        key={`${view.roundKey}:${tile.id}`}
         data-rival-tile={tile.id}
         className={`rival-slot absolute ${leavingTile ? 'rival-slot-leaving' : ''}`}
         style={{ right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }}

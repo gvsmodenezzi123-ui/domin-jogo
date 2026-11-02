@@ -172,6 +172,29 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.6: a hora da batida
+
+- A última pedra agora assenta de verdade: quando alguém bate (ou tranca), a mesa segura acesa
+  por um instante com a pedra brilhando e o grito do golpe ("BATEU!", "NAS DUAS PONTAS!",
+  "TRANCOU!"...), com o que aconteceu embaixo: a conta da tranca ("VOCÊ 22 × 29 JUVENAL"), o dano
+  e em quem, o escudo do rival ou o "NINGUÉM SANGRA". Só depois vem o resto.
+- Entre uma rodada e outra não tem mais tela de PRÓXIMA RODADA: as pedras da mesa e as que
+  sobraram nas mãos varrem para o dorme (uma atrás da outra, girando em arco, com o som do osso),
+  o dorme chacoalha embaralhando e reparte: as suas pedras saem dele para o leque e as do rival
+  para a régua (`components/tableSweep.js`, cópias por cima da tela, só transform e opacidade).
+  Vale no solo, no duelo 1×1 (você fica pronto sozinho; se o outro ainda não, aparece
+  "ESPERANDO ...") e na roda de 2 a 4. Com animação reduzida, a mesa só limpa e reparte.
+- A mesa vencida virou um placar de verdade (`MatchTally`): a polaroide do rival na lousa e, um
+  por um, cada bônus que rendeu moeda na partida (múltiplos de 5, pedras de ouro, cada talismã, o
+  prêmio da mesa com o bônus do rival e da maleta), com o tim subindo e o total enchendo; depois
+  a cura, a tampinha e o saldo, e por fim o carimbo VENCIDO bate na foto (som seco, tremida e
+  vibração). Tocar na lousa pula para o fim. As moedas de cada origem são anotadas durante a
+  partida (`matchFx.earned`, `effects.recordEarning`); nada da conta mudou.
+- Animações alinhadas: a pedra que você joga sai do leque no mesmo quadro em que a cópia começa a
+  voar (o leque segura a vaga dela até lá), sem piscar na mesa antes da hora nem voltar para a mão
+  por alguns milissegundos. A rodada nova monta as pedras com chave nova, então nada da mão velha
+  é reaproveitado.
+
 ### 2.5: encurralado
 
 - Quando um rival está por uma pedra (ou você no último coração), a mesa avisa: o coração bate

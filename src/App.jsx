@@ -28,6 +28,8 @@ import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import IntroScene from './intro/IntroScene.jsx';
 import DangerFx from './components/DangerFx.jsx';
+import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from './components/tableSweep.js';
+import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf } from './components/finale.js';
 import { dangerOf } from './engine/danger.js';
 import PvpApp from './pvp/PvpApp.jsx';
 import { parseRoomInput } from './pvp/protocol.js';
@@ -192,6 +194,13 @@ const AI_SPOTLIGHT_MS = 800;
 const PLAYER_LANDED_MS = 280;
 /** Tremida da mesa quando a pedra assenta (ms). */
 const SLAM_SHAKE_MS = 150;
+/**
+ * Versão 2.6: a hora da batida. Depois que a última pedra assenta, a mesa segura acesa (sem o
+ * placar por cima) com o grito do golpe e a pedra brilhando, para dar para ver quem venceu.
+ */
+const FINALE_ROUND_MS = 1600;
+const FINALE_MATCH_MS = 1750;
+
 /** Banner "SEM JOGADAS DISPONÍVEIS!" na tela antes do passe forçado ir para o rival (ms). */
 const NO_MOVES_MS = 1600;
 /** Canivete Suíço: os botões do modo de escolha (no Giz são PULAR · DESCARTAR). */
@@ -558,6 +567,9 @@ export default function App() {
   // jogada do rival em cena: 'flight' (pedra voando) → 'spot' (destaque) → null
   // pedra em cena na mesa: 'flight' (voando) → 'spot' (destaque do rival) / 'landed' (impacto da sua) → null
   const [tableAnim, setTableAnim] = useState(null);
+  // versão 2.6: a última pedra jogada que já começou a voar (até lá ela fica escondida na mesa)
+  const [stagedSeq, setStagedSeq] = useState(0);
+  const [finaleDone, setFinaleDone] = useState(null);
   const { items: floatItems, push: pushFloat, done: floatDone, clear: clearFloats } = useFloats();
   const shellRef = useRef(null);
   const tableRef = useRef(null);
@@ -658,6 +670,25 @@ export default function App() {
   const showBossIntro = bossIntroKey !== null && introDone !== bossIntroKey;
   const finishBossIntro = useCallback(() => setIntroDone(bossIntroKey), [bossIntroKey]);
 
+  // versão 2.6: a pedra que acabou de entrar e ainda vai voar já conta como "no ar" desde o
+  // 1º quadro (antes ela piscava na mesa e voltava para a mão antes de voar)
+  const lastPlaced = lastPlacedOf(state.events);
+  const incoming =
+    tableAnim ?? (lastPlaced && lastPlaced.seq > stagedSeq && state.phase !== 'title' ? { key: lastPlaced.seq, tileId: lastPlaced.tileId, by: lastPlaced.by, stage: 'flight' } : null);
+  const animBusy = Boolean(incoming);
+  // a hora da batida: a rodada acabou e a última pedra já assentou; a mesa segura acesa um
+  // instante antes do placar (a partida vencida ou perdida segura mais)
+  const roundDone = ['roundOver', 'matchWon', 'gameOver', 'runWon', 'secretReveal'].includes(state.phase);
+  const finaleKey = roundDone && !animBusy ? `${state.seed ?? 0}:${state.run.match}:${state.round}:${state.phase}` : null;
+  const finaleMs = state.phase === 'roundOver' ? FINALE_ROUND_MS : FINALE_MATCH_MS;
+  useEffect(() => {
+    if (!finaleKey) return undefined;
+    const id = setTimeout(() => setFinaleDone(finaleKey), prefersReducedMotion() ? 500 : finaleMs);
+    return () => clearTimeout(id);
+  }, [finaleKey, finaleMs]);
+  const finaleHold = Boolean(finaleKey) && finaleDone !== finaleKey;
+  const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
+
   // Rival: cada mudança de estado na vez dele agenda a próxima ação (cada um tem seu tempo).
   // Ele espera com o menu ou o painel DEV abertos, enquanto você decide
   // (escolha do Barbante, descarte do Giz), enquanto a jogada anterior dele está em cena e
@@ -665,9 +696,9 @@ export default function App() {
   // No treino (Patch 0.9.5), o Vô Juca só joga no passo dele e depois de terminar a fala.
   const tutorialHold = Boolean(state.tutorial) && (tutorialExpect?.type !== 'rival' || coachReady !== tutorialIndex);
   useEffect(() => {
-    if (menuOpen || devOpen || tableAnim || showBossIntro || tutorialHold || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
+    if (menuOpen || devOpen || animBusy || showBossIntro || tutorialHold || state.phase !== 'playing' || state.turn !== 'tioZe' || state.pending) return undefined;
     return scheduleTioZeTurn(dispatch, rivalOf(state).reflexMs);
-  }, [state, menuOpen, devOpen, tableAnim, showBossIntro, tutorialHold]);
+  }, [state, menuOpen, devOpen, animBusy, showBossIntro, tutorialHold]);
 
   // Turno sem saída (3 compras sem encaixe): o banner fica na mesa e o passe vai sozinho para o rival.
   const forcedPassArmed = state.phase === 'playing' && state.pending?.type === 'forcedPass';
@@ -691,9 +722,10 @@ export default function App() {
       cancelFlight.current?.();
       const rival = ev.by !== 'player';
       let from = null;
-      let fromEl = null;
+      // versão 2.6: a pedra continua na mão (a sua no leque, a dele na régua) até a cópia
+      // levantar dali; o voo esconde a original no 1º quadro
+      const fromEl = document.querySelector(rival ? `[data-rival-tile="${ev.tileId}"]` : `[data-hand-tile="${ev.tileId}"]`);
       if (rival) {
-        fromEl = document.querySelector(`[data-rival-tile="${ev.tileId}"]`);
         const src = fromEl?.firstElementChild ?? fromEl;
         const hand = src?.getBoundingClientRect() ?? rivalHandRef.current?.getBoundingClientRect();
         if (hand) from = { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2, w: hand.width, h: hand.height, angle: 0 };
@@ -703,6 +735,7 @@ export default function App() {
       pendingPlay.current = null;
       const key = ev.seq;
       setTableAnim({ key, tileId: ev.tileId, by: ev.by, stage: 'flight' });
+      setStagedSeq((n) => Math.max(n, key));
       cancelFlight.current = flyTile({
         tileId: ev.tileId,
         from,
@@ -889,7 +922,7 @@ export default function App() {
   const grampoMode = pending?.type === 'grampo';
   const pickMode = discardMode || caniveteMode || grampoMode;
   // enquanto a jogada do rival está em cena, a sua vez ainda não começou
-  const isPlayerTurn = playing && state.turn === 'player' && !pending && !tableAnim;
+  const isPlayerTurn = playing && state.turn === 'player' && !pending && !animBusy;
   const hand = state.hands.player;
   // Patch 0.5.4: valores recalculados a cada render ficam com a mesma identidade enquanto não mudam,
   // para os componentes com React.memo (mesa, leque, botões, cabeçalho) não redesenharem à toa
@@ -920,7 +953,7 @@ export default function App() {
   const passRule = useStableValue(isPlayerTurn && boardOpen ? passAvailabilityFor(state, 'player') : null);
   const canPass = Boolean(passRule?.allowed) && (!tutorialExpect || tutorialExpect.type === 'pass');
   const forcedPass = playing && state.pending?.type === 'forcedPass';
-  const undoReady = canUndo(state) && !tableAnim;
+  const undoReady = canUndo(state) && !animBusy;
   const caniveteReady = isPlayerTurn && canUseCanivete(state);
   const grampoReady = isPlayerTurn && !tutorialExpect && canUseGrampo(state);
 
@@ -1150,11 +1183,33 @@ export default function App() {
     });
   };
 
-  const nextRound = () => {
-    sound.playClick();
+  const dealNextRound = () => {
     setSelectedId(null);
     dispatch({ type: 'NEXT_ROUND', deck: dealDeck(state, `${state.run.node}:${state.rivalId}:${state.round + 1}`) });
   };
+  const nextRound = () => {
+    sound.playClick();
+    dealNextRound();
+  };
+
+  // Versão 2.6: entre uma rodada e outra não tem mais tela: depois da hora da batida, as pedras
+  // da mesa e das mãos varrem para o dorme, ele embaralha e reparte a rodada nova (as suas
+  // pedras saem do dorme para o leque, as do rival para a régua). Espera o menu fechar.
+  const sweepKey = finaleOver && state.phase === 'roundOver' && !state.tutorial && !menuOpen && !devOpen ? finaleKey : null;
+  const autoDeal = useStableHandler(dealNextRound);
+  useEffect(() => {
+    if (!sweepKey) return undefined;
+    let live = true;
+    sweepToDorme({ onTick: (i) => sound.playDealTick(i), onShuffle: () => sound.playShuffle() }).then(() => {
+      if (!live) return;
+      autoDeal();
+      requestAnimationFrame(() => requestAnimationFrame(() => dealRivalsFromDorme()));
+    });
+    return () => {
+      live = false;
+      cancelSweep();
+    };
+  }, [sweepKey, autoDeal]);
 
   // venceu a mesa: volta para o mapa da teia (no botão ou sozinho depois de uns segundos)
   const continueToMap = useCallback(() => {
@@ -1522,7 +1577,7 @@ export default function App() {
 
   const ends = getOpenEnds(state.board);
   const roundFinished = ['roundOver', 'matchWon', 'gameOver', 'runWon'].includes(state.phase);
-  const rivalThinking = playing && state.turn === 'tioZe' && !pending && !tableAnim;
+  const rivalThinking = playing && state.turn === 'tioZe' && !pending && !animBusy;
   const atmosphere = REGIONS[rival.region - 1]?.atmosphere ?? 'boteco';
 
   return (
@@ -1544,7 +1599,7 @@ export default function App() {
         flashes={relicFlashes.tioZe}
         isTurn={playing && state.turn === 'tioZe'}
         thinking={rivalThinking}
-        status={tableAnim?.by === 'tioZe' ? 'JOGOU!' : null}
+        status={incoming?.by === 'tioZe' ? 'JOGOU!' : null}
         mood={mood}
         hurtKey={tioZeHurtKey}
         speech={speech}
@@ -1562,14 +1617,16 @@ export default function App() {
         roundKey={`${state.run.match}:${state.round}`}
         playableSides={selectedSides}
         onPlaySide={handlePlaySide}
-        dimmed={(roundFinished || state.phase === 'secretReveal') && !tableAnim}
+        dimmed={finaleOver && !animBusy && state.phase !== 'roundOver'}
         previewDouble={Boolean(selectedTile && !discardMode && selectedTile.a === selectedTile.b)}
         frameRef={tableRef}
         endMarks={endMarks}
         felt={rival.felt}
         decor={rival.decor}
         atmosphere={atmosphere}
-        incoming={tableAnim}
+        incoming={incoming}
+        finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}
+        finaleTone={state.roundResult?.winner === 'player' ? 'player' : 'enemy'}
         noMoves={forcedPass && !menuOpen && !devOpen}
         boneyardCount={state.boneyard.length}
         tableMod={state.tableMod}
@@ -1583,6 +1640,23 @@ export default function App() {
         drawsUsed={isPlayerTurn ? state.drawsThisTurn : 0}
         drawCost={canDraw ? drawCostLabel(draw) : null}
       />
+      {/* versão 2.6: a hora da batida: o grito do golpe na mesa enquanto a última pedra brilha */}
+      {finaleHold && state.roundResult && (
+        <p key={finaleKey} className={`finale-callout font-pixel is-${state.roundResult.winner === 'player' ? 'player' : state.roundResult.winner ? 'enemy' : 'tie'}`} aria-live="polite">
+          {state.roundResult.winner ? (FINALE_TITLE[state.roundResult.kind] ?? 'BATEU!') : 'EMPATE!'}
+          {state.phase === 'matchWon' || state.phase === 'runWon' || state.phase === 'secretReveal' ? (
+            <span className="finale-sub">{rival.name.toUpperCase()} CAIU!</span>
+          ) : state.phase === 'gameOver' ? (
+            <span className="finale-sub">VOCÊ CAIU...</span>
+          ) : (
+            finaleLines(state.roundResult, rival.name).map((line) => (
+              <span key={line} className="finale-sub">
+                {line}
+              </span>
+            ))
+          )}
+        </p>
+      )}
 
       <PlayerRack
         onZoneHeight={setHandZone}
@@ -1630,6 +1704,8 @@ export default function App() {
         onOpenMenu={openMenu}
         press={press}
         knownIds={knownIds}
+        leaving={incoming?.by === 'player' && incoming.stage === 'flight' ? leavingTileOf(state.board, incoming.tileId) : null}
+        dealKey={`${state.run.match}:${state.round}`}
         rivalName={rival.name}
       />
       </div>
@@ -1642,7 +1718,7 @@ export default function App() {
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
 
-      {roundFinished && !tableAnim && !celebrate && !state.tutorial && (
+      {roundFinished && finaleOver && state.phase !== 'roundOver' && !celebrate && !state.tutorial && (
         <RoundOverlay
           state={state}
           rival={rival}
@@ -1654,7 +1730,7 @@ export default function App() {
         />
       )}
 
-      {celebrate && !tableAnim && (
+      {celebrate && finaleOver && !animBusy && (
         <TilesUnlockModal
           kind={reward}
           continueLabel={state.phase === 'secretReveal' ? 'CONTINUAR' : 'VER O FINAL'}
@@ -1668,7 +1744,7 @@ export default function App() {
 
       {showBossIntro && <BossIntro key={bossIntroKey} rival={rival} onDone={finishBossIntro} ball={state.fx.raffle?.number ?? null} />}
 
-      {state.phase === 'secretReveal' && !tableAnim && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
+      {state.phase === 'secretReveal' && finaleOver && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
 
       {/* Patch 0.9.5: a aula do Vô Juca por cima da mesa (some com o menu ou o painel DEV abertos) */}
       {tutorialStep && !menuOpen && !devOpen && (

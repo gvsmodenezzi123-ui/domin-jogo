@@ -15,6 +15,7 @@ import { getEnhancement } from '../data/enhancedTiles.js';
 import { getRelic } from '../data/relics.js';
 import { sound } from '../engine/audioSynth.js';
 import { getOpenEnds, getPlayableMoves, getValidSides } from '../engine/dominoLogic.js';
+import { prefersReducedMotion } from '../components/motion.js';
 import { bonusFloat, buildPlayerHint } from '../engine/gameFeedback.js';
 import { haptic } from '../engine/progress.js';
 import { canUseCanivete, canUseGrampo, drawAvailabilityFor, endMarksFor, passAvailabilityFor, requiredOpeningFor, revealedTioZeTiles, rulesFor, spentRelicsOf } from '../engine/powers.js';
@@ -24,6 +25,8 @@ import NetBadge from './NetBadge.jsx';
 import DangerFx from '../components/DangerFx.jsx';
 import { dangerOf } from '../engine/danger.js';
 import PvpRoundResult from './PvpRoundResult.jsx';
+import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf, shortName } from '../components/finale.js';
+import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/tableSweep.js';
 import { useSecondsLeft } from './useNow.js';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
@@ -31,6 +34,9 @@ const RIVAL_FLIGHT_MS = landTime(FLIGHT_RIVAL);
 const SPOTLIGHT_MS = 800;
 const LANDED_MS = 280;
 const SLAM_SHAKE_MS = 150;
+/** Versão 2.6: a hora da batida (a mesa segura acesa com a última pedra brilhando antes do placar). */
+const FINALE_MS = 1350;
+
 const CANIVETE_LABELS = { skip: 'CANCELAR', confirm: 'VIRAR BUCHA' };
 const GRAMPO_LABELS = { skip: 'CANCELAR', confirm: 'ESCONDER' };
 
@@ -61,6 +67,9 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
   const [handZone, setHandZone] = useState(0);
   const [tableAnim, setTableAnim] = useState(null);
+  // versão 2.6: a última jogada que já começou a voar (até lá a pedra fica escondida na mesa)
+  const [stagedSeq, setStagedSeq] = useState(() => Math.max(0, ...duel.view.events.map((e) => e.seq)));
+  const [finaleDone, setFinaleDone] = useState(null);
   const [inspect, setInspect] = useState(null);
   const { items: floatItems, push: pushFloat, done: floatDone, clear: clearFloats } = useFloats();
   const shellRef = useRef(null);
@@ -92,9 +101,9 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
       cancelFlight.current?.();
       const rival = ev.by !== 'player';
       let from = null;
-      let fromEl = null;
+      // versão 2.6: a pedra fica na mão até a cópia levantar (o voo esconde a original)
+      const fromEl = document.querySelector(rival ? `[data-rival-tile="${ev.tileId}"]` : `[data-hand-tile="${ev.tileId}"]`);
       if (rival) {
-        fromEl = document.querySelector(`[data-rival-tile="${ev.tileId}"]`);
         const src = fromEl?.firstElementChild ?? fromEl;
         const hand = src?.getBoundingClientRect() ?? rivalHandRef.current?.getBoundingClientRect();
         if (hand) from = { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2, w: hand.width, h: hand.height, angle: 0 };
@@ -104,6 +113,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
       pendingPlay.current = null;
       const key = ev.seq;
       setTableAnim({ key, tileId: ev.tileId, by: ev.by, stage: 'flight' });
+      setStagedSeq((n) => Math.max(n, key));
       cancelFlight.current = flyTile({
         tileId: ev.tileId,
         from,
@@ -189,6 +199,42 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const balloon = balloonInfo ? { ...balloonInfo, rect: inspect.rect } : null;
 
   const playing = view.phase === 'playing';
+  // versão 2.6: a pedra recém-chegada já conta como "no ar" desde o 1º quadro, e a hora da batida
+  const lastPlaced = lastPlacedOf(view.events);
+  const incoming =
+    tableAnim ?? (lastPlaced && lastPlaced.seq > stagedSeq ? { key: lastPlaced.seq, tileId: lastPlaced.tileId, by: lastPlaced.by, stage: 'flight' } : null);
+  const finaleKey = duel.result && !incoming ? `${duel.id}:${view.round}` : null;
+  useEffect(() => {
+    if (!finaleKey) return undefined;
+    const id = setTimeout(() => setFinaleDone(finaleKey), prefersReducedMotion() ? 500 : FINALE_MS);
+    return () => clearTimeout(id);
+  }, [finaleKey]);
+  const finaleHold = Boolean(finaleKey) && finaleDone !== finaleKey;
+  const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
+  const rr = view.roundResult;
+  // versão 2.6: sem placar entre as rodadas: a mesa varre para o dorme e você já fica pronto
+  // (a rodada nova sai quando os dois estiverem); o placar fica só para o fim do duelo
+  const lastRound = Boolean(duel.result?.matchOver) || !duel.final;
+  const sweepKey = finaleOver && duel.result && !lastRound ? finaleKey : null;
+  const autoNext = useStableHandler(() => onNextRound({ auto: true }));
+  useEffect(() => {
+    if (!sweepKey) return undefined;
+    let live = true;
+    sweepToDorme({ onTick: (i) => sound.playDealTick(i), onShuffle: () => sound.playShuffle() }).then(() => {
+      if (live) autoNext();
+    });
+    return () => {
+      live = false;
+    };
+  }, [sweepKey, autoNext]);
+  // a rodada nova chegou: as pedras viradas do rival saem do dorme (as suas saem sozinhas)
+  const dealtRef = useRef(roundKey);
+  useEffect(() => {
+    if (dealtRef.current === roundKey) return;
+    dealtRef.current = roundKey;
+    cancelSweep();
+    requestAnimationFrame(() => dealRivalsFromDorme());
+  }, [roundKey]);
   const pending = playing ? view.pending : null;
   const minePending = pending && (pending.owner ?? 'player') === 'player' ? pending : null;
   const discardMode = minePending?.type === 'discard';
@@ -196,7 +242,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const grampoMode = minePending?.type === 'grampo';
   const pickMode = discardMode || caniveteMode || grampoMode;
   const locked = Boolean(duel.awaiting) || Boolean(duel.result);
-  const isPlayerTurn = playing && view.turn === 'player' && !pending && !tableAnim && !locked;
+  const isPlayerTurn = playing && view.turn === 'player' && !pending && !incoming && !locked;
   const hand = view.hands.player;
   const playerRules = useStableValue(rulesFor(view, 'player'));
   const requiredTileId = requiredOpeningFor(view, 'player');
@@ -304,7 +350,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const actor = duel.result ? null : (duel.clock?.actor ?? actorOf(view));
   const secondsLeft = useSecondsLeft(duel.result ? null : duel.clock?.deadline);
   // enquanto a pedra do outro ainda voa para a mesa, o aviso segue com ele (como a mão)
-  const clockMine = actor === 'player' && !(tableAnim && tableAnim.by !== 'player');
+  const clockMine = actor === 'player' && !(incoming && incoming.by !== 'player');
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
   const roundFinished = !playing;
@@ -329,8 +375,8 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         relics={view.relics.tioZe}
         flashes={relicFlashes.tioZe}
         isTurn={playing && actor === 'tioZe'}
-        thinking={playing && actor === 'tioZe' && !tableAnim}
-        status={tableAnim?.by === 'tioZe' ? 'JOGOU!' : null}
+        thinking={playing && actor === 'tioZe' && !incoming}
+        status={incoming?.by === 'tioZe' ? 'JOGOU!' : null}
         mood="idle"
         hurtKey={oppHurtKey}
         speech={null}
@@ -354,14 +400,16 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
           roundKey={roundKey}
           playableSides={selectedSides}
           onPlaySide={handlePlaySide}
-          dimmed={roundFinished && !tableAnim}
+          dimmed={roundFinished && finaleOver && lastRound}
           previewDouble={Boolean(selectedTile && !pickMode && selectedTile.a === selectedTile.b)}
           frameRef={tableRef}
           endMarks={endMarks}
           felt={PVP_FELT}
           decor={[]}
           atmosphere="boteco"
-          incoming={tableAnim}
+          incoming={incoming}
+          finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}
+          finaleTone={rr?.winner === 'player' ? 'player' : 'enemy'}
           noMoves={forcedMine}
           boneyardCount={view.boneyard.length}
           tableMod={null}
@@ -419,7 +467,23 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         press={press}
         knownIds={null}
         rivalName={opp.name}
+        leaving={incoming?.by === 'player' && incoming.stage === 'flight' ? leavingTileOf(view.board, incoming.tileId) : null}
+        dealKey={roundKey}
       />
+      {finaleHold && rr && (
+        <p key={finaleKey} className={`finale-callout font-pixel is-${rr.winner === 'player' ? 'player' : rr.winner ? 'enemy' : 'tie'}`} aria-live="polite">
+          {rr.winner ? (FINALE_TITLE[rr.kind] ?? 'BATEU!') : 'EMPATE!'}
+          {duel.result.matchOver ? (
+            <span className="finale-sub">{rr.winner === 'player' ? `${opp.name.toUpperCase()} CAIU!` : 'VOCÊ CAIU...'}</span>
+          ) : (
+            finaleLines(rr, opp.name).map((line) => (
+              <span key={line} className="finale-sub">
+                {line}
+              </span>
+            ))
+          )}
+        </p>
+      )}
       </div>
 
       <NetBadge link={link} ping={ping} place="duel" />
@@ -435,7 +499,13 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
           }}
         />
       )}
-      {duel.result && !tableAnim && (
+      {duel.result && !lastRound && duel.nextSent && (
+        <p className="sweep-wait font-pixel" aria-live="polite">
+          ESPERANDO {shortName(opp.name)}
+          <span className="sweep-wait-dots" aria-hidden="true" />
+        </p>
+      )}
+      {duel.result && finaleOver && lastRound && (
         <PvpRoundResult view={view} result={duel.result} nextSent={duel.nextSent} opp={opp} onNextRound={onNextRound} onFinish={onFinish} />
       )}
       <InfoBalloon info={balloon} />
