@@ -19703,3 +19703,278 @@
   left: 30px;
   top: 384px;
 }
+
+/* --- o mapa: as folhas do caderno na mesa e a comanda na prancheta (art/landMap.js) ---- */
+.map-land .land-stage-wrap {
+  z-index: 55;
+}
+
+.ml-hud {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 8px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ml-where {
+  flex: 1;
+  min-width: 0;
+}
+
+.ml-badges {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.4;
+  color: #d8c8a8;
+  text-shadow: 0 2px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ml-region {
+  margin-top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  line-height: 1.2;
+  color: #fff3d6;
+  text-shadow:
+    0 2px 0 #000,
+    0 0 10px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ml-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.8));
+}
+
+.ml-menu {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  color: #f4e2b8;
+  border: 2px solid #0b0705;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #8a5a32, #4a2a12 70%);
+  box-shadow:
+    inset 0 0 0 2px #c9962e,
+    inset 0 -4px 6px rgba(0, 0, 0, 0.45),
+    0 3px 0 rgba(0, 0, 0, 0.6);
+}
+
+.ml-menu:active {
+  transform: translateY(2px);
+}
+
+/* as folhas rolam de lado (o único scroll do jogo) */
+.ml-scroll {
+  position: absolute;
+  left: 12px;
+  top: 64px;
+  width: 674px;
+  height: 376px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 3%, #000 96%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 3%, #000 96%, transparent 100%);
+}
+
+.ml-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.ml-strip.map-paper {
+  position: relative;
+  margin-top: 4px;
+  box-shadow: none;
+}
+
+.ml-page {
+  position: absolute;
+  top: 0;
+  width: 700px;
+  height: 368px;
+  filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.55));
+}
+
+.ml-page-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+.ml-page-head {
+  position: absolute;
+  left: 68px;
+  top: 16px;
+  right: 80px;
+}
+
+.ml-page-name {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1.3;
+  color: #2a1e10;
+}
+
+.ml-page-sub {
+  margin-top: 3px;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1;
+  color: #6a5034;
+}
+
+.ml-page.is-here .ml-page-name::after {
+  content: ' ◂ VOCÊ ESTÁ AQUI';
+  font-size: 8px;
+  color: #b8261c;
+}
+
+.ml-web {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ml-web .web-edge,
+.ml-web .web-edge-gone {
+  stroke-width: 3;
+}
+
+.ml-web .web-edge-open {
+  stroke-width: 4;
+  stroke-dasharray: 9 6;
+  animation: mlMarch 900ms linear infinite;
+}
+
+.ml-web .web-edge-done {
+  stroke-width: 4.5;
+}
+
+@keyframes mlMarch {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+.reduce-motion .ml-web .web-edge-open {
+  animation: none;
+}
+
+.ml-strip .web-cap-face {
+  width: 40px;
+  height: 40px;
+}
+
+.ml-strip .web-cap-face .map-node-lock {
+  font-size: 15px;
+}
+
+.ml-strip .web-cap-caption,
+.ml-strip .polaroid-caption {
+  max-width: 120px;
+  font-size: 8px;
+}
+
+.ml-strip .web-tag {
+  font-size: 8px;
+}
+
+.ml-strip .map-boss-tag {
+  font-size: 8px;
+}
+
+/* a comanda: o que tem no nó escolhido (o papel é da pintura: 716..964 × 134..420) */
+.ml-card {
+  position: absolute;
+  left: 718px;
+  top: 134px;
+  width: 248px;
+  height: 288px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: counterCardIn 220ms ease-out both;
+}
+
+.ml-card-kind {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.4;
+  color: #5e3e1e;
+}
+
+.ml-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ml-card-title {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  line-height: 1.35;
+  color: #140a02;
+}
+
+.ml-card-line {
+  margin-top: 4px;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1;
+  color: #3e2810;
+}
+
+.ml-card-notes {
+  max-height: 80px;
+  overflow: hidden;
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1.02;
+  color: #15306e;
+}
+
+.ml-card .map-mod-banner {
+  margin-top: 0;
+}
+
+.ml-card-heal {
+  margin-top: auto;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #4e3e2a;
+}
+
+.tl-key.ml-go .tl-key-label {
+  font-size: 13px;
+}
+
+.ml-card-hint {
+  padding: 12px 0;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.5;
+  text-align: center;
+  color: #b8261c;
+}

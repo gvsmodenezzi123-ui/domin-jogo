@@ -1,6 +1,7 @@
 /**
  * Versão 2.11: a letra miúda 3×5 das placas pintadas (FIADO SÓ AMANHÃ, o neon do BOTECO, os
- * preços a giz). Cada letra são 5 linhas de 3 bits; os acentos caem na letra sem acento.
+ * preços a giz). Cada letra são 5 linhas de 3 bits (o M e o W, de 5); os acentos caem na
+ * letra sem acento.
  */
 const GLYPHS = {
   A: '010101111101101',
@@ -15,7 +16,7 @@ const GLYPHS = {
   J: '001001001101010',
   K: '101101110101101',
   L: '100100100100111',
-  M: '101111111101101',
+  M: '1000111011101011000110001',
   N: '110101101101101',
   O: '010101101101010',
   P: '110101110100100',
@@ -25,7 +26,7 @@ const GLYPHS = {
   T: '111010010010010',
   U: '101101101101111',
   V: '101101101101010',
-  W: '101101111111101',
+  W: '1000110001101011101110001',
   X: '101101010101101',
   Y: '101101010010010',
   Z: '111001010100111',
@@ -54,8 +55,11 @@ const GLYPHS = {
 
 const PLAIN = { Á: 'A', À: 'A', Â: 'A', Ã: 'A', É: 'E', Ê: 'E', Í: 'I', Ó: 'O', Ô: 'O', Õ: 'O', Ú: 'U', Ç: 'C' };
 
+const glyphOf = (raw) => GLYPHS[PLAIN[raw] ?? raw] ?? GLYPHS[' '];
+const widthOf = (g) => g.length / 5;
+
 /** Largura (px) de `text` na letra 3×5 com escala `s`. */
-export const textWidth = (text, s = 1) => Math.max(0, text.length * 4 * s - s);
+export const textWidth = (text, s = 1) => Math.max(0, [...text.toUpperCase()].reduce((sum, ch) => sum + (widthOf(glyphOf(ch)) + 1) * s, 0) - s);
 
 /**
  * Escreve `text` em `b` a partir de (x, y), com `put(x, y, cor, alfa)` (o do buffer, ou um que
@@ -64,15 +68,15 @@ export const textWidth = (text, s = 1) => Math.max(0, text.length * 4 * s - s);
 export function pixelText(b, text, x, y, color, { s = 1, alpha = 1, put = b.put } = {}) {
   let cx = Math.round(x);
   for (const raw of text.toUpperCase()) {
-    const ch = PLAIN[raw] ?? raw;
-    const g = GLYPHS[ch] ?? GLYPHS[' '];
+    const g = glyphOf(raw);
+    const gw = widthOf(g);
     for (let row = 0; row < 5; row += 1) {
-      for (let col = 0; col < 3; col += 1) {
-        if (g[row * 3 + col] !== '1') continue;
+      for (let col = 0; col < gw; col += 1) {
+        if (g[row * gw + col] !== '1') continue;
         for (let dy = 0; dy < s; dy += 1) for (let dx = 0; dx < s; dx += 1) put(cx + col * s + dx, Math.round(y) + row * s + dy, color, alpha);
       }
     }
-    cx += 4 * s;
+    cx += (gw + 1) * s;
   }
   return textWidth(text, s);
 }

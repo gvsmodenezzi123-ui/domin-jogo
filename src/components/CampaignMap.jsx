@@ -27,6 +27,10 @@ import { ValtinhoSprite } from './art/SceneArt.jsx';
 import { EventPlaqueIcon, TableModIcon } from './art/TableModArt.jsx';
 import { tableModifierOf } from '../data/tableModifiers.js';
 import PixelCanvas from './PixelCanvas.jsx';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { MAP_PAD, PAGE_H, PAGE_W, paintMapBack, paintMapPage } from './art/landMap.js';
 import {
   ALLEY_SIZE,
   CAP_SIZE,
@@ -49,21 +53,21 @@ import {
  */
 const OBJ_PX = 1.5;
 const STOP_OBJ = {
-  shop: () => <PixelCanvas cacheKey="mapa-engradado" paint={paintCrate} w={CRATE_SIZE.w} h={CRATE_SIZE.h} scale={OBJ_PX} />,
-  event: () => (
+  shop: (s) => <PixelCanvas cacheKey="mapa-engradado" paint={paintCrate} w={CRATE_SIZE.w} h={CRATE_SIZE.h} scale={s} />,
+  event: (s) => (
     <>
-      <PixelCanvas cacheKey="mapa-beco" paint={paintAlley} w={ALLEY_SIZE.w} h={ALLEY_SIZE.h} scale={OBJ_PX} />
+      <PixelCanvas cacheKey="mapa-beco" paint={paintAlley} w={ALLEY_SIZE.w} h={ALLEY_SIZE.h} scale={s} />
       <span aria-hidden="true" className="web-obj-rain" />
       <span aria-hidden="true" className="web-obj-fog" />
     </>
   ),
-  coins: () => <PixelCanvas cacheKey="mapa-moedas" paint={paintCoinStack} w={COINS_SIZE.w} h={COINS_SIZE.h} scale={OBJ_PX} />,
-  black: () => <PixelCanvas cacheKey="mapa-porta" paint={paintBlackDoor} w={DOOR_SIZE.w} h={DOOR_SIZE.h} scale={OBJ_PX} />,
+  coins: (s) => <PixelCanvas cacheKey="mapa-moedas" paint={paintCoinStack} w={COINS_SIZE.w} h={COINS_SIZE.h} scale={s} />,
+  black: (s) => <PixelCanvas cacheKey="mapa-porta" paint={paintBlackDoor} w={DOOR_SIZE.w} h={DOOR_SIZE.h} scale={s} />,
 };
 
 /** O grampo enferrujado da polaroide do chefe. */
-const Staple = ({ side }) => (
-  <PixelCanvas cacheKey="mapa-grampo" paint={paintStaple} w={STAPLE_SIZE.w} h={STAPLE_SIZE.h} scale={OBJ_PX} className={`polaroid-staple polaroid-staple-${side}`} />
+const Staple = ({ side, s = OBJ_PX }) => (
+  <PixelCanvas cacheKey="mapa-grampo" paint={paintStaple} w={STAPLE_SIZE.w} h={STAPLE_SIZE.h} scale={s} className={`polaroid-staple polaroid-staple-${side}`} />
 );
 
 /** Altura de cada andar (px), cabeçalho de cada região e folga embaixo. */
@@ -103,6 +107,37 @@ function layoutOf(campaign) {
     if (region.id < campaign.regions.length) edges.push([region.boss, campaign.regions[region.id].entry]);
   }
   return { height, points, regions, edges };
+}
+
+/**
+ * Versão 2.11, deitado: cada região é uma folha do caderno (700 × 368 unidades do palco), lado
+ * a lado; os andares andam da esquerda para a direita e as três trilhas ficam uma embaixo da
+ * outra. As folhas rolam de lado (o único scroll do jogo é o do mapa).
+ */
+const LAND_PAGE = Object.freeze({ w: PAGE_W * 2, h: PAGE_H * 2, gap: 30, edge: 16, lead: 96, step: 100 });
+const LAND_LANES = [118, 218, 316];
+
+function layoutLand(campaign) {
+  const n = campaign.regions.length;
+  const pages = campaign.regions.map((region, r) => ({ ...REGIONS[region.id - 1], left: LAND_PAGE.edge + r * (LAND_PAGE.w + LAND_PAGE.gap) }));
+  const width = LAND_PAGE.edge * 2 + n * LAND_PAGE.w + (n - 1) * LAND_PAGE.gap;
+  const points = new Map();
+  for (const region of campaign.regions) {
+    const page = pages[region.id - 1];
+    for (const node of region.nodes) {
+      const middle = node.floor > 1 && node.floor < FLOORS;
+      const h = mixSeed(campaign.seed, node.id);
+      const jx = middle ? (h % 15) - 7 : 0;
+      const jy = middle ? ((h >>> 8) % 17) - 8 : 0;
+      points.set(node.id, { node, x: page.left + LAND_PAGE.lead + LAND_PAGE.step * (node.floor - 1) + jx, y: LAND_LANES[node.lane] + jy });
+    }
+  }
+  const edges = [];
+  for (const region of campaign.regions) {
+    for (const node of region.nodes) for (const to of node.next) edges.push([node.id, to]);
+    if (region.id < n) edges.push([region.boss, campaign.regions[region.id].entry]);
+  }
+  return { width, height: LAND_PAGE.h, points, pages, edges };
 }
 
 /** Para onde a teia ainda leva a partir dos nós abertos. */
@@ -151,9 +186,14 @@ const STATUS_LABEL = { open: 'ABERTO', done: 'JÁ PASSOU', ahead: 'MAIS ADIANTE'
  */
 const revealed = (status) => status === 'open' || status === 'done';
 
-/** Um nó da teia: polaroid do rival (mesa) ou ficha com o NPC (loja, beco, Seu Tião). */
-const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect }) {
+/**
+ * Um nó da teia: polaroid do rival (mesa) ou ficha com o NPC (loja, beco, Seu Tião).
+ * Deitado (`land`), x é em unidades do palco (não em %) e os objetos saem maiores.
+ */
+const WebNode = memo(function WebNode({ point, status, known, selected, tilt, onSelect, land = false }) {
   const { node } = point;
+  const left = land ? point.x : `${point.x}%`;
+  const s = land ? 2 : OBJ_PX;
   const fight = node.type === 'combat' || node.type === 'boss';
   const rival = fight ? getRival(node.rivalId) : null;
   const mod = tableModifierOf(node.mod);
@@ -168,15 +208,15 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
       <button
         type="button"
         className={`${cls} web-cap`}
-        style={{ left: `${point.x}%`, top: point.y, rotate: `${tilt * 2}deg` }}
+        style={{ left, top: point.y, rotate: `${tilt * 2}deg` }}
         onClick={() => onSelect(node.id)}
         aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
         aria-pressed={selected}
       >
         <span className="web-cap-art">
-          <PixelCanvas cacheKey={`mapa-tampinha-${variant}`} paint={() => paintBottleCap(variant)} w={CAP_SIZE.w} h={CAP_SIZE.h} scale={OBJ_PX} />
+          <PixelCanvas cacheKey={`mapa-tampinha-${variant}`} paint={() => paintBottleCap(variant)} w={CAP_SIZE.w} h={CAP_SIZE.h} scale={s} />
           <span className="web-cap-face" style={{ rotate: `${-tilt * 2}deg` }}>
-            {known ? <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={30} smoke={false} /> : <span className="map-node-lock font-pixel">?</span>}
+            {known ? <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={land ? 40 : 30} smoke={false} /> : <span className="map-node-lock font-pixel">?</span>}
           </span>
           {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
         </span>
@@ -190,19 +230,19 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
     );
   }
   if (fight) {
-    const photo = node.boss ? 56 : 40;
+    const photo = (node.boss ? 56 : 40) * (land ? 1.25 : 1);
     return (
       <button
         type="button"
         className={`${cls} map-polaroid web-fight ${node.boss ? 'map-node-boss' : ''}`}
-        style={{ left: `${point.x}%`, top: point.y, rotate: `${tilt}deg` }}
+        style={{ left, top: point.y, rotate: `${tilt}deg` }}
         onClick={() => onSelect(node.id)}
         aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
         aria-pressed={selected}
       >
         <span aria-hidden="true" className="polaroid-tape" />
-        <Staple side="l" />
-        <Staple side="r" />
+        <Staple side="l" s={s} />
+        <Staple side="r" s={s} />
         <span className="polaroid-photo" style={{ width: photo, height: photo }}>
           {known ? (
             <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={photo} smoke={false} />
@@ -230,37 +270,41 @@ const WebNode = memo(function WebNode({ point, status, known, selected, tilt, on
     <button
       type="button"
       className={`${cls} web-stop web-stop-${node.type} web-stop-obj`}
-      style={{ left: `${point.x}%`, top: point.y }}
+      style={{ left, top: point.y }}
       onClick={() => onSelect(node.id)}
       aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}
       aria-pressed={selected}
     >
       {/* Versão 2.0: a etiqueta de papel em cima e o objeto em pixel art */}
       <span className="web-tag font-pixel">{STOP_CAPTION[node.type]}</span>
-      <span className="web-obj">{STOP_OBJ[node.type]?.() ?? STOP_ART[node.type]('web-stop-art')}</span>
+      <span className="web-obj">{STOP_OBJ[node.type]?.(s) ?? STOP_ART[node.type]('web-stop-art')}</span>
       {status === 'done' && <span aria-hidden="true" className="chalk-x" />}
     </button>
   );
 });
 
-/** Texto e botão do rodapé para o nó escolhido. */
-function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEnter }) {
+/**
+ * O que tem no nó escolhido: a arte, o tipo, o nome, a linha de baixo, as notas e o texto do
+ * botão (o comprido do rodapé em pé e o curto da comanda deitada).
+ */
+function nodeInfo({ node, status, known, farRegion, mode, closed = false, artSize = 46 }) {
   const unknownLine = farRegion ? 'Ainda não chegou nessa região.' : 'Só aparece quando o caminho até aqui abrir.';
   const fight = node.type === 'combat' || node.type === 'boss';
   // nas Peças Pretas o rodapé mostra o baralho, os talismãs e os corações do modo difícil
   const rival = fight ? rivalFor(node.rivalId, mode) : null;
-  const open = status === 'open';
+  const sprite = artSize >= 56 ? 'h-14 w-14 shrink-0' : 'h-12 w-12 shrink-0';
   let art;
   let title;
   let line;
   let notes;
   let action;
+  let short;
   let kind = NODE_LABEL[node.type];
   if (fight) {
     if (known) kind = node.boss ? 'CHEFE' : 'MESA';
     art = (
       <div className={`avatar-frame shrink-0 self-start ${known ? '' : 'map-silhouette'}`}>
-        <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={46} smoke={known} bare={!known} />
+        <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'smug'} size={artSize} smoke={known} bare={!known} />
       </div>
     );
     title = known ? rival.name.toUpperCase() : '???';
@@ -268,31 +312,54 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
     // só o jeito de jogar dele (sem nível de IA nem pedras de grife)
     notes = known ? [rivalBlurb(rival.id)] : [];
     action = `SENTAR À MESA · ${rival.name.toUpperCase()}`;
+    short = node.boss ? 'ENCARAR O CHEFE' : 'SENTAR À MESA';
   } else if (node.type === 'shop') {
-    art = <ValtinhoSprite className="h-12 w-12 shrink-0" />;
+    art = <ValtinhoSprite className={sprite} />;
     title = 'LOJA DO VALTINHO';
     line = 'Talismãs e pedras de grife. Desvio sem luta.';
     notes = closed ? ['Só no Osso: a loja está de portas fechadas. Você passa reto.'] : ['O balcão de sempre: compre, venda a 50% e reembaralhe a vitrine.'];
     action = closed ? 'PASSAR RETO (FECHADA)' : 'ENTRAR NA LOJA';
+    short = closed ? 'PASSAR RETO' : 'ENTRAR NA LOJA';
   } else if (node.type === 'black') {
-    art = <CorvoSprite className="h-12 w-12 shrink-0" />;
+    art = <CorvoSprite className={sprite} />;
     title = 'MERCADO NEGRO';
     line = 'O Corvo da Madrugada, no beco escuro.';
     notes = closed ? ['Só no Osso: o beco está vazio esta noite. Você passa reto.'] : ['Só talismãs Necróticos, de $18 a $26. Fortes, e cobram o preço deles.'];
     action = closed ? 'PASSAR RETO (FECHADO)' : 'ENTRAR NO BECO';
+    short = closed ? 'PASSAR RETO' : 'ENTRAR NO BECO';
   } else if (node.type === 'event') {
-    art = <EventPlaqueIcon className="h-12 w-12 shrink-0" />;
+    art = <EventPlaqueIcon className={sprite} />;
     title = 'IMPREVISTO DA NOITE [?]';
     line = 'Um imprevisto da noite.';
     notes = ['Duas escolhas: arriscar ou ficar na sua. O que é, só se descobre entrando.'];
     action = 'ENCARAR O IMPREVISTO';
+    short = 'ENCARAR';
   } else {
-    art = <TiaoMoedasSprite className="h-12 w-12 shrink-0" />;
+    art = <TiaoMoedasSprite className={sprite} />;
     title = 'SEU TIÃO DAS MOEDAS';
     line = 'Um velho no engradado de cerveja.';
     notes = [`Gorjeta na hora: de $${COIN_EVENT_MIN} a $${COIN_EVENT_MAX}. Sem mesa, sem risco.`];
     action = 'SENTAR COM O SEU TIÃO';
+    short = 'SENTAR COM ELE';
   }
+  return { fight, art, kind, title, line, notes, action, short, mod: fight ? tableModifierOf(node.mod) : null };
+}
+
+/** A regra de mesa do confronto, em âmbar (Patch 0.9.4). */
+const ModBanner = ({ mod }) => (
+  <div className="map-mod-banner mt-1.5" role="note">
+    <TableModIcon icon={mod.icon} className="map-mod-banner-icon" />
+    <div className="min-w-0">
+      <p className="map-mod-banner-name">REGRA DA MESA: {mod.name.toUpperCase()}</p>
+      <p className="map-mod-banner-rule">{mod.rule}</p>
+    </div>
+  </div>
+);
+
+/** Texto e botão do rodapé para o nó escolhido. */
+function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEnter }) {
+  const { fight, art, kind, title, line, notes, action, mod } = nodeInfo({ node, status, known, farRegion, mode, closed });
+  const open = status === 'open';
   return (
     <>
       <div className="flex gap-3">
@@ -305,16 +372,7 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
           <p className="truncate font-term text-[16px] leading-none text-bone-300">{line}</p>
         </div>
       </div>
-      {/* Patch 0.9.4: a regra de mesa do confronto, em âmbar */}
-      {fight && tableModifierOf(node.mod) && (
-        <div className="map-mod-banner mt-1.5" role="note">
-          <TableModIcon icon={tableModifierOf(node.mod).icon} className="map-mod-banner-icon" />
-          <div className="min-w-0">
-            <p className="map-mod-banner-name">REGRA DA MESA: {tableModifierOf(node.mod).name.toUpperCase()}</p>
-            <p className="map-mod-banner-rule">{tableModifierOf(node.mod).rule}</p>
-          </div>
-        </div>
-      )}
+      {mod && <ModBanner mod={mod} />}
       {notes.length > 0 && !(fight && node.mod) && (
         <ul className="web-notes mt-1.5 grid gap-0.5 font-term text-[15px] leading-[1.05] text-bone-200">
           {notes.map((n, i) => (
@@ -335,6 +393,154 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
   );
 }
 
+/** Versão 2.11: a comanda presa na prancheta (o mapa deitado), com o que tem no nó escolhido. */
+function NodeCard({ node, status, known, farRegion, mode, closed = false, heal, onEnter }) {
+  const { fight, art, kind, title, line, notes, short, mod } = nodeInfo({ node, status, known, farRegion, mode, closed, artSize: 56 });
+  const open = status === 'open';
+  return (
+    <section key={node.id} className="ml-card" aria-live="polite" aria-label={title}>
+      <p className="ml-card-kind">
+        ANDAR {node.floor}/{FLOORS} · {kind} · {STATUS_LABEL[status]}
+      </p>
+      <div className="ml-card-head">
+        {art}
+        <div className="min-w-0 flex-1">
+          <p className="ml-card-title">{title}</p>
+          <p className="ml-card-line">{line}</p>
+        </div>
+      </div>
+      {mod && <ModBanner mod={mod} />}
+      {notes.length > 0 && !(fight && node.mod) && (
+        <ul className="ml-card-notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      <p className="ml-card-heal">{heal}</p>
+      {open ? (
+        <DominoKey label={short} pips={fight ? 6 : 3} tone="ivory" w={248} h={50} className="ml-go is-main" onClick={() => onEnter(node.id)} />
+      ) : (
+        <p className="ml-card-hint">TOQUE NUM CAMINHO ACESO PARA SEGUIR</p>
+      )}
+    </section>
+  );
+}
+
+/** O mapa deitado: a mesa com as folhas do caderno rolando de lado e a prancheta da comanda. */
+function MapLand({ state, campaign, status, open, onEnter, onMenu, press }) {
+  const { width, height, points, pages, edges } = useMemo(() => layoutLand(campaign), [campaign]);
+  const [picked, setPicked] = useState(null);
+  const scrollRef = useRef(null);
+  const regionId = mapRegionId(state);
+  const region = REGIONS[regionId - 1];
+  const selectedId = picked && points.has(picked) ? picked : (open[0] ?? state.run.node ?? campaign.regions[0].entry);
+  const selected = points.get(selectedId).node;
+  const focusX = open.length ? Math.round(open.reduce((sum, id) => sum + points.get(id).x, 0) / open.length) : 0;
+  const floorNow = open.length ? points.get(open[0]).node.floor : FLOORS;
+
+  // abre com os próximos caminhos um pouco à esquerda do meio
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = Math.max(0, focusX - el.clientWidth * 0.42);
+  }, [focusX]);
+
+  const path = state.run.path;
+  const stepOf = new Map(path.map((id, i) => [id, i]));
+  const edgeClass = ([a, b]) => {
+    if (stepOf.has(a) && stepOf.get(b) === stepOf.get(a) + 1) return 'web-edge-done';
+    if (a === state.run.node && status.get(b) === 'open') return 'web-edge-open';
+    if (status.get(a) === 'gone' || status.get(b) === 'gone') return 'web-edge-gone';
+    return 'web-edge';
+  };
+  const curve = ([a, b]) => {
+    const p = points.get(a);
+    const q = points.get(b);
+    const bend = ((mixSeed(campaign.seed, `${a}>${b}`) % 7) - 3) * 4;
+    return `M${p.x} ${p.y} Q${(p.x + q.x) / 2} ${(p.y + q.y) / 2 + bend} ${q.x} ${q.y}`;
+  };
+  const heal = modeOf(state.mode).healPerTable
+    ? `Vencer mesa: +${modeOf(state.mode).healPerTable}♥ (chefe também). Loja e beco são opcionais.`
+    : `Vencer mesa: +${HEAL_AFTER_NODE}♥. Chefe: cura tudo. Loja e beco são opcionais.`;
+
+  return (
+    <div className={`map-screen map-land map-atmo-${region.atmosphere}`}>
+      <LandStage paint={() => paintMapBack()} cacheKey="land-mapa-mesa" pad={MAP_PAD} bleed="#120a05" label="Mapa da campanha">
+        <header className="ml-hud">
+          <div className="ml-where">
+            <p className="ml-badges">
+              {state.maleta && state.maleta !== 'classica' && <span className="map-maleta-badge">{maletaOf(state.maleta).short} · </span>}
+              {modeBadge(state.mode) && <span className={state.mode === 'inferno' ? 'map-inferno-badge' : 'map-hard-badge'}>{modeBadge(state.mode)}</span>}
+              {state.challenge && <span className="map-challenge-badge">{challengeOf(state.challenge).name.toUpperCase()} · </span>}
+              REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
+              {open.length > 1 ? ` · ${open.length} CAMINHOS` : ''}
+            </p>
+            <h1 className="ml-region">{region.name}</h1>
+          </div>
+          <div className="ml-stats">
+            <HeartsBar current={state.hearts.player} max={state.maxHearts.player} pixel={2} label={`Você: ${state.hearts.player} de ${state.maxHearts.player} corações`} />
+            <CoinCount value={state.coins.player} />
+          </div>
+          <Hotbar relics={state.relics.player} slots={relicSlotsFor(state)} size={30} press={press} label="Seus talismãs" />
+          <button type="button" onClick={onMenu} className="ml-menu" aria-label="Voltar ao menu">
+            <MenuGlyph size={22} />
+          </button>
+        </header>
+
+        <div ref={scrollRef} className="ml-scroll">
+          <div className="ml-strip map-paper" style={{ width, height }}>
+            {pages.map((p) => (
+              <section key={p.id} className={`ml-page ${p.id === regionId ? 'is-here' : 'web-region-far'}`} style={{ left: p.left }} aria-label={p.name}>
+                <PixelCanvas cacheKey={`mapa-folha-${p.id}-${campaign.seed % 997}`} paint={() => paintMapPage((campaign.seed % 997) * 3 + p.id, p.atmosphere)} w={PAGE_W} h={PAGE_H} scale={2} className="ml-page-art" />
+                <div className="ml-page-head">
+                  <p className="ml-page-name">{p.name}</p>
+                  <p className="ml-page-sub">{p.subtitle}</p>
+                </div>
+              </section>
+            ))}
+            <svg className="ml-web" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true">
+              <defs>
+                <filter id="chalk-rough-land" x="-2%" y="-5%" width="104%" height="110%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="grain" />
+                  <feDisplacementMap in="SourceGraphic" in2="grain" scale="1.6" />
+                </filter>
+              </defs>
+              <g filter="url(#chalk-rough-land)">
+                {edges.map((edge) => (
+                  <path key={`${edge[0]}>${edge[1]}`} d={curve(edge)} className={edgeClass(edge)} />
+                ))}
+              </g>
+            </svg>
+            {[...points.values()].map((p) => (
+              <WebNode
+                key={p.node.id}
+                point={p}
+                status={status.get(p.node.id)}
+                known={revealed(status.get(p.node.id))}
+                selected={p.node.id === selectedId}
+                tilt={(mixSeed(campaign.seed, `tilt-${p.node.id}`) % 7) - 3}
+                onSelect={setPicked}
+                land
+              />
+            ))}
+          </div>
+        </div>
+
+        <NodeCard
+          node={selected}
+          status={status.get(selected.id)}
+          known={revealed(status.get(selected.id))}
+          farRegion={selected.region > regionId}
+          mode={state.mode}
+          closed={state.challenge === 'soNoOsso' && (selected.type === 'shop' || selected.type === 'black')}
+          heal={heal}
+          onEnter={onEnter}
+        />
+      </LandStage>
+    </div>
+  );
+}
+
 /**
  * Mapa da campanha em teia (Patch 0.6.1): as 3 regiões empilhadas, do Boteco (embaixo)
  * ao Submundo (no topo). Cada região sobe 6 andares: entrada, 4 andares de bifurcações
@@ -343,10 +549,17 @@ function NodeDetail({ node, status, known, farRegion, mode, closed = false, onEn
  * de cada mesa só aparece quando o caminho até ela abre (antes disso, "?").
  * Tocar num nó mostra o que tem nele; o botão do rodapé entra no nó escolhido.
  */
-export default function CampaignMap({ state, onEnter, onMenu, press }) {
-  const campaign = campaignOf(state);
+export default function CampaignMap(props) {
+  const landscape = useLandscape();
+  const campaign = campaignOf(props.state);
+  const { status, open } = useMemo(() => statusesOf(props.state, campaign), [props.state, campaign]);
+  if (landscape) return <MapLand {...props} campaign={campaign} status={status} open={open} />;
+  return <MapStand {...props} campaign={campaign} status={status} open={open} />;
+}
+
+/** O mapa em pé (a teia subindo numa folha só, com o rodapé). */
+function MapStand({ state, campaign, status, open, onEnter, onMenu, press }) {
   const { height, points, regions, edges } = useMemo(() => layoutOf(campaign), [campaign]);
-  const { status, open } = useMemo(() => statusesOf(state, campaign), [state, campaign]);
   const [picked, setPicked] = useState(null);
   const scrollRef = useRef(null);
   const regionId = mapRegionId(state);
