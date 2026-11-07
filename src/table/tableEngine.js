@@ -409,7 +409,7 @@ function finishRound(state, outcome, events = []) {
   const tentos = {};
   let next = { ...state };
   let ranked = [];
-  let over = false;
+  let over;
   let champion = null;
 
   if (usesTentos(state)) {

@@ -112,6 +112,8 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
 
   const names = useMemo(() => Object.fromEntries(view.seats.map((s) => [s.id, s.id === me ? 'você' : s.name])), [view.seats, me]);
   const coinTarget = useCallback((id) => (id === me ? 'player' : id), [me]);
+  // versão 2.7: a linha embaixo do grito lê a mesa de agora (duplas, tentos), sem refazer o efeito
+  const lineFor = useStableHandler((r) => roundLine(r, view, me, view.rules?.teams ? partnerOf(view, me) : null));
 
   /** A pedra voa da mão de quem jogou até a ponta da mesa. */
   const stagePlay = useCallback(
@@ -201,7 +203,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         const text = r.kind === 'batida' ? (r.batida === 'cruzada' ? 'CRUZADA!' : r.batida === 'bucha' ? 'BATEU DE BUCHA!' : r.batida === 'duasPontas' ? 'NAS DUAS PONTAS!' : 'BATEU!') : 'TRANCOU!';
         later(() => {
           sound[r.kind === 'tranca' ? 'playLock' : 'playTileSlam'](true);
-          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null, sub: roundLine(r, view, me, view.rules?.teams ? partnerOf(view, me) : null) });
+          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null, sub: lineFor(r) });
         }, offset + 260);
       }
       if (ev.type === 'damage') {
@@ -237,7 +239,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       if (ev.type === 'eliminated') later(() => sound.playHeartBreak?.(), offset + 1000);
       if (ev.type === 'matchOver') later(() => ((ev.winners ?? [ev.winner]).includes(me) ? sound.playVictory() : sound.playDefeat()), offset + 1500);
     }
-  }, [view.seq, view.events, me, stagePlay, pushFloat, clearFloats, later, coinTarget]);
+  }, [view.seq, view.events, me, stagePlay, pushFloat, clearFloats, later, coinTarget, lineFor]);
 
   const playing = view.phase === 'playing';
   // a pedra que acabou de chegar pela rede e ainda vai voar conta como "voando" desde já
