@@ -1,13 +1,15 @@
-import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useLayoutEffect, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
+import RivalSeat from './RivalSeat.jsx';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
 import { shortRivalName } from '../engine/rivalInfo.js';
 import { HEARTBEAT_BPM } from '../engine/audioSynth.js';
+import { useTalk } from './useTalk.js';
 
 /**
  * O outro lado da mesa, com o layout TRAVADO (nada aqui muda de tamanho
@@ -21,7 +23,7 @@ import { HEARTBEAT_BPM } from '../engine/audioSynth.js';
  *   - mão do rival presa à direita, cada pedra na sua vaga (RivalHand.jsx);
  *   - o som e o menu moram na sua hotbar desde o 0.6.2.
  */
-function RivalBench({
+function RivalBenchPortrait({
   rival,
   hearts,
   maxHearts,
@@ -47,11 +49,7 @@ function RivalBench({
   const revealedIds = new Set(revealed.map((t) => t.id));
   // Versão 2.1: a fala nova espera a atual terminar (antes ela cortava a frase no meio toda
   // vez que você jogava). Só a mais recente fica na fila.
-  const [talk, setTalk] = useState({ now: speech, next: null, busy: Boolean(speech) });
-  if (speech && speech.key !== talk.now?.key && speech.key !== talk.next?.key) {
-    setTalk(talk.busy ? { ...talk, next: speech } : { now: speech, next: null, busy: true });
-  }
-  const finishTalk = useCallback(() => setTalk((t) => (t.next ? { now: t.next, next: null, busy: true } : { ...t, busy: false })), []);
+  const [talkNow, finishTalk] = useTalk(speech);
   // 2.1: a régua das pedras nunca invade o bloco do retrato (polaroide de 64 px, corações e
   // dinheiro): mede onde a faixa dos corações termina e a régua cabe no que sobra à direita
   const statsRef = useRef(null);
@@ -144,10 +142,10 @@ function RivalBench({
 
       {/* fala: logo abaixo do cabeçalho, sobre o feltro, com a cauda subindo até o retrato
           (o retrato fica centrado em x = 38 px; o balão começa em 12 px) */}
-      {talk.now && (
+      {talkNow && (
         <RivalSpeech
-          key={talk.now.key}
-          text={talk.now.text}
+          key={talkNow.key}
+          text={talkNow.text}
           voice={rival.id}
           onMouth={setMouthOpen}
           tail="up"
@@ -158,6 +156,11 @@ function RivalBench({
       )}
     </header>
   );
+}
+
+/** Versão 2.9: com a tela deitada, o rival senta do outro lado da mesa (RivalSeat.jsx). */
+function RivalBench({ landscape = false, ...props }) {
+  return landscape ? <RivalSeat {...props} /> : <RivalBenchPortrait {...props} />;
 }
 
 // Patch 0.5.4: só redesenha quando as props mudam (não a cada moeda/dica/fala da mesa)

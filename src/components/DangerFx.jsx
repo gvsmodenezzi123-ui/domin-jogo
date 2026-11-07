@@ -31,12 +31,23 @@ export default function DangerFx({ danger, myHearts, active = true }) {
   }, [seen.key]);
   // versão 2.6.1: o aviso fica logo abaixo do card do rival (o cabeçalho de cima), não no meio
   // da mesa: mede onde o cabeçalho termina e escreve direto no estilo (sem re-render)
+  // versão 2.9: na mesa deitada o aviso vira um selo pulsando ao lado das pedras de pé do rival
+  // ([data-danger-anchor], RivalSeat), à esquerda da fileira
   const bannerRef = useRef(null);
   useLayoutEffect(() => {
     const el = bannerRef.current;
-    const bench = document.querySelector('.rival-bench');
     const box = el?.offsetParent?.getBoundingClientRect();
-    if (!el || !bench || !box) return;
+    if (!el || !box) return;
+    const seat = document.querySelector('[data-danger-anchor]');
+    if (seat) {
+      const r = seat.getBoundingClientRect();
+      el.classList.add('is-seal');
+      el.style.setProperty('--banner-left', `${Math.round(r.left - box.left - 12)}px`);
+      el.style.setProperty('--banner-top', `${Math.round(r.top + r.height / 2 - box.top)}px`);
+      return;
+    }
+    const bench = document.querySelector('.rival-bench');
+    if (!bench) return;
     el.style.setProperty('--banner-top', `${Math.round(bench.getBoundingClientRect().bottom - box.top + 6)}px`);
   }, [seen.key]);
 

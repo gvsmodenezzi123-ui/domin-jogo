@@ -47,7 +47,12 @@ function reconcile(prev, tiles, roundKey) {
  * pedra que sai anima (a cópia dela voa até a mesa); as outras não andam.
  * Pedras reveladas (Olho de Vidro, Espelho) aparecem de frente.
  */
-export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, room = ROOM, className = '' }) {
+/**
+ * Versão 2.9, `seat`: na mesa deitada as pedras ficam de pé na beirada de lá, na frente do
+ * peito do rival, numa fileira centrada (`unit` acompanha a altura da tela). As vagas fixas e
+ * o voo da pedra que sai são os mesmos.
+ */
+export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, room = ROOM, className = '', unit = UNIT, seat = false }) {
   const [book, setBook] = useState(() => reconcile(null, tiles, roundKey));
   const next = reconcile(book, tiles, roundKey);
   if (next !== book) setBook(next);
@@ -73,7 +78,8 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
   const used = [...Object.values(view.slots), ...Object.values(view.leaving).map((l) => l.slot)];
   const maxSlot = used.length ? Math.max(...used) : 0;
   // a última vaga (a mais à esquerda) ainda cabe inteira na régua
-  const step = maxSlot ? Math.min(UNIT + GAP, (room - UNIT - 2) / maxSlot) : UNIT + GAP;
+  const gap = seat ? Math.max(2, Math.round(unit * 0.16)) : GAP;
+  const step = maxSlot ? Math.min(unit + gap, (room - unit - 2) / maxSlot) : unit + gap;
 
   const render = (tile, slot, leavingTile) => {
     const revealed = !leavingTile && revealedIds.has(tile.id);
@@ -82,25 +88,36 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
         key={`${view.roundKey}:${tile.id}`}
         data-rival-tile={tile.id}
         className={`rival-slot absolute ${leavingTile ? 'rival-slot-leaving' : ''}`}
-        style={{ right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }}
+        style={
+          seat
+            ? { right: slot * step, bottom: 0, rotate: `${slot % 2 ? -1 : 1}deg` }
+            : { right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }
+        }
       >
         {revealed ? (
           <DominoTile
             values={[tile.a, tile.b]}
-            unit={UNIT}
-            depth={2}
+            unit={unit}
+            depth={seat ? 3 : 2}
             enhancement={tile.enhancement}
             className={`rival-revealed ${tile.id === foreseenId ? 'rival-foreseen' : ''}`}
           />
         ) : (
-          <DominoTile faceDown unit={UNIT} depth={2} />
+          <DominoTile faceDown unit={unit} depth={seat ? 3 : 2} />
         )}
       </div>
     );
   };
 
   return (
-    <div ref={containerRef} className={`pointer-events-none ${className}`} role="img" aria-label={`Mão do rival: ${tiles.length} pedras`}>
+    <div
+      ref={containerRef}
+      className={`pointer-events-none ${className}`}
+      // de pé na beirada: a fileira tem a largura das vagas e fica no meio
+      style={seat ? { width: Math.round(maxSlot * step + unit), height: unit * 2 } : undefined}
+      role="img"
+      aria-label={`Mão do rival: ${tiles.length} pedras`}
+    >
       {tiles.map((tile) => render(tile, view.slots[tile.id] ?? 0, false))}
       {leavingIds.map((id) => render(view.leaving[id].tile, view.leaving[id].slot, true))}
     </div>

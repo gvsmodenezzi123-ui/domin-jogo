@@ -48,6 +48,17 @@ const LOOKAHEAD = 2;
  * balão do rival, do dorme e do leque, e a corrente comprida sobe em zigue-zague (serpente).
  */
 export const MAX_VERTICAL_CHAIN = 3;
+/**
+ * Versão 2.9, a mesa deitada (16:9), de tamanho fixo: a primeira pedra no MEIO do tampo e a
+ * corrente correndo na horizontal até chegar na beirada; lá ela vira 90° (no máximo 2 pedras na
+ * vertical) e volta em U no sentido contrário. Como numa mesa de verdade, as duas pontas viram
+ * para lados opostos: a da direita dobra para perto de você, a da esquerda para o lado de lá
+ * (sem nunca passar da beirada: o mundo é o tampo). Cada ponta tem a sua metade do tampo (a de
+ * lá ou a de perto); a corrente inteira cabe sem sair da mesa.
+ */
+export const LANDSCAPE = Object.freeze({ maxRun: Infinity, maxRise: 2, rows: 7, minCols: 24, maxCols: 34 });
+/** Para onde cada ponta dobra na mesa deitada. */
+const LAND_TURN = Object.freeze({ left: 'N', right: 'S' });
 const EPS = 1e-6;
 
 const DIR = {
@@ -124,8 +135,18 @@ export function rectGap(a, b) {
   return Math.max(dx, dy);
 }
 
-/** Altura do mundo para um feltro (a largura é sempre WORLD_COLS). Congele por rodada. */
-export function computeWorldSize(width, height, cols = WORLD_COLS) {
+/**
+ * Altura do mundo para um feltro (a largura é sempre WORLD_COLS). Congele por rodada.
+ * Versão 2.9: na mesa deitada o mundo É o tampo da mesa, de tamanho fixo: 7 linhas e a largura
+ * acompanhando o formato do feltro (24 a 34 colunas). A corrente cabe sem sair da mesa e a
+ * câmera não mexe: as pedras têm sempre o mesmo tamanho.
+ */
+export function computeWorldSize(width, height, cols = WORLD_COLS, { landscape = false } = {}) {
+  if (landscape) {
+    const rows = LANDSCAPE.rows;
+    if (!width || !height) return { cols: 24, rows };
+    return { cols: Math.max(LANDSCAPE.minCols, Math.min(LANDSCAPE.maxCols, Math.round((rows * width) / height))), rows };
+  }
   if (!width || !height) return { cols, rows: 12 };
   const rows = Math.floor(height / (width / cols));
   return { cols, rows: Math.max(MIN_WORLD_ROWS, Math.min(MAX_WORLD_ROWS, rows)) };
@@ -249,9 +270,9 @@ function hasWayOut(cand, ctx, level, depth) {
   if (depth === 0) return true;
   const after = { ...ctx, placed: [...ctx.placed, cand.rect], prev: cand.rect };
   const relaxed = { ...level, gap: false };
-  return candidates(cand.next, false, ctx.turnMap).some(
-    (next) => isValid(next, after, relaxed) && hasWayOut(next, after, level, depth - 1),
-  );
+  // na mesa deitada a volta em U usa a curva contrária: as duas valem como saída
+  const next = ctx.landscape ? [...candidates(cand.next, false, ctx.turnMap), ...candidates(cand.next, false, ctx.counterMap).slice(1)] : candidates(cand.next, false, ctx.turnMap);
+  return next.some((n) => isValid(n, after, relaxed) && hasWayOut(n, after, level, depth - 1));
 }
 
 /**
@@ -339,9 +360,60 @@ function turnsOnly(list, cursor, ctx) {
   return list.filter((cand) => cand.lineAxis === 'horizontal');
 }
 
+const OPPOSITE = { W: 'E', E: 'W', N: 'S', S: 'N' };
+
+/**
+ * Versão 2.9, a serpente da mesa deitada: deitada, segue reto até a beirada e então dobra (a
+ * ponta da direita para perto, a da esquerda para lá); na vertical, volta em U para o lado
+ * contrário assim que der (no máximo 2 pedras na vertical). Primeiro dentro da metade da
+ * ponta, depois no tampo inteiro.
+ */
+function landscapePlacement(cursor, double, ctx) {
+  const all = [...candidates(cursor, double, ctx.turnMap), ...candidates(cursor, double, ctx.counterMap).slice(1)];
+  const turn = LAND_TURN[ctx.branch];
+  let prefer;
+  if (axisOf(cursor.d) === 'horizontal') {
+    const straight = all.filter((cand) => cand.next.d === cursor.d);
+    const down = all.filter((cand) => cand.next.d === turn);
+    prefer = ctx.hRun >= LANDSCAPE.maxRun ? [down] : [straight, down];
+  } else {
+    const back = all.filter((cand) => cand.next.d === OPPOSITE[cursor.lastH ?? 'W']);
+    const onward = all.filter((cand) => cand.next.d === turn);
+    const other = all.filter((cand) => axisOf(cand.next.d) === 'horizontal');
+    prefer = ctx.vertRun >= LANDSCAPE.maxRise ? [back, other] : [back, onward, other];
+  }
+  for (const levels of [HALF_LEVELS, LEVELS]) {
+    for (const list of prefer) {
+      const pick = pickFrom(list, ctx, levels);
+      if (pick) return pick;
+    }
+  }
+  return null;
+}
+
 /** Melhor posição para a pedra, do nível mais confortável ao último recurso. */
 function choosePlacement(cursor, double, ctx) {
-  const serpent = serpentPlacement(cursor, double, ctx);
+  if (ctx.landscape) {
+    const pick = landscapePlacement(cursor, double, ctx);
+    if (pick) return pick;
+    // sem a volta certa: qualquer encaixe dentro do tampo, sem voltar para o meio da mesa (e,
+    // com 2 pedras já subindo ou descendo, só deitada)
+    const risen = ctx.vertRun >= LANDSCAPE.maxRise && axisOf(cursor.d) === 'vertical';
+    const all = [...candidates(cursor, double, ctx.turnMap), ...candidates(cursor, double, ctx.counterMap).slice(1)].filter(
+      (cand) => !risen || cand.lineAxis === 'horizontal',
+    );
+    const loose = pickFrom(
+      all.filter((cand) => cand.next.d !== OPPOSITE[LAND_TURN[ctx.branch]]),
+      ctx,
+      LEVELS,
+    );
+    if (loose) return loose;
+    // a metade da ponta lotou (uma ponta só crescendo): a corrente segue pela outra metade
+    const wrap = pickFrom(all, ctx, LEVELS);
+    if (wrap) return wrap;
+    return emergencyPlacement(cursor, double, ctx, risen);
+  }
+  const serpent = ctx.landscape ? null : serpentPlacement(cursor, double, ctx);
   if (serpent && !(ctx.vertRun >= MAX_VERTICAL_CHAIN && serpent.lineAxis !== 'horizontal')) return serpent;
   const capped = ctx.vertRun >= MAX_VERTICAL_CHAIN && axisOf(cursor.d) === 'vertical';
   // travada, a pedra pode dobrar para qualquer um dos dois lados
@@ -371,10 +443,11 @@ function valuesFor(cand, innerValue, outerValue, orientation) {
   return cand.inner.y < cand.outer.y ? [innerValue, outerValue] : [outerValue, innerValue];
 }
 
-function rootGeometry(root, cols, rows, previewDouble) {
+function rootGeometry(root, cols, rows, previewDouble, landscape = false) {
   const double = root ? root.a === root.b : previewDouble;
   const cx = cols / 2;
-  const laneY = rows - 1;
+  // na mesa deitada a corrente começa no meio do tampo
+  const laneY = landscape ? rows / 2 : rows - 1;
   const rect = double
     ? { x: cx - 0.5, y: laneY - 1, w: 1, h: 2 }
     : { x: cx - 1, y: laneY - 0.5, w: 2, h: 1 };
@@ -403,8 +476,8 @@ function playOrder(board) {
  *
  * `previewDouble`: a vaga mostra o espaço de uma bucha (pedra selecionada é bucha).
  */
-export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previewDouble = false } = {}) {
-  const geo = rootGeometry(board.root, cols, rows, previewDouble);
+export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previewDouble = false, landscape = false } = {}) {
+  const geo = rootGeometry(board.root, cols, rows, previewDouble, landscape);
 
   if (!board.root) {
     return {
@@ -424,16 +497,22 @@ export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previe
   }
 
   const ends = getOpenEnds(board);
-  const bottom = geo.laneY + 0.5;
+  const bottom = landscape ? rows : geo.laneY + 0.5;
   const rootHalf = geo.double ? 1 : 0.5;
   const world = { x0: 0, x1: cols, y0: 0, y1: bottom };
-  const halves = {
-    left: { x0: 0, x1: geo.left, y0: 0, y1: bottom },
-    right: { x0: geo.right, x1: cols, y0: 0, y1: bottom },
-  };
+  // deitada, cada ponta tem a sua metade do tampo: a da esquerda a de lá, a da direita a de perto
+  const halves = landscape
+    ? {
+        left: { x0: 0, x1: cols, y0: 0, y1: geo.laneY + 0.5 },
+        right: { x0: 0, x1: cols, y0: geo.laneY - 0.5, y1: bottom },
+      }
+    : {
+        left: { x0: 0, x1: geo.left, y0: 0, y1: bottom },
+        right: { x0: geo.right, x1: cols, y0: 0, y1: bottom },
+      };
   const cursors = {
-    left: { p: { x: geo.left, y: geo.laneY }, d: 'W', prevHalf: rootHalf, prevRect: geo.rect },
-    right: { p: { x: geo.right, y: geo.laneY }, d: 'E', prevHalf: rootHalf, prevRect: geo.rect },
+    left: { p: { x: geo.left, y: geo.laneY }, d: 'W', prevHalf: rootHalf, prevRect: geo.rect, lastH: 'W', run: 1 },
+    right: { p: { x: geo.right, y: geo.laneY }, d: 'E', prevHalf: rootHalf, prevRect: geo.rect, lastH: 'E', run: 1 },
   };
 
   const rootTile = {
@@ -455,11 +534,15 @@ export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previe
     for (let i = list.length - 1; i >= 0 && list[i].lineAxis === 'vertical'; i -= 1) n += 1;
     return n;
   };
+  // deitada, a corrida conta as pedras desde a última dobra (a bucha de quina também dobra)
+  const runIn = (branch, axis) => (axisOf(cursors[branch].d) === axis ? cursors[branch].run : 0);
   const ctxFor = (branch) => ({
     branch,
+    landscape,
     turnMap: TURNS[branch],
     counterMap: COUNTER_TURNS[branch],
-    vertRun: vertRunOf(branch),
+    vertRun: landscape ? runIn(branch, 'vertical') : vertRunOf(branch),
+    hRun: runIn(branch, 'horizontal'),
     half: halves[branch],
     world,
     placed,
@@ -482,7 +565,10 @@ export function computeBoardLayout(board, cols = WORLD_COLS, rows = 12, { previe
       detached: Boolean(cand.detached),
     });
     placed.push(cand.rect);
-    cursors[branch] = { ...cand.next, prevRect: cand.rect };
+    const was = cursors[branch];
+    const lastH = axisOf(cand.next.d) === 'horizontal' ? cand.next.d : was.lastH;
+    const run = cand.next.d === was.d ? was.run + 1 : 1;
+    cursors[branch] = { ...cand.next, prevRect: cand.rect, lastH, run };
   }
 
   const slots = {};

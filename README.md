@@ -172,6 +172,30 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.9: a mesa deitada com o rival sentado (etapa 2)
+
+- Com a tela deitada (celular girado, tablet deitado, computador), a partida 1×1 (solo e duelo
+  on-line) vira a cena do desenho de referência: a sala inteira (reboco verde, faixa de azulejo
+  azul e creme, a prateleira das garrafas, as bancadas de madeira) e a mesa no meio, vista de
+  cima e de frente, com a saia e os pés. Em pé, a partida continua como antes (até a etapa 4).
+- O rival senta atrás da beirada de lá, em busto do tamanho de uma pessoa (pintado por código a
+  partir do retrato de cada um: tronco, ombros, braços), respirando; treme e acende vermelho no
+  golpe e se debruça na mesa quando bate. A lâmpada pende na frente dele. No duelo on-line, o
+  outro jogador é uma silhueta, com a maleta dele no canto.
+- As pedras do rival ficam pequenas, de pé e viradas em cima da beirada, na frente do peito dele;
+  o ÚLTIMA PEDRA! vira um selo pulsando ao lado delas.
+- No canto de cima à esquerda: o nome, os corações, o dinheiro e os talismãs dele; a fala sai da
+  boca (até 180 px, com quebra). No de cima à direita: o dorme, a soma das pontas e o seu dinheiro.
+- Embaixo: o seu leque no meio, as tábuas de madeira COMPRAR (com o preço) e PASSAR VEZ nas
+  pontas e o MENU redondo no canto (pixel art pintada por código). As tábuas ficam sempre no lugar
+  e só acendem quando são o caminho (as mesmas regras de antes).
+- A mesa tem tamanho fixo e as pedras também: a corrente começa no meio do tampo, corre deitada
+  até a beirada e lá vira 90° (no máximo 2 pedras na vertical) e volta em U; a ponta da direita
+  vira para perto de você e a da esquerda para o lado de lá. Nada sai do tampo e nenhuma pedra
+  se mexe quando outra é jogada (sem câmera andando).
+- O voo da pedra achata junto na queda, do jeito que ela fica no tampo inclinado.
+- O PWA e o APK passam a girar com o celular.
+
 ### 2.8: pedras novas com peso (etapa 1 da mesa deitada)
 
 - As pedras no desenho novo: marfim limpo, cantos arredondados, contorno escuro, pips pretos

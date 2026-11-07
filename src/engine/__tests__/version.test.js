@@ -50,11 +50,11 @@ const node = globalThis.process;
 const run = (dir, env) => spawnSync(node.execPath, ['scripts/prepare-android.mjs'], { cwd: dir, env: { ...node.env, ...env }, encoding: 'utf8' });
 
 describe('Versão 1.5: build de produção do Android', () => {
-  it('versão 2.8.0 e o pacote oficial no Capacitor', () => {
-    expect(JSON.parse(read('package.json')).version).toBe('2.8.0');
+  it('versão 2.9.0 e o pacote oficial no Capacitor', () => {
+    expect(JSON.parse(read('package.json')).version).toBe('2.9.0');
     const cap = JSON.parse(read('capacitor.config.json'));
     expect(cap).toMatchObject({ appId: 'com.buxaria.game', appName: 'Buxaria', webDir: 'dist' });
-    expect(read('public/sw.js')).toContain("'buxaria-v2.8.0'");
+    expect(read('public/sw.js')).toContain("'buxaria-v2.9.0'");
   });
 
   it('o workflow do App Bundle: manual e na main, bundleRelease, assinatura pelos 4 segredos, .aab no Actions', () => {
@@ -83,7 +83,7 @@ describe('Versão 1.5: build de produção do Android', () => {
     expect(apk).toContain('SIGN_WITH_GRADLE=1 node scripts/prepare-android.mjs');
   });
 
-  it('prepare-android: só INTERNET e VIBRATE, o resto removido, retrato, versão e MainActivity', () => {
+  it('prepare-android: só INTERNET e VIBRATE, o resto removido, gira com o celular, versão e MainActivity', () => {
     const dir = fakeProject('com.buxaria.game');
     try {
       const out = run(dir, { VERSION_CODE: '42' });
@@ -94,11 +94,11 @@ describe('Versão 1.5: build de produção do Android', () => {
       expect(manifest).toContain('<uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />');
       expect(manifest).toContain('<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />');
       expect(manifest).toContain('xmlns:tools="http://schemas.android.com/tools"');
-      expect(manifest).toContain('android:screenOrientation="portrait"');
+      expect(manifest).toContain('android:screenOrientation="fullUser"');
       expect(manifest).toContain('PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY');
       const gradle = readFileSync(join(dir, 'android/app/build.gradle'), 'utf8');
       expect(gradle).toContain('versionCode = 42');
-      expect(gradle).toContain('versionName = "2.8.0"');
+      expect(gradle).toContain('versionName = "2.9.0"');
       expect(gradle).not.toContain('signingConfigs');
       const activity = readFileSync(join(dir, 'android/app/src/main/java/com/buxaria/game/MainActivity.java'), 'utf8');
       expect(activity.startsWith('package com.buxaria.game;')).toBe(true);

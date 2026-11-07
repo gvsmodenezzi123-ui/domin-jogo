@@ -9,6 +9,7 @@ import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
+import { LAND, landTable } from './seatGeometry.js';
 import {
   APRON_H,
   BONEYARD_SIZE,
@@ -68,6 +69,40 @@ const planeSpanFor = (screen) => Math.max(0, Math.round((screen * PERSPECTIVE_PX
 const planeHeightFor = planeSpanFor;
 /** Quanto encolhe (na tela) o que está a `d` px da beirada de perto, no plano. */
 const depthScale = (d) => PERSPECTIVE_PX / (PERSPECTIVE_PX + d * SIN);
+/**
+ * Versão 2.9, a mesa deitada (16:9), como no desenho de referência: a sala inteira na tela e a
+ * mesa no meio (seatGeometry.js: LAND), vista de cima e de frente, com a beirada de lá mais
+ * estreita, a saia de madeira e os pés aparecendo embaixo. O rival senta atrás da beirada de lá.
+ */
+const LAND_SIN = Math.sin((LAND.tilt * Math.PI) / 180);
+const LAND_COS = Math.cos((LAND.tilt * Math.PI) / 180);
+/** Quanto do tampo (px do plano, a partir da beirada de perto) fica embaixo de `screen` px da tela. */
+const landSpanFor = (screen) => Math.max(0, Math.round((screen * LAND.persp) / (LAND.persp * LAND_COS - screen * LAND_SIN)));
+
+/** O tampo da mesa deitada: o plano, a faixa das pedras e o quanto a sua mão cobre da beirada de perto. */
+function landGeometry(room, handZone) {
+  const t = landTable(room.width, room.height);
+  const planeHeight = landSpanFor(t.yNear - t.yFar);
+  // a sua mão cobre o meio da beirada de perto: as pedras da mesa param acima do alto das pedras
+  // do leque (a dica a giz, por cima dele, pode ficar no feltro)
+  const overlap = Math.max(0, t.yNear - (room.height - handZone + 26));
+  const reserve = Math.min(Math.round(planeHeight * 0.35), landSpanFor(overlap));
+  return {
+    ...t,
+    planeWidth: t.width,
+    planeHeight,
+    areaSide: BOARD_PADDING,
+    areaBottom: BOARD_PADDING + reserve,
+    style: {
+      left: Math.round((room.width - t.width) / 2),
+      width: t.width,
+      bottom: room.height - t.yNear,
+      height: planeHeight,
+      transform: `perspective(${LAND.persp}px) rotateX(${LAND.tilt}deg)`,
+    },
+  };
+}
+
 /** Folga visual entre pedras vizinhas, em px do mundo (antes da câmera). */
 const TILE_INSET = 1.5;
 const B = BASE_UNIT_PX;
@@ -298,6 +333,8 @@ function TableBoard({
   // versão 2.6: a hora da batida: a última pedra brilha na cor de quem venceu
   finaleId = null,
   finaleTone = 'player',
+  // versão 2.9: a mesa deitada, com o rival sentado do outro lado (RivalSeat)
+  landscape = false,
 }) {
   const [areaRef, size] = useElementSize();
   // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
@@ -307,17 +344,19 @@ function TableBoard({
   // a mesa toda (com a mão em cima) passa NEAR_HIDE px do pé da tela; sem a mão, termina na saia
   const apron = toBottom ? -NEAR_HIDE : APRON_PX;
   const span = room.height - apron; // altura da tela que o plano cobre, da beirada de perto ao fundo
-  const planeHeight = span > 0 && room.height > 0 ? planeHeightFor(span) : 0;
+  // versão 2.9: deitada, a mesa é a do desenho de referência (no meio da sala, landGeometry)
+  const land = landscape && room.height > 0 && room.width > 0 ? landGeometry(room, handZone) : null;
+  const planeHeight = land ? land.planeHeight : span > 0 && room.height > 0 ? planeHeightFor(span) : 0;
   const reserve = toBottom && room.height > 0 ? planeSpanFor(Math.min(handZone, room.height * 0.6) + NEAR_HIDE) : 0;
   // a mesa é mais larga que a tela; a área das pedras fica só na parte que aparece: a largura
   // visível na altura da beirada de cima da sua mão (onde a perspectiva aumenta mais)
-  const planeWidth = Math.round(room.width * WIDEN);
+  const planeWidth = land ? land.planeWidth : Math.round(room.width * WIDEN);
   const nearScale = depthScale(reserve);
   // versão 2.6.1: com a mesa quase de frente, a faixa das pedras para 12 px antes das bordas da tela
   const areaWidth = Math.max(120, Math.min(planeWidth - BOARD_PADDING * 2, Math.round((room.width - 24) / nearScale)));
-  const areaSide = Math.round((planeWidth - areaWidth) / 2);
+  const areaSide = land ? land.areaSide : Math.round((planeWidth - areaWidth) / 2);
   // o dorme e a soma ocupam o alto da tela: no plano, isso é a faixa a partir do fundo da mesa
-  const hudTop = span > HUD_TOP_PX ? Math.max(0, planeHeight - planeSpanFor(span - HUD_TOP_PX)) : 0;
+  const hudTop = !land && span > HUD_TOP_PX ? Math.max(0, planeHeight - planeSpanFor(span - HUD_TOP_PX)) : 0;
   // Versão 2.6.1: as pedras ficam presas abaixo da faixa do HUD (nunca sobem na lâmpada, no
   // balão nem no dorme): a moldura das pedras corta tudo o que passar do alto dela
   const clipTop = Math.max(0, hudTop - 4);
@@ -325,7 +364,7 @@ function TableBoard({
   // com a mão em cima da mesa, desce até a mão (a beirada de madeira de perto fica embaixo dela):
   // nos celulares baixos isso devolve ~30% de altura para as pedras
   const camTop = Math.max(0, hudTop - BOARD_PADDING);
-  const areaBottom = toBottom ? reserve + 6 : BOARD_PADDING + reserve;
+  const areaBottom = land ? land.areaBottom : toBottom ? reserve + 6 : BOARD_PADDING + reserve;
   // a moldura de madeira, à direita, na altura do dorme (no fundo a mesa afina um pouco)
   const railPx = RAIL_WOOD_W * TABLE_PX;
   const dormeRight =
@@ -343,23 +382,33 @@ function TableBoard({
   // O tamanho do mundo é congelado no começo da rodada: se a mesa mudar de
   // altura no meio (dica em duas linhas, barra do Safari), só a câmera ajusta;
   // nenhuma pedra muda de lugar.
-  const [world, setWorld] = useState({ round: null, cols: WORLD_COLS, rows: 13 });
-  if (size.width > 0 && world.round !== roundKey) {
-    setWorld({ round: roundKey, ...computeWorldSize(size.width, size.height) });
+  // (versão 2.9: girar a tela troca o mundo: a serpente deitada tem outro formato)
+  const [world, setWorld] = useState({ round: null, landscape: false, cols: WORLD_COLS, rows: 13 });
+  if (size.width > 0 && (world.round !== roundKey || world.landscape !== landscape)) {
+    setWorld({ round: roundKey, landscape, ...computeWorldSize(size.width, size.height, WORLD_COLS, { landscape }) });
   }
   const { cols, rows } = world;
+  const lay = world.landscape;
 
   // A câmera usa o layout sem prévia, para não mexer quando o jogador seleciona uma pedra.
-  const baseLayout = useMemo(() => computeBoardLayout(board, cols, rows), [board, cols, rows]);
+  const baseLayout = useMemo(() => computeBoardLayout(board, cols, rows, { landscape: lay }), [board, cols, rows, lay]);
   const layout = useMemo(
-    () => (previewDouble ? computeBoardLayout(board, cols, rows, { previewDouble: true }) : baseLayout),
-    [board, cols, rows, previewDouble, baseLayout],
+    () => (previewDouble ? computeBoardLayout(board, cols, rows, { previewDouble: true, landscape: lay }) : baseLayout),
+    [board, cols, rows, previewDouble, baseLayout, lay],
   );
-  // Versão 1.5: a faixa de cima do feltro é do dorme e dos selos; a câmera enquadra abaixo dela
+  // Versão 1.5: a faixa de cima do feltro é do dorme e dos selos; a câmera enquadra abaixo dela.
+  // Versão 2.9: deitada, a câmera é FIXA: o mundo inteiro (o tampo) cabe no feltro, as pedras têm
+  // sempre o mesmo tamanho e nenhuma sai do lugar quando outra é jogada (a bucha de quina pode
+  // passar meia casa do mundo: a margem de meia casa em volta já conta com ela)
   const camera = useMemo(() => {
-    const cam = computeCamera(baseLayout, { width: size.width, height: Math.max(0, size.height - camTop) });
+    if (lay) {
+      const unitPx = Math.max(4, Math.min(size.width / (cols + 1), size.height / (rows + 1)));
+      return { unitPx, scale: unitPx / B, x: (size.width - cols * unitPx) / 2, y: (size.height - rows * unitPx) / 2, focus: 'all' };
+    }
+    const view = { width: size.width, height: Math.max(0, size.height - camTop) };
+    const cam = computeCamera(baseLayout, view);
     return { ...cam, y: cam.y + camTop };
-  }, [baseLayout, size.width, size.height, camTop]);
+  }, [baseLayout, size.width, size.height, camTop, lay, cols, rows]);
   const unit = B - TILE_INSET * 2;
   const enhancementOf = useMemo(
     () => new Map(boardTilesInOrder(board).filter((t) => t.enhancement).map((t) => [t.id, t.enhancement])),
@@ -375,20 +424,24 @@ function TableBoard({
   return (
     <section
       ref={setFelt}
-      className={`felt-table felt-25d tableboard-viewport felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${mahogany ? 'felt-mahogany' : ''}`}
-      style={feltVars}
+      className={`felt-table felt-25d tableboard-viewport felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${mahogany ? 'felt-mahogany' : ''} ${
+        landscape ? 'is-landscape' : ''
+      }`}
+      style={land ? { ...feltVars, '--rail-px': `${land.yFar}px`, '--near-px': `${land.yNear}px`, '--table-w': `${land.width}px` } : feltVars}
       aria-label="Mesa"
     >
       {/* Versão 2.0: a sala em volta da mesa (aparece nos cantos do fundo, onde a mesa afina) */}
       <div ref={roomRef} aria-hidden="true" className="table-room pointer-events-none absolute inset-0">
-        <BotecoBackdrop scene="tableroom" className="absolute inset-0" />
+        <BotecoBackdrop scene={landscape ? 'landroom' : 'tableroom'} className="absolute inset-0" />
       </div>
 
       {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}
       <div
         className="table-plane absolute"
         style={
-          planeHeight
+          land
+            ? land.style
+            : planeHeight
             ? {
                 left: Math.round((room.width - planeWidth) / 2),
                 width: planeWidth,
@@ -419,11 +472,13 @@ function TableBoard({
       <div ref={areaRef} className="absolute" style={{ top: BOARD_PADDING - clipTop, left: areaSide, right: areaSide, bottom: areaBottom }}>
         {size.width > 0 && (
           <div
-            className="board-world absolute left-0 top-0"
+            className={`board-world absolute left-0 top-0 ${lay ? 'is-pan' : ''}`}
             style={{
               width: cols * B,
               height: rows * B,
-              transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
+              transform: lay
+                ? `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.scale})`
+                : `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
             }}
           >
             {layout.tiles.map((tile) => {
@@ -466,7 +521,8 @@ function TableBoard({
               const active = playableSides.includes(side);
               const box = tileBox(slot, slot.orientation, unit);
               // badge com tamanho fixo NA TELA (contraescala da câmera): número sempre legível
-              const badgeScreen = Math.min(40, Math.max(22, camera.unitPx * 0.82));
+              // (2.9: na mesa deitada, a plaquinha acompanha o tamanho fixo das pedras)
+              const badgeScreen = lay ? Math.min(28, Math.max(15, camera.unitPx * 1.05)) : Math.min(40, Math.max(22, camera.unitPx * 0.82));
               const badgeSize = badgeScreen / camera.scale;
               return (
                 <div key={side}>
@@ -531,13 +587,29 @@ function TableBoard({
         />
       )}
       {/* Versão 2.1: sem copo, cinzeiro e tampinhas em cima da mesa: ela fica só com o jogo */}
+      {/* versão 2.9: deitada, a frente da mesa aparece: a saia de madeira e os dois pés */}
+      {land && planeW > 0 && (
+        <div aria-hidden="true" className="land-table-front pointer-events-none absolute" style={{ left: land.style.left, width: land.width, top: land.yNear }}>
+          <PixelCanvas
+            cacheKey={`saia-${planeW}-${mahogany ? 'mogno' : 'pinho'}`}
+            paint={() => paintApron(planeW, { mahogany })}
+            w={planeW}
+            h={APRON_H}
+            className="land-apron"
+            style={{ width: '100%', height: APRON_PX }}
+          />
+          <span className="land-leg is-left" />
+          <span className="land-leg is-right" />
+        </div>
+      )}
 
       {/* lâmpada pendurada: balança como pêndulo e o facho varre a mesa, clareando
           as pedras por onde passa; quando ela falha, o facho tremula de leve */}
-      <LampRig part="light" lamp={64} cord={2} beamWidth={300} />
+      <LampRig part="light" lamp={landscape ? 40 : 64} cord={2} beamWidth={landscape ? 300 : 300} />
       {/* versão 2.6.1: sem a película preta das falhas (.room-flicker): a mesa piscava preta */}
 
-      <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />
+      {/* deitada, o corpo da lâmpada fica na camada do rival (RivalSeat): ela pende NA FRENTE dele */}
+      {!landscape && <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />}
 
       {boneyardCount !== null && (
         <BoneyardPile
@@ -548,10 +620,10 @@ function TableBoard({
           onDraw={onDraw}
           drawsUsed={drawsUsed}
           cost={drawCost}
-          right={dormeRight}
+          right={landscape ? null : dormeRight}
         />
       )}
-      <EndsSum sum={endsSum} right={dormeRight} />
+      <EndsSum sum={endsSum} right={landscape ? null : dormeRight} />
       <TableModSeal id={tableMod} />
       <RivalRuleSeal rule={rivalRule} shifted={Boolean(tableModifierOf(tableMod))} />
 

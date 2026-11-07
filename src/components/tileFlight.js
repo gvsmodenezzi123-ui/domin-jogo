@@ -208,7 +208,7 @@ export function flyTile({ tileId, from, fromEl = null, timing = FLIGHT_PLAYER, a
     if (t <= L + G + D) {
       // cai com gravidade até o feltro, encolhendo do ar para o tamanho da mesa
       const k = easeInQuad(clamp01((t - L - G) / D));
-      return { x: end.x, y: end.y - LIFT_PX * (1 - k), gx: end.x, gy: end.y, air: 1 - k, scale: lerp(landedScale, end.scale, k), angle: 0, flipT: 1, ...flat };
+      return { x: end.x, y: end.y - LIFT_PX * (1 - k), gx: end.x, gy: end.y, air: 1 - k, scale: lerp(landedScale, end.scale, k), angle: 0, flipT: 1, sx: 1, sy: lerp(1, end.flatY ?? 1, k) };
     }
     // no feltro: achata por 40 ms e volta elástica (passa um tico do tamanho e assenta)
     const ms = t - L - G - D;
@@ -223,7 +223,7 @@ export function flyTile({ tileId, from, fromEl = null, timing = FLIGHT_PLAYER, a
       sy = 1 - (1 - SQUASH) * spring;
       sx = 1 + (1 - SQUASH) * 0.5 * spring;
     }
-    return { x: end.x, y: end.y, gx: end.x, gy: end.y, air: 0, scale: end.scale, angle: 0, flipT: 1, sx, sy };
+    return { x: end.x, y: end.y, gx: end.x, gy: end.y, air: 0, scale: end.scale, angle: 0, flipT: 1, sx, sy: sy * (end.flatY ?? 1) };
   };
 
   const place = (el, pose, w, h, extra = '') => {
@@ -252,7 +252,9 @@ export function flyTile({ tileId, from, fromEl = null, timing = FLIGHT_PLAYER, a
     const natW = face.offsetWidth || 1;
     const natH = face.offsetHeight || 1;
     const rect = target.getBoundingClientRect();
-    const end = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, scale: rect.width / natW };
+    // versão 2.9: na mesa deitada (tampo bem tombado) a pedra na mesa fica achatada na altura:
+    // a cópia achata junto na queda (flatY), para não pular na troca pela pedra de verdade
+    const end = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, scale: rect.width / natW, flatY: Math.max(0.4, Math.min(1, rect.height / natH / (rect.width / natW))) };
     const horizontal = natW > natH;
     const origin = from ?? { x: end.x, y: end.y - 80, w: Math.min(natW, natH) * end.scale, h: Math.max(natW, natH) * end.scale, angle: 0 };
     const ctx = {

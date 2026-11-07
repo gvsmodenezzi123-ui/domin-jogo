@@ -41,6 +41,7 @@ import { coinRain, flashOver, goldPop, hitstop, lateralShake, sparkBurst } from 
 import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
+import { useLandscape } from './components/useLandscape.js';
 import { TileSkinContext } from './components/tileSkin.js';
 import { BOSS_INTRO_IDS, REGIONS, bossMusicOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
@@ -556,6 +557,8 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
   const [handZone, setHandZone] = useState(0);
+  // versão 2.9: tela deitada, a mesa 16:9 com o rival sentado do outro lado
+  const landscape = useLandscape();
   const [muted, setMuted] = useState(() => sound.isMuted);
   const [settings, setSettings] = useState(loadSettings);
   const [collection, setCollection] = useState(loadCollection);
@@ -1584,10 +1587,11 @@ export default function App() {
     <TileSkinContext.Provider value={tileSkin}>
     <div
       ref={shellRef}
-      className="app-shell flex h-full flex-col overflow-hidden"
+      className={`app-shell flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': rival.felt.light, '--felt-mid': rival.felt.mid, '--felt-dark': rival.felt.dark }}
     >
       <RivalBench
+        landscape={landscape}
         rival={rival}
         hearts={state.hearts.tioZe}
         maxHearts={state.maxHearts.tioZe}
@@ -1613,6 +1617,7 @@ export default function App() {
 
       <div className="match-stage relative flex min-h-0 flex-1 flex-col">
       <TableBoard
+        landscape={landscape}
         board={state.board}
         roundKey={`${state.run.match}:${state.round}`}
         playableSides={selectedSides}
@@ -1659,6 +1664,7 @@ export default function App() {
       )}
 
       <PlayerRack
+        landscape={landscape}
         onZoneHeight={setHandZone}
         tutorialAction={tutorialExpect?.type ?? null}
         tutorialFocus={tutorialStep?.focus ?? null}

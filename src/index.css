@@ -17350,3 +17350,621 @@
     translate: 0 -8px;
   }
 }
+
+/* =====================================================================================
+   Versão 2.9: a mesa deitada (16:9). O rival senta do outro lado (RivalSeat.jsx): o busto
+   atrás da beirada de lá, as pedras dele de pé em cima dela, o nome e a vida no canto de cima
+   à esquerda; o dorme e o seu dinheiro no canto de cima à direita; o seu leque no meio de
+   baixo e as tábuas COMPRAR / PASSAR VEZ nas pontas, com o MENU redondo no canto.
+   A linha da beirada é a mesma conta nos dois lados (seatGeometry.js: SEAT_RAIL).
+   ===================================================================================== */
+/* (o duelo on-line mora dentro de outro .app-shell: a coluna de fora também abre) */
+.app-shell:has(> .app-shell.is-landscape) {
+  max-width: none;
+}
+
+.app-shell.is-landscape {
+  position: relative;
+  /* a coluna do celular (520 px) vira a tela inteira */
+  max-width: none;
+  /* nada rola: as pedras da mão passam do pé da tela de propósito (clip não deixa rolar nem
+     por foco ou scrollIntoView) */
+  overflow: clip;
+}
+
+.app-shell.is-landscape .match-stage,
+.app-shell.is-landscape .tableboard-viewport {
+  overflow: clip;
+}
+
+.app-shell.is-landscape .tut-spacer {
+  display: none;
+}
+
+/* --- o rival sentado ------------------------------------------------------------- */
+.rival-seat {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* sem o pano do cabeçalho em pé: a cena atrás é a mesa e a parede do TableBoard */
+.rival-seat.rival-seat.rival-bench {
+  background: none;
+  box-shadow: none;
+}
+
+.rival-seat .rival-status {
+  width: auto;
+}
+
+.rival-seat button,
+.rival-seat .relic-bare {
+  pointer-events: auto;
+}
+
+.seat-bust-clip {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--rail-y);
+  overflow: hidden;
+  contain: layout paint;
+}
+
+/* a vez dele: a luz da lâmpada esquenta atrás do busto */
+.seat-bust-clip::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(var(--bust-w) * 2.2);
+  height: calc(var(--bust-h) * 1.1);
+  translate: -50% 0;
+  background: radial-gradient(ellipse 50% 60% at 50% 70%, rgba(255, 196, 110, 0.22), transparent 72%);
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.rival-seat.is-turn .seat-bust-clip::before {
+  opacity: 1;
+}
+
+.seat-bust {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--bust-drop) * -1);
+  width: var(--bust-w);
+  height: var(--bust-h);
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  backface-visibility: hidden;
+}
+
+.seat-breath {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  animation: seatBreath 3.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.seat-bust-px {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.seat-smoke {
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+}
+
+@keyframes seatBreath {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: translateY(-0.5px) scale(1.012, 1.024);
+  }
+}
+
+/* pensando: a cabeça pende um tico e a respiração acelera */
+.seat-bust.is-thinking {
+  rotate: -1.5deg;
+  transition: rotate 300ms ease;
+}
+
+.seat-bust.is-thinking .seat-breath {
+  animation-duration: 2.4s;
+}
+
+/* o golpe: treme e acende vermelho */
+.seat-bust.is-hurt {
+  animation: seatHurt 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.seat-bust.is-hurt::after {
+  content: '';
+  position: absolute;
+  inset: 8% 10% 20%;
+  background: radial-gradient(closest-side, rgba(255, 50, 36, 0.6), transparent);
+  mix-blend-mode: screen;
+  animation: seatHurtFlash 600ms ease-out both;
+  pointer-events: none;
+}
+
+@keyframes seatHurt {
+  0% {
+    transform: none;
+  }
+  12% {
+    transform: translateX(-6px) rotate(-2.5deg);
+  }
+  28% {
+    transform: translateX(5px) rotate(2deg);
+  }
+  44% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  62% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes seatHurtFlash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* bateu (ou ganhou a jogada): se inclina sobre a mesa, por cima das pedras */
+.seat-bust.is-smug {
+  animation: seatLean 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes seatLean {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(4px) scale(1.07);
+  }
+  100% {
+    transform: translateY(2px) scale(1.035);
+  }
+}
+
+.reduce-motion .seat-breath,
+.reduce-motion .seat-bust {
+  animation: none;
+}
+
+/* as pedras dele, de pé na beirada de lá */
+.seat-rack {
+  position: absolute;
+  left: 50%;
+  top: var(--rail-y);
+  z-index: 2;
+  translate: -50% calc(-100% + 6px);
+}
+
+/* a lâmpada pende na frente do rival, acima da cabeça dele */
+.rival-seat .seat-lamp {
+  top: -10px;
+  z-index: 1;
+}
+
+.seat-rack .rival-slot {
+  transition: right 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.seat-rack-danger {
+  inset: -6px -10px;
+}
+
+/* o canto de cima à esquerda */
+.seat-hud {
+  position: absolute;
+  left: max(env(safe-area-inset-left), 10px);
+  top: max(env(safe-area-inset-top), 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: calc(50% - var(--bust-w) / 2 - 24px);
+}
+
+.seat-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seat-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+
+.seat-avatar > * {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.seat-name.seat-name {
+  font-size: 9px;
+}
+
+.seat-hud.seat-hud .seat-stats {
+  gap: 8px;
+}
+
+.seat-status {
+  min-height: 9px;
+  font-size: 7px;
+}
+
+.seat-counts {
+  max-width: 200px;
+}
+
+/* a fala sai da boca, à direita do busto (até 180 px, com quebra) */
+.speech-balloon.speech-rival.speech-seat {
+  left: calc(50% + var(--bust-w) * 0.34);
+  top: max(6px, calc(var(--mouth-y) - 20px));
+  width: max-content;
+  max-width: min(180px, calc(50% - var(--bust-w) * 0.34 - 150px));
+  white-space: pre-wrap;
+  font-size: 18px;
+  --tail-y: calc(var(--mouth-y) - max(6px, calc(var(--mouth-y) - 20px)));
+}
+
+.speech-tail-left::before {
+  left: -12px;
+  top: calc(var(--tail-y, 20px) - 5px);
+  transform: rotate(-90deg);
+}
+
+.speech-tail-left::after {
+  left: -8.5px;
+  top: calc(var(--tail-y, 20px) - 4px);
+  transform: rotate(-90deg);
+}
+
+/* ÚLTIMA PEDRA!: um selo pulsando à esquerda das pedras de pé dele */
+.app-shell.is-landscape .danger-banner.is-seal {
+  left: var(--banner-left);
+  top: var(--banner-top);
+  translate: -100% -50%;
+  transform-origin: 100% 50%;
+  padding: 6px 10px 5px;
+  border-radius: 999px;
+}
+
+.app-shell.is-landscape .danger-banner.is-seal b {
+  font-size: 10px;
+}
+
+.app-shell.is-landscape .danger-banner.is-seal span {
+  display: none;
+}
+
+/* --- a mesa ------------------------------------------------------------------------ */
+.board-world.is-pan {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* as pedras da mesa deitada são pequenas: a vaga da jogada pega o toque numa área maior */
+.tableboard-viewport.is-landscape .slot-ghost::after {
+  content: '';
+  position: absolute;
+  inset: -45%;
+}
+
+.reduce-motion .board-world.is-pan {
+  transition: none;
+}
+
+/* o facho da lâmpada (a mesma lâmpada do RivalSeat) cai no meio da mesa */
+.tableboard-viewport.is-landscape .lamp-rig {
+  top: -10px;
+}
+
+.tableboard-viewport.is-landscape .lamp-pool {
+  top: 62%;
+}
+
+/* o fundo da mesa escurece menos (o rival senta ali, na luz) */
+.tableboard-viewport.is-landscape .felt-vignette {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 22%, transparent 86%, rgba(0, 0, 0, 0.25) 100%);
+}
+
+/* a frente da mesa: a saia de madeira e os dois pés, até o pé da tela */
+.land-table-front {
+  bottom: 0;
+}
+
+.land-apron {
+  position: relative;
+  z-index: 1;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.land-leg {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  width: 4.2%;
+  min-width: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 210, 150, 0.16) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.5) calc(100% - 3px)),
+    linear-gradient(180deg, #4e2d15, #2b170b 70%, #160b05);
+  border: 2px solid #0b0603;
+  border-top: 0;
+}
+
+.land-leg.is-left {
+  left: 5%;
+}
+
+.land-leg.is-right {
+  right: 5%;
+}
+
+/* o dorme no canto de cima à direita (na parede, acima da beirada) */
+.tableboard-viewport.is-landscape .boneyard-pile {
+  top: max(env(safe-area-inset-top), 8px);
+  right: max(env(safe-area-inset-right), 10px);
+}
+
+/* a soma das pontas, a giz, à esquerda do dorme */
+.tableboard-viewport.is-landscape .ends-sum {
+  top: max(env(safe-area-inset-top), 8px);
+  right: calc(max(env(safe-area-inset-right), 10px) + 150px);
+}
+
+/* os selos da regra (mesa e rival) na bancada da esquerda, na altura da beirada de lá */
+.tableboard-viewport.is-landscape .table-mod,
+.tableboard-viewport.is-landscape .rival-rule {
+  top: calc(var(--rail-px) + 10px);
+  left: max(env(safe-area-inset-left), 10px);
+}
+
+.tableboard-viewport.is-landscape .rival-rule.is-shifted {
+  left: calc(max(env(safe-area-inset-left), 10px) + 40px);
+}
+
+/* --- a sua mão e os botões táticos ---------------------------------------------- */
+.player-zone.is-landscape {
+  display: block;
+  padding: 0;
+}
+
+.player-zone.is-landscape .hand-band {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(100% - 2 * (max(env(safe-area-inset-left), 0px) + 190px));
+  min-width: 260px;
+  translate: -50% 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: none;
+}
+
+.player-zone.is-landscape .player-hint {
+  min-height: 15px;
+  padding: 0 6px 1px;
+  font-size: 15px;
+}
+
+.tac-corner {
+  position: absolute;
+  bottom: max(env(safe-area-inset-bottom), 10px);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.tac-corner button {
+  pointer-events: auto;
+}
+
+.tac-left {
+  left: max(env(safe-area-inset-left), 10px);
+}
+
+.tac-right {
+  right: max(env(safe-area-inset-right), 10px);
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.tac-abilities {
+  display: flex;
+  gap: 6px;
+}
+
+/* a tábua: pintada em pixel art (art/hudPixels.js), 42×15 ampliada 3× */
+.tac-plank {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 126px;
+  height: 45px;
+  padding: 0 14px 3px;
+  border: 0;
+  background: none;
+  color: #fbe9c6;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.tac-plank-px {
+  position: absolute;
+  inset: 0;
+  image-rendering: pixelated;
+}
+
+.tac-title,
+.tac-cost {
+  position: relative;
+  z-index: 1;
+  line-height: 1.15;
+  text-shadow:
+    0 2px 0 #1a0c04,
+    1px 0 0 #1a0c04,
+    -1px 0 0 #1a0c04;
+}
+
+.tac-title {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+
+.tac-cost {
+  margin-top: 2px;
+  font-size: 7px;
+  color: #ffe2a0;
+}
+
+/* apagada: a tábua fica no lugar, escura */
+.tac-plank:disabled {
+  opacity: 0.5;
+}
+
+.tac-plank:disabled .tac-plank-px {
+  opacity: 0.75;
+}
+
+/* acesa (é o caminho): o friso de latão pulsa em volta */
+.tac-plank.is-on::after {
+  content: '';
+  position: absolute;
+  inset: -4px -4px -2px;
+  border: 2px solid #ffd36b;
+  box-shadow:
+    0 0 10px rgba(255, 200, 90, 0.55),
+    inset 0 0 6px rgba(255, 200, 90, 0.35);
+  animation: tacPulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.tac-plank:not(:disabled):active {
+  transform: translateY(2px) scale(0.97);
+}
+
+@keyframes tacPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.reduce-motion .tac-plank.is-on::after {
+  animation: none;
+  opacity: 0.8;
+}
+
+/* o MENU redondo: disco de madeira com aro de latão */
+.tac-menu {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 45px;
+  height: 48px;
+  padding: 0 0 3px;
+  border: 0;
+  background: none;
+  color: #fbe9c6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tac-menu-px {
+  position: absolute;
+  inset: 0;
+  image-rendering: pixelated;
+}
+
+.tac-menu svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 0 #1a0c04);
+}
+
+.tac-menu:active {
+  transform: translateY(2px);
+}
+
+.tac-dev {
+  align-self: center;
+}
+
+/* a coluna da esquerda: talismãs e a sua vida, acima das tábuas */
+.land-side {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.land-left {
+  left: max(env(safe-area-inset-left), 10px);
+  bottom: calc(max(env(safe-area-inset-bottom), 10px) + 58px);
+  align-items: flex-start;
+}
+
+.player-zone.is-landscape .player-relics {
+  position: static;
+}
+
+.player-zone.is-landscape .player-life-row {
+  justify-content: flex-start;
+}
+
+/* o seu dinheiro: no alto à direita, embaixo do dorme */
+.player-zone.is-landscape .land-coins {
+  position: absolute;
+  top: calc(max(env(safe-area-inset-top), 8px) + 70px);
+  right: calc(max(env(safe-area-inset-right), 10px) + 6px);
+  margin: 0;
+}
+
+/* duelo on-line: o relógio da vez fica à esquerda do busto */
+.app-shell.is-landscape .pvp-clock {
+  left: 32%;
+  top: 8px;
+}
+
+/* a hora da batida: o grito no meio do tampo (não em cima do rival) */
+.app-shell.is-landscape .finale-callout {
+  top: 54%;
+}
+
+/* duelo on-line: o selo da conexão na bancada da esquerda; a faixa do modo sai (o relógio diz a vez) */
+.app-shell.is-landscape .net-duel {
+  top: calc(39% + 10px);
+  left: max(env(safe-area-inset-left), 10px);
+}
+
+.app-shell.is-landscape .pvp-final-tag {
+  display: none;
+}

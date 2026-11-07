@@ -28,6 +28,7 @@ import PvpRoundResult from './PvpRoundResult.jsx';
 import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf, shortName } from '../components/finale.js';
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/tableSweep.js';
 import { useSecondsLeft } from './useNow.js';
+import { useLandscape } from '../components/useLandscape.js';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
 const RIVAL_FLIGHT_MS = landTime(FLIGHT_RIVAL);
@@ -66,6 +67,8 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   const [selectedId, setSelectedId] = useState(null);
   // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
   const [handZone, setHandZone] = useState(0);
+  // versão 2.9: tela deitada, o outro senta do outro lado da mesa (silhueta + maleta)
+  const landscape = useLandscape();
   const [tableAnim, setTableAnim] = useState(null);
   // versão 2.6: a última jogada que já começou a voar (até lá a pedra fica escondida na mesa)
   const [stagedSeq, setStagedSeq] = useState(() => Math.max(0, ...duel.view.events.map((e) => e.seq)));
@@ -361,10 +364,11 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   return (
     <div
       ref={shellRef}
-      className="app-shell pvp-duel flex h-full flex-col overflow-hidden"
+      className={`app-shell pvp-duel flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': PVP_FELT.light, '--felt-mid': PVP_FELT.mid, '--felt-dark': PVP_FELT.dark }}
     >
       <RivalBench
+        landscape={landscape}
         rival={oppRival}
         avatar={avatar}
         hearts={view.hearts.tioZe}
@@ -396,6 +400,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         )}
         <p className="pvp-final-tag">DUELO · ATÉ ALGUÉM ZERAR</p>
         <TableBoard
+          landscape={landscape}
           board={view.board}
           roundKey={roundKey}
           playableSides={selectedSides}
@@ -423,6 +428,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
         />
 
       <PlayerRack
+        landscape={landscape}
         onZoneHeight={setHandZone}
         hand={hand}
         selectedId={selectedTile?.id ?? null}

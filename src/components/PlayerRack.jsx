@@ -7,6 +7,8 @@ import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import { TentoCap, TentosBar } from './TentoCap.jsx';
 import { CoinGlyph, EyeGlyph, MenuGlyph } from './UiGlyphs.jsx';
 import { prefersReducedMotion } from './motion.js';
+import PixelCanvas from './PixelCanvas.jsx';
+import { paintPlank, paintRoundButton } from './art/hudPixels.js';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -15,6 +17,17 @@ const FAN_BASE = 26;
 /** Quanto a pedra selecionada sobe para fora do leque (-translate-y-6). */
 /** Versão 2.8: a pedra tocada sobe 16 px e cresce 8% (inclinando um tico para o lado dela). */
 const SELECT_LIFT = 16;
+
+/**
+ * Versão 2.9, a mesa deitada: o leque acompanha a altura da tela (as pedras da mão têm ~10%
+ * dela), fica no meio entre as colunas dos lados e desce até quase o pé da tela.
+ */
+const landFan = (h) => {
+  const unit = Math.max(28, Math.min(46, Math.round((h || 390) * 0.088)));
+  return { unit, height: unit * 2 + 30, base: 8 };
+};
+/** A tábua dos botões táticos (pixels da pintura, ampliada 3×). */
+const PLANK_PX = { w: 42, h: 15 };
 
 function useWidth() {
   const ref = useRef(null);
@@ -189,7 +202,7 @@ function usePresence(show, ms = 220) {
  * redesenha a mão inteira). A selecionada brilha e anima o material; as em repouso
  * ficam em gradiente estático.
  */
-const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, selected, active, playable, discardMode, known, onSelectTile, press, rivalName }) {
+const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, base = FAN_BASE, selected, active, playable, discardMode, known, onSelectTile, press, rivalName }) {
   const power = selected && tile.a === tile.b && !discardMode;
   const handleClick = useCallback(() => onSelectTile(tile), [onSelectTile, tile]);
   const enterRef = useEnterFromDorme(x, angle);
@@ -202,7 +215,7 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
         // versão 2.8: a vaga anda por transform (não por `left`): quando uma pedra sai, as outras
         // deslizam até fechar o vão, na GPU
         left: `calc(50% - ${unit / 2}px)`,
-        bottom: FAN_BASE,
+        bottom: base,
         width: unit,
         height: unit * 2,
         zIndex: selected ? 30 : index + 1,
@@ -250,7 +263,7 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
 });
 
 /** O leque da sua mão. Não depende de moedas, dica nem botões: muda só com a mão e a seleção. */
-const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '' }) {
+const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '', fan = null }) {
   const [areaRef, width] = useWidth();
   // Versão 2.6: a pedra jogada continua na vaga dela (levantada, como estava) até a cópia do
   // voo levantar dali; só então o leque fecha o buraco. Antes ela sumia, piscava na mesa e
@@ -264,10 +277,11 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
   }
   const shownKey = shown.map((t) => t.id).join(',');
   if (order.join(',') !== shownKey) setOrder(shown.map((t) => t.id));
-  const { unit, spots } = computeFan(shown.length, width);
+  // (2.9: deitada, as pedras seguem a altura da tela e o arco é mais raso)
+  const { unit, spots } = computeFan(shown.length, width, fan ? { baseUnit: fan.unit, minUnit: Math.round(fan.unit * 0.74), angle: 16, drop: 14 } : undefined);
   const active = isTurn || discardMode;
   return (
-    <div ref={areaRef} data-tut="hand" className="relative mx-1" style={{ height: FAN_HEIGHT }}>
+    <div ref={areaRef} data-tut="hand" className="relative mx-1" style={{ height: fan ? fan.height : FAN_HEIGHT }}>
       {shown.map((tile, i) => {
         const spot = spots[i];
         if (!spot) return null;
@@ -281,6 +295,7 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
             drop={spot.drop}
             angle={spot.angle}
             unit={unit}
+            base={fan ? fan.base : FAN_BASE}
             selected={going || tile.id === selectedId}
             active={active}
             playable={!going && active && playableIds.has(tile.id)}
@@ -392,6 +407,125 @@ const ActionChips = memo(function ActionChips({
   );
 });
 
+/** A tábua pintada atrás do texto de um botão tático. */
+function PlankArt({ tone }) {
+  return (
+    <PixelCanvas
+      cacheKey={`tabua-${tone}`}
+      paint={() => paintPlank(PLANK_PX.w, PLANK_PX.h, { tone, seed: tone === 'sangue' ? 23 : 11 })}
+      w={PLANK_PX.w}
+      h={PLANK_PX.h}
+      scale={1}
+      className="tac-plank-px"
+      style={{ width: '100%', height: '100%' }}
+    />
+  );
+}
+
+/**
+ * Versão 2.9: os botões táticos da mesa deitada (o desenho de referência): nas pontas de
+ * baixo, a tábua COMPRAR (com o preço da compra) à esquerda e a tábua PASSAR VEZ à direita, e
+ * o MENU redondo no canto. As tábuas ficam sempre no lugar (nada pula); só acendem quando são o
+ * caminho, com as mesmas regras das fichas da mesa em pé (comprar quando não há jogada,
+ * passar depois da compra). No modo de escolha (Giz, Canivete, Grampo) viram PULAR e a
+ * confirmação; os poderes prontos dos talismãs sobem em fichas em cima da tábua da direita.
+ */
+const TacticalPlanks = memo(function TacticalPlanks({
+  discardMode,
+  pickLabels = DISCARD_LABELS,
+  hasSelection,
+  onSkipDiscard,
+  onDiscard,
+  showDraw,
+  canDraw,
+  onDraw,
+  draw,
+  myTurn,
+  showPass,
+  canPass,
+  passRule,
+  onPass,
+  canUndo = false,
+  onUndo,
+  canCanivete = false,
+  onCanivete,
+  canGrampo = false,
+  onGrampo,
+  onOpenMenu,
+  devUnlocked = false,
+  onOpenDev,
+}) {
+  const drawOn = discardMode || (showDraw && canDraw);
+  const passOn = discardMode ? hasSelection : showPass && canPass;
+  return (
+    <>
+      <div className="tac-corner tac-left">
+        {onOpenMenu && (
+          <button type="button" onClick={onOpenMenu} className="tac-menu" aria-label="Menu">
+            <PixelCanvas cacheKey="botao-menu" paint={() => paintRoundButton(15)} w={15} h={16} scale={1} className="tac-menu-px" style={{ width: '100%', height: '100%' }} />
+            <MenuGlyph size={16} />
+          </button>
+        )}
+        {devUnlocked && (
+          <button type="button" className="dev-chip tac-dev" onClick={onOpenDev} aria-label="Abrir painel de testes">
+            DEV
+          </button>
+        )}
+        <button
+          type="button"
+          data-tut={discardMode ? undefined : 'draw'}
+          className={`tac-plank ${drawOn ? 'is-on' : ''}`}
+          disabled={!drawOn}
+          onClick={discardMode ? onSkipDiscard : onDraw}
+        >
+          <PlankArt tone="pinho" />
+          <span className="tac-title font-pixel">{discardMode ? pickLabels.skip : 'COMPRAR'}</span>
+          {!discardMode && myTurn && (
+            <span className="tac-cost font-pixel">
+              <DrawCost draw={draw} />
+            </span>
+          )}
+        </button>
+      </div>
+      <div className="tac-corner tac-right">
+        {(canUndo || canCanivete || canGrampo) && !discardMode && (
+          <div className="tac-abilities">
+            {canUndo && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onUndo}>
+                DESFAZER
+              </button>
+            )}
+            {canCanivete && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
+                CANIVETE
+              </button>
+            )}
+            {canGrampo && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onGrampo} aria-label="Grampo: esconder uma bucha no fundo do dorme">
+                GRAMPO
+              </button>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          data-tut={discardMode ? undefined : 'pass'}
+          className={`tac-plank tac-plank-blood ${passOn ? 'is-on' : ''}`}
+          disabled={!passOn}
+          onClick={discardMode ? onDiscard : onPass}
+          aria-label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
+        >
+          <PlankArt tone="sangue" />
+          <span className="tac-title font-pixel">{discardMode ? pickLabels.confirm : 'PASSAR VEZ'}</span>
+          {!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) && (
+            <span className="tac-cost font-pixel">{passRule.fiado ? 'FIADO' : `$${passRule.cost}`}</span>
+          )}
+        </button>
+      </div>
+    </>
+  );
+});
+
 /**
  * Mão do jogador em leque flutuante sobre o feltro, HUD (corações, moedas) e as
  * ações: comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
@@ -447,9 +581,12 @@ function PlayerRack({
   leaving = null,
   dealKey = '',
   tentos = null,
+  // versão 2.9: a mesa deitada (o leque no meio de baixo, as tábuas nas pontas)
+  landscape = false,
 }) {
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
+  // (2.9: deitada, a zona cobre a cena inteira; quem conta é só a faixa do leque)
   const zoneRef = useRef(null);
   useLayoutEffect(() => {
     const el = zoneRef.current;
@@ -459,7 +596,18 @@ function PlayerRack({
     const observer = new ResizeObserver(([entry]) => onZoneHeight(Math.round(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height)));
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onZoneHeight]);
+  }, [onZoneHeight, landscape]);
+  // deitada, a altura da cena decide o tamanho das pedras do leque
+  const sceneRef = useRef(null);
+  const [sceneH, setSceneH] = useState(0);
+  useLayoutEffect(() => {
+    const el = sceneRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => setSceneH(Math.round(entry.contentRect.height)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [landscape]);
+  const fan = landscape ? landFan(sceneH) : null;
   const noPlay = playableIds.size === 0;
   const myTurn = isTurn && !discardMode;
   // sem jogada: COMPRAR enquanto der; PASSAR só depois de comprar (ou sem compra possível).
@@ -467,6 +615,106 @@ function PlayerRack({
   const showDraw = myTurn && ((canDraw && (noPlay || tutorialAction === 'draw')) || tutorialFocus === 'draw');
   const showPass =
     myTurn && ((canPass && (noPlay || tutorialAction === 'pass') && (drawsThisTurn > 0 || !canDraw || tutorialAction === 'pass')) || tutorialFocus === 'pass');
+  const life = (
+    <button
+      type="button"
+      className={`player-life ${!tentos && hearts <= 2 ? 'is-low' : ''} ${tentos ? 'is-tentos' : ''}`}
+      onClick={onSecretTap}
+      aria-label={tentos ? `Você: ${tentos.current} de ${tentos.max} tentos` : `Você: ${hearts} de ${maxHearts} corações`}
+    >
+      <span data-tut="hearts" className="life-hearts">
+        {/* versão 2.7: na roda por tentos, as tampinhas amassadas no lugar dos corações */}
+        {tentos ? (
+          <TentosBar current={tentos.current} max={tentos.max} size={landscape ? 17 : tentos.max <= 5 ? 24 : 19} label={`Você: ${tentos.current} de ${tentos.max} tentos`} />
+        ) : (
+          <HeartsBar current={hearts} max={maxHearts} pixel={landscape || maxHearts > 6 ? 2 : 3} label={`Você: ${hearts} de ${maxHearts} corações`} />
+        )}
+      </span>
+    </button>
+  );
+  const relicRow = (
+    <RelicRow
+      relics={relics}
+      relicSlots={relicSlots}
+      relicFlashes={relicFlashes}
+      spentRelics={spentRelics}
+      canUndo={canUndo}
+      onUndo={onUndo}
+      canCanivete={canCanivete}
+      onCanivete={onCanivete}
+      canGrampo={canGrampo}
+      onGrampo={onGrampo}
+      press={press}
+    />
+  );
+
+  if (landscape) {
+    return (
+      <section
+        ref={sceneRef}
+        className={`player-zone is-landscape absolute inset-0 z-20 ${isTurn ? 'is-turn' : ''} ${frame ? `player-frame player-frame-${frame}` : ''}`}
+        aria-label="Sua mão"
+      >
+        {/* a faixa do leque, no meio de baixo (a mesa mede só ela) */}
+        <div ref={zoneRef} className="hand-band">
+          <p className="player-hint font-term" aria-live="polite">
+            {hint}
+          </p>
+          <HandFan
+            hand={hand}
+            selectedId={selectedId}
+            playableIds={playableIds}
+            isTurn={isTurn}
+            discardMode={discardMode}
+            knownIds={knownIds}
+            onSelectTile={onSelectTile}
+            press={press}
+            rivalName={rivalName}
+            leaving={leaving}
+            dealKey={dealKey}
+            fan={fan}
+          />
+        </div>
+        <TacticalPlanks
+          discardMode={discardMode}
+          pickLabels={pickLabels}
+          hasSelection={Boolean(selectedId)}
+          onSkipDiscard={onSkipDiscard}
+          onDiscard={onDiscard}
+          showDraw={showDraw}
+          canDraw={canDraw}
+          onDraw={onDraw}
+          draw={draw}
+          myTurn={myTurn}
+          showPass={showPass}
+          canPass={canPass}
+          passRule={passRule}
+          onPass={onPass}
+          canUndo={canUndo}
+          onUndo={onUndo}
+          canCanivete={canCanivete}
+          onCanivete={onCanivete}
+          canGrampo={canGrampo}
+          onGrampo={onGrampo}
+          onOpenMenu={onOpenMenu}
+          devUnlocked={devUnlocked}
+          onOpenDev={onOpenDev}
+        />
+        {/* a coluna da esquerda: seus talismãs e, embaixo, a sua vida */}
+        <div className="land-side land-left">
+          {relicRow}
+          <div className="player-life-row">{life}</div>
+        </div>
+        {/* o seu dinheiro: no alto à direita, embaixo do dorme */}
+        <div className="player-coins-row land-coins">
+          <span className="coins-led">
+            <CoinCount value={coins} target="player" className="player-coins" />
+          </span>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       ref={zoneRef}
@@ -518,42 +766,14 @@ function PlayerRack({
       </div>
 
       {/* a vida no meio, grande e solta no feltro, pulsando como LED; o dinheiro logo embaixo */}
-      <div className="player-life-row">
-        <button
-          type="button"
-          className={`player-life ${!tentos && hearts <= 2 ? 'is-low' : ''} ${tentos ? 'is-tentos' : ''}`}
-          onClick={onSecretTap}
-          aria-label={tentos ? `Você: ${tentos.current} de ${tentos.max} tentos` : `Você: ${hearts} de ${maxHearts} corações`}
-        >
-          <span data-tut="hearts" className="life-hearts">
-            {/* versão 2.7: na roda por tentos, as tampinhas amassadas no lugar dos corações */}
-            {tentos ? (
-              <TentosBar current={tentos.current} max={tentos.max} size={tentos.max <= 5 ? 24 : 19} label={`Você: ${tentos.current} de ${tentos.max} tentos`} />
-            ) : (
-              <HeartsBar current={hearts} max={maxHearts} pixel={maxHearts <= 6 ? 3 : 2} label={`Você: ${hearts} de ${maxHearts} corações`} />
-            )}
-          </span>
-        </button>
-      </div>
+      <div className="player-life-row">{life}</div>
       <div className="player-coins-row">
         <span className="coins-led">
           <CoinCount value={coins} target="player" className="player-coins" />
         </span>
       </div>
 
-      <RelicRow
-        relics={relics}
-        relicSlots={relicSlots}
-        relicFlashes={relicFlashes}
-        spentRelics={spentRelics}
-        canUndo={canUndo}
-        onUndo={onUndo}
-        canCanivete={canCanivete}
-        onCanivete={onCanivete}
-        canGrampo={canGrampo}
-        onGrampo={onGrampo}
-        press={press}
-      />
+      {relicRow}
 
       {/* o canto: o menu (e o atalho do DEV em cima dele) */}
       <div className="player-corner">

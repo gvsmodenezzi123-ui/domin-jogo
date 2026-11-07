@@ -558,6 +558,86 @@ function sceneTableRoom(b, r) {
   vignette(b, 0.9, 0.5);
 }
 
+/**
+ * Versão 2.9: a sala da mesa deitada (o desenho de referência). Em cima, o reboco verde-escuro
+ * descascando com os canos e a fiação; no meio, a faixa de azulejo azul e creme encardido (o
+ * rival senta na frente dela); à direita, a prateleira com as garrafas; embaixo, as bancadas de
+ * madeira dos lados e o escuro debaixo da mesa. A lâmpada clareia o meio de cima.
+ */
+function sceneLandRoom(b, r) {
+  const { w, h } = b;
+  const band = Math.round(h * 0.25);
+  const floor = Math.round(h * 0.47);
+  // reboco: verde-escuro com manchas de umidade e o descascado
+  for (let y = 0; y < band; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const n = Math.sin(x * 0.07 + Math.sin(y * 0.09) * 2) + Math.sin(y * 0.13 + x * 0.02);
+      const c = mixRgb(hex('#2c3b31'), hex('#1b2620'), 0.5 + n * 0.22 + (r() - 0.5) * 0.12);
+      b.put(x, y, c);
+    }
+  }
+  for (let i = 0; i < Math.round(w / 40); i += 1) {
+    const cx = Math.floor(r() * w);
+    const cy = Math.floor(r() * band);
+    b.ellipse(cx, cy, 3 + r() * 9, 2 + r() * 5, hex('#3b4a3c'), 0.5);
+    b.ellipse(cx + 1, cy + 1, 2 + r() * 5, 1 + r() * 3, hex('#141c17'), 0.45);
+  }
+  drips(b, r, 0, w, 0, band, [8, 10, 6], Math.round(w / 5));
+  // canos e a fiação descendo a parede
+  for (const px of [Math.round(w * 0.27), Math.round(w * 0.6)]) {
+    b.rect(px, 0, 2, floor, hex('#0e1411'));
+    b.rect(px, 0, 1, floor, hex('#34443a'), 0.7);
+    for (let y = 6; y < floor; y += 22) b.rect(px - 1, y, 4, 2, hex('#0a0d0b'));
+  }
+  for (let x = 0; x < w; x += 1) {
+    const y = Math.round(h * 0.035 + Math.sin(x / (w * 0.09)) * h * 0.02);
+    b.put(x, y, hex('#0d120f'));
+  }
+  // a faixa de azulejo azul e creme, encardida, com o friso de cima
+  b.rect(0, band - 2, w, 2, hex('#101512'));
+  const size = 10;
+  for (let ty = band; ty < floor; ty += size) {
+    for (let tx = -((ty / size) % 2) * 3; tx < w; tx += size) {
+      const cream = r() < 0.45;
+      const base = cream ? hex('#a59f84') : hex('#2d5560');
+      const c = shift(base, Math.round((r() - 0.5) * 18));
+      b.rect(tx, ty, size, size, hex('#141a18'));
+      b.rect(tx, ty, size - 1, size - 1, c);
+      b.rect(tx, ty, size - 1, 1, shift(c, 18), 0.8);
+      b.rect(tx + size - 2, ty, 1, size - 1, shift(c, -14), 0.7);
+      if (r() < 0.7) b.rect(tx + 1 + Math.floor(r() * 6), ty + 2 + Math.floor(r() * 5), 1 + Math.floor(r() * 3), 1 + Math.floor(r() * 2), shift(c, -40), 0.55);
+      if (r() < 0.12) b.rect(tx + 2, ty + 2, size - 5, size - 5, hex('#3a2a1a'), 0.35);
+    }
+  }
+  drips(b, r, 0, w, band, floor, [20, 14, 6], Math.round(w / 3));
+  // a prateleira das garrafas, à direita
+  const sx = Math.round(w * 0.63);
+  shelf(b, r, sx, Math.round(h * 0.12), Math.round(w * 0.36), [2, 0, 4, 'mug', 1, 3, 5]);
+  shelf(b, r, sx, Math.round(h * 0.26), Math.round(w * 0.36), [0, 3, 1, 5, 2, 'mug', 4]);
+  // as bancadas de madeira dos lados (as tábuas fecham para o fundo)
+  for (let y = floor; y < h; y += 1) {
+    const t = (y - floor) / (h - floor);
+    const row = Math.floor(Math.sqrt(t) * 9);
+    const base = row % 2 ? hex('#4a2c16') : hex('#3e2412');
+    for (let x = 0; x < w; x += 1) {
+      const u = (x - w / 2) / (w / 2);
+      const seam = Math.abs(((u * (1 + t * 2.2) * 9) % 1)) < 0.04;
+      b.put(x, y, seam ? hex('#1e1008') : shift(base, Math.round((r() - 0.5) * 8 - t * 18)));
+    }
+  }
+  b.rect(0, floor, w, 1, hex('#6a4224'));
+  b.light(0, floor + 1, w, 5, [0, 0, 0], (x, y) => 0.5 - (y - floor) * 0.09);
+  // manchas de copo nas bancadas
+  for (let i = 0; i < 5; i += 1) {
+    const cx = r() < 0.5 ? Math.floor(r() * w * 0.2) : Math.floor(w * 0.8 + r() * w * 0.2);
+    const cy = floor + 6 + Math.floor(r() * (h - floor - 12));
+    for (let a = 0; a < 6.28; a += 0.4) b.put(cx + Math.cos(a) * 5, cy + Math.sin(a) * 3, hex('#2a170a'), 0.6);
+  }
+  lampGlow(b, w / 2, h * 0.08, w * 0.42, 0.34);
+  lampGlow(b, w / 2, h * 0.62, w * 0.5, 0.08);
+  vignette(b, 1.05, 0.42);
+}
+
 function sceneWide(b, r) {
   const { w, h } = b;
   const tableTop = Math.round(h * 0.72);
@@ -701,7 +781,7 @@ function sceneMap(b, r) {
   });
 }
 
-const SCENES = { title: sceneTitle, counter: sceneCounter, match: sceneMatch, wide: sceneWide, map: sceneMap, tableroom: sceneTableRoom };
+const SCENES = { title: sceneTitle, counter: sceneCounter, match: sceneMatch, wide: sceneWide, map: sceneMap, tableroom: sceneTableRoom, landroom: sceneLandRoom };
 export const SCENE_IDS = Object.freeze(Object.keys(SCENES));
 
 /** Pinta a cena `name` numa grade de `w`×`h` pixels. */
