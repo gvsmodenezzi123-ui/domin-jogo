@@ -31,11 +31,15 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const snap = (v, step) => Math.round(v / step) * step;
 const fmt = (v) => (Math.abs(v) < 1e-9 ? 0 : Number(v.toFixed(2)));
 
-/** Variáveis de luz de uma pedra no centro (x, y), com a lâmpada parada em `light`. */
-export function lightingFor(x, y, light, hand) {
-  const dx = x - light.x;
-  const dy = y - light.y;
-  const near = clamp(1 - Math.hypot(dx, dy) / FALLOFF, 0, 1);
+/**
+ * Variáveis de luz de uma pedra no centro (x, y), com a mancha de luz em `light`. Versão 2.8:
+ * a direção vem da lâmpada (`lamp`, pendurada no alto): a sombra cai para baixo e para o lado
+ * de fora (à esquerda da lâmpada, para a esquerda; à direita, para a direita).
+ */
+export function lightingFor(x, y, light, hand, lamp = light) {
+  const dx = x - lamp.x;
+  const dy = y - lamp.y;
+  const near = clamp(1 - Math.hypot(x - light.x, y - light.y) / FALLOFF, 0, 1);
   const lx = fmt(snap(clamp(dx / REACH, -1, 1), DIR_STEP));
   const ly = fmt(snap(clamp(dy / REACH, -1, 1), DIR_STEP));
   // a sua mão fica na beira da mesa: pega menos luz, mas nunca some no escuro
@@ -68,11 +72,12 @@ export function startTileLighting(root) {
     // a lâmpada em repouso: no meio da mesa, a mancha de luz um pouco acima do centro
     const box = root.getBoundingClientRect();
     const light = { x: box.left + box.width / 2, y: box.top + box.height * 0.42 };
+    const lamp = { x: light.x, y: box.top + box.height * 0.04 };
     // 1º mede tudo, depois escreve (escrever no meio das medições trava o quadro)
     const spots = els.map((el) => [el, el.getBoundingClientRect()]);
     for (const [el, r] of spots) {
       if (!r.width) continue;
-      const { lx, ly, lit } = lightingFor(r.left + r.width / 2, r.top + r.height / 2, light, el.hasAttribute('data-hand-tile'));
+      const { lx, ly, lit } = lightingFor(r.left + r.width / 2, r.top + r.height / 2, light, el.hasAttribute('data-hand-tile'), lamp);
       const key = `${lx}|${ly}|${lit}`;
       if (written.get(el) === key) continue;
       written.set(el, key);

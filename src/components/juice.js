@@ -83,7 +83,11 @@ export function flashOver(el, { color = 'rgba(255, 246, 214, 0.55)', ms = 170 } 
   dropAfter(anim, flash);
 }
 
-/** O número dourado gigante que pula na pedra (escala 1,5 → 1,0) e sobe sumindo. */
+/**
+ * O número dourado gigante da pontuação. Versão 2.8 (com peso): surge grande (1,45) no alto,
+ * cai com gravidade até a pedra, bate achatando, quica duas vezes cada vez mais baixo e, no
+ * 1º impacto, solta faíscas; depois sobe sumindo.
+ */
 export function goldPop(at, text, { tone = 'player' } = {}) {
   const root = juiceLayer();
   if (!root || !at || off()) return;
@@ -94,18 +98,31 @@ export function goldPop(at, text, { tone = 'player' } = {}) {
   el.style.left = `${at.x}px`;
   el.style.top = `${at.y}px`;
   root.appendChild(el);
+  const DUR = 1180;
+  const FALL = 0.24;
+  const fall = 'cubic-bezier(0.55, 0, 1, 0.45)';
+  const rise = 'cubic-bezier(0, 0.55, 0.45, 1)';
+  const at0 = (dy, sx = 1, sy = sx) => `translate(-50%, calc(-50% - ${dy}px)) scale(${sx}, ${sy})`;
   const anim = el.animate(
     [
-      { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 0 },
-      { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 1, offset: 0.06 },
-      { transform: 'translate(-50%, -50%) scale(0.94)', opacity: 1, offset: 0.24 },
-      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.34 },
-      { transform: 'translate(-50%, calc(-50% - 10px)) scale(1)', opacity: 1, offset: 0.72 },
-      { transform: 'translate(-50%, calc(-50% - 30px)) scale(0.9)', opacity: 0 },
+      { transform: at0(54, 1.45), opacity: 0, easing: fall },
+      { transform: at0(54, 1.45), opacity: 1, offset: 0.03, easing: fall },
+      // bate na pedra: achata
+      { transform: at0(0, 1.3, 1.02), opacity: 1, offset: FALL, easing: rise },
+      // 1º quique
+      { transform: at0(18, 1.08), offset: 0.35, easing: fall },
+      { transform: at0(0, 1.14, 0.98), offset: 0.45, easing: rise },
+      // 2º quique, baixinho
+      { transform: at0(6, 1.02), offset: 0.51, easing: fall },
+      { transform: at0(0, 1), offset: 0.57 },
+      { transform: at0(0, 1), opacity: 1, offset: 0.8 },
+      { transform: at0(24, 0.9), opacity: 0 },
     ],
-    { duration: 950, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
+    { duration: DUR },
   );
   dropAfter(anim, el);
+  // as faíscas saem do 1º impacto
+  window.setTimeout(() => sparkBurst({ x: at.x, y: at.y + 6 }, { count: 10, spread: 64 }), Math.round(DUR * FALL));
 }
 
 /** O contador que recebe as moedas dá um pulo dourado. */
@@ -146,16 +163,22 @@ export function coinRain(from, to, { count = 8, targetEl = null, onArrive = null
     const by = Math.sin(a) * burst * 0.7 - 18;
     const dx = to.x - from.x;
     const dy = to.y - from.y;
-    const anim = el.animate(
-      [
-        { transform: 'translate3d(0, 0, 0) scale(0.4)', opacity: 0 },
-        { transform: `translate3d(${bx}px, ${by}px, 0) scale(1.15)`, opacity: 1, offset: 0.28 },
-        { transform: `translate3d(${bx * 0.6 + dx * 0.45}px, ${Math.min(by, dy) - 40 + dy * 0.2}px, 0) scale(1)`, opacity: 1, offset: 0.62 },
-        { transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.55)`, opacity: 1, offset: 0.97 },
-        { transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.4)`, opacity: 0 },
-      ],
-      { duration: 720 + i * 14, delay: i * 55, easing: 'cubic-bezier(0.35, 0.1, 0.4, 1)', fill: 'backwards' },
-    );
+    // versão 2.8: depois de saltar da pedra, a moeda faz uma parábola de verdade até o contador
+    // (x anda reto, y sobe e cai pela gravidade: o pico fica acima dos dois pontos)
+    const apex = Math.max(56, Math.abs(dy - by) * 0.35);
+    const keys = [
+      { transform: 'translate3d(0, 0, 0) scale(0.4)', opacity: 0, offset: 0 },
+      { transform: `translate3d(${bx.toFixed(1)}px, ${by.toFixed(1)}px, 0) scale(1.15)`, opacity: 1, offset: 0.24 },
+    ];
+    const STEPS = 6;
+    for (let k = 1; k <= STEPS; k += 1) {
+      const t = k / STEPS;
+      const x = bx + (dx - bx) * t;
+      const y = by + (dy - by) * t - 4 * apex * t * (1 - t);
+      keys.push({ transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${(1.15 - 0.6 * t).toFixed(3)})`, opacity: 1, offset: 0.24 + 0.73 * t });
+    }
+    keys.push({ transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.4)`, opacity: 0, offset: 1 });
+    const anim = el.animate(keys, { duration: 760 + i * 14, delay: i * 55, easing: 'linear', fill: 'backwards' });
     anim.onfinish = () => {
       el.remove();
       onArrive?.(i);

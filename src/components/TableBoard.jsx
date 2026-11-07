@@ -452,7 +452,7 @@ function TableBoard({
                       openEnd={tile.isOpenEnd}
                       shimmer={tile.isOpenEnd}
                       still={!tile.isOpenEnd}
-                      depth={tile.isDouble ? 9 : 8}
+                      depth={tile.isDouble ? 7 : 6}
                     />
                     {tile.isDouble && (!arriving || landed) && <span aria-hidden="true" className="impact-ring pointer-events-none absolute" />}
                     {spot && <span aria-hidden="true" className="ai-spot-ring pointer-events-none absolute" />}

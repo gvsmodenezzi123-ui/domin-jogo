@@ -13,7 +13,8 @@ const FAN_HEIGHT = 150;
 /** Distância da base do leque até o rodapé (as pedras das pontas descem até aqui). */
 const FAN_BASE = 26;
 /** Quanto a pedra selecionada sobe para fora do leque (-translate-y-6). */
-const SELECT_LIFT = 24;
+/** Versão 2.8: a pedra tocada sobe 16 px e cresce 8% (inclinando um tico para o lado dela). */
+const SELECT_LIFT = 16;
 
 function useWidth() {
   const ref = useRef(null);
@@ -198,13 +199,17 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
       {...(tile.enhancement && press ? press({ kind: 'tile', tile }) : {})}
       className="hand-slot absolute"
       style={{
-        left: `calc(50% + ${x - unit / 2}px)`,
+        // versão 2.8: a vaga anda por transform (não por `left`): quando uma pedra sai, as outras
+        // deslizam até fechar o vão, na GPU
+        left: `calc(50% - ${unit / 2}px)`,
         bottom: FAN_BASE,
         width: unit,
         height: unit * 2,
         zIndex: selected ? 30 : index + 1,
-        // selecionada: sai do leque (-translate-y-6 scale-110), reta
-        transform: selected ? `translateY(-${SELECT_LIFT}px) rotate(0deg) scale(1.1)` : `translateY(${drop}px) rotate(${angle}deg)`,
+        // selecionada: sai do leque (sobe 16 px, cresce 8% e inclina um tico)
+        transform: selected
+          ? `translateX(${x}px) translateY(-${SELECT_LIFT}px) rotate(${(angle * 0.3).toFixed(2)}deg) scale(1.08)`
+          : `translateX(${x}px) translateY(${drop}px) rotate(${angle}deg)`,
       }}
     >
       <div className={`hand-float ${selected ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
@@ -218,7 +223,7 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, sel
               values={[tile.a, tile.b]}
               orientation="vertical"
               unit={unit}
-              depth={6}
+              depth={4}
               selected={selected}
               power={power}
               enhancement={tile.enhancement}

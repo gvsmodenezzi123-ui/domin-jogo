@@ -1,6 +1,7 @@
 import { memo, useContext } from 'react';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { TileSkinContext } from './tileSkin.js';
+import { tileMesh } from './tileMaterials.js';
 import { sameTileProps } from './tileMemo.js';
 
 /**
@@ -42,32 +43,6 @@ const PIP_LAYOUT = Object.freeze({
   ],
 });
 
-/**
- * Versão 2.1: a espessura da pedra. Em vez de uma faixa só embaixo, a lateral é feita de uma
- * sombra de 1 px por pixel de altura, do tom claro da quina ao escuro da base, mais a linha
- * preta do chão: a pedra ganha volume de verdade (e não parece papel em cima do feltro).
- */
-const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const sideCache = new Map();
-function sideShadows(depth, top, bottom, floor) {
-  const key = `${depth}${top}${bottom}${floor}`;
-  let out = sideCache.get(key);
-  if (!out) {
-    const a = hexRgb(top);
-    const b = hexRgb(bottom);
-    const parts = [];
-    for (let i = 1; i <= depth; i += 1) {
-      const t = depth > 1 ? (i - 1) / (depth - 1) : 0;
-      const c = a.map((v, k) => Math.round(v + (b[k] - v) * t));
-      parts.push(`0 ${i}px 0 rgb(${c.join(',')})`);
-    }
-    parts.push(`0 ${depth + 1}px 0 ${floor}`);
-    out = parts.join(',');
-    sideCache.set(key, out);
-  }
-  return out;
-}
-
 /** Manchas de envelhecimento estáveis por pedra (sem aleatoriedade no render). */
 function stainFor(values) {
   const seed = (values[0] * 7 + values[1] * 13 + 3) % 17;
@@ -75,12 +50,15 @@ function stainFor(values) {
 }
 
 function Half({ value, horizontal, unit }) {
-  const pad = Math.max(2, Math.round(unit * 0.15));
-  const pip = Math.max(2, Math.round(unit * 0.19));
+  // versão 2.8: pips maiores e mais perto das bordas (o desenho de referência)
+  const pad = Math.max(2, Math.round(unit * 0.13));
+  const pip = Math.max(2, Math.round(unit * 0.23));
   const pips = (PIP_LAYOUT[value] ?? []).map(([r, c]) => (horizontal ? [c, r] : [r, c]));
   return (
     <div
-      className="grid grid-cols-3 grid-rows-3"
+      // versão 2.8: os pips ficam por cima da luz da lâmpada e dos brilhos (preto chapado nas
+      // duas metades, como na referência)
+      className="domino-half relative z-[1] grid grid-cols-3 grid-rows-3"
       style={{ width: unit, height: unit, padding: pad, boxSizing: 'border-box' }}
     >
       {pips.map(([r, c]) => (
@@ -95,7 +73,10 @@ function Half({ value, horizontal, unit }) {
 }
 
 /**
- * Pedra de dominó em osso amarelado envelhecido (ou ébano, nas Peças Pretas: TileSkinContext).
+ * Pedra de dominó em marfim (ou ébano, nas Peças Pretas: TileSkinContext).
+ * Versão 2.8: todas as pedras (comuns e aprimoradas) usam a mesma malha (tileMaterials.js):
+ * contorno escuro, chanfro, lateral de 3–4 px de espessura, o friso do meio com o pino de
+ * latão e os pips cavados; o material só troca o "shader" da face.
  *
  * values:      [primeiro, segundo] — esquerda/direita (deitada) ou cima/baixo (em pé)
  * orientation: na mão, a orientação da pedra; na mesa (`onBoard`), a direção da LINHA
@@ -162,7 +143,8 @@ function DominoTile({
         className={`domino-back relative shrink-0 ${className}`}
         style={{
           ...shared,
-          boxShadow: `inset 1px 1px 0 rgba(255,220,170,.14), inset -1px -1px 0 rgba(0,0,0,.6), 0 ${depth}px 0 #120b06, 0 ${depth + 1}px ${depth + 2}px rgba(0,0,0,.6)`,
+          '--d': `${depth}px`,
+          boxShadow: tileMesh('back', depth),
         }}
       >
         <span className="domino-back-sigil" />
@@ -171,64 +153,47 @@ function DominoTile({
   }
 
   const stain = stainFor(values);
-  const dividerThickness = Math.max(1, Math.round(unit * 0.06));
+  const dividerThickness = Math.max(1, Math.round(unit * 0.07));
   const enh = getEnhancement(enhancement);
   const onyx = !enh && skin === 'onyx';
   const silver = !enh && skin === 'silver';
   // osso envelhecido (padrão), ébano (Peças Pretas), prata (Peças Prateadas, Patch 0.9.0) ou
   // material da peça aprimorada, que vem do CSS
+  // a malha é a mesma para todo material (contorno, chanfro, lateral e sombra no pano);
+  // só a face muda: a da aprimorada vem do CSS (.tile-enh-<id>)
   const surface = enh
-    ? { '--d': `${depth}px` }
+    ? { '--d': `${depth}px`, boxShadow: tileMesh(enh.id, depth) }
     : silver
-    ? {
-        '--d': `${depth}px`,
-        background: [
-          `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.55), transparent 44%)`,
-          'repeating-linear-gradient(100deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px)',
-          'linear-gradient(150deg, #f4f6f8 0%, #cfd4da 38%, #9aa1a8 72%, #7d848b 100%)',
-        ].join(','),
-        boxShadow: [
-          'inset 2px 2px 0 rgba(255,255,255,.9)',
-          'inset -2px -2px 0 rgba(40,44,50,.5)',
-          'inset 0 0 0 1px rgba(60,66,74,.35)',
-          sideShadows(depth, '#b8bec4', '#4a5056', '#16181b'),
-          'var(--cast)',
-        ].join(','),
-      }
-    : onyx
-    ? {
-        '--d': `${depth}px`,
-        background: [
-          `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.07), transparent 46%)`,
-          'linear-gradient(150deg, #2b2724 0%, #1c1917 45%, #0f0d0c 100%)',
-        ].join(','),
-        boxShadow: [
-          'inset 2px 2px 0 rgba(255,255,255,.14)',
-          'inset -2px -2px 0 rgba(0,0,0,.7)',
-          'inset 0 0 0 1px rgba(120,113,108,.35)',
-          sideShadows(depth, '#3a3430', '#0a0908', '#000000'),
-          'var(--cast)',
-        ].join(','),
-      }
-    : {
-        '--d': `${depth}px`,
-        background: [
-          // Versão 2.0: osso gasto (art/boneTexture.js): veio, poros e rachadura, deslocado por pedra
-          `var(--bone-grain, none) ${stain.x}% ${stain.y}% / 48px 48px`,
-          `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(112,78,28,${stain.alpha}), transparent 42%)`,
-          `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,252,236,.22), transparent 48%)`,
-          'linear-gradient(150deg, #f3e9c9 0%, #e2d1a2 42%, #c9b47c 100%)',
-        ].join(','),
-        boxShadow: [
-          'inset 2px 2px 0 rgba(255,251,236,.85)',
-          'inset -2px -2px 0 rgba(96,70,30,.5)',
-          'inset 0 0 0 1px rgba(58,40,16,.3)',
-          // a lateral de osso: clara na quina, escura na base (a espessura da pedra)
-          sideShadows(depth, '#d4c08e', '#6a5530', '#1e160a'),
-          // sombra no pano: cai para o lado oposto da lâmpada (components/tileLighting.js)
-          'var(--cast)',
-        ].join(','),
-      };
+      ? {
+          '--d': `${depth}px`,
+          background: [
+            `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.55), transparent 44%)`,
+            'repeating-linear-gradient(100deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px)',
+            'linear-gradient(150deg, #f4f6f8 0%, #cfd4da 38%, #9aa1a8 72%, #7d848b 100%)',
+          ].join(','),
+          boxShadow: tileMesh('silver', depth),
+        }
+      : onyx
+        ? {
+            '--d': `${depth}px`,
+            background: [
+              `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.07), transparent 46%)`,
+              'linear-gradient(150deg, #2b2724 0%, #1c1917 45%, #0f0d0c 100%)',
+            ].join(','),
+            boxShadow: tileMesh('onyx', depth),
+          }
+        : {
+            '--d': `${depth}px`,
+            // versão 2.8: marfim limpo (o desenho de referência): a luz de cima, um tico de
+            // encardido em cada pedra e o pé da face um pouco mais escuro
+            background: [
+              `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(150,110,50,${(stain.alpha * 0.55).toFixed(3)}), transparent 42%)`,
+              'linear-gradient(180deg, rgba(255,255,250,.35) 0%, transparent 18%)',
+              'linear-gradient(172deg, #f8eecd 0%, #efe1b3 48%, #e1cd95 100%)',
+            ].join(','),
+            boxShadow: tileMesh('bone', depth),
+          };
+  const rivet = Math.max(3, Math.round(unit * 0.16));
 
   return (
     <Tag
@@ -251,10 +216,12 @@ function DominoTile({
         className="domino-divider pointer-events-none absolute"
         style={
           horizontal
-            ? { left: '50%', top: '16%', bottom: '16%', width: dividerThickness, transform: 'translateX(-50%)' }
-            : { top: '50%', left: '16%', right: '16%', height: dividerThickness, transform: 'translateY(-50%)' }
+            ? { left: '50%', top: '10%', bottom: '10%', width: dividerThickness, transform: 'translateX(-50%)' }
+            : { top: '50%', left: '10%', right: '10%', height: dividerThickness, transform: 'translateY(-50%)' }
         }
       />
+      {/* o pino de latão no meio do friso */}
+      <span aria-hidden="true" className="domino-rivet pointer-events-none absolute" style={{ width: rivet, height: rivet }} />
       {enh && (
         <>
           <span aria-hidden="true" className="tile-enh-layer" />

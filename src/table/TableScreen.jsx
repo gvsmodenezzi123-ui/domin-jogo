@@ -272,7 +272,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   };
   const handleSelectTile = useStableHandler((tile) => {
     if (!myTurn || !playableIds.has(tile.id)) return;
-    sound.playClick();
+    sound.playBoneTick(selectedTile?.id !== tile.id);
     setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
     if (tile.a === tile.b) haptic(15);
   });

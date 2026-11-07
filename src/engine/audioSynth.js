@@ -1879,6 +1879,19 @@ export class SoundEngine {
    * "toc" da trava. Toques repetidos em menos de 60 ms viram um só (o App toca o clique em
    * todo botão e alguns botões também chamam playClick no próprio handler).
    */
+  /**
+   * Versão 2.8: o tique seco de osso ao pegar uma pedra da mão (marfim batendo em marfim):
+   * estalo curto e agudo e um corpo grave bem curtinho; sobe meio tom quando ela sobe do leque.
+   */
+  playBoneTick(lift = true) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - (this.lastTickAt ?? -1e9) < 50) return;
+    this.lastTickAt = now;
+    this.noise({ freq: lift ? 2900 : 2500, filter: 'bandpass', q: 7, peak: 0.24, dur: 0.018 });
+    this.tone({ type: 'triangle', freq: lift ? 1250 : 1050, freqEnd: lift ? 980 : 820, peak: 0.07, dur: 0.02, attack: 0.001 });
+    this.tone({ type: 'sine', freq: 180, freqEnd: 120, peak: 0.12, dur: 0.03, attack: 0.001, delay: 0.004 });
+  }
+
   playClick() {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (now - (this.lastClickAt ?? -1e9) < 60) return;

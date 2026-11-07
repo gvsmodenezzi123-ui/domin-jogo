@@ -172,6 +172,27 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.8: pedras novas com peso (etapa 1 da mesa deitada)
+
+- As pedras no desenho novo: marfim limpo, cantos arredondados, contorno escuro, pips pretos
+  maiores e cavados (nas duas metades, por cima da luz da lâmpada), o friso de ponta a ponta com
+  o pino de latão no meio e 3–4 px de espessura com a lateral em degradê. Uma malha só para todas
+  (`components/tileMaterials.js`): as comuns, as Peças Pretas e Prateadas, o verso e todas as
+  aprimoradas (Ouro, Sanguinária, Camaleão, Chumbo, Fantasma, Âmbar, Obsidiana) têm a mesma
+  geometria, o mesmo contorno, chanfro, espessura e pino; o material só troca a face (e o metal
+  do pino: aço no Chumbo, brasa na Obsidiana, vidro no Camaleão e no Fantasma).
+- Física com peso: a pedra jogada sobe mais (1,18×, a sombra no pano abre e clareia), cai em arco
+  com gravidade e, ao tocar o feltro, achata (scaleY 0,92 por 40 ms) e volta elástica. Bucha (2 px)
+  e pedra de 9+ pontos (1 px) fazem a corrente já jogada tremer, a onda saindo do pouso.
+- A sombra das pedras vem da lâmpada pendurada no alto: cai para baixo e para o lado de fora.
+- A mão: a pedra tocada sobe 16 px, cresce 8% e inclina um tico, com o tique seco de osso; com
+  mouse, a jogável sobe um pouco ao passar o ponteiro; quando uma sai, as outras deslizam
+  (`cubic-bezier(0.22, 1, 0.36, 1)`, por transform) até fechar o vão.
+- O número dos múltiplos de 5 surge grande (1,45), cai com gravidade, quica duas vezes e solta
+  faíscas no primeiro impacto; as moedas voam em parábola de verdade até o saldo, que pulsa.
+- Próximas etapas (pedido de 07/11): a mesa deitada 16:9 com o rival sentado na cabeceira em busto
+  novo, a roda de 4 com todos sentados em volta e o resto do jogo em paisagem.
+
 ### 2.7: duplas e tentos na roda
 
 - Roda de 4 com DUPLAS (MODO no saguão): quem senta de frente joga junto (a 1ª e a 3ª cadeira

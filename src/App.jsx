@@ -1006,12 +1006,12 @@ export default function App() {
   const handleSelectTile = useStableHandler((tile) => {
     if (pickMode) {
       if (!playableIds.has(tile.id)) return;
-      sound.playClick();
+      sound.playBoneTick(selectedTile?.id !== tile.id);
       setSelectedId(selectedTile?.id === tile.id ? null : tile.id);
       return;
     }
     if (!isPlayerTurn || !playableIds.has(tile.id)) return;
-    sound.playClick();
+    sound.playBoneTick(selectedTile?.id !== tile.id);
     if (selectedTile?.id === tile.id) {
       setSelectedId(null);
       return;
