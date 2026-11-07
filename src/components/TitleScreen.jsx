@@ -63,7 +63,7 @@ function waitingRival(save) {
 }
 
 /** A versão do jogo, no rodapé e nos créditos. */
-const GAME_VERSION = '2.11.1';
+const GAME_VERSION = '2.11.2';
 
 /** Chave das maletas e desafios liberados (muda quando a meta muda). */
 function metaSnapshot() {
@@ -278,7 +278,9 @@ export default function TitleScreen({
           <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} />
         </MenuModal>
       )}
-      {modal === 'book' && (
+      {/* deitado, o livro abre inteiro na mesa (com o FECHAR dele) */}
+      {modal === 'book' && landscape && <CollectionBook collection={collection} onClose={close} />}
+      {modal === 'book' && !landscape && (
         <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
           <CollectionBook collection={collection} />
         </MenuModal>

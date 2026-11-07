@@ -172,6 +172,24 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.11.2: o fim da run, o Livro e o Caderno de Fiado deitados
+
+- **Fim da run**: virou uma cena só, sem páginas. À esquerda, quem te nocauteou rindo atrás do
+  balcão (ou o último chefe nocauteado, com o carimbo de K.O. e o prêmio final) e as pedras de
+  TENTAR NOVAMENTE e MENU; no meio, a lousa da tentativa; à direita, a Conta do Boteco num quadro
+  de letras de bar, com as melhorias para comprar ali mesmo. Perdeu, a sala esfria; ganhou, o
+  dia raia pela janela.
+- **Livro de Boteco**: o álbum de figurinhas de couro aberto na mesa, com as abas em cima. Na
+  folha da esquerda as 12 figurinhas da página (as que faltam são só o quadrinho impresso com o
+  número); na da direita a ficha da escolhida, sempre aberta, com a figurinha grande, a
+  raridade, o efeito (ou a meta da conquista) e o carimbo COLADA / FALTA / TRANCADA. Os rivais
+  ganharam o jeito de jogar e a fala de chegada.
+- **Caderno de Fiado**: o caderno de espiral aberto, as duas folhas de uma vez e tudo sentado na
+  pauta: os números grandes a lápis da carreira, a sua pedra mais jogada, a análise de dominó e o
+  dossiê dos rivais com as fotos presas.
+- Na roda (2 a 4), o relógio da vez foi para o alto à esquerda, o dorme e as pontas para o alto
+  à direita, e as moedas saíram da tela (lá elas não compram nada).
+
 ### 2.11.1: a mesa online, o saguão, a pausa e o HUD da mesa
 
 - **Na mesa deitada**, a tábua COMPRAR mora no canto de baixo à direita; a PASSAR VEZ só aparece

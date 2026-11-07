@@ -1,9 +1,26 @@
-import { Children, isValidElement, useLayoutEffect, useRef, useState } from 'react';
+import { Children, isValidElement, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { sound } from '../engine/audioSynth.js';
 import { prefersReducedMotion } from './motion.js';
 import { PAGER_HEIGHT, packPages, pageScale, samePages, stackHeight } from './pagePack.js';
 import { ArrowGlyph } from './UiGlyphs.jsx';
+import { PageColumnsContext } from './pageColumns.js';
+
+const COL_GAP = 22;
+
+/**
+ * Versão 2.11: as páginas em `columns` colunas. Cada coluna enche até `room` como uma página de
+ * antes; uma página junta `columns` colunas seguidas. Se tudo cabe nas colunas, sem barra.
+ */
+function packColumns(heights, room, columns, opts) {
+  if (columns <= 1) return packPages(heights, room, opts);
+  const loose = packPages(heights, room, { ...opts, pagerHeight: 0 });
+  if (loose.length <= columns) return [loose.flat()];
+  const chunks = packPages(heights, room, opts);
+  const pages = [];
+  for (let i = 0; i < chunks.length; i += columns) pages.push(chunks.slice(i, i + columns).flat());
+  return pages;
+}
 
 const sameList = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 
@@ -21,7 +38,9 @@ const sameList = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]
  *   squeeze: escala mínima aceita para não quebrar a página por pouco (1 = nunca aperta)
  *   role:  papel da lista (ex.: 'list' quando os blocos são itens)
  */
-export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1, theme = 'card', className = '', label = 'Páginas', role, onTurn }) {
+export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1, theme = 'card', className = '', label = 'Páginas', role, onTurn, columns: ownColumns }) {
+  const contextColumns = useContext(PageColumnsContext);
+  const columns = Math.max(1, ownColumns ?? contextColumns);
   const blocks = Children.toArray(children).filter(isValidElement);
   const count = blocks.length;
   const viewRef = useRef(null);
@@ -40,7 +59,7 @@ export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1
       const keep = els.map((el) => Boolean(el?.querySelector(':scope > [data-keep]')));
       const natural = stackHeight(heights, gap);
       const room = view.clientHeight - slack;
-      const pages = packPages(heights, room, { gap, keep, squeeze });
+      const pages = packColumns(heights, room, columns, { gap, keep, squeeze });
       setFit((prev) =>
         prev.pages && prev.natural === natural && prev.room === room && sameList(prev.heights, heights) && samePages(prev.pages, pages) ? prev : { pages, natural, room, heights },
       );
@@ -50,7 +69,7 @@ export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1
     ro.observe(view);
     for (const el of blockRefs.current.slice(0, count)) if (el) ro.observe(el);
     return () => ro.disconnect();
-  }, [count, gap, slack, squeeze]);
+  }, [count, gap, slack, squeeze, columns]);
 
   const pages = fit.pages ?? [blocks.map((_, i) => i)];
   const current = Math.min(page, pages.length - 1);
@@ -58,7 +77,8 @@ export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1
   const multi = pages.length > 1;
   const room = multi ? fit.room - PAGER_HEIGHT : fit.room;
   // página que passou da caixa (bloco grande sozinho, ou apertada pelo `squeeze`) encolhe inteira
-  const scale = fit.pages ? pageScale(fit.heights, pages[current] ?? [], room, gap) : 1;
+  const scale = fit.pages && columns === 1 ? pageScale(fit.heights, pages[current] ?? [], room, gap) : 1;
+  const cols = columns > 1;
 
   const turn = (step) => {
     const next = Math.max(0, Math.min(pages.length - 1, current + step));
@@ -91,17 +111,28 @@ export default function PagedBlocks({ children, gap = 10, slack = 4, squeeze = 1
   };
 
   return (
-    <div ref={viewRef} className={`paged ${className}`} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => (swipe.current = null)}>
+    <div
+      ref={viewRef}
+      className={`paged ${cols ? 'is-cols' : ''} ${className}`}
+      style={cols ? { '--cols': columns, '--col-gap': `${COL_GAP}px`, '--block-gap': `${gap}px` } : undefined}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => (swipe.current = null)}
+    >
       <div
         ref={trackRef}
         className="paged-track"
         role={role}
-        style={{
-          height: fit.natural == null ? undefined : fit.natural + slack,
-          gap,
-          transform: scale < 1 ? `scale(${scale.toFixed(3)})` : undefined,
-          transformOrigin: scale < 1 ? 'top center' : undefined,
-        }}
+        style={
+          cols
+            ? { height: Math.max(0, room), columnCount: columns, columnGap: COL_GAP, columnFill: 'auto' }
+            : {
+                height: fit.natural == null ? undefined : fit.natural + slack,
+                gap,
+                transform: scale < 1 ? `scale(${scale.toFixed(3)})` : undefined,
+                transformOrigin: scale < 1 ? 'top center' : undefined,
+              }
+        }
       >
         {blocks.map((block, i) => {
           const on = shown.has(i);

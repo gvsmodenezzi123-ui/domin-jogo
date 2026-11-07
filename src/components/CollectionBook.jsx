@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELICS, RELIC_IDS } from '../data/relics.js';
@@ -9,12 +9,17 @@ import DominoTile from './DominoTile.jsx';
 import RelicIcon from './RelicIcon.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import { ArrowGlyph } from './UiGlyphs.jsx';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { BOOK_PAD, paintAlbumSpread } from './art/landBook.js';
 import { sound } from '../engine/audioSynth.js';
+import { rivalBlurb } from '../engine/rivalInfo.js';
 
 const TABS = [
-  { id: 'relics', label: 'TALISMÃS', ids: RELIC_IDS },
-  { id: 'tiles', label: 'PEDRAS', ids: ENHANCEMENT_IDS },
-  { id: 'rivals', label: 'RIVAIS', ids: RIVAL_IDS },
+  { id: 'relics', label: 'TALISMÃS', one: 'TALISMÃ', ids: RELIC_IDS },
+  { id: 'tiles', label: 'PEDRAS', one: 'PEDRA', ids: ENHANCEMENT_IDS },
+  { id: 'rivals', label: 'RIVAIS', one: 'RIVAL', ids: RIVAL_IDS },
 ];
 
 function Rarity({ id }) {
@@ -40,14 +45,20 @@ function progressText(achievementId, progress) {
 /** Versão 1.5: cada página do álbum tem 3 colunas × 4 prateleiras. */
 const PER_PAGE = 12;
 
+/** Os tamanhos dos desenhos: em pé (nicho e ficha) e deitado (figurinha e figurinha grande). */
+const SIZES = {
+  stand: { relic: [40, 48], tile: [15, 20], rival: [40, 52] },
+  land: { relic: [46, 96], tile: [14, 26], rival: [56, 112] },
+};
+
 /** O que o álbum mostra de cada item: ícone do nicho, ícone grande da ficha, nome, raridade e texto. */
-function entryOf(kind, id, { known, unlocked, achievement, progress }) {
+function entryOf(kind, id, { known, unlocked, achievement, progress }, sizes = SIZES.stand) {
   if (kind === 'relics') {
     const relic = RELICS[id];
     const locked = unlocked === false;
     return {
-      icon: <RelicIcon relic={relic} size={40} />,
-      big: <RelicIcon relic={relic} size={48} />,
+      icon: <RelicIcon relic={relic} size={sizes.relic[0]} />,
+      big: <RelicIcon relic={relic} size={sizes.relic[1]} />,
       name: locked ? 'BLOQUEADO' : known ? relic.name : '???',
       rarity: known && !locked ? relic.rarity : null,
       text: locked ? null : known ? relic.description : 'Ainda não apareceu na sua mesa.',
@@ -61,8 +72,8 @@ function entryOf(kind, id, { known, unlocked, achievement, progress }) {
   if (kind === 'tiles') {
     const enh = ENHANCEMENTS[id];
     return {
-      icon: <DominoTile values={[3, 5]} unit={15} depth={2} enhancement={known ? id : null} />,
-      big: <DominoTile values={[3, 5]} unit={20} depth={3} enhancement={known ? id : null} />,
+      icon: <DominoTile values={[3, 5]} unit={sizes.tile[0]} depth={2} enhancement={known ? id : null} />,
+      big: <DominoTile values={[3, 5]} unit={sizes.tile[1]} depth={3} enhancement={known ? id : null} />,
       name: known ? `Pedra de ${enh.name}` : '???',
       rarity: known ? enh.rarity : null,
       text: known ? enh.description : 'Ainda não apareceu na sua mesa.',
@@ -71,11 +82,13 @@ function entryOf(kind, id, { known, unlocked, achievement, progress }) {
   }
   const rival = RIVALS[id];
   return {
-    icon: <RivalAvatar rival={rival} mood="idle" size={40} smoke={false} bare={!known} />,
-    big: <RivalAvatar rival={rival} mood="idle" size={52} smoke={known} bare={!known} />,
+    icon: <RivalAvatar rival={rival} mood="idle" size={sizes.rival[0]} smoke={false} bare={!known} />,
+    big: <RivalAvatar rival={rival} mood="idle" size={sizes.rival[1]} smoke={known} bare={!known} />,
     name: known ? rival.name : '???',
     rarity: null,
     text: known ? `${rival.title} · ${REGIONS[rival.region - 1]?.name ?? ''}${rival.boss ? ' · CHEFE' : ''}` : 'Ainda não apareceu na sua mesa.',
+    blurb: known ? rivalBlurb(id) : null,
+    quote: known ? (rival.lines?.intro?.[0] ?? null) : null,
     known,
   };
 }
@@ -137,16 +150,8 @@ function DetailSheet({ entry, onClose }) {
   );
 }
 
-/**
- * COLEÇÕES — o Livro de Boteco: tudo que já passou pela sua mesa (na loja, na
- * hotbar do rival, no seu baralho). O que falta aparece como silhueta com "?".
- * Patch 0.7.0: os talismãs de conquista mostram a meta enquanto estão trancados
- * e, liberados, aparecem inteiros com o selo DESBLOQUEADO.
- * Versão 1.5: álbum de figurinhas. Cada página é uma prateleira de 3 × 4 nichos; tocar num
- * nicho sobe a ficha do item no rodapé (nome, raridade, efeito ou a meta). As setas, ou
- * arrastar para o lado, viram a página. Sem scroll.
- */
-export default function CollectionBook({ collection }) {
+/** O estado do álbum (aba, página, item tocado, conquistas), o mesmo em pé e deitado. */
+function useAlbum(collection, sizes) {
   const [tab, setTab] = useState('relics');
   const [page, setPage] = useState(0);
   const [picked, setPicked] = useState(null);
@@ -166,7 +171,7 @@ export default function CollectionBook({ collection }) {
   const shownPage = Math.min(page, pages - 1);
   const ids = current.ids.slice(shownPage * PER_PAGE, shownPage * PER_PAGE + PER_PAGE);
   const entry = (id) =>
-    entryOf(tab, id, { known: isKnown(id), unlocked: tab === 'relics' ? unlockedRelic(id) : null, achievement: ACHIEVEMENT_BY_RELIC[id], progress: achievements.progress });
+    entryOf(tab, id, { known: isKnown(id), unlocked: tab === 'relics' ? unlockedRelic(id) : null, achievement: ACHIEVEMENT_BY_RELIC[id], progress: achievements.progress }, sizes);
   const turn = (step) => {
     const next = Math.max(0, Math.min(pages - 1, shownPage + step));
     if (next === shownPage) return;
@@ -178,6 +183,32 @@ export default function CollectionBook({ collection }) {
     sound.playTileSlam(false);
     setPicked((cur) => (cur === id ? null : id));
   };
+  const openTab = (id) => {
+    setTab(id);
+    setPage(0);
+    setPicked(null);
+  };
+  return { tab, openTab, current, found, pages, shownPage, ids, entry, turn, pick, picked, setPicked, swipe, setSwipe, achievements };
+}
+
+/**
+ * COLEÇÕES — o Livro de Boteco: tudo que já passou pela sua mesa (na loja, na
+ * hotbar do rival, no seu baralho). O que falta aparece como silhueta com "?".
+ * Patch 0.7.0: os talismãs de conquista mostram a meta enquanto estão trancados
+ * e, liberados, aparecem inteiros com o selo DESBLOQUEADO.
+ * Versão 1.5: álbum de figurinhas. Cada página é uma prateleira de 3 × 4 nichos; tocar num
+ * nicho sobe a ficha do item no rodapé (nome, raridade, efeito ou a meta). As setas, ou
+ * arrastar para o lado, viram a página. Sem scroll.
+ * Versão 2.11: deitado, o livro abre inteiro na mesa (AlbumLand, com o próprio FECHAR).
+ */
+export default function CollectionBook({ collection, onClose }) {
+  const landscape = useLandscape();
+  if (landscape && onClose) return <AlbumLand collection={collection} onClose={onClose} />;
+  return <AlbumStand collection={collection} />;
+}
+
+function AlbumStand({ collection }) {
+  const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, pick, picked, setPicked, swipe, setSwipe, achievements } = useAlbum(collection, SIZES.stand);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* abas de fita marcadora, como num álbum encadernado */}
@@ -190,11 +221,7 @@ export default function CollectionBook({ collection }) {
             aria-selected={tab === t.id}
             className="book-ribbon font-pixel"
             data-tab={t.id}
-            onClick={() => {
-              setTab(t.id);
-              setPage(0);
-              setPicked(null);
-            }}
+            onClick={() => openTab(t.id)}
           >
             {t.label}
           </button>
@@ -242,5 +269,164 @@ export default function CollectionBook({ collection }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Versão 2.11: uma figurinha da página (deitado). A que falta é só o quadrinho impresso, com o número. */
+function Sticker({ entry, number, tilt, selected, onPick }) {
+  const tier = entry.rarity ? getRarity(entry.rarity) : null;
+  const state = entry.known ? 'is-known' : entry.locked ? 'is-locked' : 'is-missing';
+  return (
+    <button
+      type="button"
+      role="listitem"
+      className={`lb-sticker ${state} ${selected ? 'is-selected' : ''} ${tier?.id === 'mitico' ? 'is-mythic' : ''}`}
+      style={{ '--tilt': `${tilt}deg`, ...(tier ? { '--rarity': tier.color } : {}) }}
+      onClick={onPick}
+      aria-pressed={selected}
+      aria-label={entry.known ? entry.name : entry.locked ? `Bloqueado: ${entry.goal}` : 'Ainda não descoberto'}
+    >
+      <span className="lb-sticker-num" aria-hidden="true">
+        {number}
+      </span>
+      <span className={`lb-sticker-art ${entry.known ? '' : 'map-silhouette'}`} aria-hidden="true">
+        {entry.icon}
+      </span>
+      {!entry.known && (
+        <span className="lb-sticker-q" aria-hidden="true">
+          ?
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** A ficha da página da direita: a figurinha grande, o nome, a raridade e o que ela faz (ou a meta). */
+function Ficha({ entry, kind, label }) {
+  const tier = entry.rarity ? getRarity(entry.rarity) : null;
+  return (
+    <div className="lb-ficha" aria-live="polite">
+      <p className="lb-kicker">{label}</p>
+      <div className="lb-ficha-top">
+        <div className={`lb-big ${entry.known ? 'is-known' : 'is-missing'} ${tier?.id === 'mitico' ? 'is-mythic' : ''}`} style={tier ? { '--rarity': tier.color } : undefined}>
+          <span className={`lb-big-art ${entry.known ? '' : 'map-silhouette'}`} aria-hidden="true">
+            {entry.big}
+          </span>
+          {!entry.known && (
+            <span className="lb-big-q" aria-hidden="true">
+              ?
+            </span>
+          )}
+        </div>
+        <div className="lb-ficha-id">
+          <h3 className="lb-name">{entry.name.toUpperCase()}</h3>
+          {entry.rarity && <Rarity id={entry.rarity} />}
+          {kind === 'rivals' && entry.known && <p className="lb-sub">{entry.text}</p>}
+          {entry.badge && <p className="lb-badge">✓ CONQUISTA · {entry.badge.toUpperCase()}</p>}
+        </div>
+      </div>
+      <div className="lb-ficha-body">
+        {entry.locked ? (
+          <>
+            <p className="lb-how">COMO DESBLOQUEAR</p>
+            <p className="lb-text">{entry.goal}</p>
+            {entry.extra && <p className="lb-progress">{entry.extra}</p>}
+          </>
+        ) : kind === 'rivals' && entry.known ? (
+          <>
+            {entry.blurb && <p className="lb-text">{entry.blurb}</p>}
+            {entry.quote && <p className="lb-quote">“{entry.quote}”</p>}
+          </>
+        ) : (
+          <p className={`lb-text ${entry.known ? '' : 'is-missing'}`}>{entry.text}</p>
+        )}
+      </div>
+      <span aria-hidden="true" className={`lb-stamp ${entry.known ? 'is-known' : entry.locked ? 'is-locked' : 'is-missing'}`}>
+        {entry.known ? 'COLADA' : entry.locked ? 'TRANCADA' : 'FALTA'}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Versão 2.11: o Livro de Boteco deitado. O álbum de couro aberto na mesa: as abas de couro em
+ * cima; na página da esquerda as 12 figurinhas da folha (4 × 3), com as setas (ou arrastar) para
+ * virar; na da direita, sempre aberta, a ficha da figurinha tocada (a primeira da folha, de saída).
+ */
+function AlbumLand({ collection, onClose }) {
+  const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, picked, setPicked, swipe, setSwipe, achievements } = useAlbum(collection, SIZES.land);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const shown = picked && ids.includes(picked) ? picked : ids[0];
+  const numberOf = (id) => String(current.ids.indexOf(id) + 1).padStart(2, '0');
+  const choose = (id) => {
+    if (id === shown) return;
+    sound.playTileSlam(false);
+    setPicked(id);
+  };
+  return (
+    <LandStage paint={() => paintAlbumSpread()} cacheKey="land-livro" pad={BOOK_PAD} bleed="#0d0805" className="book-land land-fade-in" label="Livro de Boteco" role="dialog">
+      <div className="lb-tabs" role="tablist" aria-label="Seções do livro">
+        {TABS.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className="lb-tab" data-tab={t.id} onClick={() => tab !== t.id && openTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <DominoKey label="FECHAR" pips={0} w={156} h={40} className="lb-close" onClick={onClose} />
+
+      <section
+        className="lb-left"
+        aria-labelledby="book-title"
+        onPointerDown={(e) => setSwipe({ x: e.clientX, id: e.pointerId })}
+        onPointerUp={(e) => {
+          if (!swipe || e.pointerId !== swipe.id) return;
+          const dx = e.clientX - swipe.x;
+          setSwipe(null);
+          if (Math.abs(dx) > 50) turn(dx < 0 ? 1 : -1);
+        }}
+        onPointerCancel={() => setSwipe(null)}
+      >
+        <header className="lb-head">
+          <p className="lb-book">LIVRO DE BOTECO</p>
+          <h2 id="book-title" className="lb-title">
+            {current.label}
+          </h2>
+          <p className="lb-count">
+            {found}/{current.ids.length} DESCOBERTOS
+            {tab === 'relics' && (
+              <span className="lb-count-gold">
+                {' '}
+                · CONQUISTAS {achievements.done.size}/{ACHIEVEMENT_IDS.length}
+              </span>
+            )}
+          </p>
+        </header>
+        <div key={`${tab}-${shownPage}`} className="lb-grid" role="list" aria-label={`${current.label}: página ${shownPage + 1} de ${pages}`}>
+          {ids.map((id, i) => (
+            <Sticker key={id} entry={entry(id)} number={numberOf(id)} tilt={((i * 7 + shownPage * 3) % 5) - 2} selected={shown === id} onPick={() => choose(id)} />
+          ))}
+          {Array.from({ length: PER_PAGE - ids.length }, (_, i) => (
+            <span key={`vazio-${i}`} className="lb-sticker is-blank" aria-hidden="true" />
+          ))}
+        </div>
+        <div className="lb-pager">
+          <button type="button" className="lb-turn" onClick={() => turn(-1)} disabled={shownPage === 0} aria-label="Página anterior">
+            <ArrowGlyph dir="prev" size={12} />
+          </button>
+          <span className="lb-folio">
+            FOLHA {shownPage + 1} DE {pages}
+          </span>
+          <button type="button" className="lb-turn" onClick={() => turn(1)} disabled={shownPage === pages - 1} aria-label="Próxima página">
+            <ArrowGlyph dir="next" size={12} />
+          </button>
+        </div>
+      </section>
+
+      <section className="lb-right">{shown && <Ficha entry={entry(shown)} kind={tab} label={`${current.one} Nº ${numberOf(shown)}`} />}</section>
+    </LandStage>
   );
 }

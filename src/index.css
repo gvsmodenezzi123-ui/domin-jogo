@@ -18495,24 +18495,27 @@
   bottom: auto;
 }
 
-/* a roda deitada: o dorme, a soma e o seu dinheiro descem para a lateral direita (em cima,
-   as cadeiras), o relógio da vez fica na bancada da esquerda e o grito no meio do tampo */
+/* a roda deitada: o dorme e a soma no canto de cima à direita, o relógio da vez no canto de
+   cima à esquerda (entre eles, as cadeiras) e o grito no meio do tampo */
 .table-v24.is-landscape .tableboard-viewport.is-landscape .boneyard-pile {
-  top: calc(var(--rail-px) + 6px);
+  top: max(env(safe-area-inset-top), 8px);
 }
 
+/* versão 2.11.2: a soma das pontas logo embaixo do dorme, no canto de cima à direita */
 .table-v24.is-landscape .tableboard-viewport.is-landscape .ends-sum {
-  top: calc(var(--rail-px) + 76px);
+  top: calc(max(env(safe-area-inset-top), 8px) + 70px);
   right: max(env(safe-area-inset-right), 10px);
 }
 
+/* na roda o dinheiro não aparece (lá ele não compra nada que importe) */
 .table-v24.is-landscape .player-zone.is-landscape .land-coins {
-  top: calc(39% + 130px);
+  display: none;
 }
 
+/* o relógio da vez no canto de cima à esquerda */
 .table-v24.is-landscape .table-clock {
   left: max(env(safe-area-inset-left), 10px);
-  top: calc(39% + 8px);
+  top: max(env(safe-area-inset-top), 8px);
   translate: 0 0;
 }
 
@@ -21659,4 +21662,1091 @@
   min-height: 0;
   overflow: hidden;
   font-size: 16px;
+}
+
+/* --- versão 2.11: as páginas em colunas e as janelas largas deitadas ---------------------- */
+.paged.is-cols .paged-track {
+  display: block;
+}
+
+.paged.is-cols .paged-block {
+  break-inside: avoid;
+  margin-bottom: var(--block-gap, 10px);
+}
+
+.paged.is-cols .paged-block.is-off {
+  right: auto;
+  width: calc((100% - (var(--cols) - 1) * var(--col-gap)) / var(--cols));
+}
+
+.mml-frame {
+  width: min(94vw, 960px);
+  height: min(88%, 440px);
+  padding: 16px 22px 18px;
+}
+
+.mml-board {
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 30%, rgba(80, 96, 88, 0.3), transparent),
+    radial-gradient(ellipse 40% 40% at 75% 70%, rgba(80, 96, 88, 0.2), transparent),
+    #222b26;
+  border: 10px solid #6a3e1e;
+  box-shadow:
+    inset 0 0 0 2px #2a1608,
+    inset 0 0 30px rgba(0, 0, 0, 0.55),
+    0 0 0 2px #1a0c04,
+    0 14px 30px rgba(0, 0, 0, 0.7);
+}
+
+.mml-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mml-title {
+  font-size: 15px;
+  line-height: 1.3;
+  color: #f4ecd2;
+  text-shadow: 0 0 8px rgba(244, 236, 210, 0.25);
+}
+
+.tl-key.mml-close .tl-key-label {
+  font-size: 12px;
+}
+
+.mml-body {
+  margin-top: 12px;
+}
+
+/* ---------- Versão 2.11: o Livro de Boteco deitado (álbum de figurinhas aberto na mesa) ---------- */
+.land-stage-wrap.book-land,
+.land-stage-wrap.ledger-land {
+  z-index: 76;
+}
+
+.land-fade-in {
+  animation: landFadeIn 180ms ease-out both;
+}
+
+@keyframes landFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+.lb-tabs {
+  position: absolute;
+  left: 96px;
+  top: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 46px;
+}
+
+.lb-tab {
+  height: 36px;
+  padding: 0 16px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(244, 226, 190, 0.72);
+  background: linear-gradient(180deg, var(--ribbon, #6a3a1e), color-mix(in srgb, var(--ribbon, #6a3a1e) 55%, #000));
+  border: 2px solid #140a04;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 220, 170, 0.2),
+    inset 0 -6px 8px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 2px 0 #000;
+  transition: height 140ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lb-tab[data-tab='relics'] {
+  --ribbon: #8e2c1e;
+}
+
+.lb-tab[data-tab='tiles'] {
+  --ribbon: #2c6038;
+}
+
+.lb-tab[data-tab='rivals'] {
+  --ribbon: #2c4272;
+}
+
+.lb-tab[aria-selected='true'] {
+  height: 46px;
+  color: #fff4d6;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 220, 170, 0.35),
+    0 0 12px rgba(255, 200, 120, 0.25);
+}
+
+.lb-close,
+.fl-close {
+  position: absolute;
+  right: 18px;
+  top: 0;
+}
+
+.tl-key.lb-close .tl-key-label,
+.tl-key.fl-close .tl-key-label {
+  font-size: 13px;
+}
+
+.lb-left {
+  position: absolute;
+  left: 96px;
+  top: 58px;
+  width: 380px;
+  height: 356px;
+  display: flex;
+  flex-direction: column;
+  touch-action: pan-y;
+}
+
+.lb-head {
+  height: 60px;
+}
+
+.lb-book {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  color: #6a4a22;
+}
+
+.lb-title {
+  margin-top: 5px;
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  line-height: 1;
+  color: #3a1a0a;
+  text-shadow: 0 1px 0 rgba(255, 250, 230, 0.6);
+}
+
+.lb-count {
+  margin-top: 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #3e2a14;
+}
+
+.lb-count-gold {
+  color: #8a3e06;
+}
+
+.lb-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 80px);
+  grid-auto-rows: 84px;
+  column-gap: 20px;
+  row-gap: 8px;
+  animation: lbPage 220ms ease-out;
+}
+
+@keyframes lbPage {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
+.lb-sticker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 84px;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 3px;
+  transition: translate 120ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* o quadrinho impresso no papel (a figurinha que falta) */
+.lb-sticker.is-missing,
+.lb-sticker.is-locked,
+.lb-sticker.is-blank {
+  border: 2px dashed rgba(122, 94, 56, 0.55);
+  background: rgba(150, 118, 70, 0.1);
+}
+
+.lb-sticker.is-blank {
+  opacity: 0.45;
+}
+
+.lb-sticker.is-locked {
+  border-color: rgba(176, 100, 20, 0.7);
+  background: rgba(214, 150, 60, 0.12);
+}
+
+/* a figurinha colada: borda branca, a cor da raridade e o fundo escuro do retrato */
+.lb-sticker.is-known {
+  rotate: var(--tilt, 0deg);
+  background:
+    radial-gradient(ellipse 70% 58% at 50% 44%, color-mix(in srgb, var(--rarity, #8a6a3e) 38%, #24160a), #140c06 78%);
+  border: 3px solid var(--rarity, #8a6a3e);
+  outline: 3px solid #fbf5e4;
+  box-shadow:
+    0 0 0 4px rgba(60, 40, 18, 0.18),
+    2px 5px 0 rgba(60, 40, 18, 0.3);
+}
+
+.lb-sticker.is-known.is-mythic {
+  box-shadow:
+    0 0 0 4px rgba(60, 40, 18, 0.18),
+    2px 5px 0 rgba(60, 40, 18, 0.3),
+    0 0 14px rgba(255, 190, 70, 0.55);
+}
+
+.lb-sticker-num {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: #5a3e1c;
+}
+
+.lb-sticker.is-known .lb-sticker-num {
+  left: auto;
+  right: -3px;
+  top: auto;
+  bottom: -3px;
+  padding: 2px 3px 1px;
+  color: #3a2410;
+  background: #fbf5e4;
+}
+
+.lb-sticker-art {
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.55));
+}
+
+.lb-sticker:not(.is-known) .lb-sticker-art {
+  opacity: 0.16;
+  filter: brightness(0);
+}
+
+.lb-sticker-q {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-pixel);
+  font-size: 22px;
+  color: rgba(106, 76, 40, 0.6);
+}
+
+.lb-sticker.is-locked .lb-sticker-q {
+  color: rgba(176, 96, 16, 0.85);
+}
+
+/* a escolhida ganha o círculo de lápis vermelho */
+.lb-sticker.is-selected {
+  translate: 0 -3px;
+}
+
+.lb-sticker.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: -9px -8px;
+  border: 2px solid rgba(196, 52, 30, 0.85);
+  border-radius: 48% 52% 46% 54% / 52% 46% 54% 48%;
+  rotate: -5deg;
+  pointer-events: none;
+}
+
+.lb-sticker:active:not(.is-blank) {
+  scale: 0.95;
+}
+
+.lb-pager {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  height: 28px;
+}
+
+.lb-turn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 28px;
+  color: #2a1206;
+  background: rgba(130, 96, 52, 0.22);
+  border: 2px solid rgba(80, 52, 24, 0.75);
+  border-radius: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lb-turn:disabled {
+  opacity: 0.32;
+}
+
+.lb-folio {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #3e2a14;
+}
+
+.lb-right {
+  position: absolute;
+  left: 532px;
+  top: 64px;
+  width: 360px;
+  height: 344px;
+}
+
+.lb-ficha {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.lb-kicker {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: #6a4a22;
+}
+
+.lb-ficha-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.lb-big {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 144px;
+  height: 152px;
+  border-radius: 4px;
+}
+
+.lb-big.is-known {
+  rotate: -2deg;
+  background:
+    radial-gradient(ellipse 70% 58% at 50% 44%, color-mix(in srgb, var(--rarity, #8a6a3e) 40%, #24160a), #140c06 78%);
+  border: 4px solid var(--rarity, #8a6a3e);
+  outline: 5px solid #fbf5e4;
+  box-shadow:
+    0 0 0 6px rgba(60, 40, 18, 0.16),
+    3px 8px 0 rgba(60, 40, 18, 0.28);
+}
+
+.lb-big.is-known.is-mythic {
+  box-shadow:
+    0 0 0 6px rgba(60, 40, 18, 0.16),
+    3px 8px 0 rgba(60, 40, 18, 0.28),
+    0 0 22px rgba(255, 190, 70, 0.6);
+}
+
+.lb-big.is-missing {
+  border: 3px dashed rgba(122, 94, 56, 0.55);
+  background: rgba(150, 118, 70, 0.1);
+}
+
+.lb-big-art {
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.55));
+}
+
+.lb-big.is-missing .lb-big-art {
+  opacity: 0.16;
+  filter: brightness(0);
+}
+
+.lb-big-q {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-pixel);
+  font-size: 40px;
+  color: rgba(106, 76, 40, 0.6);
+}
+
+.lb-ficha-id {
+  flex: 1;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.lb-name {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #2a1608;
+  overflow-wrap: break-word;
+}
+
+.lb-ficha-id .rarity-badge {
+  margin-top: 8px;
+  padding: 3px 6px 2px;
+  font-size: 8px;
+}
+
+.lb-sub {
+  margin-top: 8px;
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1;
+  color: #5a4226;
+}
+
+.lb-badge {
+  margin-top: 10px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.6;
+  color: #2e6a2a;
+}
+
+.lb-ficha-body {
+  margin-top: 22px;
+  padding-top: 12px;
+  border-top: 2px solid rgba(138, 106, 62, 0.35);
+}
+
+.lb-text {
+  font-family: var(--font-term);
+  font-size: 23px;
+  line-height: 1.02;
+  color: #2a1a0c;
+}
+
+.lb-text.is-missing {
+  color: #8a6a3e;
+}
+
+.lb-how {
+  margin-bottom: 6px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #a0400e;
+}
+
+.lb-progress {
+  margin-top: 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.5;
+  color: #a0560c;
+}
+
+.lb-quote {
+  margin-top: 10px;
+  font-family: var(--font-term);
+  font-size: 21px;
+  line-height: 1;
+  font-style: italic;
+  color: #5a3e1e;
+}
+
+/* ---------- Versão 2.11: o Caderno de Fiado deitado (caderno de espiral aberto, tudo na pauta) ---------- */
+.fl-page {
+  position: absolute;
+  top: 55px;
+  width: 344px;
+  color: #2a2420;
+}
+
+.fl-page.is-left {
+  left: 132px;
+}
+
+.fl-page.is-right {
+  left: 552px;
+  height: 357px;
+}
+
+.fl-title {
+  height: 18px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  line-height: 18px;
+  color: #2a1c10;
+}
+
+.fl-sub {
+  height: 18px;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 18px;
+  color: #4a3a24;
+}
+
+.fl-section {
+  height: 18px;
+  margin-top: 18px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 18px;
+  letter-spacing: 0.05em;
+  color: #9a2418;
+}
+
+.fl-page > .fl-section:first-child {
+  margin-top: 0;
+}
+
+.fl-tallies {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 72px;
+}
+
+.fl-tally {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fl-tally-num {
+  height: 54px;
+  font-family: var(--font-term);
+  font-size: 56px;
+  line-height: 58px;
+  color: #26303e;
+}
+
+.fl-tally.is-win .fl-tally-num {
+  color: #2a5e2a;
+}
+
+.fl-tally.is-rate .fl-tally-num {
+  color: #a8342a;
+}
+
+.fl-tally-label {
+  height: 18px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 18px;
+  color: #3e2e1a;
+}
+
+.fl-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 18px;
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 18px;
+}
+
+.fl-label {
+  flex: none;
+  color: #3a3028;
+}
+
+.fl-dots {
+  flex: 1;
+  min-width: 8px;
+  border-bottom: 2px dotted rgba(70, 58, 44, 0.45);
+  translate: 0 -4px;
+}
+
+.fl-value {
+  flex: none;
+  color: #1e3a6a;
+}
+
+.fl-line.is-stacked {
+  display: block;
+  height: 36px;
+}
+
+.fl-line.is-stacked .fl-label,
+.fl-line.is-stacked .fl-value {
+  display: block;
+  height: 18px;
+}
+
+.fl-line.is-stacked .fl-value {
+  padding-left: 14px;
+}
+
+.fl-caps {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8a5a0c;
+}
+
+.fl-kicker {
+  height: 18px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 18px;
+  color: #3e2e1a;
+}
+
+.fl-rivals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  height: 90px;
+}
+
+.fl-rival-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 72px;
+}
+
+.fl-rival-photo {
+  flex: none;
+  padding: 3px 3px 8px;
+  background: #f6eedb;
+  box-shadow: 1px 3px 0 rgba(40, 28, 16, 0.3);
+  rotate: -4deg;
+}
+
+.fl-rival:nth-child(2) .fl-rival-photo {
+  rotate: 3deg;
+}
+
+.fl-rival-name {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.5;
+  color: #2a1c10;
+}
+
+.fl-rival-count {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #a8342a;
+}
+
+.fl-empty {
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 18px;
+  color: #4e3e28;
+}
+
+.fl-empty.is-tall {
+  height: 54px;
+}
+
+.fl-favorite {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+}
+
+.fl-favorite-tile {
+  flex: none;
+  filter: drop-shadow(1px 3px 0 rgba(40, 28, 16, 0.35));
+}
+
+.fl-favorite-name {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.6;
+  color: #2a1c10;
+}
+
+.fl-favorite-count {
+  display: block;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1;
+  color: #1e3a6a;
+}
+
+/* o rabisco a lápis do canto: os pauzinhos de contagem e uma pedrinha */
+.fl-doodle {
+  position: absolute;
+  right: 22px;
+  top: 222px;
+  width: 132px;
+  height: 56px;
+  opacity: 0.5;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgba(60, 54, 48, 0.85) 0 2px, transparent 2px 9px) 0 8px / 36px 34px no-repeat,
+    linear-gradient(rgba(60, 54, 48, 0.85), rgba(60, 54, 48, 0.85)) 52px 8px / 2px 34px no-repeat,
+    repeating-linear-gradient(90deg, rgba(60, 54, 48, 0.85) 0 2px, transparent 2px 9px) 62px 8px / 18px 34px no-repeat;
+}
+
+.fl-doodle::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 22px;
+  width: 50px;
+  height: 2px;
+  background: rgba(60, 54, 48, 0.85);
+  rotate: -28deg;
+}
+
+.fl-doodle::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 0;
+  width: 22px;
+  height: 46px;
+  border: 2px solid rgba(60, 54, 48, 0.85);
+  border-radius: 4px;
+  rotate: 12deg;
+  background:
+    linear-gradient(rgba(60, 54, 48, 0.85), rgba(60, 54, 48, 0.85)) 50% 50% / 70% 2px no-repeat,
+    radial-gradient(circle, rgba(60, 54, 48, 0.9) 0 2px, transparent 2.5px) 50% 22% / 8px 8px no-repeat,
+    radial-gradient(circle, rgba(60, 54, 48, 0.9) 0 2px, transparent 2.5px) 30% 76% / 8px 8px no-repeat,
+    radial-gradient(circle, rgba(60, 54, 48, 0.9) 0 2px, transparent 2.5px) 70% 88% / 8px 8px no-repeat;
+}
+
+.fl-foot {
+  position: absolute;
+  left: 0;
+  top: 288px;
+  width: 100%;
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 18px;
+  color: #4e3e28;
+}
+
+/* ---------- Versão 2.11: o fim da run deitado (rival, lousa e quadro da conta lado a lado) ---------- */
+.land-stage-wrap.run-end-land {
+  z-index: 80;
+}
+
+/* a mesa já segurou a hora da batida: a cena entra logo (como o placar da rodada) */
+.run-end-land.animate-overlay-in {
+  animation-delay: 90ms;
+}
+
+.rel-bust {
+  position: absolute;
+  left: 40px;
+  width: 220px;
+  height: 190px;
+  pointer-events: none;
+}
+
+.run-end-land.is-lost .rel-bust {
+  top: 112px;
+}
+
+.run-end-land.is-won .rel-bust {
+  top: 124px;
+}
+
+.rel-bust .seat-breath,
+.rel-ko {
+  position: absolute;
+  inset: 0;
+}
+
+.rel-ko {
+  rotate: -7deg;
+  transform-origin: 50% 100%;
+}
+
+.rel-bust .seat-bust-px {
+  filter: brightness(0.9) saturate(0.95);
+}
+
+.rel-stamp {
+  position: absolute;
+  right: -6px;
+  top: 14px;
+  padding: 5px 7px 3px;
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  color: #ff5a46;
+  border: 3px solid #ff5a46;
+  rotate: 14deg;
+  text-shadow: 0 2px 0 #000;
+  box-shadow: 0 2px 0 #000;
+  animation: relStamp 420ms cubic-bezier(0.2, 1.6, 0.4, 1) 300ms both;
+}
+
+@keyframes relStamp {
+  from {
+    opacity: 0;
+    scale: 2.2;
+  }
+}
+
+.rel-front {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.rel-head {
+  position: absolute;
+  left: 24px;
+  top: 14px;
+  width: 276px;
+}
+
+.rel-kicker {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.6;
+  letter-spacing: 0.06em;
+  color: #b8a888;
+  text-shadow: 0 2px 0 #000;
+}
+
+.rel-title {
+  margin-top: 6px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #ffd98a;
+  text-shadow:
+    0 2px 0 #000,
+    0 0 12px rgba(255, 190, 90, 0.35);
+}
+
+.rel-how {
+  margin-top: 6px;
+  font-family: var(--font-term);
+  font-size: 21px;
+  line-height: 1;
+  color: #efe4c8;
+  text-shadow: 0 2px 0 #000;
+}
+
+.rel-challenge {
+  margin-top: 6px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.5;
+  color: #ffc46a;
+  text-shadow: 0 2px 0 #000;
+}
+
+.rel-keys {
+  position: absolute;
+  left: 24px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 272px;
+}
+
+.tl-key.rel-retry .tl-key-label {
+  font-size: 12px;
+}
+
+.tl-key.rel-menu .tl-key-label {
+  font-size: 13px;
+}
+
+.rel-prize {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding: 7px 10px 6px;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #9fe08a;
+  background: rgba(12, 8, 4, 0.8);
+  border: 2px solid #c9962e;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 224, 138, 0.25),
+    0 3px 0 #000;
+}
+
+.rel-prize .chalk-coins {
+  font-size: 15px;
+}
+
+/* a lousa: a moldura e a canaleta são as da pintura */
+.rel-slate {
+  position: absolute;
+  left: 334px;
+  top: 40px;
+  width: 304px;
+  height: 366px;
+}
+
+.rel-slate .run-slate {
+  height: 100%;
+  margin: 0;
+}
+
+.rel-slate .run-slate-board {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.rel-slate .run-slate-tray {
+  display: none;
+}
+
+.rel-slate .slate-doodle-tile {
+  right: 4px;
+  bottom: 56px;
+}
+
+.rel-slate .slate-doodle-tally {
+  right: 2px;
+  top: 2px;
+}
+
+.rel-slate .slate-kicker {
+  font-size: 8px;
+}
+
+.rel-slate .slate-title {
+  font-size: 13px;
+}
+
+.rel-slate .slate-grid {
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.rel-slate .slate-label {
+  font-size: 7px;
+}
+
+.rel-slate .slate-value {
+  font-size: 22px;
+}
+
+.rel-slate .slate-sheet {
+  padding-right: 0;
+  font-size: 17px;
+}
+
+.rel-slate .slate-copy {
+  width: 100%;
+  margin-top: auto;
+  font-size: 9px;
+}
+
+/* o quadro de letras da conta: letra branca de plástico no feltro preto */
+.rel-tab {
+  position: absolute;
+  left: 700px;
+  top: 46px;
+  width: 264px;
+  height: 360px;
+}
+
+.rel-tab .run-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.rel-tab .run-tab-board.chalkboard {
+  flex: 1;
+  margin-top: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.rel-tab .run-tab-board.chalkboard::before,
+.rel-tab .run-tab-board.chalkboard::after {
+  display: none;
+}
+
+.rel-tab .chalk-text {
+  color: #f1ede2;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 0 #000;
+}
+
+.rel-tab .chalk-dim {
+  color: rgba(241, 237, 226, 0.62);
+}
+
+.rel-tab h3.chalk-text {
+  font-size: 12px;
+}
+
+.rel-tab .chalk-line {
+  height: 2px;
+  background: rgba(241, 237, 226, 0.22);
+}
+
+.rel-tab .run-tab-item {
+  padding: 6px 0 8px;
+  border-bottom: 2px solid rgba(241, 237, 226, 0.08);
+}
+
+.rel-tab .run-tab-item .font-pixel {
+  font-size: 9px;
+}
+
+.rel-tab .run-tab-item .font-term {
+  margin-top: 2px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.rel-tab .run-tab-gain {
+  font-size: 15px;
+}
+
+/* o carimbo da ficha: COLADA, FALTA ou TRANCADA */
+.lb-stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  padding: 6px 10px 4px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink, #2e6a2a);
+  border: 3px double var(--ink, #2e6a2a);
+  border-radius: 4px;
+  rotate: -10deg;
+  opacity: 0.72;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.lb-stamp.is-missing {
+  --ink: #a8342a;
+}
+
+.lb-stamp.is-locked {
+  --ink: #9a560c;
 }

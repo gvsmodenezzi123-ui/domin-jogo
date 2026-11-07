@@ -14,6 +14,8 @@ import RivalAvatar from './RivalAvatar.jsx';
 import GameOverModal from './GameOverModal.jsx';
 import VictoryModal from './VictoryModal.jsx';
 import MatchTally from './MatchTally.jsx';
+import RunEndLand from './RunEndLand.jsx';
+import { useLandscape } from './useLandscape.js';
 import { sound } from '../engine/audioSynth.js';
 
 /** Versão 1.5: intervalo entre um coração trincando e o seguinte (ms). */
@@ -173,6 +175,7 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   const where = nodeLabel(state);
 
   const prizeShown = useCountUp(runWon ? (result?.prize ?? 0) : 0, 1000);
+  const landscape = useLandscape();
   if (!result) return null;
   const runOver = phase === 'gameOver';
   const playerWon = result.winner === 'player';
@@ -181,6 +184,39 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
   const damage = result.damage || 0;
   const boosted = result.baseDamage && damage > result.baseDamage;
   const name = rival.name.toUpperCase();
+  const wonTitle = secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO';
+  const wonLine = `${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : (FINAL_LINES[rival.id] ?? FINAL_LINES.comendador)}`;
+
+  // versão 2.11, deitado: o fim da run é uma cena inteira (rival, lousa e conta lado a lado)
+  if (landscape && runOver) {
+    return (
+      <RunEndLand
+        state={state}
+        rival={rival}
+        won={false}
+        kicker={`FIM DA RUN${state.challenge ? ` · DESAFIO ${challengeOf(state.challenge)?.name.toUpperCase()}` : ''}`}
+        howItEnded={`${KIND_TITLE[result.kind]} ${subtitle}`}
+        onRetry={onRestart}
+        onMenu={onMenu}
+      />
+    );
+  }
+  if (landscape && runWon) {
+    return (
+      <RunEndLand
+        state={state}
+        rival={rival}
+        won
+        kicker={`${modeBadge(state.mode)}${state.stats.matchesWon} MESAS · ${REGIONS.length} REGIÕES`}
+        title={wonTitle}
+        howItEnded={wonLine}
+        challengeLine={state.challenge ? `DESAFIO CONCLUÍDO: ${challengeOf(state.challenge)?.name.toUpperCase()}` : null}
+        prizeShown={prizeShown}
+        onRetry={onRestart}
+        onMenu={onMenu}
+      />
+    );
+  }
 
   return (
     <div
@@ -214,8 +250,8 @@ export default function RoundOverlay({ state, rival, onNext, onContinue, autoCon
             rival={rival}
             portrait={<KnockedOut rival={rival} size={64} />}
             kicker={`${modeBadge(state.mode)}${state.stats.matchesWon} MESAS · ${REGIONS.length} REGIÕES`}
-            title={secretWon ? 'A NOITE É SUA' : state.mode === 'inferno' ? 'O INFERNO É SEU' : state.mode === 'hard' ? 'O SUBMUNDO É SEU' : 'VOCÊ É O NOVO DONO DO BOTECO'}
-            howItEnded={`${KIND_TITLE[result.kind]} ${secretWon ? 'O Dono da Noite some na fumaça. O sol nasce no boteco.' : (FINAL_LINES[rival.id] ?? FINAL_LINES.comendador)}`}
+            title={wonTitle}
+            howItEnded={wonLine}
             challengeLine={state.challenge ? `DESAFIO CONCLUÍDO: ${challengeOf(state.challenge)?.name.toUpperCase()}` : null}
             prizeShown={prizeShown}
             onRetry={onRestart}

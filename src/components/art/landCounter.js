@@ -183,4 +183,4 @@ export function paintCounterBack(seed = 23, mode = 'normal') {
 }
 
 /** As peças desta cena que as outras telas deitadas também usam (a loja, o beco). */
-export const counterKit = Object.freeze({ subwayTiles, longCounter, canLight });
+export const counterKit = Object.freeze({ subwayTiles, longCounter, canLight, chalkBoard });
