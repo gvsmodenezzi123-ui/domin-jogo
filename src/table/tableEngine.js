@@ -10,8 +10,17 @@
  *   - tranca: quem tem a menor soma escapa, os outros levam 1 (todos empatados: ninguém);
  *   - quem zera sai; o último vivo vence; a ordem das saídas dá o pódio.
  *
- * Talismãs, pedras de grife e duplas entram nas próximas fases (o documento "Buxaria Online
- * — Mesas de 2 a 4"). A semente da mesa é só dela: nada aqui toca as sementes do solo.
+ * Versão 2.7, duas regras novas (o anfitrião escolhe no saguão):
+ *   - DUPLAS (só com 4): a 1ª e a 3ª cadeira contra a 2ª e a 4ª (os parceiros sentam de frente
+ *     e a vez alterna entre as duplas). Se você ou o seu parceiro bate, os dois vencem e a outra
+ *     dupla leva o dano; na tranca, vence a dupla com a menor soma das duas mãos. A vida (ou os
+ *     tentos) é da dupla: os dois parceiros sobem e descem juntos.
+ *   - TENTOS no lugar dos corações: ninguém sangra; cada rodada vencida (sozinho ou em dupla)
+ *     vale 1 tento (uma tampinha amassada) e vence quem chegar primeiro à meta. A 3ª compra do
+ *     turno, que custaria 1 coração, custa 1 tento.
+ *
+ * Talismãs e pedras de grife entram nas próximas fases (o documento "Buxaria Online — Mesas de
+ * 2 a 4"). A semente da mesa é só dela: nada aqui toca as sementes do solo.
  */
 import {
   DAMAGE,
@@ -45,7 +54,15 @@ export const DEFAULT_TABLE_RULES = Object.freeze({
   batida: 'todos',
   /** pedras na mão com 4 jogadores: 6 (dorme de 4) ou 7 (sem dorme). */
   hand4: 6,
+  /** Versão 2.7: duplas (só vale com 4 cadeiras): a 1ª e a 3ª contra a 2ª e a 4ª. */
+  teams: false,
+  /** Versão 2.7: 'coracoes' (perde quem zera) · 'tentos' (vence quem chegar primeiro à meta). */
+  scoring: 'coracoes',
 });
+
+/** As duas duplas: a cadeira de número par é da A, a ímpar da B (parceiros sentam de frente). */
+export const TEAMS = Object.freeze(['A', 'B']);
+const teamForIndex = (i) => TEAMS[i % 2];
 
 /** Quantas pedras cada um recebe com `alive` jogadores na mesa. */
 export function handSizeFor(alive, rules = DEFAULT_TABLE_RULES) {
@@ -57,6 +74,24 @@ export function handSizeFor(alive, rules = DEFAULT_TABLE_RULES) {
 export const aliveSeats = (state) => state.seats.filter((s) => s.alive);
 const seatOf = (state, id) => state.seats.find((s) => s.id === id);
 const handSumOf = (hand) => hand.reduce((sum, t) => sum + pipSum(t), 0);
+
+/** A mesa conta por tentos (tampinhas) em vez de corações? */
+export const usesTentos = (state) => state.rules?.scoring === 'tentos';
+
+/** Os ids da cadeira e do parceiro dela (sem duplas, só ela). */
+export function matesOf(state, id) {
+  const me = seatOf(state, id);
+  if (!state.rules?.teams || !me?.team) return [id];
+  return state.seats.filter((s) => s.team === me.team).map((s) => s.id);
+}
+
+/** O parceiro de `id` nas duplas (ou null). */
+export function partnerOf(state, id) {
+  return matesOf(state, id).find((m) => m !== id) ?? null;
+}
+
+/** As duplas que ainda têm alguém sentado. */
+const teamsAlive = (state) => [...new Set(aliveSeats(state).map((s) => s.team))];
 
 /** A próxima cadeira viva depois de `id` (a vez gira pela ordem das cadeiras). */
 export function nextAlive(state, id) {
@@ -100,12 +135,29 @@ export function createTable({ seed, seats, hearts = 5, coins = 100, rules = {} }
   }
   const ids = new Set(seats.map((s) => s.id));
   if (ids.size !== seats.length) throw new Error('Duas cadeiras com o mesmo id.');
+  const merged = { ...DEFAULT_TABLE_RULES, ...rules };
+  // duplas só com as 4 cadeiras ocupadas; a contagem é corações ou tentos
+  const ruleSet = { ...merged, teams: Boolean(merged.teams) && seats.length === 4, scoring: merged.scoring === 'tentos' ? 'tentos' : 'coracoes' };
+  const tentos = ruleSet.scoring === 'tentos';
   return {
     v: 1,
     seed: seed >>> 0,
-    rules: { ...DEFAULT_TABLE_RULES, ...rules },
+    rules: ruleSet,
+    // com tentos, o número da sala é a meta (quantos tentos para vencer)
     maxHearts: hearts,
-    seats: seats.map((s) => ({ id: s.id, name: s.name ?? s.id, face: s.face ?? null, bot: Boolean(s.bot), hearts, coins, alive: true, place: null })),
+    target: tentos ? hearts : null,
+    seats: seats.map((s, i) => ({
+      id: s.id,
+      name: s.name ?? s.id,
+      face: s.face ?? null,
+      bot: Boolean(s.bot),
+      hearts: tentos ? 0 : hearts,
+      tentos: 0,
+      team: ruleSet.teams ? teamForIndex(i) : null,
+      coins,
+      alive: true,
+      place: null,
+    })),
     round: 0,
     phase: 'lobby',
     hands: {},
@@ -119,6 +171,7 @@ export function createTable({ seed, seats, hearts = 5, coins = 100, rules = {} }
     lastAction: {},
     result: null,
     winner: null,
+    winners: [],
     seq: 0,
     events: [],
   };
@@ -167,6 +220,18 @@ const canAct = (state, seat) => state.phase === 'playing' && state.turn === seat
 /** Pedras no dorme (o espelho de uma cadeira só traz o número). */
 const boneyardCountOf = (state) => state.boneyardCount ?? state.boneyard.length;
 
+/**
+ * A compra da vez: a escada de sempre (grátis, $3, 1 coração). Versão 2.7: com tentos, o
+ * coração vira 1 tento (só compra quem tem um para dar).
+ */
+function drawRule(state, me) {
+  if (!usesTentos(state)) return getDrawAvailability({ drawsThisTurn: state.drawsThisTurn, boneyardCount: boneyardCountOf(state), coins: me.coins, hearts: me.hearts });
+  // a regra do coração exige sobrar 1 (hearts > 1): com tentos, basta ter 1 (tentos + 1 > 1)
+  const rule = getDrawAvailability({ drawsThisTurn: state.drawsThisTurn, boneyardCount: boneyardCountOf(state), coins: me.coins, hearts: me.tentos + 1 });
+  const cost = rule.cost?.type === 'heart' ? { type: 'tento', amount: rule.cost.amount } : rule.cost;
+  return { ...rule, cost, reason: rule.reason === 'hearts' ? 'tentos' : rule.reason };
+}
+
 /** O que a cadeira da vez pode fazer agora (para o HUD, o bot e a validação). Vale no espelho. */
 export function turnOptions(state, seat = state.turn) {
   const me = seatOf(state, seat);
@@ -174,9 +239,7 @@ export function turnOptions(state, seat = state.turn) {
   const hand = state.hands[seat];
   const required = !state.board.root ? state.openingTileId : null;
   const moves = getPlayableMoves(hand, state.board, required);
-  const draw = state.board.root
-    ? getDrawAvailability({ drawsThisTurn: state.drawsThisTurn, boneyardCount: boneyardCountOf(state), coins: me.coins, hearts: me.hearts })
-    : { allowed: false, reason: 'opening', cost: null };
+  const draw = state.board.root ? drawRule(state, me) : { allowed: false, reason: 'opening', cost: null };
   const pass = state.board.root
     ? getPassAvailability({ hasPlay: moves.length > 0, drawsThisTurn: state.drawsThisTurn, boneyardCount: boneyardCountOf(state), coins: me.coins })
     : { allowed: false, cost: 0, reason: 'opening' };
@@ -185,6 +248,17 @@ export function turnOptions(state, seat = state.turn) {
 }
 
 const patchSeat = (state, id, patch) => ({ ...state, seats: state.seats.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
+
+/** Muda a vida (ou os tentos) da cadeira; nas duplas, do parceiro junto (é da dupla). */
+function patchPool(state, id, field, value) {
+  let next = state;
+  for (const mate of matesOf(state, id)) {
+    // quem saiu da dupla (W.O.) não volta a ter vida
+    if (mate !== id && !seatOf(state, mate).alive) continue;
+    next = patchSeat(next, mate, { [field]: value });
+  }
+  return next;
+}
 
 /** Passa a vez para a próxima cadeira viva. */
 const advance = (state, from) => ({ ...state, turn: nextAlive(state, from), drawsThisTurn: 0 });
@@ -232,13 +306,15 @@ function playTile(state, { seat, tileId, side }) {
 function drawTile(state, { seat }) {
   if (!canAct(state, seat) || !state.board.root) return state;
   const me = seatOf(state, seat);
-  const rule = getDrawAvailability({ drawsThisTurn: state.drawsThisTurn, boneyardCount: state.boneyard.length, coins: me.coins, hearts: me.hearts });
+  const rule = drawRule(state, me);
   if (!rule.allowed) return state;
   const { cost } = rule;
   const [tile, ...boneyard] = state.boneyard;
   let next = { ...state, boneyard, hands: { ...state.hands, [seat]: sortHand([...state.hands[seat], tile]) }, drawsThisTurn: state.drawsThisTurn + 1 };
   if (cost.type === 'coins') next = patchSeat(next, seat, { coins: me.coins - cost.amount });
-  if (cost.type === 'heart') next = patchSeat(next, seat, { hearts: me.hearts - cost.amount });
+  // o coração (ou o tento) sai da vida da dupla inteira
+  if (cost.type === 'heart') next = patchPool(next, seat, 'hearts', me.hearts - cost.amount);
+  if (cost.type === 'tento') next = patchPool(next, seat, 'tentos', me.tentos - cost.amount);
   next = { ...next, lastAction: { ...next.lastAction, [seat]: { kind: 'draw', count: next.drawsThisTurn } } };
   const events = [{ type: 'draw', by: seat, cost, n: next.drawsThisTurn }];
   const lock = blocked(next);
@@ -261,65 +337,164 @@ function passTurn(state, { seat }) {
 }
 
 /**
- * Fecha a rodada: calcula quem leva dano, tira os corações, marca quem saiu (com a
- * colocação) e decide se a partida acabou.
+ * Quem vence a rodada e quem leva o golpe. Sem duplas: quem bateu (ou a menor soma na tranca)
+ * contra os outros vivos (ou só a mão mais pesada). Nas duplas: a dupla de quem bateu (ou a
+ * de menor soma das duas mãos) contra a outra dupla inteira.
+ */
+function roundOutcome(state, outcome, sums) {
+  const alive = aliveSeats(state);
+  const amount = outcome.kind === 'batida' ? (DAMAGE[outcome.batida] ?? DAMAGE.normal) : DAMAGE.tranca;
+  if (state.rules.teams) {
+    let team = null;
+    if (outcome.kind === 'batida') team = seatOf(state, outcome.by).team;
+    else {
+      const total = (t) => alive.filter((s) => s.team === t).reduce((n, s) => n + sums[s.id], 0);
+      const [a, b] = TEAMS.map(total);
+      if (a !== b) team = a < b ? TEAMS[0] : TEAMS[1];
+    }
+    if (!team) return { winners: [], losers: [], amount, nextStarter: null };
+    const winners = alive.filter((s) => s.team === team).map((s) => s.id);
+    const losers = alive.filter((s) => s.team !== team).map((s) => s.id);
+    // na tranca, abre a próxima quem da dupla vencedora tem a mão mais leve
+    const low = Math.min(...winners.map((id) => sums[id]));
+    const lightest = winners.filter((id) => sums[id] === low);
+    const nextStarter = outcome.kind === 'batida' ? outcome.by : lightest.length === 1 ? lightest[0] : null;
+    return { winners, losers, amount, nextStarter };
+  }
+  if (outcome.kind === 'batida') {
+    let victims = alive.filter((s) => s.id !== outcome.by);
+    // "a mão mais pesada" só vale quando o golpe tira coração
+    if (state.rules.batida === 'pesada' && !usesTentos(state) && victims.length) {
+      const top = Math.max(...victims.map((s) => sums[s.id]));
+      victims = victims.filter((s) => sums[s.id] === top);
+    }
+    return { winners: [outcome.by], losers: victims.map((s) => s.id), amount, nextStarter: outcome.by };
+  }
+  const low = Math.min(...alive.map((s) => sums[s.id]));
+  const spared = alive.filter((s) => sums[s.id] === low).map((s) => s.id);
+  // todos empatados na menor soma: ninguém vence, ninguém sangra
+  if (spared.length === alive.length) return { winners: [], losers: [], amount, nextStarter: null };
+  return { winners: spared, losers: alive.filter((s) => !spared.includes(s.id)).map((s) => s.id), amount, nextStarter: spared.length === 1 ? spared[0] : null };
+}
+
+/** Pódio por tentos: mais tentos na frente (empatados dividem); quem saiu fica atrás. */
+function placeByTentos(state) {
+  const alive = aliveSeats(state);
+  let next = state;
+  for (const s of alive) {
+    const place = 1 + alive.filter((o) => o.tentos > s.tentos).length;
+    next = patchSeat(next, s.id, { place });
+  }
+  return next;
+}
+
+/** Fim da partida com duplas: a dupla que sobrou (ou que fez a meta) em 1º, a outra em 2º. */
+function placeTeams(state, team) {
+  let next = state;
+  for (const s of state.seats) next = patchSeat(next, s.id, { place: s.team === team ? 1 : 2, alive: s.team === team ? s.alive : false });
+  return next;
+}
+
+/**
+ * Fecha a rodada: com corações, calcula quem leva dano, tira os corações, marca quem saiu (com
+ * a colocação) e decide se a partida acabou. Com tentos, dá a tampinha a quem venceu e confere
+ * se alguém chegou à meta.
  */
 function finishRound(state, outcome, events = []) {
   const alive = aliveSeats(state);
   const sums = Object.fromEntries(alive.map((s) => [s.id, handSumOf(state.hands[s.id])]));
+  const { winners, losers, amount, nextStarter } = roundOutcome(state, outcome, sums);
+  const teams = state.rules.teams;
   const damage = {};
-  let spared;
-  let nextStarter;
-  if (outcome.kind === 'batida') {
-    const amount = DAMAGE[outcome.batida] ?? DAMAGE.normal;
-    let victims = alive.filter((s) => s.id !== outcome.by);
-    if (state.rules.batida === 'pesada' && victims.length) {
-      const top = Math.max(...victims.map((s) => sums[s.id]));
-      victims = victims.filter((s) => sums[s.id] === top);
+  const tentos = {};
+  let next = { ...state };
+  let ranked = [];
+  let over = false;
+  let champion = null;
+
+  if (usesTentos(state)) {
+    // cada vitória vale 1 tento; nas duplas, 1 para a dupla (os dois sobem juntos)
+    const done = new Set();
+    for (const id of winners) {
+      if (done.has(id)) continue;
+      const seat = seatOf(next, id);
+      const value = seat.tentos + 1;
+      next = patchPool(next, id, 'tentos', value);
+      for (const mate of matesOf(next, id)) {
+        done.add(mate);
+        if (seatOf(next, mate).alive) {
+          tentos[mate] = 1;
+          events.push({ type: 'tento', who: mate, tentos: value });
+        }
+      }
     }
-    for (const v of victims) damage[v.id] = amount;
-    spared = [outcome.by];
-    nextStarter = outcome.by;
+    const top = Math.max(...aliveSeats(next).map((s) => s.tentos));
+    over = top >= state.target;
+    if (over) {
+      if (teams) {
+        champion = aliveSeats(next).find((s) => s.tentos === top).team;
+        next = placeTeams(next, champion);
+      } else next = placeByTentos(next);
+    }
   } else {
-    const low = Math.min(...alive.map((s) => sums[s.id]));
-    spared = alive.filter((s) => sums[s.id] === low).map((s) => s.id);
-    if (spared.length < alive.length) {
-      for (const s of alive) if (!spared.includes(s.id)) damage[s.id] = DAMAGE.tranca;
+    // o golpe: nas duplas, um coração da dupla (os dois descem juntos)
+    const hit = new Set();
+    for (const id of losers) {
+      if (hit.has(id)) continue;
+      const seat = seatOf(next, id);
+      const hearts = Math.max(0, seat.hearts - amount);
+      next = patchPool(next, id, 'hearts', hearts);
+      for (const mate of matesOf(next, id)) {
+        hit.add(mate);
+        if (!seatOf(next, mate).alive) continue;
+        damage[mate] = amount;
+        events.push({ type: 'damage', who: mate, amount, hearts });
+      }
     }
-    nextStarter = spared.length === 1 ? spared[0] : null;
+    const out = aliveSeats(next).filter((s) => s.hearts === 0).map((s) => s.id);
+    if (teams) {
+      // a dupla que zerou sai inteira; a outra vence a partida
+      for (const id of out) {
+        next = patchSeat(next, id, { alive: false });
+        events.push({ type: 'eliminated', who: id, place: 2 });
+      }
+      ranked = out;
+      const left = teamsAlive(next);
+      over = left.length <= 1;
+      if (over) {
+        champion = left[0] ?? null;
+        next = placeTeams(next, champion);
+      }
+    } else {
+      // quem saiu neste golpe divide as últimas colocações; a mão mais leve fica à frente
+      const left = alive.length - out.length;
+      ranked = out.slice().sort((x, y) => sums[x] - sums[y]);
+      ranked.forEach((id) => {
+        // empatados na soma dividem a colocação
+        const place = left + 1 + ranked.findIndex((o) => sums[o] === sums[id]);
+        next = patchSeat(next, id, { alive: false, place });
+        events.push({ type: 'eliminated', who: id, place });
+      });
+      const survivors = aliveSeats(next);
+      over = survivors.length <= 1;
+      if (over && survivors.length === 1) next = patchSeat(next, survivors[0].id, { place: 1 });
+    }
   }
 
-  let next = { ...state };
-  const out = [];
-  for (const [id, amount] of Object.entries(damage)) {
-    const seat = seatOf(next, id);
-    const hearts = Math.max(0, seat.hearts - amount);
-    next = patchSeat(next, id, { hearts });
-    events.push({ type: 'damage', who: id, amount, hearts });
-    if (hearts === 0) out.push(id);
-  }
-  // quem saiu neste golpe divide as últimas colocações; a mão mais leve fica à frente
-  const left = alive.length - out.length;
-  const ranked = out.slice().sort((x, y) => sums[x] - sums[y]);
-  ranked.forEach((id) => {
-    // empatados na soma dividem a colocação
-    const place = left + 1 + ranked.findIndex((o) => sums[o] === sums[id]);
-    next = patchSeat(next, id, { alive: false, place });
-    events.push({ type: 'eliminated', who: id, place });
-  });
-  const survivors = aliveSeats(next);
-  const over = survivors.length <= 1;
-  if (over && survivors.length === 1) next = patchSeat(next, survivors[0].id, { place: 1 });
-  const result = { ...outcome, sums, damage, spared, eliminated: ranked, round: state.round };
+  const winnersOfMatch = over ? next.seats.filter((s) => s.place === 1).map((s) => s.id) : [];
+  // compatível com a 2.4: `spared` são os que não levaram o golpe nesta rodada
+  const spared = alive.map((s) => s.id).filter((id) => !losers.includes(id));
+  const result = { ...outcome, sums, damage, tentos, spared, winners, eliminated: ranked, round: state.round, team: teams && winners.length ? seatOf(state, winners[0]).team : null };
   events.push({ type: 'roundOver', result });
-  if (over) events.push({ type: 'matchOver', winner: survivors[0]?.id ?? null });
+  if (over) events.push({ type: 'matchOver', winner: winnersOfMatch[0] ?? null, winners: winnersOfMatch, team: champion });
   next = {
     ...next,
     phase: over ? 'matchOver' : 'roundOver',
     turn: null,
     result,
     nextStarter: nextStarter && seatOf(next, nextStarter)?.alive ? nextStarter : null,
-    winner: over ? (survivors[0]?.id ?? null) : null,
+    winner: over ? (winnersOfMatch[0] ?? null) : null,
+    winners: winnersOfMatch,
   };
   return commit(next, events);
 }
@@ -327,18 +502,29 @@ function finishRound(state, outcome, events = []) {
 /**
  * W.O. ou saída de propósito: a cadeira zera e sai. Se era a vez dela, a vez segue; se só
  * sobrar um, a partida acaba. As pedras dela ficam fora da rodada (não contam na tranca).
+ * Versão 2.7: nas duplas, o parceiro segue jogando sozinho pela dupla; a dupla só sai quando
+ * os dois saem. Com tentos, quem sobrou sozinho na mesa vence.
  */
 function forfeit(state, { seat }) {
   const me = seatOf(state, seat);
   if (!me?.alive || state.phase === 'matchOver' || state.phase === 'lobby') return state;
   const alive = aliveSeats(state).length;
-  let next = patchSeat(state, seat, { hearts: 0, alive: false, place: alive });
-  const events = [{ type: 'eliminated', who: seat, place: alive, reason: 'wo' }];
+  const teams = state.rules.teams;
+  let next = patchSeat(state, seat, { hearts: 0, alive: false, place: teams ? 2 : alive });
+  const events = [{ type: 'eliminated', who: seat, place: teams ? 2 : alive, reason: 'wo' }];
   const survivors = aliveSeats(next);
-  if (survivors.length <= 1) {
-    if (survivors.length === 1) next = patchSeat(next, survivors[0].id, { place: 1 });
-    events.push({ type: 'matchOver', winner: survivors[0]?.id ?? null });
-    return commit({ ...next, phase: 'matchOver', turn: null, winner: survivors[0]?.id ?? null }, events);
+  const left = teams ? teamsAlive(next) : null;
+  if (teams ? left.length <= 1 : survivors.length <= 1) {
+    let winners;
+    if (teams) {
+      next = placeTeams(next, left[0] ?? null);
+      winners = next.seats.filter((s) => s.place === 1).map((s) => s.id);
+    } else {
+      if (survivors.length === 1) next = patchSeat(next, survivors[0].id, { place: 1 });
+      winners = survivors.map((s) => s.id);
+    }
+    events.push({ type: 'matchOver', winner: winners[0] ?? null, winners, team: teams ? (left[0] ?? null) : null });
+    return commit({ ...next, phase: 'matchOver', turn: null, winner: winners[0] ?? null, winners }, events);
   }
   if (next.nextStarter === seat) next = { ...next, nextStarter: null };
   if (next.phase === 'playing') {
@@ -403,7 +589,8 @@ export function botAction(state, seat = state.turn) {
     const best = moves.reduce((top, m) => (score(m) > score(top) ? m : top), moves[0]);
     return { type: 'PLAY', seat, tileId: best.tile.id, side: best.side };
   }
-  if (draw.allowed && draw.cost?.type !== 'heart') return { type: 'DRAW', seat };
+  // o bot não paga com coração nem com tento enquanto puder passar
+  if (draw.allowed && draw.cost?.type !== 'heart' && draw.cost?.type !== 'tento') return { type: 'DRAW', seat };
   if (pass.allowed) return { type: 'PASS', seat };
   if (draw.allowed) return { type: 'DRAW', seat };
   return null;

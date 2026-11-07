@@ -250,3 +250,35 @@ describe('mesa online de 2 a 4: regras no saguão', () => {
     expect(t.people[1].s.getSnapshot().lobby.seats).toHaveLength(3);
   });
 });
+
+describe('versão 2.7: duplas e tentos pela rede', () => {
+  it('duplas só começam com as 4 cadeiras ocupadas; a partida por tentos vai até a meta com a dupla junta', () => {
+    const t = setup({ guests: 2, config: { seats: 4, hearts: 3, turn: 30, batida: 'todos', teams: true, scoring: 'tentos' } });
+    t.people.forEach((p) => p.s.setReady(true));
+    t.clock.advance(100);
+    expect(t.host.getSnapshot().lobby.config).toMatchObject({ teams: true, scoring: 'tentos' });
+    // 3 cadeiras ocupadas: não dá para começar as duplas
+    expect(t.host.canStart()).toBe(false);
+    t.host.addBot();
+    t.clock.advance(100);
+    expect(t.host.canStart()).toBe(true);
+    t.host.startMatch();
+    t.clock.advance(100);
+    const v0 = t.people[0].s.getSnapshot().view;
+    expect(v0.rules).toMatchObject({ teams: true, scoring: 'tentos' });
+    expect(v0.seats.map((s) => s.team)).toEqual(['A', 'B', 'A', 'B']);
+    playAll(t);
+    const final = t.host.getSnapshot().view;
+    expect(final.phase).toBe('matchOver');
+    expect(final.winners).toHaveLength(2);
+    const [a, b] = final.winners.map((id) => final.seats.find((s) => s.id === id));
+    expect(a.team).toBe(b.team);
+    expect(a.tentos).toBeGreaterThanOrEqual(3);
+    for (const p of t.people) expect(p.s.getSnapshot().view.winners).toEqual(final.winners);
+  });
+
+  it('com 3 cadeiras, o pedido de duplas não vale', () => {
+    const t = setup({ guests: 1, config: { seats: 3, hearts: 3, turn: 30, batida: 'todos', teams: true } });
+    expect(t.host.getSnapshot().lobby.config.teams).toBe(false);
+  });
+});

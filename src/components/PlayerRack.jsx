@@ -4,6 +4,7 @@ import DominoTile from './DominoTile.jsx';
 import { DEAL_STEP_MS, computeFan } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
+import { TentoCap, TentosBar } from './TentoCap.jsx';
 import { CoinGlyph, EyeGlyph, MenuGlyph } from './UiGlyphs.jsx';
 import { prefersReducedMotion } from './motion.js';
 
@@ -40,6 +41,14 @@ function DrawCost({ draw }) {
         {cost.amount}
       </span>
     );
+  } else if (cost.type === 'tento') {
+    // versão 2.7: na roda por tentos, a 3ª compra custa uma tampinha
+    price = (
+      <span className="inline-flex items-center gap-1 text-blood-400">
+        <TentoCap size={10} />
+        {cost.amount}
+      </span>
+    );
   } else {
     price = (
       <span className="inline-flex items-center gap-1 text-blood-400">
@@ -53,6 +62,7 @@ function DrawCost({ draw }) {
       {price}
       {draw.reason === 'coins' && <span className="text-bone-400">· SEM $</span>}
       {draw.reason === 'hearts' && <span className="text-bone-400">· SEM ♥</span>}
+      {draw.reason === 'tentos' && <span className="text-bone-400">· SEM TENTO</span>}
     </span>
   );
 }
@@ -431,6 +441,7 @@ function PlayerRack({
   tutorialFocus = null,
   leaving = null,
   dealKey = '',
+  tentos = null,
 }) {
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
@@ -505,12 +516,17 @@ function PlayerRack({
       <div className="player-life-row">
         <button
           type="button"
-          className={`player-life ${hearts <= 2 ? 'is-low' : ''}`}
+          className={`player-life ${!tentos && hearts <= 2 ? 'is-low' : ''} ${tentos ? 'is-tentos' : ''}`}
           onClick={onSecretTap}
-          aria-label={`Você: ${hearts} de ${maxHearts} corações`}
+          aria-label={tentos ? `Você: ${tentos.current} de ${tentos.max} tentos` : `Você: ${hearts} de ${maxHearts} corações`}
         >
           <span data-tut="hearts" className="life-hearts">
-            <HeartsBar current={hearts} max={maxHearts} pixel={maxHearts <= 6 ? 3 : 2} label={`Você: ${hearts} de ${maxHearts} corações`} />
+            {/* versão 2.7: na roda por tentos, as tampinhas amassadas no lugar dos corações */}
+            {tentos ? (
+              <TentosBar current={tentos.current} max={tentos.max} size={tentos.max <= 5 ? 24 : 19} label={`Você: ${tentos.current} de ${tentos.max} tentos`} />
+            ) : (
+              <HeartsBar current={hearts} max={maxHearts} pixel={maxHearts <= 6 ? 3 : 2} label={`Você: ${hearts} de ${maxHearts} corações`} />
+            )}
           </span>
         </button>
       </div>

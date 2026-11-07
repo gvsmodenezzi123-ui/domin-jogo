@@ -18,8 +18,11 @@
  */
 import { ROOM_ALPHABET, ROOM_LENGTH } from '../pvp/protocol.js';
 
-/** Sobe quando o formato muda: mesas de versões diferentes não sentam juntas. */
-export const TABLE_PROTOCOL = 1;
+/**
+ * Sobe quando o formato muda: mesas de versões diferentes não sentam juntas.
+ * 2 (versão 2.7): as duplas e a contagem por tentos (o espelho traz `team`, `tentos`, `target`).
+ */
+export const TABLE_PROTOCOL = 2;
 
 export const TMSG = Object.freeze({
   HELLO: 'T_HELLO',
@@ -71,14 +74,20 @@ export function maskTableInput(text) {
 export const TABLE_OPTIONS = Object.freeze({
   seats: Object.freeze([2, 3, 4]),
   batida: Object.freeze(['todos', 'pesada']),
+  /** com tentos, é a meta: quantos tentos para vencer */
   hearts: Object.freeze([3, 5, 7]),
   turn: Object.freeze([15, 30, 45, 60]),
+  /** versão 2.7: duplas (só com 4 cadeiras) */
+  teams: Object.freeze([false, true]),
+  /** versão 2.7: a partida conta por corações (perde quem zera) ou por tentos (vence quem faz a meta) */
+  scoring: Object.freeze(['coracoes', 'tentos']),
 });
-export const DEFAULT_TABLE_CONFIG = Object.freeze({ seats: 4, batida: 'todos', hearts: 5, turn: 30 });
+export const DEFAULT_TABLE_CONFIG = Object.freeze({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes' });
 
 export function sanitizeTableConfig(config) {
   const pick = (key) => (TABLE_OPTIONS[key].includes(config?.[key]) ? config[key] : DEFAULT_TABLE_CONFIG[key]);
-  return { seats: pick('seats'), batida: pick('batida'), hearts: pick('hearts'), turn: pick('turn') };
+  const seats = pick('seats');
+  return { seats, batida: pick('batida'), hearts: pick('hearts'), turn: pick('turn'), teams: seats === 4 && pick('teams'), scoring: pick('scoring') };
 }
 
 export const makeTableMessage = (type, payload = {}) => ({ type, v: TABLE_PROTOCOL, payload });

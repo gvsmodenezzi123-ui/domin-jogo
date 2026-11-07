@@ -381,13 +381,21 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       },
       canStart() {
         const seated = seats.filter(Boolean);
+        // duplas precisam das 4 cadeiras ocupadas (gente ou bot)
+        if (cfg.teams && seated.length < 4) return false;
         return !engine && seated.length >= 2 && seated.every((s) => s.ready && !s.lost);
       },
       startMatch() {
         if (!api.canStart()) return;
         const seated = seats.filter(Boolean);
         const seed = Math.floor(random() * 2 ** 31) >>> 0;
-        const table = createTable({ seed, seats: seated.map((s) => ({ id: s.id, name: s.name, face: s.face, bot: s.bot })), hearts: cfg.hearts, coins: 100, rules: { batida: cfg.batida } });
+        const table = createTable({
+          seed,
+          seats: seated.map((s) => ({ id: s.id, name: s.name, face: s.face, bot: s.bot })),
+          hearts: cfg.hearts,
+          coins: 100,
+          rules: { batida: cfg.batida, teams: cfg.teams, scoring: cfg.scoring },
+        });
         engine = null;
         lastTurnKey = null;
         apply(tableReducer(table, { type: 'START_ROUND' }));

@@ -2186,6 +2186,18 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 330, freqEnd: 260, peak: 0.05, dur: 0.06, delay: 0.34 });
   }
 
+  /**
+   * Versão 2.7: o tento na roda por tentos: a tampinha amassada cai na mesa (o tlec seco de
+   * lata, quicando duas vezes) e um tim curto. `mine`: o tim sobe quando o tento é seu.
+   */
+  playTento(mine = false) {
+    [0, 0.07, 0.115].forEach((delay, i) => {
+      this.noise({ freq: 5200 - i * 600, filter: 'bandpass', q: 6, peak: 0.16 - i * 0.04, dur: 0.02, delay });
+    });
+    this.tone({ type: 'square', freq: 1480, freqEnd: 1320, peak: 0.035, dur: 0.05, delay: 0.01 });
+    this.later(0.14, () => this.playCoinTing(mine ? 7 : 2));
+  }
+
   /** Versão 2.6: cada linha do placar da mesa vencida (o tim sobe meio tom a cada linha) e o giz riscando. */
   playTallyLine(step = 0) {
     this.noise({ freq: 4200, filter: 'bandpass', q: 1.4, peak: 0.05, dur: 0.05 });

@@ -44,5 +44,13 @@ export function plateName(name) {
   return up.length > 9 ? `${up.slice(0, 8)}.` : up;
 }
 
-/** "Mão de 6 pedras · dorme de 4. A vez gira no sentido anti-horário." */
-export const tableNote = (seats) => `Mão de ${seats === 4 ? 6 : 7} pedras · dorme de ${seats === 4 ? 4 : seats === 3 ? 7 : 14}. A vez gira no sentido anti-horário.`;
+/**
+ * "Mão de 6 pedras · dorme de 4. A vez gira no sentido anti-horário." Versão 2.7: nas duplas e
+ * por tentos, a nota conta a regra ("Duplas: quem senta de frente joga junto.").
+ */
+export function tableNote(seats, config = {}) {
+  const base = `Mão de ${seats === 4 ? 6 : 7} pedras · dorme de ${seats === 4 ? 4 : seats === 3 ? 7 : 14}.`;
+  const duo = seats === 4 && config.teams ? ' Duplas: quem senta de frente joga junto; bateu, os dois vencem.' : '';
+  const count = config.scoring === 'tentos' ? ` Cada vitória vale 1 tento; vence quem fizer ${config.hearts ?? 5}.` : '';
+  return duo || count ? `${base}${duo}${count}` : `${base} A vez gira no sentido anti-horário.`;
+}

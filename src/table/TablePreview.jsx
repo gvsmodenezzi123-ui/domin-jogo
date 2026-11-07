@@ -12,8 +12,8 @@ const BOTS = Object.freeze([
   { id: 's3', name: 'Sofia', face: 'sofia', bot: true, ready: true },
 ]);
 
-function LocalTable({ seats, seed, hearts, rule, onLeave, muted, onToggleMute }) {
-  const rules = useMemo(() => ({ batida: rule }), [rule]);
+function LocalTable({ seats, seed, hearts, rule, teams = false, scoring = 'coracoes', onLeave, muted, onToggleMute }) {
+  const rules = useMemo(() => ({ batida: rule, teams, scoring }), [rule, teams, scoring]);
   const { view, clock, act, nextRound, rematch } = useLocalTable({ seats, seed, hearts, coins: 100, rules, turnSec: 30 });
   return (
     <TableScreen
@@ -36,7 +36,7 @@ function LocalTable({ seats, seed, hearts, rule, onLeave, muted, onToggleMute })
  * prévia do HUD). A mesa online troca os bots por pessoas.
  */
 export default function TablePreview({ onExit = null, muted: mutedProp, onToggleMute: toggleProp }) {
-  const [config, setConfig] = useState({ seats: 4, batida: 'todos', hearts: 5, turn: 30 });
+  const [config, setConfig] = useState({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes' });
   const [myFace, setMyFace] = useState(TABLE_FACES[0]);
   const [game, setGame] = useState(null);
   const [mutedLocal, setMutedLocal] = useState(() => Boolean(sound.isMuted));
@@ -63,12 +63,25 @@ export default function TablePreview({ onExit = null, muted: mutedProp, onToggle
   };
 
   if (game) {
-    return <LocalTable key={game.key} seats={game.seats} seed={game.seed} hearts={config.hearts} rule={config.batida} onLeave={() => setGame(null)} muted={muted} onToggleMute={toggleMute} />;
+    return (
+      <LocalTable
+        key={game.key}
+        seats={game.seats}
+        seed={game.seed}
+        hearts={config.hearts}
+        rule={config.batida}
+        teams={config.seats === 4 && config.teams}
+        scoring={config.scoring}
+        onLeave={() => setGame(null)}
+        muted={muted}
+        onToggleMute={toggleMute}
+      />
+    );
   }
   const slots = [{ id: 's0', name: 'Você', face: myFace, ready: true }, ...BOTS.slice(0, config.seats - 1)];
   return (
     <TableLobby
-      title={`MESA DE ${config.seats}`}
+      title={`MESA DE ${config.seats}${config.seats === 4 && config.teams ? ' · DUPLAS' : ''}`}
       code="TREINO COM BOTS"
       slots={slots}
       you="s0"
@@ -83,7 +96,8 @@ export default function TablePreview({ onExit = null, muted: mutedProp, onToggle
           }}
         />
       }
-      note={tableNote(config.seats)}
+      teams={config.seats === 4 && config.teams}
+      note={tableNote(config.seats, config)}
       footer={
         <>
           <button type="button" data-tone="play" className="btn-pixel lobby-start w-full" onClick={start}>

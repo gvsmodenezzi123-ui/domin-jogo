@@ -17159,3 +17159,140 @@
   translate: -50% 0;
   transform-origin: 50% 0;
 }
+
+/* =====================================================================================
+   Versão 2.7: duplas e tentos na roda de 2 a 4
+   ===================================================================================== */
+/* as duplas: A âmbar, B azul (a letra no canto da foto, no saguão e na mesa) */
+:root {
+  --team-a: #f0b64a;
+  --team-b: #6fb6ff;
+}
+.lobby-team {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  font-size: 6px;
+  color: #10141a;
+  background: var(--team-a);
+  box-shadow: 0 0 0 1px #1a0f06;
+}
+.lobby-team.is-B {
+  background: var(--team-b);
+}
+.lobby-chair {
+  position: relative;
+}
+.lobby-duo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  padding: 3px 5px 2px;
+  font-size: 6px;
+  letter-spacing: 0.08em;
+  color: #f4ecd2;
+  background: rgba(10, 6, 3, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(244, 236, 210, 0.25);
+  pointer-events: none;
+}
+.lobby-chip .tento-cap {
+  vertical-align: -2px;
+  margin: 0 1px;
+}
+.lobby-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* o tento: a tampinha amassada cai batendo quando a vaga enche; a vaga fica apagada */
+.tento-cap {
+  image-rendering: pixelated;
+}
+.tento-cap.is-full {
+  animation: tentoDrop 420ms cubic-bezier(0.25, 1.4, 0.5, 1) both;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
+}
+@keyframes tentoDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-90deg) scale(1.6);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(1px) rotate(8deg) scale(0.92);
+  }
+  100% {
+    transform: none;
+  }
+}
+.reduce-motion .tento-cap.is-full {
+  animation: none;
+}
+/* as duplas na mesa: a letra no canto de baixo da foto; o seu parceiro com "DUPLA" e o aro da dupla */
+.seat-team {
+  position: absolute;
+  z-index: 3;
+  left: -4px;
+  bottom: -3px;
+  padding: 1px 2px;
+  font-size: 5px;
+  line-height: 1;
+  color: #10141a;
+  background: var(--team-a);
+  box-shadow: 0 1px 0 #000;
+}
+.seat-team.is-B {
+  background: var(--team-b);
+}
+.seat.is-partner .seat-photo.avatar-frame {
+  box-shadow:
+    0 0 0 2px var(--team-a),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.seat.is-partner:has(.seat-team.is-B) .seat-photo.avatar-frame {
+  box-shadow:
+    0 0 0 2px var(--team-b),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.seat-tentos-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.player-life.is-tentos .tento-cap.is-empty {
+  opacity: 0.85;
+}
+
+/* o pódio: os tentos de cada um e o pódio das duplas (as duas fotos juntas no degrau) */
+.table-step-tentos {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  color: #ffd9c8;
+}
+.table-podium-duo {
+  gap: 14px;
+}
+.table-step-duo {
+  width: 132px;
+}
+.table-duo-photos {
+  display: flex;
+  gap: 4px;
+}
+.table-duo-photos .table-step-photo.avatar-frame:nth-child(2) {
+  transform: rotate(3deg);
+}
+.table-step-duo .table-step-name {
+  white-space: normal;
+  line-height: 1.4;
+}

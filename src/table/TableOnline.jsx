@@ -192,7 +192,7 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
     return (
       <>
         <TableLobby
-          title={`RODA DE ${cfg.seats}`}
+          title={`RODA DE ${cfg.seats}${cfg.teams ? ' · DUPLAS' : ''}`}
           code={formatTableId(code)}
           onCopy={copy}
           copied={copied}
@@ -201,8 +201,21 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
           onFace={cycleFace}
           onAddBot={host ? () => (tap(), session.addBot()) : null}
           onRemoveBot={host ? (id) => (tap(), session.removeBot(id)) : null}
+          teams={Boolean(cfg.teams)}
           options={<TableRules config={cfg} minSeats={highest} onChange={host ? (next) => (tap(), session.setConfig(next)) : null} />}
-          note={host ? (seated.length < 2 ? 'Mande o código para quem vai jogar, ou ponha bots nas cadeiras vazias.' : waiting.length ? `Esperando ${waiting.map((s) => s.name).join(', ')} marcar PRONTO.` : tableNote(seated.length)) : 'Quem abriu a roda escolhe as regras e começa a partida.'}
+          note={
+            host
+              ? seated.length < 2
+                ? 'Mande o código para quem vai jogar, ou ponha bots nas cadeiras vazias.'
+                : cfg.teams && seated.length < 4
+                  ? 'Duplas precisam das 4 cadeiras: chame mais gente ou ponha bots.'
+                  : waiting.length
+                    ? `Esperando ${waiting.map((s) => s.name).join(', ')} marcar PRONTO.`
+                    : tableNote(seated.length, cfg)
+              : cfg.teams || cfg.scoring === 'tentos'
+                ? tableNote(cfg.seats, cfg)
+                : 'Quem abriu a roda escolhe as regras e começa a partida.'
+          }
           footer={
             <>
               {host ? (

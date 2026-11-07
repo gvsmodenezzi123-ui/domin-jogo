@@ -172,6 +172,22 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.7: duplas e tentos na roda
+
+- Roda de 4 com DUPLAS (MODO no saguão): quem senta de frente joga junto (a 1ª e a 3ª cadeira
+  contra a 2ª e a 4ª, e a vez alterna entre as duplas). Se você ou o seu parceiro bate, os dois
+  vencem e a outra dupla inteira leva o dano; na tranca vence a dupla com a menor soma das duas
+  mãos. A vida é da dupla (os dois sobem e descem juntos, inclusive a 3ª compra paga com
+  coração). Se um parceiro cai (W.O.), o outro segue sozinho pela dupla. No saguão, a letra da
+  dupla em cada cadeira; na mesa, o seu parceiro com "DUPLA" e o aro da cor dela, e o aviso de
+  ÚLTIMA PEDRA só vale para quem joga contra. O pódio das duplas põe as duas fotos juntas.
+- CONTAGEM por CORAÇÕES ou por TENTOS (em qualquer roda de 2 a 4): por tentos, ninguém sangra;
+  cada rodada vencida, sozinho ou em dupla, vale 1 tento, uma tampinha amassada em pixel art
+  (`art/tentoArt.js`, `TentoCap`) no lugar dos corações, e vence quem chegar primeiro à meta (3, 5
+  ou 7). A 3ª compra do turno custa 1 tento. Embaixo do grito da rodada, quem pontuou ("+1 TENTO
+  PARA A SUA DUPLA"); a tampinha cai quicando com o som de lata.
+- Protocolo da roda 2: mesas de versões diferentes não sentam juntas.
+
 ### 2.6.1: mesa estável
 
 - Sem a tela piscando preta: a causa era a película preta das falhas da lâmpada (`.room-flicker`)

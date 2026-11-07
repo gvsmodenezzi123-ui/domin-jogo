@@ -19,7 +19,7 @@ import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
 import TableResult from './TableResult.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
-import { turnOptions } from './tableEngine.js';
+import { partnerOf, turnOptions } from './tableEngine.js';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
 const RIVAL_FLIGHT_MS = landTime(FLIGHT_RIVAL);
@@ -39,8 +39,9 @@ const NONE = [];
 const NO_MARKS = Object.freeze({});
 
 
-function hintFor({ view, me, opts, selected, names }) {
+function hintFor({ view, me, opts, selected, names, partner = null }) {
   if (view.phase !== 'playing') return '';
+  if (view.turn !== me && view.turn === partner) return `Vez de ${names[view.turn] ?? '...'}, a sua dupla.`;
   if (view.turn !== me) return `Vez de ${names[view.turn] ?? '...'}.`;
   if (!view.board.root) return 'Você abre a rodada com a sua maior pedra.';
   if (selected) return 'Toque numa ponta que brilha.';
@@ -59,13 +60,26 @@ function hintFor({ view, me, opts, selected, names }) {
  * Serve para a mesa local com bots e, na fase 3, para a mesa online (o espelho vem da rede).
  */
 /**
- * Versão 2.6: o dano da rodada embaixo do grito (não tem mais placar entre as rodadas):
- * "VOCÊ −1♥ · NEIDE −1♥", ou "NINGUÉM SANGRA" no empate da tranca.
+ * Versão 2.6: o que a rodada fez, embaixo do grito (não tem mais placar entre as rodadas):
+ * "VOCÊ −1♥ · NEIDE −1♥", ou "NINGUÉM SANGRA" no empate da tranca. Versão 2.7: nas duplas, o
+ * golpe é na dupla ("−1♥ NA SUA DUPLA"); por tentos, quem pontuou ("+1 TENTO PARA A SUA DUPLA").
  */
-function damageLine(result, seats, me) {
+function roundLine(result, view, me, partner) {
+  const name = (id) => (id === me ? 'VOCÊ' : plateName(view.seats.find((s) => s.id === id)?.name ?? ''));
+  const duo = (ids) => (ids.includes(me) || (partner && ids.includes(partner)) ? 'A SUA DUPLA' : ids.map(name).join(' E '));
+  if (view.rules?.scoring === 'tentos') {
+    const got = Object.keys(result.tentos ?? {});
+    if (!got.length) return 'NINGUÉM PONTUA';
+    if (view.rules?.teams) return `+1 TENTO PARA ${duo(got)}`;
+    return got.length > 2 ? `+1 TENTO: ${got.map(name).slice(0, 2).join(' · ')} …` : `+1 TENTO: ${got.map(name).join(' · ')}`;
+  }
   const hurt = Object.entries(result.damage ?? {}).filter(([, d]) => d > 0);
   if (!hurt.length) return 'NINGUÉM SANGRA';
-  const shown = hurt.slice(0, 3).map(([id, d]) => `${id === me ? 'VOCÊ' : plateName(seats.find((s) => s.id === id)?.name ?? '')} −${d}♥`);
+  if (view.rules?.teams) {
+    const ids = hurt.map(([id]) => id);
+    return `−${hurt[0][1]}♥ ${ids.includes(me) ? 'NA SUA DUPLA' : `NA DUPLA DE ${ids.map(name).join(' E ')}`}`;
+  }
+  const shown = hurt.slice(0, 3).map(([id, d]) => `${name(id)} −${d}♥`);
   return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
 }
 
@@ -187,7 +201,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         const text = r.kind === 'batida' ? (r.batida === 'cruzada' ? 'CRUZADA!' : r.batida === 'bucha' ? 'BATEU DE BUCHA!' : r.batida === 'duasPontas' ? 'NAS DUAS PONTAS!' : 'BATEU!') : 'TRANCOU!';
         later(() => {
           sound[r.kind === 'tranca' ? 'playLock' : 'playTileSlam'](true);
-          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null, sub: damageLine(r, view.seats, me) });
+          setCallout({ key: view.seq, text, by: r.kind === 'batida' ? r.by : null, sub: roundLine(r, view, me, view.rules?.teams ? partnerOf(view, me) : null) });
         }, offset + 260);
       }
       if (ev.type === 'damage') {
@@ -207,8 +221,21 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           return from && { from, text: `−${ev.amount}♥`, tone: who === me ? 'enemy' : 'player' };
         }, offset + 640);
       }
+      // versão 2.7: o tento (a tampinha) de quem venceu a rodada, na roda por tentos
+      if (ev.type === 'tento') {
+        const who = ev.who;
+        later(() => {
+          sound.playTento(who === me);
+          setHits((h) => ({ ...h, [who]: null }));
+          if (who === me) haptic([20, 30, 20]);
+        }, offset + 620);
+        pushFloat(() => {
+          const from = who === me ? centerOf('.player-life') : centerOf(`[data-seat-photo="${who}"]`);
+          return from && { from, text: '+1 TENTO', tone: who === me ? 'player' : 'enemy', kind: 'coin' };
+        }, offset + 640);
+      }
       if (ev.type === 'eliminated') later(() => sound.playHeartBreak?.(), offset + 1000);
-      if (ev.type === 'matchOver') later(() => (ev.winner === me ? sound.playVictory() : sound.playDefeat()), offset + 1500);
+      if (ev.type === 'matchOver') later(() => ((ev.winners ?? [ev.winner]).includes(me) ? sound.playVictory() : sound.playDefeat()), offset + 1500);
     }
   }, [view.seq, view.events, me, stagePlay, pushFloat, clearFloats, later, coinTarget]);
 
@@ -261,6 +288,10 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   // a fileira de cima: os rivais na ordem de jogo a partir de você
   const ordered = seatsFrom(view.seats, me);
   const mine = ordered[0];
+  // versão 2.7: duplas (o seu parceiro) e a contagem por tentos
+  const teams = Boolean(view.rules?.teams);
+  const tentosMode = view.rules?.scoring === 'tentos';
+  const partner = teams ? partnerOf(view, me) : null;
   const lastBy = view.events.find((e) => e.type === 'play' || e.type === 'draw' || e.type === 'pass')?.by ?? null;
   const batedor = view.result?.kind === 'batida' ? view.result.by : null;
   // online: quem caiu (contagem dos 60 s) e o ping de cada um
@@ -273,7 +304,9 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       color: colorOf(view, s.id),
       isTurn: playing && view.turn === s.id && !(flying && flying.by === s.id),
       smug: batedor === s.id,
-      danger: playing && s.alive && (view.handCounts[s.id] ?? 0) === 1,
+      // o seu parceiro por uma pedra é boa notícia: o perigo é só de quem joga contra
+      danger: playing && s.alive && s.id !== partner && (view.handCounts[s.id] ?? 0) === 1,
+      partner: s.id === partner,
       ping: link && !link.lost ? link.ping : null,
       lostLeft: link?.lost && link.graceEndsAt ? Math.max(0, Math.ceil((link.graceEndsAt - now) / 1000)) : null,
     };
@@ -295,7 +328,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const clockMine = actor === me && !(flying && flying.by !== me);
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
-  const hint = hintFor({ view, me, opts, selected: selectedTile, names });
+  const hint = hintFor({ view, me, opts, selected: selectedTile, names, partner });
   // versão 2.6: a hora da batida: a mesa segura acesa com a última pedra brilhando antes do placar
   const finaleKey = !playing && !flying && view.phase !== 'lobby' ? `${view.round}:${view.phase}` : null;
   useEffect(() => {
@@ -323,7 +356,14 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   const waitingFor =
     view.phase === 'roundOver' && ready?.includes(me) ? view.seats.filter((s) => s.alive && !s.bot && s.id !== me && !ready.includes(s.id)).map((s) => plateName(s.name)) : [];
   // versão 2.5: encurralado (alguém por uma pedra, você no último coração)
-  const danger = dangerOf({ myHearts: mine.hearts, rivals: ordered.slice(1).filter((s) => s.alive).map((s) => ({ id: s.id, name: s.name, count: view.handCounts[s.id] ?? 0 })) });
+  // (por tentos ninguém sangra: só vale o rival por uma pedra; nas duplas, só os adversários)
+  const danger = dangerOf({
+    myHearts: tentosMode ? 99 : mine.hearts,
+    rivals: ordered
+      .slice(1)
+      .filter((s) => s.alive && s.id !== partner)
+      .map((s) => ({ id: s.id, name: s.name, count: view.handCounts[s.id] ?? 0 })),
+  });
   const dangerOn = playing && mine.alive;
 
   return (
@@ -332,7 +372,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
       className={`app-shell table-v24 flex h-full flex-col overflow-hidden`}
       style={{ '--felt-light': TABLE_FELT.light, '--felt-mid': TABLE_FELT.mid, '--felt-dark': TABLE_FELT.dark, '--me': colorOf(view, me) }}
     >
-      <SeatBench seats={bench} maxHearts={view.maxHearts} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
+      <SeatBench seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
         {/* o relógio grande só na sua vez; a dos outros está no anel e nos segundos da cadeira */}
@@ -373,7 +413,19 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           drawUrge={canDraw && playableIds.size === 0}
           onDraw={handleDraw}
           drawsUsed={myTurn ? view.drawsThisTurn : 0}
-          drawCost={canDraw ? (opts.draw.cost?.type === 'free' ? 'GRÁTIS' : opts.draw.cost?.type === 'coins' ? `$${opts.draw.cost.amount}` : opts.draw.cost ? `${opts.draw.cost.amount}♥` : null) : null}
+          drawCost={
+            canDraw
+              ? opts.draw.cost?.type === 'free'
+                ? 'GRÁTIS'
+                : opts.draw.cost?.type === 'coins'
+                  ? `$${opts.draw.cost.amount}`
+                  : opts.draw.cost?.type === 'tento'
+                    ? `${opts.draw.cost.amount} TENTO`
+                    : opts.draw.cost
+                      ? `${opts.draw.cost.amount}♥`
+                      : null
+              : null
+          }
         />
 
         <PlayerRack
@@ -394,6 +446,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           onPass={handlePass}
           hearts={mine.hearts}
           maxHearts={view.maxHearts}
+          tentos={tentosMode ? { current: mine.tentos ?? 0, max: view.target } : null}
           coins={mine.coins}
           endsSum={ends ? ends.left + ends.right : null}
           hint={hint}

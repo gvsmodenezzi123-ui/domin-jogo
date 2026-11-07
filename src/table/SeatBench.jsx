@@ -3,6 +3,7 @@ import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
 import CoinCount from '../components/CoinCount.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
+import { TentoCap, TentosBar } from '../components/TentoCap.jsx';
 import { ordinal, plateName } from './seats.js';
 
 /** Tamanho do retrato e das pedrinhas de cada formato de cadeira (1, 2 ou 3 rivais na mesa). */
@@ -35,14 +36,38 @@ function TileFan({ id, count, size, max }) {
   );
 }
 
-function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble, hit }) {
+/** A vida da cadeira: os corações ou, na roda por tentos, as tampinhas até a meta. */
+function SeatLife({ seat, L, variant, maxHearts, target }) {
+  if (target) {
+    const label = `${seat.name}: ${seat.tentos} de ${target} tentos`;
+    // com 3 rivais e meta alta, cabe só a tampinha e a conta
+    if (variant === 'third' && target > 5) {
+      return (
+        <span className="seat-hearts-n seat-tentos-n font-pixel" role="img" aria-label={label}>
+          <TentoCap size={L.heart + 1} empty={seat.tentos === 0} />
+          {seat.tentos}/{target}
+        </span>
+      );
+    }
+    return <TentosBar current={seat.tentos} max={target} size={L.heart + 1} label={label} />;
+  }
+  if (variant === 'third' && maxHearts > 5) {
+    return (
+      <span className="seat-hearts-n font-pixel" role="img" aria-label={`${seat.hearts} de ${maxHearts} corações`}>
+        <PixelHeart size={L.heart} broken={seat.hearts === 0} />×{seat.hearts}
+      </span>
+    );
+  }
+  return <HeartsBar current={seat.hearts} max={maxHearts} size={L.heart} label={`${seat.name}: ${seat.hearts} de ${maxHearts} corações`} />;
+}
+
+function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft, bubble, hit }) {
   const L = LAYOUT[variant];
   const out = !seat.alive;
   const mood = hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
-  const compactHearts = variant === 'third' && maxHearts > 5;
   return (
     <div
-      className={`seat seat-${variant} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''} ${seat.danger && !out ? 'is-danger' : ''}`}
+      className={`seat seat-${variant} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''} ${seat.danger && !out ? 'is-danger' : ''} ${seat.partner ? 'is-partner' : ''}`}
       style={{ '--seat': seat.color }}
       data-seat={seat.id}
       aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}
@@ -66,6 +91,12 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
             </span>
           )}
           {seat.bot && !out && <span className="seat-tag">BOT</span>}
+          {/* versão 2.7: nas duplas, a letra da dupla (e "DUPLA" no seu parceiro) */}
+          {seat.team && (
+            <span className={`seat-team font-pixel is-${seat.team}`} aria-label={seat.partner ? 'sua dupla' : `dupla ${seat.team}`}>
+              {seat.partner ? 'DUPLA' : seat.team}
+            </span>
+          )}
           {!seat.bot && seat.ping != null && !out && <span className={`seat-ping ${seat.ping > 250 ? 'is-slow' : ''}`} aria-label={`ping ${seat.ping} ms`} />}
         </div>
         {variant !== 'third' && (
@@ -80,13 +111,7 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
           {out ? `FORA · ${ordinal(seat.place)}` : plateName(seat.name)}
         </h3>
         <div className="seat-stats rival-stats">
-          {compactHearts ? (
-            <span className="seat-hearts-n font-pixel" role="img" aria-label={`${seat.hearts} de ${maxHearts} corações`}>
-              <PixelHeart size={L.heart} broken={seat.hearts === 0} />×{seat.hearts}
-            </span>
-          ) : (
-            <HeartsBar current={seat.hearts} max={maxHearts} size={L.heart} label={`${seat.name}: ${seat.hearts} de ${maxHearts} corações`} />
-          )}
+          <SeatLife seat={seat} L={L} variant={variant} maxHearts={maxHearts} target={target} />
           <CoinCount value={seat.coins} target={seat.id} className="seat-coins" size={L.coin} />
         </div>
         {!out && variant !== 'wide' && <TileFan id={seat.id} count={seat.count} size={L.tile} max={L.maxTiles} />}
@@ -110,9 +135,11 @@ function SeatCard({ seat, variant, maxHearts, turnKey, turnMs, turnLeft, bubble,
  * depois de quem). Cada cadeira: a polaroide do rosto 64×64, a plaquinha com o nome, corações,
  * moedas e as pedras na mão viradas. A da vez acende na cor dela e ganha o anel do cronômetro
  * esvaziando em volta da foto; quem saiu fica em cinza com um X de giz e a colocação.
+ * Versão 2.7: nas duplas, a letra da dupla no canto da foto (o seu parceiro com "DUPLA" e o aro
+ * na cor da dupla); na roda por tentos, as tampinhas amassadas no lugar dos corações.
  * O tamanho é travado por mesa (1, 2 ou 3 rivais): nada muda de lugar no meio da rodada.
  */
-function SeatBench({ seats, maxHearts, turnKey, turnMs, turnLeft = null, bubble, hits }) {
+function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits }) {
   const variant = seats.length >= 3 ? 'third' : seats.length === 2 ? 'half' : 'wide';
   return (
     <header className={`seat-bench seat-bench-${variant} rival-bench relative z-30 shrink-0`} style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>
@@ -125,6 +152,7 @@ function SeatBench({ seats, maxHearts, turnKey, turnMs, turnLeft = null, bubble,
               seat={seat}
               variant={variant}
               maxHearts={maxHearts}
+              target={target}
               turnKey={turnKey}
               turnMs={turnMs}
               turnLeft={seat.isTurn ? turnLeft : null}

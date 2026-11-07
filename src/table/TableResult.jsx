@@ -1,6 +1,7 @@
 import DominoTile from '../components/DominoTile.jsx';
 import { HeartsBar } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
+import { TentoCap } from '../components/TentoCap.jsx';
 import { colorOf, ordinal, plateName, seatsFrom } from './seats.js';
 
 const KIND_TITLE = { normal: 'BATIDA!', bucha: 'BATIDA DE BUCHA!', duasPontas: 'NAS DUAS PONTAS!', cruzada: 'CRUZADA!' };
@@ -29,34 +30,86 @@ function MiniTiles({ tiles }) {
   );
 }
 
+/** Versão 2.7: os tentos de quem está no pódio (na roda por tentos). */
+function TentosTag({ value }) {
+  return (
+    <span className="table-step-tentos font-pixel">
+      <TentoCap size={10} />
+      {value}
+    </span>
+  );
+}
+
+/** Versão 2.7: o pódio das duplas: a dupla vencedora no degrau de cima, as duas fotos juntas. */
+function TeamSteps({ view, me, tentos }) {
+  const byTeam = ['A', 'B'].map((team) => view.seats.filter((s) => s.team === team));
+  const ordered = byTeam.sort((x, y) => (x[0]?.place ?? 9) - (y[0]?.place ?? 9));
+  return (
+    <div className="table-podium-row table-podium-duo">
+      {ordered.map((duo, k) => (
+        <div key={duo[0]?.team ?? k} className={`table-step table-step-duo ${k === 0 ? 'is-1st' : 'is-2nd'} ${duo.some((s) => s.id === me) ? 'is-me' : ''}`} style={{ '--seat': k === 0 ? 'var(--team-win, #f0b64a)' : '#8a7a5a' }}>
+          <span className="table-duo-photos">
+            {duo.map((s) => (
+              <span key={s.id} className="table-step-photo avatar-frame">
+                <RivalAvatar rival={{ art: s.face ?? 'tioZe', name: s.name }} mood={k === 0 ? 'smug' : 'idle'} size={k === 0 ? 46 : 38} smoke={false} />
+              </span>
+            ))}
+          </span>
+          <span className="table-step-name font-pixel">{duo.map((s) => (s.id === me ? 'VOCÊ' : plateName(s.name))).join(' + ')}</span>
+          {tentos && <TentosTag value={duo[0]?.tentos ?? 0} />}
+          <span className="table-step-block font-pixel">{k === 0 ? '1º' : '2º'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Podium({ view, me, names, onRematch, onLeave, canRematch }) {
   const ranked = view.seats.slice().sort((a, b) => (a.place ?? 9) - (b.place ?? 9));
-  const won = view.winner === me;
+  // versão 2.7: nas duplas, a partida tem dois vencedores
+  const winners = view.winners?.length ? view.winners : view.winner ? [view.winner] : [];
+  const won = winners.includes(me);
+  const teams = Boolean(view.rules?.teams);
+  const tentos = view.rules?.scoring === 'tentos';
   const step = { 1: 'is-1st', 2: 'is-2nd', 3: 'is-3rd', 4: 'is-4th' };
   // 2º à esquerda, 1º no meio (mais alto), 3º à direita; o 4º embaixo
   const top = [ranked[1], ranked[0], ranked[2]].filter(Boolean);
   const fourth = ranked[3];
+  const headline = teams
+    ? won
+      ? 'A SUA DUPLA LEVOU A MESA!'
+      : `${winners.map((id) => String(names[id]).toUpperCase()).join(' E ')} LEVARAM A MESA`
+    : won
+      ? 'A MESA É SUA!'
+      : `${String(names[view.winner]).toUpperCase()} LEVOU A MESA`;
+  const kicker = `MESA DE ${view.seats.length}${teams ? ' · DUPLAS' : ''} · ${view.round} RODADAS${tentos ? ` · ${view.target} TENTOS` : ''}`;
   return (
     <div className="overlay-backdrop animate-overlay-in fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="table-podium-title">
       <div className={`${won ? 'chalkboard' : 'overlay-card'} round-card table-podium w-full max-w-[360px] overflow-hidden px-4 py-5 text-center`}>
-        <p className={`font-pixel text-[9px] ${won ? 'chalk-dim' : 'text-bone-400'}`}>{`MESA DE ${view.seats.length} · ${view.round} RODADAS`}</p>
+        <p className={`font-pixel text-[9px] ${won ? 'chalk-dim' : 'text-bone-400'}`}>{kicker}</p>
         <h2 id="table-podium-title" className={`mt-2 font-pixel text-[16px] leading-snug text-shadow-pixel ${won ? 'chalk-text' : 'text-bone-100'}`}>
-          {won ? 'A MESA É SUA!' : `${String(names[view.winner]).toUpperCase()} LEVOU A MESA`}
+          {headline}
         </h2>
-        <div className="table-podium-row">
-          {top.map((s) => (
-            <div key={s.id} className={`table-step ${step[s.place] ?? ''} ${s.id === me ? 'is-me' : ''}`} style={{ '--seat': colorOf(view, s.id) }}>
-              <span className="table-step-photo avatar-frame">
-                <RivalAvatar rival={{ art: s.face ?? 'tioZe', name: s.name }} mood={s.place === 1 ? 'smug' : 'idle'} size={s.place === 1 ? 56 : 44} smoke={false} />
-              </span>
-              <span className="table-step-name font-pixel">{s.id === me ? 'VOCÊ' : plateName(s.name)}</span>
-              <span className="table-step-block font-pixel">{ordinal(s.place)}</span>
-            </div>
-          ))}
-        </div>
-        {fourth && (
+        {teams ? (
+          <TeamSteps view={view} me={me} tentos={tentos} />
+        ) : (
+          <div className="table-podium-row">
+            {top.map((s) => (
+              <div key={s.id} className={`table-step ${step[s.place] ?? ''} ${s.id === me ? 'is-me' : ''}`} style={{ '--seat': colorOf(view, s.id) }}>
+                <span className="table-step-photo avatar-frame">
+                  <RivalAvatar rival={{ art: s.face ?? 'tioZe', name: s.name }} mood={s.place === 1 ? 'smug' : 'idle'} size={s.place === 1 ? 56 : 44} smoke={false} />
+                </span>
+                <span className="table-step-name font-pixel">{s.id === me ? 'VOCÊ' : plateName(s.name)}</span>
+                {tentos && <TentosTag value={s.tentos ?? 0} />}
+                <span className="table-step-block font-pixel">{ordinal(s.place)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {!teams && fourth && (
           <p className="table-podium-4th font-pixel" style={{ '--seat': colorOf(view, fourth.id) }}>
             {ordinal(fourth.place)} · {fourth.id === me ? 'VOCÊ' : plateName(fourth.name)}
+            {tentos ? ` · ${fourth.tentos ?? 0} TENTOS` : ''}
           </p>
         )}
         <div className="mt-4 flex gap-2">
