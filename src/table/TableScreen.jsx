@@ -17,6 +17,7 @@ import { useNow, useSecondsLeft } from '../pvp/useNow.js';
 import DangerFx from '../components/DangerFx.jsx';
 import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
+import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { partnerOf, turnOptions } from './tableEngine.js';
@@ -86,6 +87,8 @@ function roundLine(result, view, me, partner) {
 export default function TableScreen({ view, me, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
   const [selectedId, setSelectedId] = useState(null);
   const [handZone, setHandZone] = useState(0);
+  // versão 2.9: tela deitada, todos sentados em volta da mesa
+  const landscape = useLandscape();
   const [tableAnim, setTableAnim] = useState(null);
   // a última jogada que já começou a voar (até lá, a pedra nova fica escondida na mesa)
   const [stagedSeq, setStagedSeq] = useState(view.seq);
@@ -371,10 +374,10 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
   return (
     <div
       ref={shellRef}
-      className={`app-shell table-v24 flex h-full flex-col overflow-hidden`}
+      className={`app-shell table-v24 flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': TABLE_FELT.light, '--felt-mid': TABLE_FELT.mid, '--felt-dark': TABLE_FELT.dark, '--me': colorOf(view, me) }}
     >
-      <SeatBench seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
+      <SeatBench landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
         {/* o relógio grande só na sua vez; a dos outros está no anel e nos segundos da cadeira */}
@@ -392,6 +395,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         )}
         {tag && <p className="pvp-final-tag table-tag">{tag}</p>}
         <TableBoard
+          landscape={landscape}
           board={view.board}
           roundKey={`mesa:${view.round}`}
           playableSides={selectedSides}
@@ -431,6 +435,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
         />
 
         <PlayerRack
+          landscape={landscape}
           onZoneHeight={setHandZone}
           hand={hand}
           selectedId={selectedTile?.id ?? null}

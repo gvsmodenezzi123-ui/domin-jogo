@@ -1,5 +1,7 @@
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef, useState } from 'react';
 import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
+import RivalBust from '../components/RivalBust.jsx';
+import { RODA_SPOTS, SEAT_RAIL, landCorners, seatBust, seatUnit } from '../components/seatGeometry.js';
 import CoinCount from '../components/CoinCount.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
@@ -139,7 +141,138 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
  * na cor da dupla); na roda por tentos, as tampinhas amassadas no lugar dos corações.
  * O tamanho é travado por mesa (1, 2 ou 3 rivais): nada muda de lugar no meio da rodada.
  */
-function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits }) {
+/**
+ * Versão 2.9: a cadeira na mesa deitada. O rival em busto atrás da beirada de lá (a madeira
+ * cobre o peito), as pedras dele de pé na beirada e, em cima da cabeça, só a plaquinha com o
+ * nome e a vida (na vez dele a plaquinha acende na cor da cadeira, com os segundos ao lado); a
+ * fala da jogada ("JOGOU 4|3", "PASSOU") sai logo embaixo da vida. Os mesmos marcadores da
+ * cadeira em pé (data-seat, data-seat-photo, data-seat-fan) para os voos e os efeitos.
+ */
+function SeatChair({ seat, x, bust, unit, solo, maxHearts, target, turnLeft, bubble, hit, anchor }) {
+  const out = !seat.alive;
+  const mood = out ? 'idle' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
+  const L = LAYOUT.half;
+  return (
+    <div
+      className={`seat chair ${solo ? 'is-solo' : ''} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''} ${seat.danger && !out ? 'is-danger' : ''} ${seat.partner ? 'is-partner' : ''}`}
+      style={{ '--seat': seat.color, '--x': `${x * 100}%`, '--bust-w': `${bust.w}px`, '--bust-h': `${bust.h}px`, '--bust-drop': `${bust.drop}px` }}
+      data-seat={seat.id}
+      aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}
+    >
+      <div className="chair-clip" aria-hidden="true">
+        <div className={`chair-bust seat-bust is-${mood}`} data-seat-photo={seat.id}>
+          <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
+            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} />
+          </span>
+          {out && <ChalkX />}
+        </div>
+      </div>
+      {!out && (
+        <div className="chair-rack" {...(anchor ? { 'data-danger-anchor': '' } : {})}>
+          <TileFan id={seat.id} count={seat.count} size={[unit, unit * 2]} max={12} />
+        </div>
+      )}
+      {/* em cima da cabeça, só a plaquinha do nome e a vida; a fala da jogada logo embaixo */}
+      <div className={`chair-plate ${seat.isTurn && !out ? 'is-on' : ''}`} data-coin-target={seat.id}>
+        <h3 className="seat-plate rival-nameplate font-pixel" aria-label={seat.name}>
+          {out ? `FORA · ${ordinal(seat.place)}` : plateName(seat.name)}
+          {seat.isTurn && !out && turnLeft != null && <span className={`seat-secs chair-secs font-pixel ${turnLeft <= 10 ? 'is-urgent' : ''}`}>{turnLeft}</span>}
+        </h3>
+        {(seat.bot || seat.team) && !out && (
+          <span className="chair-tags">
+            {seat.bot && <span className="seat-tag">BOT</span>}
+            {seat.team && (
+              <span className={`seat-team font-pixel is-${seat.team}`} aria-label={seat.partner ? 'sua dupla' : `dupla ${seat.team}`}>
+                {seat.partner ? 'DUPLA' : seat.team}
+              </span>
+            )}
+          </span>
+        )}
+        <span className="chair-life">
+          <SeatLife seat={seat} L={L} variant="half" maxHearts={maxHearts} target={target} />
+          {!seat.bot && seat.ping != null && !out && <span className={`seat-ping ${seat.ping > 250 ? 'is-slow' : ''}`} aria-label={`ping ${seat.ping} ms`} />}
+        </span>
+        {!out && seat.lostLeft != null && (
+          <span className="seat-lost chair-lost font-pixel" role="status" aria-label={`${seat.name} caiu: ${seat.lostLeft} segundos para voltar`}>
+            CAIU <b>{seat.lostLeft}s</b>
+          </span>
+        )}
+        {bubble && !out && (
+          <span key={bubble.key} className={`seat-bubble chair-bubble font-pixel ${bubble.strong ? 'is-strong' : ''}`} role="status">
+            {bubble.text}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** O recorte das cadeiras: tudo acima da beirada de lá e, fora do tampo, até a bancada (47%). */
+function chairClip(w, h) {
+  const c = landCorners(w, h);
+  const yC = Math.round(h * 0.47);
+  const r = (v) => Math.round(v);
+  return {
+    '--chair-h': `${yC}px`,
+    '--rail-px': `${c.yFar}px`,
+    '--chair-clip': `polygon(0 0, ${w}px 0, ${w}px ${yC}px, ${r(c.xAt(yC, 1))}px ${yC}px, ${r(c.farR)}px ${c.yFar}px, ${r(c.farL)}px ${c.yFar}px, ${r(c.xAt(yC, -1))}px ${yC}px, 0 ${yC}px)`,
+  };
+}
+
+/**
+ * Versão 2.9: a roda na mesa deitada: todos sentados atrás da beirada de lá, na ordem da vez
+ * (o próximo à sua direita, o da frente no meio, o último à sua esquerda), do mesmo tamanho do
+ * rival do duelo. Quem senta na ponta passa da beirada: o corpo desce até a bancada.
+ */
+function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits }) {
+  const ref = useRef(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      const h = Math.round(entry.contentRect.height);
+      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const n = Math.min(3, seats.length);
+  const spots = RODA_SPOTS[n] ?? RODA_SPOTS[3];
+  const solo = n === 1;
+  // todos do mesmo tamanho do rival do duelo; a cabeça um pouco mais baixa (a plaquinha mora em cima)
+  const bust = seatBust(size.h, 0.44, 0.02);
+  const unit = seatUnit(size.h);
+  // o selo do perigo encosta nas pedras de quem está por uma
+  const danger = seats.find((s) => s.danger && s.alive)?.id ?? seats.find((s) => s.alive)?.id;
+  // quem senta na ponta passa da beirada de lá: o tampo esconde só o que fica atrás dele, e o
+  // corpo de fora desce até a bancada (sumindo no escuro, sem o corte reto no meio do ar)
+  const clip = size.w > 0 ? chairClip(size.w, size.h) : undefined;
+  return (
+    <header ref={ref} className={`seat-bench rival-bench roda-seats roda-n${n}`} style={{ '--rail-y': `${SEAT_RAIL * 100}%`, ...clip }}>
+      {seats.map((seat, i) => (
+        <SeatChair
+          key={seat.id}
+          seat={seat}
+          x={spots[i] ?? 0.5}
+          bust={bust}
+          unit={unit}
+          solo={solo}
+          maxHearts={maxHearts}
+          target={target}
+          turnLeft={seat.isTurn ? turnLeft : null}
+          bubble={bubble?.seat === seat.id ? bubble : null}
+          hit={hits?.[seat.id] ?? null}
+          anchor={seat.id === danger}
+        />
+      ))}
+    </header>
+  );
+}
+
+function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false }) {
+  if (landscape) return <SeatRow seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} />;
   const variant = seats.length >= 3 ? 'third' : seats.length === 2 ? 'half' : 'wide';
   return (
     <header className={`seat-bench seat-bench-${variant} rival-bench relative z-30 shrink-0`} style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>

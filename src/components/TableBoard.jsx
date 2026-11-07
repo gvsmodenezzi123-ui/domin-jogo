@@ -9,7 +9,7 @@ import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
-import { LAND, landTable } from './seatGeometry.js';
+import { LAND, landSpanFor, landTable } from './seatGeometry.js';
 import {
   APRON_H,
   BONEYARD_SIZE,
@@ -74,10 +74,6 @@ const depthScale = (d) => PERSPECTIVE_PX / (PERSPECTIVE_PX + d * SIN);
  * mesa no meio (seatGeometry.js: LAND), vista de cima e de frente, com a beirada de lá mais
  * estreita, a saia de madeira e os pés aparecendo embaixo. O rival senta atrás da beirada de lá.
  */
-const LAND_SIN = Math.sin((LAND.tilt * Math.PI) / 180);
-const LAND_COS = Math.cos((LAND.tilt * Math.PI) / 180);
-/** Quanto do tampo (px do plano, a partir da beirada de perto) fica embaixo de `screen` px da tela. */
-const landSpanFor = (screen) => Math.max(0, Math.round((screen * LAND.persp) / (LAND.persp * LAND_COS - screen * LAND_SIN)));
 
 /** O tampo da mesa deitada: o plano, a faixa das pedras e o quanto a sua mão cobre da beirada de perto. */
 function landGeometry(room, handZone) {

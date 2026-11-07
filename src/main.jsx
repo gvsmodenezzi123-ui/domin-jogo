@@ -23,5 +23,11 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <WideRoom />
     <App />
+    {/* versão 2.10: o jogo é deitado; em pé no celular, o aviso pede para girar */}
+    <div className="rotate-hint" role="alert" aria-live="polite">
+      <span className="rotate-hint-phone" aria-hidden="true" />
+      <p className="rotate-hint-title">GIRE O CELULAR</p>
+      <p className="rotate-hint-text">O Buxaria é jogado com a tela deitada, como uma mesa de boteco.</p>
+    </div>
   </StrictMode>,
 );

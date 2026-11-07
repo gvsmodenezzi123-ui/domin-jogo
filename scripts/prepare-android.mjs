@@ -51,10 +51,9 @@ writeFileSync(activity, readFileSync(join(root, 'android-extras/MainActivity.jav
 const manifestPath = join(android, 'app/src/main/AndroidManifest.xml');
 let manifest = readFileSync(manifestPath, 'utf8');
 if (!manifest.includes('xmlns:tools=')) manifest = manifest.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ');
-// versão 2.9: a partida tem a mesa deitada (16:9): o jogo gira com o celular (fullUser respeita a
-// trava de rotação do aparelho)
+// versão 2.10: o jogo inteiro é deitado (16:9): abre deitado e vira entre os dois lados
 if (!manifest.includes('android:screenOrientation')) {
-  manifest = manifest.replace('android:name=".MainActivity"', 'android:name=".MainActivity" android:screenOrientation="fullUser"');
+  manifest = manifest.replace('android:name=".MainActivity"', 'android:name=".MainActivity" android:screenOrientation="sensorLandscape"');
 }
 // Android 16 ignora a trava de orientação em tela grande; esta propriedade mantém a escolha do jogo
 const RESIZE = 'android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY';

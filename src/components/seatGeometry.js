@@ -25,19 +25,50 @@ export function landTable(w, h) {
   };
 }
 
+const LAND_SIN = Math.sin((LAND.tilt * Math.PI) / 180);
+const LAND_COS = Math.cos((LAND.tilt * Math.PI) / 180);
+/** Quanto do tampo (px do plano, a partir da beirada de perto) fica embaixo de `screen` px da tela. */
+export const landSpanFor = (screen) => Math.max(0, Math.round((screen * LAND.persp) / (LAND.persp * LAND_COS - screen * LAND_SIN)));
+
+/**
+ * Os quatro cantos do tampo na tela (px): a beirada de lá (yFar, de farL a farR, mais estreita
+ * pela perspectiva) e a de perto (yNear, de nearL a nearR). `xAt(y, side)` dá a borda do tampo
+ * em qualquer altura (para recortar o que fica atrás dele).
+ */
+export function landCorners(w, h) {
+  const t = landTable(w, h);
+  const depth = landSpanFor(t.yNear - t.yFar);
+  const far = (t.width * LAND.persp) / (LAND.persp + depth * LAND_SIN);
+  const c = { yFar: t.yFar, yNear: t.yNear, farL: (w - far) / 2, farR: (w + far) / 2, nearL: (w - t.width) / 2, nearR: (w + t.width) / 2 };
+  const xAt = (y, side) => {
+    const k = (y - c.yFar) / Math.max(1, c.yNear - c.yFar);
+    return side < 0 ? c.farL + (c.nearL - c.farL) * k : c.farR + (c.nearR - c.farR) * k;
+  };
+  return { ...c, xAt };
+}
+
 /** Lado (px) de cada metade das pedras de pé do rival: pequenas, do tamanho do busto. */
 export const seatUnit = (h) => Math.max(8, Math.min(16, Math.round((h || 390) * 0.028)));
 
 /**
- * O busto: altura (px), largura, quanto passa para baixo da beirada (`drop`, escondido atrás do
+ * O busto (`size`: a altura em fração da cena; `lift`: quanto a linha dos ombros fica acima da
+ * beirada, em fração da cena; na roda a cabeça desce um pouco para a plaquinha caber em cima): altura
+ * (px), largura, quanto passa para baixo da beirada (`drop`, escondido atrás do
  * tampo) e a altura da boca a partir do alto da cena (`mouth`). A linha dos ombros (linha 50 de
  * 76 do desenho) fica acima da beirada: aparecem a cabeça, os ombros e o alto do peito.
  */
-export function seatBust(h) {
+export function seatBust(h, size = 0.44, lift = 0.07) {
   const H = h || 390;
   const rail = H * SEAT_RAIL;
-  const bh = Math.round(H * 0.44);
+  const bh = Math.round(H * size);
   const bw = Math.round((bh * BUST_W) / BUST_H);
-  const top = Math.round(rail - H * 0.07 - (bh * 50) / BUST_H);
+  const top = Math.round(rail - H * lift - (bh * 50) / BUST_H);
   return { w: bw, h: bh, drop: top + bh - Math.round(rail), mouth: Math.round(top + (bh * 38) / BUST_H) };
 }
+
+/**
+ * Versão 2.9, a roda deitada: onde cada rival senta atrás da beirada de lá (fração da largura),
+ * na ordem da vez a partir de você. A vez gira no sentido anti-horário: o próximo fica à sua
+ * direita, depois o da frente, depois o da esquerda.
+ */
+export const RODA_SPOTS = Object.freeze({ 1: [0.5], 2: [0.69, 0.31], 3: [0.78, 0.5, 0.22] });

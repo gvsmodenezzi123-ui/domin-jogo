@@ -17968,3 +17968,734 @@
 .app-shell.is-landscape .pvp-final-tag {
   display: none;
 }
+
+/* =====================================================================================
+   Versão 2.10: o jogo inteiro deitado (16:9). Com a tela deitada, a coluna do celular (520 px)
+   abre na tela toda e cada cena reorganiza as coisas em duas colunas. A abertura continua em pé
+   (ela já se desenha numa moldura em pé no meio da tela). Em pé num celular, um aviso pede
+   para girar (o APK e o app instalado já abrem deitados).
+   ===================================================================================== */
+
+/* o aviso de girar o celular (só no toque, em pé, fora da abertura) */
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    text-align: center;
+    color: #f4ecd2;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 40%, rgba(255, 200, 110, 0.12), transparent 70%),
+      #0b0907;
+  }
+
+  body:has(.intro) .rotate-hint {
+    display: none;
+  }
+}
+
+.rotate-hint-phone {
+  width: 54px;
+  height: 92px;
+  border: 4px solid #e8c98a;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 0 3px #1a0f08,
+    0 6px 0 rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #2c4a2c, #16261a);
+  animation: rotateHint 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.rotate-hint-title {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1.5;
+  text-shadow: 0 3px 0 #000;
+}
+
+.rotate-hint-text {
+  max-width: 280px;
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1.05;
+  color: var(--color-bone-300);
+}
+
+@keyframes rotateHint {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  55%,
+  100% {
+    transform: rotate(-90deg);
+  }
+}
+
+@media (min-aspect-ratio: 5/4) {
+  /* --- a tela toda --------------------------------------------------------------- */
+  .app-shell {
+    max-width: none;
+  }
+
+  .wide-room {
+    display: none;
+  }
+
+  /* --- o balcão das maletas: o título, a escolha e o INICIAR à esquerda; a bancada à direita */
+  .counter-scene .case-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.2fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title stage'
+      'head stage'
+      'card stage'
+      'back stage';
+    column-gap: 22px;
+    align-items: start;
+    padding: max(env(safe-area-inset-top), 12px) max(18px, env(safe-area-inset-right, 0px)) max(env(safe-area-inset-bottom), 10px)
+      max(18px, env(safe-area-inset-left, 0px));
+  }
+
+  .counter-scene .case-title {
+    grid-area: title;
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .counter-scene .case-title span {
+    font-size: 16px;
+  }
+
+  .counter-scene .counter-head {
+    grid-area: head;
+    margin-top: 6px;
+  }
+
+  .counter-scene .case-stage {
+    grid-area: stage;
+    align-self: center;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .counter-scene .counter-card {
+    grid-area: card;
+    max-width: none;
+    margin-top: 8px;
+  }
+
+  .counter-scene .case-back {
+    grid-area: back;
+    justify-self: start;
+  }
+
+  .counter-scene .case-lamp {
+    left: 44%;
+  }
+
+  /* --- o mapa: o caderno à esquerda (rola), a região e a próxima mesa à direita ------- */
+  .map-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'map head'
+      'map foot';
+  }
+
+  .map-screen > .map-header {
+    grid-area: head;
+    padding-left: 14px;
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+
+  .map-screen > .map-scroll {
+    grid-area: map;
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+  }
+
+  .map-screen > .map-footer {
+    grid-area: foot;
+    align-self: end;
+    padding-left: 14px;
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+  }
+
+  /* --- as cenas (loja, beco, Seu Tião): duas colunas, encolhendo juntas se não couber -- */
+  .shop-v22 .scene-fit {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'awning shelf'
+      'wall shelf'
+      'counter shelf'
+      'controls shelf';
+    column-gap: 0;
+    max-width: none;
+  }
+
+  .shop-v22 .scene-fit > .shop-awning {
+    grid-area: awning;
+  }
+
+  .shop-v22 .scene-fit > .shop-backwall {
+    grid-area: wall;
+    min-height: 0;
+  }
+
+  .shop-v22 .scene-fit > .shop-estante {
+    grid-area: shelf;
+    align-self: stretch;
+  }
+
+  .shop-v22 .scene-fit > .shop-counter-front {
+    grid-area: counter;
+  }
+
+  .shop-v22 .scene-fit > .shop-controls {
+    grid-area: controls;
+  }
+
+  .bm-v22 .scene-fit {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'head coat'
+      'alley coat'
+      'foot coat';
+    max-width: none;
+  }
+
+  .bm-v22 .scene-fit > .bm-head {
+    grid-area: head;
+  }
+
+  .bm-v22 .scene-fit > .bm-alley {
+    grid-area: alley;
+    min-height: 0;
+  }
+
+  .bm-v22 .scene-fit > .bm-coat {
+    grid-area: coat;
+    align-self: stretch;
+  }
+
+  .bm-v22 .scene-fit > :last-child:not(.bm-coat):not(.bm-alley):not(.bm-head) {
+    grid-area: foot;
+  }
+
+  .tiao-v22 .scene-fit {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+    grid-template-areas: 'stage controls';
+    max-width: none;
+  }
+
+  .tiao-v22 .scene-fit > .tiao-stage {
+    grid-area: stage;
+  }
+
+  .tiao-v22 .scene-fit > .tiao-controls {
+    grid-area: controls;
+    align-self: center;
+  }
+
+  /* --- o imprevisto da noite: a arte à esquerda, a história e as escolhas à direita ---- */
+  .encounter-scroll {
+    padding-top: calc(max(env(safe-area-inset-top), 10px) + 40px);
+  }
+
+  .encounter-card {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-areas:
+      'kick kick'
+      'art title'
+      'art text'
+      'art opts'
+      'foot foot';
+    column-gap: 14px;
+    align-items: start;
+    max-width: 640px;
+    text-align: left;
+  }
+
+  .encounter-card > .encounter-kicker {
+    grid-area: kick;
+    text-align: center;
+  }
+
+  .encounter-card > .encounter-art {
+    grid-area: art;
+    align-self: center;
+  }
+
+  .encounter-card > .encounter-title {
+    grid-area: title;
+  }
+
+  .encounter-card > .encounter-text {
+    grid-area: text;
+  }
+
+  .encounter-card > .encounter-options,
+  .encounter-card > .encounter-result {
+    grid-area: opts;
+  }
+
+  .encounter-card > :last-child:not(.encounter-options):not(.encounter-result):not(.encounter-text) {
+    grid-area: foot;
+  }
+
+  /* --- a mesa online: o título e o apelido à esquerda, abrir/entrar à direita ---------- */
+  .pvp-lobby-inner {
+    max-width: 760px;
+    padding-top: 70px;
+  }
+
+  /* --- o saguão da roda: as cadeiras à esquerda, as regras à direita ------------------ */
+  .table-lobby .lobby-fit .scene-fit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'head opts'
+      'table opts'
+      'table note'
+      'table foot';
+    column-gap: 22px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .table-lobby .scene-fit > .lobby-head {
+    grid-area: head;
+  }
+
+  .table-lobby .scene-fit > .lobby-table {
+    grid-area: table;
+    align-self: center;
+  }
+
+  .table-lobby .scene-fit > .lobby-opts {
+    grid-area: opts;
+    align-self: center;
+  }
+
+  .table-lobby .scene-fit > .lobby-note {
+    grid-area: note;
+  }
+
+  .table-lobby .scene-fit > .lobby-foot {
+    grid-area: foot;
+  }
+}
+
+/* --- a roda deitada (SeatBench → SeatRow): todos sentados atrás da beirada de lá --------- */
+.roda-seats.roda-seats.rival-bench {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.chair {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chair-clip {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--chair-h, var(--rail-y));
+  overflow: hidden;
+  clip-path: var(--chair-clip, none);
+}
+
+/* o corpo de quem passa da beirada some no escuro antes da bancada */
+.chair-bust .seat-bust-px {
+  -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 98%);
+  mask-image: linear-gradient(180deg, #000 74%, transparent 98%);
+}
+
+.chair-bust {
+  position: absolute;
+  left: var(--x);
+  /* (o recorte desce até a bancada: o busto se mede da beirada de lá, não do pé do recorte) */
+  top: calc(var(--rail-px) + var(--bust-drop) - var(--bust-h));
+  width: var(--bust-w);
+  height: var(--bust-h);
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+}
+
+.chair-breath {
+  display: block;
+}
+
+.chair.is-out .chair-bust {
+  filter: grayscale(1) brightness(0.55);
+}
+
+.chair .seat-chalk {
+  position: absolute;
+  left: 25%;
+  top: 15%;
+  width: 50%;
+  height: 50%;
+}
+
+/* a vez dele: a luz esquenta atrás do busto, na cor da cadeira */
+.chair-clip::before {
+  content: '';
+  position: absolute;
+  left: var(--x);
+  bottom: 0;
+  width: calc(var(--bust-w) * 1.8);
+  height: var(--bust-h);
+  translate: -50% 0;
+  background: radial-gradient(ellipse 50% 60% at 50% 72%, color-mix(in srgb, var(--seat) 40%, transparent), transparent 72%);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.chair.is-turn .chair-clip::before {
+  opacity: 1;
+}
+
+/* as pedras dele de pé na beirada, viradas (o verso de madeira) */
+.chair-rack {
+  position: absolute;
+  left: var(--x);
+  top: var(--rail-y);
+  translate: -50% calc(-100% + 5px);
+  z-index: 2;
+}
+
+.chair-rack .seat-fan {
+  gap: 2px;
+}
+
+.chair-rack .seat-fan-tile {
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 50% 50%, #b8863a 0 1.5px, transparent 2px),
+    linear-gradient(180deg, rgba(255, 220, 170, 0.18) 0 1px, transparent 1px),
+    linear-gradient(180deg, #3e2e20, #1c130b);
+  box-shadow:
+    0 0 0 1px #0b0705,
+    0 2px 0 #120b06,
+    0 3px 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.chair-rack .seat-fan-n {
+  align-self: center;
+  margin-left: 4px;
+  font-size: 7px;
+  text-shadow: 0 1px 0 #000;
+}
+
+/* em cima da cabeça: só a plaquinha do nome e a vida (sem caixa); a fala da jogada embaixo */
+.chair-plate {
+  position: absolute;
+  left: var(--x);
+  top: max(env(safe-area-inset-top), 4px);
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: auto;
+}
+
+.chair-plate .seat-plate {
+  position: relative;
+  font-size: 7px;
+  white-space: nowrap;
+  transition: filter 300ms ease;
+}
+
+/* a vez dele: a plaquinha acende na cor da cadeira, com os segundos ao lado */
+.chair-plate.is-on .seat-plate {
+  filter: drop-shadow(0 0 4px var(--seat)) drop-shadow(0 0 2px var(--seat));
+}
+
+.chair-secs.chair-secs {
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.chair-life {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
+.chair-tags {
+  position: absolute;
+  right: -10px;
+  top: -7px;
+  display: flex;
+  gap: 2px;
+}
+
+.chair-lost.chair-lost {
+  position: static;
+  font-size: 6px;
+}
+
+.chair.is-danger .chair-life {
+  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 4px rgba(255, 50, 36, 0.9));
+}
+
+/* a fala da jogada logo embaixo da vida, centrada na cadeira */
+.chair-bubble.chair-bubble {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 5px);
+  bottom: auto;
+  height: auto;
+  width: max-content;
+  translate: -50% 0;
+}
+
+.chair-bubble.chair-bubble::before {
+  top: -4px;
+  bottom: auto;
+}
+
+/* a roda deitada: o dorme, a soma e o seu dinheiro descem para a lateral direita (em cima,
+   as cadeiras), o relógio da vez fica na bancada da esquerda e o grito no meio do tampo */
+.table-v24.is-landscape .tableboard-viewport.is-landscape .boneyard-pile {
+  top: calc(var(--rail-px) + 6px);
+}
+
+.table-v24.is-landscape .tableboard-viewport.is-landscape .ends-sum {
+  top: calc(var(--rail-px) + 76px);
+  right: max(env(safe-area-inset-right), 10px);
+}
+
+.table-v24.is-landscape .player-zone.is-landscape .land-coins {
+  top: calc(39% + 130px);
+}
+
+.table-v24.is-landscape .table-clock {
+  left: max(env(safe-area-inset-left), 10px);
+  top: calc(39% + 8px);
+  translate: 0 0;
+}
+
+.table-v24.is-landscape .table-tag {
+  display: none;
+}
+
+.table-v24.is-landscape .table-callout {
+  top: 54%;
+}
+
+@media (min-aspect-ratio: 5/4) {
+  /* a mesa online: o título e o apelido à esquerda; abrir, entrar e treinar à direita */
+  .pvp-lobby .pvp-lobby-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    align-content: start;
+    column-gap: 28px;
+    row-gap: 10px;
+    padding-top: 64px;
+  }
+
+  .pvp-lobby .pvp-lobby-inner > * {
+    grid-column: 2;
+  }
+
+  .pvp-lobby .pvp-lobby-inner > .pvp-title,
+  .pvp-lobby .pvp-lobby-inner > .pvp-mode,
+  .pvp-lobby .pvp-lobby-inner > .pvp-field {
+    grid-column: 1;
+  }
+
+  .pvp-lobby .pvp-lobby-inner > .pvp-or {
+    margin: 0;
+  }
+
+  /* o Seu Tião: o porão no meio e a placa ao lado */
+  .tiao-v22 .scene-fit {
+    grid-template-columns: minmax(0, 400px) minmax(220px, 300px);
+    justify-content: center;
+    column-gap: 24px;
+  }
+
+  /* o Dono da Noite: o retrato e o nome à esquerda, a regra e o SENTAR à direita */
+  .secret-card.secret-card {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-areas:
+      'kick kick'
+      'face title'
+      'face text'
+      'face hearts'
+      'face rule'
+      'face sit';
+    column-gap: 18px;
+    align-items: center;
+    max-width: 620px;
+    text-align: left;
+  }
+
+  .secret-card > .secret-kicker {
+    grid-area: kick;
+    text-align: center;
+  }
+
+  .secret-card > .secret-portrait {
+    grid-area: face;
+  }
+
+  .secret-card > .secret-title {
+    grid-area: title;
+    margin-top: 0;
+  }
+
+  .secret-card > p.font-term {
+    grid-area: text;
+  }
+
+  .secret-card > div.flex {
+    grid-area: hearts;
+    justify-content: flex-start;
+  }
+
+  .secret-card > .secret-rule {
+    grid-area: rule;
+  }
+
+  .secret-card > .btn-pixel {
+    grid-area: sit;
+    margin-top: 10px;
+  }
+
+  /* o livro de boteco aberto deitado: 6 nichos por prateleira, 2 prateleiras */
+  .overlay-backdrop > .book-leather {
+    max-width: min(720px, 92vw);
+  }
+
+  .album-shelves {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-aspect-ratio: 5/4) {
+  .album {
+    height: min(40vh, 280px);
+  }
+
+  .pvp-lobby .pvp-lobby-inner {
+    padding-top: 56px;
+  }
+
+  .pvp-lobby .pvp-lobby-inner > .mt-auto {
+    grid-column: 1;
+    align-self: end;
+    align-items: flex-start;
+    margin-top: 0;
+  }
+
+  /* a pausa: o recado do rival e a semente à esquerda, os botões à direita */
+  .overlay-backdrop > .pause-card:has(> .grid) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-areas:
+      'title btns'
+      'text btns'
+      'seed btns';
+    column-gap: 22px;
+    align-items: center;
+    max-width: 580px;
+  }
+
+  .pause-card > h2 {
+    grid-area: title;
+  }
+
+  .pause-card:has(> .grid) > p {
+    grid-area: text;
+  }
+
+  .pause-card > .grid {
+    grid-area: btns;
+    margin-top: 0;
+  }
+
+  .pause-card > .pause-seed {
+    grid-area: seed;
+    margin-top: 6px;
+  }
+
+
+}
+
+@media (min-aspect-ratio: 5/4) {
+  /* a aula do Vô Juca na mesa deitada: a caixa no alto à esquerda (o dorme e a soma, à direita,
+     continuam à vista) */
+  .tut-coach {
+    right: auto;
+    width: min(560px, 62%);
+    padding-left: max(env(safe-area-inset-left), 6px);
+  }
+}
+
+@media (min-aspect-ratio: 5/4) {
+  /* o balcão deitado: o nome da maleta numa linha só e o cartão mais justo */
+  .counter-scene .counter-pick-name {
+    font-size: clamp(12px, 2.2vw, 18px);
+    white-space: nowrap;
+  }
+
+  .counter-scene.is-picked .case-title span {
+    display: none;
+  }
+
+  .counter-scene .counter-card {
+    padding: 9px 10px 10px;
+  }
+
+  .counter-scene .seed-field {
+    margin-top: 6px;
+  }
+}
+
+@media (min-aspect-ratio: 5/4) and (max-height: 420px) {
+  .counter-scene.is-picked .seed-field-hint {
+    display: none;
+  }
+
+  .round-card.py-5 {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}

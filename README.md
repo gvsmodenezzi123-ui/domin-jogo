@@ -172,6 +172,23 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.10: o jogo inteiro deitado (etapas 3 e 4)
+
+- O jogo agora é todo de tela deitada (16:9). O APK e o app instalado abrem deitados; em pé,
+  num celular, aparece o aviso para girar. A abertura continua em pé (no meio da tela) por
+  enquanto.
+- Cada tela foi reorganizada em duas colunas: o balcão das maletas (escolha e INICIAR à esquerda,
+  a bancada à direita), o mapa (o caderno à esquerda, a região e a próxima mesa à direita), a
+  loja (o Valtinho e a sua bolsa à esquerda, a estante à direita), o Mercado Negro, o Seu Tião,
+  os imprevistos (a arte ao lado da história), a mesa online, o saguão da roda (as cadeiras ao
+  lado das regras), a pausa, o Dono da Noite e o Livro de Boteco (6 nichos por prateleira).
+- A roda de 2 a 4 deitada: todos sentados atrás da mesa, do tamanho do rival do duelo, na ordem
+  da vez (o próximo à sua direita, o da frente no meio, o último à esquerda). Em cima de cada um,
+  só a plaquinha do nome e a vida (acende na vez dele, com os segundos ao lado); a fala da
+  jogada ("JOGOU 4|3", "PASSOU") sai embaixo da vida. Quem senta na ponta passa da beirada:
+  o tampo esconde o que fica atrás dele e o corpo de fora some no escuro antes da bancada.
+- A aula do Vô Juca deitada: a caixa no alto à esquerda, com o dorme à vista.
+
 ### 2.9: a mesa deitada com o rival sentado (etapa 2)
 
 - Com a tela deitada (celular girado, tablet deitado, computador), a partida 1×1 (solo e duelo
