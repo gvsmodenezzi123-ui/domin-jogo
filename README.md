@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.11.1: a mesa online, o saguão, a pausa e o HUD da mesa
+
+- **Na mesa deitada**, a tábua COMPRAR mora no canto de baixo à direita; a PASSAR VEZ só aparece
+  em cima dela depois da compra. Os talismãs viraram nichos de madeira (os da bolsa da loja):
+  os do rival ao lado da plaquinha do nome, os seus numa coluna na beirada da esquerda (4 vagas;
+  5 com a Maleta do Trapaceiro ou o Bolso Fundo).
+- **Mesa online**: a calçada em frente ao bar, de noite e com chuva, com o orelhão, a calçada de
+  pedra portuguesa e o cavalete de giz onde se cria a mesa, se digita o código e se entra.
+- **Saguão da roda**: o salão dos fundos visto de cima, a mesa de feltro com as cadeiras em
+  volta e a folha das REGRAS DA CASA na mesinha de apoio.
+- **Pausa**: o quadro de giz no meio da mesa escurecida, com as teclas em pedra de dominó.
+
 ### 2.11: as telas deitadas desenhadas do zero
 
 - Cada tela deitada agora é uma cena inteira pintada para o 16:9, num palco fixo de 1000 × 450

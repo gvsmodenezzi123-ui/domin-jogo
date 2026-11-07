@@ -7,6 +7,10 @@ import { webrtcAvailable } from './peerLoader.js';
 import { ROOM_LENGTH, ROOM_PREFIX, formatRoomId, maskRoomInput } from './protocol.js';
 import { TABLE_PREFIX, maskTableInput } from '../table/tableProtocol.js';
 import { copyText, roomLink } from './share.js';
+import DominoKey from '../components/DominoKey.jsx';
+import LandStage from '../components/LandStage.jsx';
+import { useLandscape } from '../components/useLandscape.js';
+import { STREET_PAD, paintStreetBack } from '../components/art/landStreet.js';
 
 const ERRORS = {
   notFound: 'Mesa não encontrada. Confira o ID (ou peça um novo).',
@@ -121,6 +125,7 @@ export default function LobbyView({
   // CRIAR MESA CLANDESTINA abre a configuração; ABRIR A MESA cria de verdade
   const [setup, setSetup] = useState(false);
   const [room, setRoom] = useState(loadRoom);
+  const landscape = useLandscape();
   const busy = Boolean(snap);
   const hosting = snap?.role === 'host';
   const error = snap?.error ? (ERRORS[snap.error] ?? ERRORS.network) : null;
@@ -135,6 +140,268 @@ export default function LobbyView({
     const text = link ? `Bora jogar Buxaria! Mesa ${formatRoomId(code)} · ${link}` : formatRoomId(code);
     setCopied(await copyText(text));
   };
+
+  if (landscape) {
+    const codeInput = (prefix, value, onChange, ok, go, label) => (
+      <label className="ol-code">
+        <span className="ol-code-prefix" aria-hidden="true">
+          {prefix}
+        </span>
+        <input
+          className="ol-code-input"
+          type="text"
+          inputMode="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="_____"
+          maxLength={ROOM_LENGTH + prefix.length}
+          aria-label={label}
+          autoCapitalize="characters"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="go"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && ok) go();
+          }}
+        />
+      </label>
+    );
+    return (
+      <main className="pvp-lobby-land" role="main" aria-label="Mesa online">
+        <LandStage paint={() => paintStreetBack()} cacheKey="land-calcada" pad={STREET_PAD} bleed="#07080c" label="Mesa online" role="presentation">
+          <span className="bl-rain" aria-hidden="true" />
+          {snap && (
+            <span className="ol-net">
+              <NetBadge link={snap.link} ping={snap.ping} />
+            </span>
+          )}
+
+          {/* a coluna da esquerda: quem é você e que mesa quer */}
+          <h1 className="ol-title">
+            MESA ONLINE
+            <span>
+              {roda
+                ? 'De 2 a 4 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
+                : 'Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.'}
+            </span>
+          </h1>
+          {!busy && !setup && (
+            <div className="ol-modes" role="radiogroup" aria-label="Tipo de mesa">
+              {[
+                ['duelo', 'DUELO 1×1', 2],
+                ['roda', 'RODA 2 A 4', 4],
+              ].map(([id, label, pips]) => (
+                <DominoKey
+                  key={id}
+                  role="radio"
+                  aria-checked={mode === id}
+                  label={label}
+                  pips={pips}
+                  tone={mode === id ? 'ivory' : 'ebony'}
+                  w={170}
+                  h={46}
+                  className="ol-mode"
+                  onClick={() => {
+                    onTap?.();
+                    setMode(id);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          <label className="ol-name">
+            <span className="ol-label">SEU APELIDO NA MESA</span>
+            <input
+              className="ol-name-input"
+              type="text"
+              value={name}
+              onChange={(e) => onName(e.target.value.slice(0, 14))}
+              placeholder="Como te chamam no boteco"
+              maxLength={14}
+              disabled={busy}
+              autoComplete="nickname"
+              spellCheck={false}
+            />
+          </label>
+          {!busy && !direct && !roda && (
+            <div className="ol-warn" role="alert">
+              <span className="ol-label">A MESA ONLINE NÃO ABRE AQUI</span>
+              <p>Esta página não deixa fazer conexão direta entre aparelhos (WebRTC). Jogue pelo site ou pelo app:</p>
+              <a href={SITE_URL} target="_blank" rel="noopener noreferrer">
+                {SITE_URL.replace(/^https:\/\//, '').replace(/\/$/, '')}
+              </a>
+            </div>
+          )}
+          {error && (
+            <p className="ol-error" role="alert">
+              {error}
+            </p>
+          )}
+          {setup && !busy ? null : busy ? (
+            <DominoKey label={error ? 'TENTAR DE NOVO' : 'CANCELAR'} pips={0} w={190} h={46} className="ol-back" onClick={onCancel} />
+          ) : (
+            <DominoKey label="VOLTAR" pips={1} w={156} h={46} className="ol-back" onClick={onBack} />
+          )}
+
+          {/* o cavalete na frente do bar: abrir, o código e entrar */}
+          <section className="ol-board" aria-label="Mesas da noite">
+            <p className="ol-board-head">MESAS DA NOITE</p>
+            {!busy && !nameOk && <p className="ol-hint">Escreva o seu apelido para abrir ou entrar numa mesa.</p>}
+            {roda && (
+              <>
+                {direct ? (
+                  <>
+                    <DominoKey
+                      label="ABRIR UMA RODA"
+                      note="As regras você escolhe no saguão"
+                      pips={6}
+                      tone="ivory"
+                      w={330}
+                      h={58}
+                      className="is-main"
+                      disabled={!nameOk}
+                      onClick={() => {
+                        onTap?.();
+                        onCreateTable();
+                      }}
+                    />
+                    <p className="ol-or">ou entre numa roda</p>
+                    {codeInput(TABLE_PREFIX, typedTable, (v) => setTypedTable(maskTableInput(v)), joinTableOk, () => onJoinTable(typedTable), 'Digite o código da roda')}
+                    <DominoKey label="PUXAR CADEIRA" pips={3} w={330} h={46} disabled={!joinTableOk} onClick={() => onJoinTable(typedTable)} />
+                  </>
+                ) : (
+                  <p className="ol-hint">Esta página não deixa fazer conexão direta entre aparelhos (WebRTC): a roda online abre no site ou no app. Aqui dá para treinar com bots.</p>
+                )}
+                <button
+                  type="button"
+                  className="ol-text-btn"
+                  onClick={() => {
+                    onTap?.();
+                    onPractice();
+                  }}
+                >
+                  TREINAR COM BOTS (SEM INTERNET)
+                </button>
+              </>
+            )}
+
+            {!busy && direct && setup && (
+              <div className="ol-setup" role="group" aria-label="Configurar a mesa">
+                {SETUP_ROWS.map((row) => (
+                  <div key={row.key} className="ol-setup-row">
+                    <span className="ol-label">{row.label}</span>
+                    <div className="ol-seg" role="radiogroup" aria-label={row.label}>
+                      {ROOM_OPTIONS[row.key].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={room[row.key] === v}
+                          className={`ol-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
+                          onClick={() => {
+                            onTap?.();
+                            setRoom({ ...room, [row.key]: v });
+                          }}
+                        >
+                          {row.show(v)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="ol-setup-go">
+                  <button
+                    type="button"
+                    className="ol-text-btn"
+                    onClick={() => {
+                      onTap?.();
+                      setSetup(false);
+                    }}
+                  >
+                    ◂ VOLTAR
+                  </button>
+                  <DominoKey
+                    label="ABRIR A MESA"
+                    pips={6}
+                    tone="ivory"
+                    w={220}
+                    h={50}
+                    className="is-main"
+                    disabled={!nameOk}
+                    onClick={() => {
+                      saveRoom(room);
+                      setSetup(false);
+                      onCreate(room);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!busy && direct && !setup && !roda && (
+              <>
+                {saved && (
+                  <DominoKey
+                    label={`VOLTAR PARA A ${formatRoomId(saved.code)}`}
+                    note={saved.oppName ? `A partida com ${saved.oppName} continua` : 'A mesa continua'}
+                    pips={5}
+                    w={330}
+                    h={54}
+                    onClick={onRejoin}
+                  />
+                )}
+                <DominoKey
+                  label="CRIAR MESA"
+                  note="Você escolhe as regras e chama alguém"
+                  pips={6}
+                  tone="ivory"
+                  w={330}
+                  h={58}
+                  className="is-main"
+                  disabled={!nameOk}
+                  onClick={() => {
+                    onTap?.();
+                    setSetup(true);
+                  }}
+                />
+                <p className="ol-or">ou sente numa mesa</p>
+                {codeInput(ROOM_PREFIX, typed, (v) => setTyped(maskRoomInput(v)), joinOk, () => onJoin(typed), 'Digite o ID da sala')}
+                <DominoKey label="PUXAR CADEIRA" pips={3} w={330} h={46} disabled={!joinOk} onClick={() => onJoin(typed)} />
+              </>
+            )}
+
+            {busy && hosting && (
+              <div className="ol-host" role="group" aria-label="Sua mesa">
+                <span className="ol-label">O ID DA SUA MESA</span>
+                <p className="ol-room-id">{formatRoomId(code)}</p>
+                <p className="ol-status">
+                  {snap.link === 'connecting' ? 'Abrindo a mesa' : 'Esperando oponente sentar à mesa'}
+                  <span className="thinking-dots" aria-hidden="true" />
+                </p>
+                {snap.room && <p className="ol-rules">{describeRoom(snap.room)}</p>}
+                <DominoKey label={copied ? 'COPIADO!' : 'COPIAR LINK/ID'} pips={4} tone="ivory" w={330} h={50} className="is-main" onClick={copy} />
+                <p className="ol-hint">Mande o ID para quem vai jogar. Ele toca em PUXAR CADEIRA e digita.</p>
+              </div>
+            )}
+
+            {busy && !hosting && (
+              <div className="ol-host" role="group" aria-label="Entrando na mesa">
+                <span className="ol-label">ENTRANDO NA MESA</span>
+                <p className="ol-room-id">{formatRoomId(code)}</p>
+                {!error && (
+                  <p className="ol-status">
+                    Puxando a cadeira
+                    <span className="thinking-dots" aria-hidden="true" />
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        </LandStage>
+      </main>
+    );
+  }
 
   return (
     <main className="pvp-lobby fixed inset-0 z-[55] flex flex-col items-center px-5 text-center" role="main" aria-label="Mesa online">

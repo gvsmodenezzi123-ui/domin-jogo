@@ -101,7 +101,7 @@ function passButtonText(rule) {
  * um dispara, ele treme. Os poderes prontos (Relógio, Canivete, Grampo) viram botões na fileira
  * das ações, e o toque no talismã que brilha também usa o poder.
  */
-const RelicRow = memo(function RelicRow({ relics, relicSlots, relicFlashes, spentRelics, canUndo, onUndo, canCanivete = false, onCanivete, canGrampo = false, onGrampo, press }) {
+const RelicRow = memo(function RelicRow({ relics, relicSlots, relicFlashes, spentRelics, canUndo, onUndo, canCanivete = false, onCanivete, canGrampo = false, onGrampo, press, vertical = false }) {
   const ready = readyRelics(canUndo, canCanivete, canGrampo);
   const abilities = (canUndo ? 1 : 0) + (canCanivete ? 1 : 0) + (canGrampo ? 1 : 0);
   // o toque rápido no talismã que brilha também usa o poder (além do botão na fileira das ações)
@@ -115,19 +115,35 @@ const RelicRow = memo(function RelicRow({ relics, relicSlots, relicFlashes, spen
   );
   return (
     <div className="relic-row player-relics">
-      <Hotbar
-        relics={relics}
-        slots={relicSlots}
-        cols={Math.min(2, Math.max(1, relicSlots))}
-        size={26}
-        flashes={relicFlashes}
-        spent={spentRelics}
-        ready={ready}
-        press={press}
-        onTap={abilities ? tapRelic : undefined}
-        bare
-        label="Seus talismãs"
-      />
+      {vertical ? (
+        <Hotbar
+          relics={relics}
+          slots={relicSlots}
+          cols={1}
+          size={36}
+          flashes={relicFlashes}
+          spent={spentRelics}
+          ready={ready}
+          press={press}
+          onTap={abilities ? tapRelic : undefined}
+          niche
+          label="Seus talismãs"
+        />
+      ) : (
+        <Hotbar
+          relics={relics}
+          slots={relicSlots}
+          cols={Math.min(2, Math.max(1, relicSlots))}
+          size={26}
+          flashes={relicFlashes}
+          spent={spentRelics}
+          ready={ready}
+          press={press}
+          onTap={abilities ? tapRelic : undefined}
+          bare
+          label="Seus talismãs"
+        />
+      )}
     </div>
   );
 });
@@ -423,12 +439,12 @@ function PlankArt({ tone }) {
 }
 
 /**
- * Versão 2.9: os botões táticos da mesa deitada (o desenho de referência): nas pontas de
- * baixo, a tábua COMPRAR (com o preço da compra) à esquerda e a tábua PASSAR VEZ à direita, e
- * o MENU redondo no canto. As tábuas ficam sempre no lugar (nada pula); só acendem quando são o
- * caminho, com as mesmas regras das fichas da mesa em pé (comprar quando não há jogada,
- * passar depois da compra). No modo de escolha (Giz, Canivete, Grampo) viram PULAR e a
- * confirmação; os poderes prontos dos talismãs sobem em fichas em cima da tábua da direita.
+ * Versão 2.9: os botões táticos da mesa deitada (o desenho de referência), com o MENU redondo
+ * no canto de baixo à esquerda. Versão 2.11: as tábuas moram no canto de baixo à direita: a
+ * COMPRAR (com o preço da compra) sempre no lugar, acendendo quando é o caminho, e a PASSAR VEZ
+ * só aparece em cima dela depois da compra (as mesmas regras das fichas da mesa em pé). No modo
+ * de escolha (Giz, Canivete, Grampo) viram PULAR (embaixo) e a confirmação (em cima); os poderes
+ * prontos dos talismãs sobem em fichas em cima das tábuas.
  */
 const TacticalPlanks = memo(function TacticalPlanks({
   discardMode,
@@ -457,6 +473,9 @@ const TacticalPlanks = memo(function TacticalPlanks({
 }) {
   const drawOn = discardMode || (showDraw && canDraw);
   const passOn = discardMode ? hasSelection : showPass && canPass;
+  // versão 2.11: as duas tábuas no canto de baixo à direita: COMPRAR sempre no lugar e o PASSAR
+  // VEZ só aparece (em cima dela) depois da compra, quando passar é o caminho
+  const passShown = discardMode || passOn;
   return (
     <>
       <div className="tac-corner tac-left">
@@ -471,21 +490,6 @@ const TacticalPlanks = memo(function TacticalPlanks({
             DEV
           </button>
         )}
-        <button
-          type="button"
-          data-tut={discardMode ? undefined : 'draw'}
-          className={`tac-plank ${drawOn ? 'is-on' : ''}`}
-          disabled={!drawOn}
-          onClick={discardMode ? onSkipDiscard : onDraw}
-        >
-          <PlankArt tone="pinho" />
-          <span className="tac-title font-pixel">{discardMode ? pickLabels.skip : 'COMPRAR'}</span>
-          {!discardMode && myTurn && (
-            <span className="tac-cost font-pixel">
-              <DrawCost draw={draw} />
-            </span>
-          )}
-        </button>
       </div>
       <div className="tac-corner tac-right">
         {(canUndo || canCanivete || canGrampo) && !discardMode && (
@@ -507,18 +511,35 @@ const TacticalPlanks = memo(function TacticalPlanks({
             )}
           </div>
         )}
+        {passShown && (
+          <button
+            type="button"
+            data-tut={discardMode ? undefined : 'pass'}
+            className={`tac-plank tac-plank-blood tac-pass-in ${passOn ? 'is-on' : ''}`}
+            disabled={!passOn}
+            onClick={discardMode ? onDiscard : onPass}
+            aria-label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
+          >
+            <PlankArt tone="sangue" />
+            <span className="tac-title font-pixel">{discardMode ? pickLabels.confirm : 'PASSAR VEZ'}</span>
+            {!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) && (
+              <span className="tac-cost font-pixel">{passRule.fiado ? 'FIADO' : `$${passRule.cost}`}</span>
+            )}
+          </button>
+        )}
         <button
           type="button"
-          data-tut={discardMode ? undefined : 'pass'}
-          className={`tac-plank tac-plank-blood ${passOn ? 'is-on' : ''}`}
-          disabled={!passOn}
-          onClick={discardMode ? onDiscard : onPass}
-          aria-label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
+          data-tut={discardMode ? undefined : 'draw'}
+          className={`tac-plank ${drawOn ? 'is-on' : ''}`}
+          disabled={!drawOn}
+          onClick={discardMode ? onSkipDiscard : onDraw}
         >
-          <PlankArt tone="sangue" />
-          <span className="tac-title font-pixel">{discardMode ? pickLabels.confirm : 'PASSAR VEZ'}</span>
-          {!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) && (
-            <span className="tac-cost font-pixel">{passRule.fiado ? 'FIADO' : `$${passRule.cost}`}</span>
+          <PlankArt tone="pinho" />
+          <span className="tac-title font-pixel">{discardMode ? pickLabels.skip : 'COMPRAR'}</span>
+          {!discardMode && myTurn && (
+            <span className="tac-cost font-pixel">
+              <DrawCost draw={draw} />
+            </span>
           )}
         </button>
       </div>
@@ -645,6 +666,7 @@ function PlayerRack({
       canGrampo={canGrampo}
       onGrampo={onGrampo}
       press={press}
+      vertical={landscape}
     />
   );
 
@@ -700,9 +722,9 @@ function PlayerRack({
           devUnlocked={devUnlocked}
           onOpenDev={onOpenDev}
         />
-        {/* a coluna da esquerda: seus talismãs e, embaixo, a sua vida */}
+        {/* versão 2.11: seus talismãs numa coluna de nichos na beirada da esquerda e, embaixo, a vida */}
+        <div className="land-relics">{relicRow}</div>
         <div className="land-side land-left">
-          {relicRow}
           <div className="player-life-row">{life}</div>
         </div>
         {/* o seu dinheiro: no alto à direita, embaixo do dorme */}

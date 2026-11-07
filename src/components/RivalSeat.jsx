@@ -15,7 +15,8 @@ import { useTalk } from './useTalk.js';
  * Versão 2.9: o rival SENTADO do outro lado da mesa deitada (16:9), no lugar do cabeçalho.
  *   - o busto no meio, atrás da beirada de lá (a madeira cobre o peito), respirando;
  *   - as pedras dele de pé, viradas, em cima da beirada, na frente do peito;
- *   - no canto de cima à esquerda: o nome, os corações, o dinheiro, os talismãs e o PENSANDO;
+ *   - no canto de cima à esquerda: o nome (com os talismãs nos nichos ao lado, versão 2.11),
+ *     os corações, o dinheiro e o PENSANDO;
  *   - o balão sai da boca, à direita do busto (até 180 px, com quebra de linha);
  *   - o selo do perigo (ÚLTIMA PEDRA!) encosta na fileira das pedras ([data-danger-anchor]).
  * Tudo é uma camada por cima da mesa: o busto é cortado na linha da beirada (SEAT_RAIL, a
@@ -111,6 +112,8 @@ function RivalSeat({
           <h2 className="rival-name rival-nameplate seat-name whitespace-nowrap font-pixel leading-none" aria-label={rival.name}>
             {shortRivalName(rival.name)}
           </h2>
+          {/* versão 2.11: os talismãs dele nos nichos de madeira, ao lado da plaquinha */}
+          <Hotbar relics={relics} size={30} cols={Math.max(4, relics.length)} flashes={flashes} press={press} owner="tioZe" niche label={`Talismãs de ${rival.name}`} className="seat-relics" />
         </div>
         <div className="rival-stats seat-stats">
           <HeartsBar current={hearts} max={maxHearts} size={12} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
@@ -119,7 +122,6 @@ function RivalSeat({
         <span className={`rival-status seat-status font-pixel ${thinking ? 'rival-status-on' : ''}`} role="status" aria-live="polite">
           {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
         </span>
-        <Hotbar relics={relics} size={18} cols={6} flashes={flashes} press={press} owner="tioZe" bare label={`Talismãs de ${rival.name}`} />
         {/* versão 1.4, Lupa de Joalheiro: quantas pedras com cada número ele tem */}
         {numberCounts && (
           <div className="rival-counts seat-counts flex flex-wrap gap-[3px] font-pixel" role="status" aria-label={`Lupa: ${numberCounts.map((n, i) => `${n} com ${i}`).join(', ')}`}>

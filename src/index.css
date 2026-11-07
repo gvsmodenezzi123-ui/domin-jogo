@@ -21016,3 +21016,647 @@
   left: 686px;
   top: 372px;
 }
+
+.tl-key:disabled {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+  cursor: default;
+}
+
+/* --- a mesa online: a calçada em frente ao bar, o orelhão e o cavalete (art/landStreet.js) */
+.pvp-lobby-land .land-stage-wrap {
+  z-index: 55;
+}
+
+.ol-net {
+  position: absolute;
+  right: 20px;
+  top: 14px;
+}
+
+.ol-title {
+  position: absolute;
+  left: 30px;
+  top: 26px;
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-pixel);
+  font-size: 22px;
+  line-height: 1;
+  color: #ffe9b8;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 10px rgba(255, 170, 60, 0.75),
+    0 3px 0 #2a1204;
+}
+
+.ol-title span {
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.05;
+  color: #e6dcc4;
+  text-shadow: 0 2px 0 #000;
+}
+
+.ol-modes {
+  position: absolute;
+  left: 30px;
+  top: 148px;
+  display: flex;
+  gap: 8px;
+}
+
+.tl-key.ol-mode .tl-key-label {
+  font-size: 11px;
+}
+
+.ol-name {
+  position: absolute;
+  left: 30px;
+  top: 212px;
+  width: 348px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ol-label {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: #ffd98a;
+  text-shadow: 0 2px 0 #000;
+}
+
+.ol-name-input {
+  padding: 8px 12px;
+  font-family: var(--font-term);
+  font-size: 24px;
+  color: #2a1a08;
+  background: linear-gradient(180deg, #f4ead2, #ddcaa0);
+  border: 2px solid #2a1a08;
+  border-radius: 0;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.55);
+  outline: none;
+}
+
+.ol-name-input::placeholder {
+  color: rgba(42, 26, 8, 0.45);
+}
+
+.ol-name-input:focus {
+  border-color: #b8261c;
+}
+
+.ol-name-input:disabled {
+  opacity: 0.7;
+}
+
+.ol-warn {
+  position: absolute;
+  left: 30px;
+  top: 292px;
+  width: 348px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.05;
+  color: #e6dcc4;
+  text-shadow: 0 2px 0 #000;
+}
+
+.ol-warn a {
+  color: #8fd6ff;
+  text-decoration: underline;
+}
+
+.ol-error {
+  position: absolute;
+  left: 30px;
+  top: 300px;
+  width: 348px;
+  padding: 6px 10px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.05;
+  color: #ffd2c8;
+  background: rgba(90, 10, 6, 0.75);
+  border: 2px solid #1a0402;
+}
+
+.ol-back {
+  position: absolute;
+  left: 30px;
+  top: 388px;
+}
+
+/* a ardósia do cavalete (616..972 × 68..360) */
+.ol-board {
+  position: absolute;
+  left: 628px;
+  top: 74px;
+  width: 332px;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ol-board-head {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #ffe9a8;
+  text-shadow: 0 0 6px rgba(255, 233, 168, 0.25);
+}
+
+.ol-or {
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(232, 236, 223, 0.7);
+}
+
+.ol-code {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  width: 330px;
+  padding: 2px 0 4px;
+  border-bottom: 2px dashed rgba(232, 236, 223, 0.55);
+  font-family: var(--font-term);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.ol-code-prefix {
+  color: #9fe08a;
+}
+
+.ol-code-input {
+  width: 120px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: 0.12em;
+  color: #f4ecd2;
+  outline: none;
+}
+
+.ol-code-input::placeholder {
+  color: rgba(244, 236, 210, 0.35);
+}
+
+.ol-text-btn {
+  padding: 4px;
+  border: 0;
+  background: none;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #ffd98a;
+  text-shadow: 0 2px 0 #000;
+}
+
+.ol-hint {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1.05;
+  text-align: center;
+  color: rgba(232, 236, 223, 0.8);
+}
+
+.ol-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 330px;
+}
+
+.ol-setup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ol-setup-row .ol-label {
+  color: rgba(232, 236, 223, 0.75);
+}
+
+.ol-seg {
+  display: flex;
+  gap: 4px;
+}
+
+.ol-seg-btn {
+  flex: 1;
+  padding: 5px 0;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #e8ecdf;
+  background: none;
+  border: 2px solid rgba(232, 236, 223, 0.25);
+  border-radius: 0;
+}
+
+.ol-seg-btn.is-on {
+  color: #1a120a;
+  background: #ffe9a8;
+  border-color: #ffe9a8;
+}
+
+.ol-setup-go {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.ol-host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 330px;
+}
+
+.ol-room-id {
+  font-family: var(--font-pixel);
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  color: #9fe08a;
+  text-shadow: 0 0 10px rgba(159, 224, 138, 0.35);
+}
+
+.ol-status {
+  font-family: var(--font-term);
+  font-size: 19px;
+  color: #e8ecdf;
+}
+
+.ol-rules {
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.05;
+  text-align: center;
+  color: rgba(232, 236, 223, 0.7);
+}
+
+/* --- o saguão da roda: o salão dos fundos visto de cima (art/landRoom.js) ---------------- */
+.table-lobby-land .land-stage-wrap {
+  z-index: 60;
+}
+
+.tll-head {
+  position: absolute;
+  left: 20px;
+  top: 14px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tll-head .lobby-sign {
+  font-size: 11px;
+}
+
+.tll-head .lobby-code {
+  font-size: 8px;
+}
+
+.tll-head .lobby-copy {
+  margin: 0;
+  font-size: 8px;
+}
+
+/* a mesa (o feltro é da pintura: 190..410 × 114..334) e as cadeiras em volta */
+.table-lobby-land .lobby-table {
+  position: absolute;
+  left: 190px;
+  top: 114px;
+  width: 220px;
+  height: 220px;
+  max-width: none;
+  margin: 0;
+}
+
+.table-lobby-land .lobby-felt {
+  inset: 18px;
+  left: 18px;
+  top: 18px;
+  width: auto;
+  height: auto;
+  translate: none;
+  border-radius: 50%;
+  background: none;
+  box-shadow: none;
+}
+
+.table-lobby-land .lobby-seat {
+  width: 120px;
+}
+
+.table-lobby-land .lobby-seat.at-bottom {
+  left: 110px;
+  top: 270px;
+}
+
+.table-lobby-land .lobby-seat.at-top {
+  left: 110px;
+  top: -52px;
+}
+
+.table-lobby-land .lobby-seat.at-left {
+  left: -52px;
+  top: 110px;
+}
+
+.table-lobby-land .lobby-seat.at-right {
+  left: 272px;
+  top: 110px;
+}
+
+.table-lobby-land .lobby-seat-name {
+  font-size: 9px;
+  text-shadow: 0 2px 0 #000;
+}
+
+.table-lobby-land .lobby-ready {
+  font-size: 7px;
+}
+
+.table-lobby-land .lobby-face-pick {
+  font-size: 7px;
+}
+
+.table-lobby-land .lobby-mini {
+  font-size: 8px;
+}
+
+/* a folha das regras na mesinha (620..968 × 32..336) */
+.tll-sheet {
+  position: absolute;
+  left: 636px;
+  top: 40px;
+  width: 316px;
+  height: 284px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tll-sheet-head {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #8a1a10;
+}
+
+.table-lobby-land .lobby-opts {
+  max-width: none;
+  margin: 0;
+  gap: 7px;
+}
+
+.table-lobby-land .lobby-opt-label {
+  font-size: 8px;
+  color: #3a2410;
+}
+
+.table-lobby-land .lobby-chip {
+  height: 28px;
+  font-size: 8px;
+  color: #3a2410;
+  background: rgba(60, 40, 20, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(60, 40, 20, 0.45);
+}
+
+.table-lobby-land .lobby-chip.is-on {
+  color: #fff4dc;
+  background: #2a1a0c;
+  box-shadow:
+    inset 0 0 0 1px #000,
+    0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.table-lobby-land .lobby-note {
+  margin-top: auto;
+  font-size: 17px;
+  line-height: 1.05;
+  text-align: left;
+  color: #4a3420;
+}
+
+.table-lobby-land .lobby-foot {
+  position: absolute;
+  left: 620px;
+  top: 350px;
+  width: 348px;
+  max-width: none;
+  margin: 0;
+  gap: 4px;
+}
+
+.table-lobby-land .lobby-start {
+  max-width: none;
+  font-size: 12px;
+}
+
+/* --- versão 2.11: a mesa deitada: as tábuas no canto direito e os talismãs nos nichos ----- */
+.tac-right {
+  gap: 8px;
+}
+
+.tac-pass-in {
+  animation: tacPassIn 260ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+@keyframes tacPassIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reduce-motion .tac-pass-in {
+  animation: none;
+}
+
+/* os nichos de madeira (o mesmo da bolsa da loja), com o talismã dentro */
+.hotbar-niches {
+  display: grid;
+  gap: 4px;
+}
+
+.relic-niche {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  image-rendering: pixelated;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.relic-niche-px {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.relic-niche-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  translate: -50% -50%;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.6));
+}
+
+.relic-niche.is-empty {
+  opacity: 0.85;
+}
+
+.relic-niche.relic-slot-ready {
+  filter: drop-shadow(0 0 5px rgba(255, 214, 110, 0.9));
+}
+
+.relic-niche.relic-slot-ready .relic-niche-icon {
+  animation: nicheReady 1.1s ease-in-out infinite;
+}
+
+@keyframes nicheReady {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.relic-niche.relic-slot-spent .relic-niche-icon {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.relic-niche:active .relic-niche-icon {
+  transform: scale(0.92);
+}
+
+.reduce-motion .relic-niche.relic-slot-ready .relic-niche-icon {
+  animation: none;
+}
+
+/* os seus: a coluna na beirada da esquerda, no meio da altura */
+.player-zone.is-landscape .land-relics {
+  position: absolute;
+  left: max(env(safe-area-inset-left), 10px);
+  top: 50%;
+  translate: 0 -58%;
+  pointer-events: auto;
+}
+
+.player-zone.is-landscape .land-relics .player-relics {
+  position: static;
+}
+
+/* os do rival: ao lado da plaquinha do nome */
+.seat-name-row .seat-relics {
+  margin-left: 4px;
+}
+
+/* --- a pausa deitada: o quadro de giz no meio da mesa escurecida ------------------------ */
+.pause-land .land-stage-wrap {
+  z-index: 1;
+}
+
+.pl-board {
+  position: absolute;
+  left: 160px;
+  top: 58px;
+  width: 680px;
+  height: 334px;
+  display: flex;
+  gap: 26px;
+  padding: 26px 30px;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 30%, rgba(80, 96, 88, 0.35), transparent),
+    radial-gradient(ellipse 40% 40% at 75% 70%, rgba(80, 96, 88, 0.25), transparent),
+    #222b26;
+  border: 10px solid #6a3e1e;
+  box-shadow:
+    inset 0 0 0 2px #2a1608,
+    inset 0 0 30px rgba(0, 0, 0, 0.55),
+    0 0 0 2px #1a0c04,
+    0 14px 30px rgba(0, 0, 0, 0.7);
+  animation: counterCardIn 220ms ease-out both;
+}
+
+.pl-left {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pl-title {
+  font-family: var(--font-pixel);
+  font-size: 26px;
+  line-height: 1;
+  color: #f4ecd2;
+  text-shadow: 0 0 8px rgba(244, 236, 210, 0.25);
+}
+
+.pl-line {
+  font-family: var(--font-term);
+  font-size: 22px;
+  line-height: 1.05;
+  color: rgba(232, 236, 223, 0.8);
+}
+
+.pl-seed.pl-seed {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.pl-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+}
+
+.pl-note {
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.05;
+  color: rgba(232, 236, 223, 0.6);
+}
+
+.pl-options {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.pl-options-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 16px;
+}
