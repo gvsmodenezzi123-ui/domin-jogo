@@ -184,6 +184,14 @@
   body,
   #root {
     height: 100%;
+    /* versão 2.10.1: a altura medida da janela (pwa.js: installViewportFit), sem a faixa preta */
+    height: var(--app-h, 100dvh);
+  }
+
+  /* as telas fixas (fixed inset-0) medem pelo #root, que tem a altura medida da janela */
+  #root {
+    position: relative;
+    contain: layout;
   }
 
   html {
@@ -195,7 +203,7 @@
 
   body {
     position: fixed;
-    inset: 0;
+    inset: 0 0 auto;
     margin: 0;
     overflow: hidden;
     overscroll-behavior: none;
@@ -18698,4 +18706,1000 @@
     padding-top: 10px;
     padding-bottom: 10px;
   }
+}
+
+/* =====================================================================================
+   Versão 2.11: as telas deitadas desenhadas do zero. Cada cena é um palco fixo de 1000 × 450
+   (LandStage.jsx) que cresce ou encolhe inteiro para caber na tela: as medidas abaixo são em
+   unidades do palco, não em px da tela.
+   ===================================================================================== */
+.land-stage-wrap {
+  z-index: 50;
+  overflow: hidden;
+  overflow: clip;
+}
+
+.land-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 50% 50%;
+}
+
+.land-stage-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+/* --- o salão (menu): meia-noite no boteco (art/landTitle.js) ------------------------ */
+.tl-rain {
+  position: absolute;
+  left: 936px;
+  top: 40px;
+  width: 64px;
+  height: 200px;
+  background: repeating-linear-gradient(105deg, transparent 0 9px, rgba(170, 200, 214, 0.26) 9px 10px, transparent 10px 23px);
+  background-size: 46px 60px;
+  animation: tlRain 0.7s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+@keyframes tlRain {
+  to {
+    background-position: -14px 60px;
+  }
+}
+
+/* a luz da TV tremendo e o neon respirando */
+.tl-tv {
+  position: absolute;
+  left: 760px;
+  top: 0;
+  width: 160px;
+  height: 120px;
+  background: radial-gradient(closest-side, rgba(120, 200, 255, 0.22), transparent);
+  mix-blend-mode: screen;
+  animation: tlTv 2.3s steps(1, end) infinite;
+  pointer-events: none;
+}
+
+@keyframes tlTv {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  31% {
+    opacity: 0.55;
+  }
+  47% {
+    opacity: 1;
+  }
+  63% {
+    opacity: 0.35;
+  }
+  82% {
+    opacity: 0.75;
+  }
+}
+
+.tl-neon {
+  position: absolute;
+  left: 486px;
+  top: -14px;
+  width: 220px;
+  height: 92px;
+  background: radial-gradient(closest-side, rgba(255, 80, 140, 0.3), transparent);
+  mix-blend-mode: screen;
+  animation: tlNeon 6s steps(1, end) infinite;
+  pointer-events: none;
+}
+
+@keyframes tlNeon {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  61% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.2;
+  }
+  64% {
+    opacity: 0.9;
+  }
+  65% {
+    opacity: 0.3;
+  }
+  67% {
+    opacity: 1;
+  }
+}
+
+/* o rival, cortado na beirada de lá (a altura vem do TITLE_GEO.rail) */
+.tl-rival {
+  position: absolute;
+  left: 588px;
+  top: 0;
+  width: 264px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tl-rival-bust {
+  position: absolute;
+  left: 0;
+  top: 118px;
+  width: 264px;
+  height: 228px;
+}
+
+.tl-rival .seat-bust-px {
+  filter: brightness(0.86) saturate(0.92);
+}
+
+.tl-front {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.tl-smoke {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.tl-puff {
+  position: absolute;
+  left: -3px;
+  top: -6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(200, 200, 196, 0.55);
+  filter: blur(1px);
+}
+
+.title-land .tl-lamp {
+  position: absolute;
+  top: -90px;
+  width: 300px;
+  height: 804px;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.title-land .tl-lamp .lamp-rig {
+  width: 300px;
+}
+
+.title-land .tl-lamp .lamp-beam {
+  opacity: 0.55;
+}
+
+.title-land .tl-lamp .lamp-pool {
+  opacity: 0.45;
+}
+
+.tl-dust {
+  position: absolute;
+  left: 640px;
+  top: 96px;
+  width: 160px;
+  height: 230px;
+  background:
+    radial-gradient(circle, rgba(255, 230, 170, 0.5) 0 1px, transparent 1.5px) 0 0 / 37px 41px,
+    radial-gradient(circle, rgba(255, 230, 170, 0.35) 0 1px, transparent 1.5px) 13px 20px / 29px 53px;
+  animation: tlDust 9s linear infinite;
+  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent);
+  mask-image: radial-gradient(closest-side, #000 40%, transparent);
+  pointer-events: none;
+}
+
+@keyframes tlDust {
+  to {
+    background-position:
+      0 -82px,
+      13px -86px;
+  }
+}
+
+.reduce-motion .tl-rain,
+.reduce-motion .tl-dust,
+.reduce-motion .tl-tv,
+.reduce-motion .tl-neon {
+  animation: none;
+}
+
+/* o letreiro, na parede iluminada pelo pescoço de ganso */
+.tl-logo {
+  position: absolute;
+  left: 26px;
+  top: 32px;
+  width: 384px;
+}
+
+.tl-logo .title-logo-svg {
+  width: 384px;
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, 0.75));
+}
+
+.tl-tagline {
+  position: absolute;
+  left: 26px;
+  top: 132px;
+  width: 384px;
+  text-align: center;
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: #e6dcc4;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.85),
+    0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+/* o menu: pedras de dominó deitadas */
+.tl-nav {
+  position: absolute;
+  left: 30px;
+  top: 168px;
+  width: 340px;
+}
+
+.tl-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tl-key {
+  position: relative;
+  display: block;
+  width: 320px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 140ms ease-out,
+    filter 140ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tl-key-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+.tl-key-text {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tl-key-label {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #f2e6c8;
+  text-shadow: 0 2px 0 #000;
+  white-space: nowrap;
+}
+
+.tl-key-note {
+  overflow: hidden;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #6e5638;
+}
+
+.tl-key.is-ivory .tl-key-label {
+  font-size: 17px;
+  color: #23170b;
+  text-shadow: 0 1px 0 rgba(255, 250, 236, 0.7);
+}
+
+.tl-key.is-blood .tl-key-label {
+  font-size: 13px;
+  color: #ffe9d8;
+}
+
+.tl-key.is-main {
+  filter: drop-shadow(0 0 12px rgba(255, 214, 140, 0.32));
+}
+
+/* o brilho passando pelo marfim de vez em quando */
+.tl-key.is-main::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  right: 2px;
+  bottom: 8px;
+  border-radius: 6px;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%) no-repeat;
+  background-size: 260% 100%;
+  background-position: 140% 0;
+  animation: tlGloss 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes tlGloss {
+  0%,
+  62% {
+    background-position: 140% 0;
+  }
+  86%,
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+.reduce-motion .tl-key.is-main::after {
+  animation: none;
+  opacity: 0;
+}
+
+.tl-key:active {
+  transform: translateY(2px);
+}
+
+.tl-key:focus-visible {
+  outline: 2px solid #ffd98a;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .tl-key:hover {
+    transform: translateX(6px);
+    filter: brightness(1.14);
+  }
+
+  .tl-key.is-main:hover {
+    filter: brightness(1.06) drop-shadow(0 0 14px rgba(255, 214, 140, 0.45));
+  }
+}
+
+.tl-key.is-dim {
+  opacity: 0.55;
+}
+
+.tl-menu-head {
+  margin: 4px 0 0;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1.2;
+  color: #ffb39c;
+  text-shadow: 0 2px 0 #000;
+}
+
+.tl-menu-note {
+  margin: 0 0 6px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.05;
+  color: #d8ccb4;
+  text-shadow: 0 2px 0 #000;
+}
+
+/* o Livro e o Caderno, em cima da mesa do seu lado */
+.tl-objects {
+  position: absolute;
+  left: 484px;
+  top: 366px;
+  display: flex;
+  gap: 8px;
+}
+
+.tl-object {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  background: none;
+  transition: transform 140ms ease-out;
+}
+
+.tl-object-art {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 5px 2px rgba(0, 0, 0, 0.6)) brightness(0.9);
+}
+
+.tl-object:active {
+  transform: translateY(2px) scale(0.96);
+}
+
+.tl-object-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  translate: -50% 0;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #f0d9a4;
+  text-shadow: 0 2px 0 #000;
+  white-space: nowrap;
+}
+
+.tl-gear {
+  position: absolute;
+  left: 944px;
+  top: 10px;
+  width: 42px;
+  height: 42px;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(8, 6, 4, 0.55);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7));
+}
+
+.tl-gear:active {
+  transform: rotate(30deg);
+}
+
+.tl-foot {
+  position: absolute;
+  left: 30px;
+  bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-family: var(--font-term);
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(232, 222, 200, 0.5);
+  text-shadow: 0 2px 0 #000;
+}
+
+.tl-credit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.tl-install {
+  color: rgba(255, 217, 138, 0.75);
+}
+
+/* --- o balcão das maletas: o carrossel sob o canhão de luz (art/landCounter.js) ----- */
+.counter-land .land-stage-wrap {
+  z-index: 70;
+}
+
+.counter-land {
+  --case-size: 236px;
+  --case-step: 196px;
+}
+
+.counter-land.is-picked {
+  --case-size: 236px;
+}
+
+/* o facho do canhão do teto sobre a maleta do meio */
+.cl-spot {
+  position: absolute;
+  left: 120px;
+  top: 30px;
+  width: 400px;
+  height: 300px;
+  background: conic-gradient(
+    at 50% 0%,
+    transparent 0deg 158deg,
+    rgba(255, 222, 160, 0.1) 167deg,
+    rgba(255, 230, 180, 0.2) 180deg,
+    rgba(255, 222, 160, 0.1) 193deg,
+    transparent 202deg 360deg
+  );
+  -webkit-mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.counter-land.mode-hard .cl-spot {
+  filter: hue-rotate(185deg) saturate(0.7);
+}
+
+.counter-land.mode-inferno .cl-spot {
+  filter: hue-rotate(-28deg) saturate(1.6);
+}
+
+/* as brasas subindo do chão (Peças Prateadas) */
+.cl-embers {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 450px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cl-embers i {
+  position: absolute;
+  bottom: -8px;
+  width: 4px;
+  height: 4px;
+  background: #ffae4a;
+  box-shadow: 0 0 8px #ff5a1a;
+  animation: clEmber linear infinite;
+}
+
+@keyframes clEmber {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  60% {
+    transform: translate(16px, -280px);
+  }
+  100% {
+    transform: translate(-8px, -470px);
+    opacity: 0;
+  }
+}
+
+.reduce-motion .cl-embers {
+  display: none;
+}
+
+/* o letreiro em neon, no alto à esquerda */
+.cl-sign {
+  position: absolute;
+  left: 30px;
+  top: 22px;
+  width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.cl-sign-main {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  line-height: 1.25;
+  color: #ffe0ea;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 8px rgba(255, 80, 140, 0.95),
+    0 0 18px rgba(255, 60, 120, 0.6),
+    0 3px 0 #2a0610;
+  animation: clNeon 6s steps(1, end) infinite;
+}
+
+.counter-land.mode-hard .cl-sign-main {
+  color: #e0f4ff;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 8px rgba(90, 190, 255, 0.95),
+    0 0 18px rgba(60, 150, 255, 0.6),
+    0 3px 0 #04122a;
+}
+
+.counter-land.mode-inferno .cl-sign-main {
+  color: #ffe2c8;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 8px rgba(255, 110, 40, 0.95),
+    0 0 18px rgba(255, 60, 20, 0.65),
+    0 3px 0 #2a0802;
+}
+
+.cl-sign-sub {
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1;
+  color: #e6dcc4;
+  text-shadow: 0 2px 0 #000;
+}
+
+@keyframes clNeon {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  71% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.5;
+  }
+  74% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.65;
+  }
+  76% {
+    opacity: 1;
+  }
+}
+
+.reduce-motion .cl-sign-main {
+  animation: none;
+}
+
+/* o carrossel em cima do balcão */
+.cl-carousel.case-carousel {
+  position: absolute;
+  left: 30px;
+  top: 0;
+  display: block;
+  width: 580px;
+  max-width: none;
+  height: 362px;
+  margin: 0;
+}
+
+.cl-carousel .case-track {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 9%, #000 91%, transparent 100%);
+}
+
+.cl-carousel .case-slot {
+  top: 96px;
+  transform-origin: 50% 100%;
+  filter: brightness(calc(1 - var(--far, 0) * 0.36));
+}
+
+.cl-carousel .counter-case {
+  width: calc(var(--case-size) + 18px);
+  padding: 6px 2px 0;
+  border: 0;
+}
+
+.cl-carousel .counter-case.is-selected {
+  transform: none;
+  background: none;
+}
+
+.cl-carousel .counter-name {
+  display: none;
+}
+
+/* as fichas da dificuldade presas na tira da tampa aberta */
+.counter-land .lid-tokens {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  top: calc(8px + var(--case-size) * 0.105);
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--case-size) * 0.05);
+  width: calc(var(--case-size) * 0.66);
+  height: calc(var(--case-size) * 0.27);
+  transform: translateX(-50%);
+  animation: lidTokensIn 300ms ease-out 640ms both;
+}
+
+.counter-land .lid-token-name {
+  bottom: -13px;
+  font-size: 7px;
+}
+
+/* a plaquinha de latão na frente do balcão, com o nome da maleta do meio */
+.cl-plate {
+  position: absolute;
+  left: 320px;
+  top: 342px;
+  min-width: 150px;
+  margin: 0;
+  padding: 6px 18px 5px;
+  translate: -50% 0;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  color: #2a1806;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
+  background: linear-gradient(180deg, #f2cf7a 0%, #c9962e 55%, #9a6c1c 100%);
+  border: 2px solid #2e1c06;
+  box-shadow:
+    inset 0 1px 0 #fff2b8,
+    0 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+.cl-plate::before,
+.cl-plate::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  background: #5a3c10;
+  box-shadow: inset 1px 1px 0 #ffe08a;
+}
+
+.cl-plate::before {
+  left: 5px;
+}
+
+.cl-plate::after {
+  right: 5px;
+}
+
+.cl-plate.is-locked {
+  color: #1a1a1a;
+  background: linear-gradient(180deg, #c8ccd0 0%, #8a9096 55%, #5a6066 100%);
+}
+
+.cl-dots {
+  position: absolute;
+  left: 320px;
+  top: 384px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  translate: -50% 0;
+}
+
+.cl-dot-row {
+  display: flex;
+}
+
+.cl-nav {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 36px;
+  padding: 0;
+  color: #f2d79a;
+  background: linear-gradient(180deg, #3a2414, #1e1209);
+  border: 2px solid #0b0705;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 150, 0.25),
+    0 3px 0 rgba(0, 0, 0, 0.6);
+}
+
+.cl-nav:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 150, 0.25),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.cl-nav:disabled {
+  opacity: 0.3;
+}
+
+.cl-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.cl-dot::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  background: rgba(244, 236, 210, 0.3);
+  border: 2px solid rgba(0, 0, 0, 0.7);
+  transition: transform 160ms ease-out;
+}
+
+.cl-dot.is-locked::before {
+  background: rgba(120, 112, 104, 0.4);
+}
+
+.cl-dot.is-on::before {
+  background: #f2b84b;
+  box-shadow: 0 0 8px rgba(242, 184, 75, 0.8);
+  transform: scale(1.2);
+}
+
+/* a ficha a giz no quadro (o quadro é da pintura: 636..976 × 20..300) */
+.cl-board {
+  position: absolute;
+  left: 656px;
+  top: 38px;
+  width: 302px;
+  height: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: counterCardIn 260ms ease-out both;
+}
+
+.cl-name {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  line-height: 1.3;
+  color: #ffe9a8;
+  text-shadow: 0 0 6px rgba(255, 233, 168, 0.25);
+}
+
+.cl-title {
+  font-family: var(--font-term);
+  font-size: 21px;
+  line-height: 1;
+  color: rgba(232, 236, 223, 0.72);
+}
+
+.cl-rule {
+  display: block;
+  height: 2px;
+  margin: 2px 0 4px;
+  background: repeating-linear-gradient(90deg, rgba(232, 236, 223, 0.45) 0 10px, transparent 10px 15px);
+}
+
+.cl-buff,
+.cl-debuff,
+.cl-text,
+.cl-goal {
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1.02;
+}
+
+.cl-buff {
+  color: #b2ec9e;
+}
+
+.cl-debuff {
+  color: #ffa08e;
+}
+
+.cl-text {
+  color: #e8ecdf;
+}
+
+.cl-goal-head {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #ffcf6a;
+}
+
+.cl-goal {
+  color: #f6e4b4;
+}
+
+.cl-progress {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: rgba(255, 207, 106, 0.8);
+}
+
+.cl-hint {
+  margin-top: auto;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #ffd98a;
+  animation: clHint 1.6s ease-in-out infinite;
+}
+
+@keyframes clHint {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.reduce-motion .cl-hint {
+  animation: none;
+}
+
+.cl-setup {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cl-mode {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.3;
+  color: #f4ecd2;
+}
+
+.cl-mode-hard {
+  color: #a8ccff;
+}
+
+.cl-mode-inferno {
+  color: #ff9a6a;
+}
+
+.cl-warn {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #ffb3a0;
+}
+
+.cl-board .seed-field {
+  margin-top: 0;
+}
+
+.cl-board .seed-field-label {
+  font-size: 8px;
+  color: rgba(232, 236, 223, 0.7);
+}
+
+.cl-board .seed-field-input {
+  margin-top: 2px;
+  padding: 2px 0 3px;
+  font-size: 21px;
+  background: none;
+  border: 0;
+  border-bottom: 2px dashed rgba(232, 236, 223, 0.5);
+}
+
+.cl-board .seed-field-input:focus {
+  border-color: #ffd98a;
+  box-shadow: none;
+}
+
+.cl-board .seed-field-hint {
+  display: none;
+}
+
+/* as teclas na frente do balcão */
+.cl-start {
+  position: absolute;
+  left: 648px;
+  top: 368px;
+  animation: clStartIn 360ms cubic-bezier(0.2, 1.3, 0.4, 1) 420ms both;
+}
+
+@keyframes clStartIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.cl-back {
+  position: absolute;
+  left: 30px;
+  top: 384px;
 }

@@ -832,4 +832,4 @@ export function paintProp(name, seed = 7) {
 // Versão 2.0: o kit de pintura fica disponível para os outros desenhos grandes
 // (maletas em 128x128, pilha do dorme, nós do mapa), que também viram <canvas>.
 // ---------------------------------------------------------------------------
-export const paintKit = Object.freeze({ hex, mixRgb, shift, rngOf, bayer, buffer, plank, felt, looseTile, beerGlass, ashtray, bone, WOOD, FELT });
+export const paintKit = Object.freeze({ hex, mixRgb, shift, rngOf, bayer, buffer, plank, felt, looseTile, beerGlass, ashtray, bone, WOOD, FELT, tiles, drips, shelf, bottle, mug, rainyWindow, chalkboard, vignette, lampGlow });

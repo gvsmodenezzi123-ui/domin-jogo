@@ -8,11 +8,12 @@ import App from './App.jsx';
 import WideRoom from './components/WideRoom.jsx';
 import { applyReducedMotion } from './components/motion.js';
 import { loadSettings } from './engine/progress.js';
-import { installTouchGuards, registerServiceWorker } from './pwa.js';
+import { installTouchGuards, installViewportFit, registerServiceWorker } from './pwa.js';
 import { installBoneGrain } from './components/art/boneTexture.js';
 import { installPixelSkins } from './components/art/uiPixels.js';
 
 installTouchGuards();
+installViewportFit();
 installBoneGrain();
 installPixelSkins();
 registerServiceWorker();

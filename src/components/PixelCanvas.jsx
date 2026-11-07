@@ -6,7 +6,7 @@ const CACHE_MAX = 160;
 /** Pinturas grandes (a mesa inteira) ficam num cache à parte, de poucas: cada uma pesa centenas de KB. */
 const bigCache = new Map();
 const BIG_PIXELS = 20000;
-const BIG_MAX = 3;
+const BIG_MAX = 6;
 
 function imageOf(cacheKey, paint, w, h) {
   const store = w * h > BIG_PIXELS ? bigCache : cache;

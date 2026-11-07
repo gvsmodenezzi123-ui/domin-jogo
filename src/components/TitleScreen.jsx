@@ -15,6 +15,8 @@ import OptionsPanel from './OptionsPanel.jsx';
 import LampRig from './LampRig.jsx';
 import PagedBlocks from './PagedBlocks.jsx';
 import AccountStatsModal from './AccountStatsModal.jsx';
+import TitleLand from './TitleLand.jsx';
+import { useLandscape } from './useLandscape.js';
 import { BookIcon, GearIcon, LedgerIcon } from './art/SceneArt.jsx';
 import { sound } from '../engine/audioSynth.js';
 import { haptic } from '../engine/progress.js';
@@ -46,6 +48,22 @@ function saveSummary(save) {
     .join(', ');
   return [kit || null, where, what, `${save.hearts}♥`, `$${save.coins}`].filter(Boolean).join(' · ');
 }
+
+/** O resumo curto da run salva, na pedra do CONTINUAR deitado (o rival já aparece sentado na mesa). */
+function landSummary(save) {
+  const node = save.node ? generateCampaign(save.seed ?? 0, save.map ?? 1).byId.get(save.node) : null;
+  const where = node ? `Região ${node.region} · andar ${node.floor}` : 'Entrada do boteco';
+  return [where, `${save.hearts}♥`, `$${save.coins}`].join(' · ');
+}
+
+/** Quem espera você na mesa da tela inicial: o rival da run salva, ou o Tio Zé. */
+function waitingRival(save) {
+  const node = save?.node ? generateCampaign(save.seed ?? 0, save.map ?? 1).byId.get(save.node) : null;
+  return getRival(node?.rivalId ?? 'tioZe');
+}
+
+/** A versão do jogo, no rodapé e nos créditos. */
+const GAME_VERSION = '2.10.0';
 
 /** Chave das maletas e desafios liberados (muda quando a meta muda). */
 function metaSnapshot() {
@@ -142,7 +160,7 @@ function Credits() {
   return (
     <PagedBlocks className="min-h-0 flex-1 text-center font-term text-[18px] leading-tight text-bone-200" gap={12} label="Páginas dos créditos">
       <p>
-        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO 2.10.0</span>
+        <span className="block font-pixel text-[9px] text-brass-300">BUXARIA · VERSÃO {GAME_VERSION}</span>
         Dominó de boteco, um contra um, até alguém zerar os corações.
       </p>
       <p>
@@ -208,6 +226,8 @@ export default function TitleScreen({
   const [picking, setPicking] = useState(startPicking || false);
   // maletas e desafios liberados (relidos quando a meta muda)
   const metaKey = useSyncExternalStore(subscribeMeta, metaSnapshot, () => '');
+  // versão 2.11: deitada, a tela inicial é o salão do boteco (TitleLand)
+  const landscape = useLandscape();
   const showInstallHint = isIOS() && !isStandalone();
   const open = (id) => {
     onTap?.();
@@ -250,6 +270,68 @@ export default function TitleScreen({
     onTap?.();
     setPicking(false);
   };
+
+  const modals = (
+    <>
+      {modal === 'options' && (
+        <MenuModal id="options-title" title="OPÇÕES" onClose={close}>
+          <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} />
+        </MenuModal>
+      )}
+      {modal === 'book' && (
+        <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
+          <CollectionBook collection={collection} />
+        </MenuModal>
+      )}
+      {modal === 'stats' && <AccountStatsModal onClose={close} />}
+      {modal === 'credits' && (
+        <MenuModal id="credits-title" title="CRÉDITOS DA MESA" onClose={close}>
+          <Credits />
+        </MenuModal>
+      )}
+      {modal === 'challenges' && (
+        <MenuModal id="challenges-title" title="DESAFIOS" onClose={close}>
+          <ChallengesModal onPlay={playChallenge} />
+        </MenuModal>
+      )}
+      {picking && (
+        <CaseCounter
+          unlocked={loadUnlockedMaletas()}
+          seen={loadSeenMaletas()}
+          blackUnlocked={blackUnlocked}
+          silverUnlocked={silverUnlocked}
+          progress={loadMetaProgress()}
+          challenge={picking.challenge ?? null}
+          onStart={onNewGame}
+          onBack={closeCases}
+        />
+      )}
+    </>
+  );
+
+  if (landscape) {
+    return (
+      <>
+        <TitleLand
+          save={save}
+          summary={save ? landSummary(save) : null}
+          rival={waitingRival(save)}
+          onNewGame={newGame}
+          onContinue={onContinue}
+          onChallenges={() => open('challenges')}
+          hasChallenges={metaKey.split('|')[1] !== ''}
+          onOnline={onOnline}
+          onTap={onTap}
+          onOpen={open}
+          onSecretTap={onSecretTap}
+          devUnlocked={devUnlocked}
+          showInstallHint={showInstallHint}
+          version={GAME_VERSION}
+        />
+        {modals}
+      </>
+    );
+  }
 
   return (
     <main
@@ -331,44 +413,12 @@ export default function TitleScreen({
             Criador: Gabriel Modenezzi
           </button>
           <p className="title-version">
-            VERSÃO 2.10.0{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
+            VERSÃO {GAME_VERSION}{devUnlocked && <span className="text-[#8fd6b4]"> · DEV</span>}
           </p>
         </div>
       </footer>
 
-      {modal === 'options' && (
-        <MenuModal id="options-title" title="OPÇÕES" onClose={close}>
-          <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} />
-        </MenuModal>
-      )}
-      {modal === 'book' && (
-        <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
-          <CollectionBook collection={collection} />
-        </MenuModal>
-      )}
-      {modal === 'stats' && <AccountStatsModal onClose={close} />}
-      {modal === 'credits' && (
-        <MenuModal id="credits-title" title="CRÉDITOS DA MESA" onClose={close}>
-          <Credits />
-        </MenuModal>
-      )}
-      {modal === 'challenges' && (
-        <MenuModal id="challenges-title" title="DESAFIOS" onClose={close}>
-          <ChallengesModal onPlay={playChallenge} />
-        </MenuModal>
-      )}
-      {picking && (
-        <CaseCounter
-          unlocked={loadUnlockedMaletas()}
-          seen={loadSeenMaletas()}
-          blackUnlocked={blackUnlocked}
-          silverUnlocked={silverUnlocked}
-          progress={loadMetaProgress()}
-          challenge={picking.challenge ?? null}
-          onStart={onNewGame}
-          onBack={closeCases}
-        />
-      )}
+      {modals}
     </main>
   );
 }

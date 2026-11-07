@@ -43,3 +43,26 @@ export function registerServiceWorker() {
     }
   });
 }
+
+/**
+ * Versão 2.10.1: a altura do jogo segue a janela de verdade. No iPhone deitado (app instalado
+ * e Safari) o 100% do CSS pode ficar menor que a tela depois de girar, e sobrava uma faixa
+ * preta embaixo: a altura medida vira a variável --app-h (o CSS usa ela no html, body e #root).
+ */
+export function installViewportFit() {
+  if (typeof window === 'undefined') return;
+  const root = document.documentElement;
+  const fit = () => {
+    const h = Math.round(Math.max(window.innerHeight || 0, window.visualViewport?.height || 0));
+    if (h > 0) root.style.setProperty('--app-h', `${h}px`);
+  };
+  fit();
+  window.addEventListener('resize', fit);
+  window.visualViewport?.addEventListener('resize', fit);
+  // o Safari só acerta a medida um tempo depois de girar
+  window.addEventListener('orientationchange', () => {
+    fit();
+    setTimeout(fit, 120);
+    setTimeout(fit, 500);
+  });
+}

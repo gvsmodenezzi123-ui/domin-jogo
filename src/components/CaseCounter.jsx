@@ -16,6 +16,10 @@ import { CadeadoSprite } from './art/CaseArt.jsx';
 import { CASE_PX, TOKEN_SIZE, paintCaseChains, paintCaseLock, paintDifficultyToken } from './art/casePixels.js';
 import MaletaPixel from './MaletaPixel.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
+import LandStage from './LandStage.jsx';
+import DominoKey from './DominoKey.jsx';
+import { useLandscape } from './useLandscape.js';
+import { COUNTER_PAD, paintCounterBack } from './art/landCounter.js';
 
 const FILL = { width: '100%', height: '100%' };
 
@@ -209,16 +213,24 @@ const caseStep = () => (typeof window === 'undefined' ? 140 : Math.min(window.in
  * para a outra; a maleta acompanha o dedo e assenta na mais perto quando solta. Tocar na do meio abre
  * (ou mostra a meta, se trancada); tocar numa vizinha traz ela para o meio.
  */
-function CaseCarousel({ ids, focus, onFocus, children }) {
-  const [drag, setDrag] = useState(null); // { x, dx, moved } enquanto o dedo está no balcão
+function CaseCarousel({ ids, focus, onFocus, dim = false, shrink = 0.3, className = '', children }) {
+  const [drag, setDrag] = useState(null); // { x, dx, moved, step } enquanto o dedo está no balcão
   const trackRef = useRef(null);
   const swallowClick = useRef(false);
   const last = ids.length - 1;
-  const shift = drag?.moved ? drag.dx / caseStep() : 0;
+  const shift = drag?.moved ? drag.dx / drag.step : 0;
+
+  // versão 2.11: o passo de verdade na tela (no palco deitado o carrossel é ampliado junto)
+  const stepPx = () => {
+    const el = trackRef.current;
+    const units = el ? parseFloat(getComputedStyle(el).getPropertyValue('--case-step')) : NaN;
+    if (!el || !Number.isFinite(units) || !el.offsetWidth) return caseStep();
+    return (units * el.getBoundingClientRect().width) / el.offsetWidth;
+  };
 
   const onPointerDown = (e) => {
     swallowClick.current = false;
-    setDrag({ x: e.clientX, dx: 0, moved: false, id: e.pointerId });
+    setDrag({ x: e.clientX, dx: 0, moved: false, id: e.pointerId, step: stepPx() });
   };
   const onPointerMove = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -234,9 +246,9 @@ function CaseCarousel({ ids, focus, onFocus, children }) {
     if (drag.moved) {
       swallowClick.current = true;
       // arrastou um pouco mais de 1/5 do passo: já conta como uma maleta
-      const moved = -drag.dx / caseStep();
+      const moved = -drag.dx / drag.step;
       let steps = Math.round(moved);
-      if (steps === 0 && Math.abs(drag.dx) > caseStep() * 0.2) steps = moved > 0 ? 1 : -1;
+      if (steps === 0 && Math.abs(drag.dx) > drag.step * 0.2) steps = moved > 0 ? 1 : -1;
       const target = Math.max(0, Math.min(last, focus + steps));
       if (target !== focus) onFocus(target);
     }
@@ -244,7 +256,7 @@ function CaseCarousel({ ids, focus, onFocus, children }) {
   };
 
   return (
-    <div className="case-carousel">
+    <div className={`case-carousel ${className}`}>
       <div
         ref={trackRef}
         className={`case-track ${drag?.moved ? 'is-dragging' : ''}`}
@@ -267,14 +279,16 @@ function CaseCarousel({ ids, focus, onFocus, children }) {
         {ids.map((id, i) => {
           const d = i - focus + shift;
           const far = Math.abs(d);
-          const scale = 1 - Math.min(far, 1.5) * 0.3;
+          const scale = 1 - Math.min(far, 1.5) * shrink;
           return (
             <div
               key={id}
               className={`case-slot ${i === focus ? 'is-focus' : ''}`}
               style={{
                 transform: `translateX(calc(-50% + ${d.toFixed(3)} * var(--case-step))) scale(${scale.toFixed(3)})`,
-                opacity: far > 2.2 ? 0 : Math.max(0, 1 - Math.min(far, 2) * 0.38),
+                // deitado (`dim`), as vizinhas escurecem em vez de ficar transparentes
+                '--far': Math.min(far, 2).toFixed(3),
+                opacity: far > 2.2 ? 0 : dim ? 1 : Math.max(0, 1 - Math.min(far, 2) * 0.38),
                 zIndex: 10 - Math.round(far * 2),
                 visibility: far > 2.4 ? 'hidden' : undefined,
               }}
@@ -379,6 +393,165 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
 
   const maleta = selected ? MALETAS[selected] : null;
   const focused = MALETAS[focusId];
+  const landscape = useLandscape();
+
+  const seedField = (
+    <label className="seed-field">
+      <span className="seed-field-label">SEMENTE (OPCIONAL)</span>
+      <input
+        className="seed-field-input"
+        type="text"
+        value={seed}
+        onChange={(e) => setSeed(e.target.value.toUpperCase().slice(0, SEED_MAX_LENGTH))}
+        placeholder="BUX-9K2 · em branco: sorteia"
+        maxLength={SEED_MAX_LENGTH}
+        autoCapitalize="characters"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="go"
+        aria-describedby="seed-field-hint"
+      />
+      <span id="seed-field-hint" className="seed-field-hint">
+        {normalizeSeed(seed) ? `A run sai igual para quem usar ${normalizeSeed(seed)}.` : 'Cole uma semente para repetir uma run.'}
+      </span>
+    </label>
+  );
+
+  if (landscape) {
+    const info = maleta ?? focused;
+    const locked = !unlocked.includes(focusId);
+    return (
+      <div
+        className={`case-scene counter-scene counter-land mode-${mode} ${maleta ? 'is-picked' : ''}`}
+        onKeyDown={(e) => {
+          if (e.target?.tagName === 'INPUT') return;
+          if (e.key === 'ArrowRight') focusTo(focus + 1);
+          if (e.key === 'ArrowLeft') focusTo(focus - 1);
+        }}
+      >
+        <LandStage paint={() => paintCounterBack(23, mode)} cacheKey={`land-balcao-${mode}`} pad={COUNTER_PAD} bleed="#060504" label="Balcão de maletas" role="dialog">
+          {/* o fogo subindo do chão nas Peças Prateadas */}
+          {mode === 'inferno' && (
+            <span aria-hidden="true" className="cl-embers">
+              {EMBERS.map(([x, delay, dur]) => (
+                <i key={x} style={{ left: `${x}%`, animationDelay: `${delay}s`, animationDuration: `${dur}s` }} />
+              ))}
+            </span>
+          )}
+          {/* o facho do canhão do teto na maleta do meio */}
+          <span aria-hidden="true" className="cl-spot" />
+
+          <h1 id="counter-title" className="cl-sign">
+            <span className="cl-sign-main">{pvp ? pvp.title : rule ? `DESAFIO: ${rule.name.toUpperCase()}` : 'BALCÃO DE MALETAS'}</span>
+            <span className="cl-sign-sub">{pvp ? pvp.note : rule ? rule.rule : 'Arraste para o lado e escolha a sua maleta'}</span>
+          </h1>
+
+          {/* o carrossel: uma maleta grande sob a luz, as vizinhas no escuro dos lados */}
+          <CaseCarousel ids={MALETA_IDS} focus={focus} onFocus={focusTo} dim shrink={0.36} className="cl-carousel">
+            {(id, i) => (
+              <>
+                <CaseSlot
+                  id={id}
+                  unlocked={unlocked.includes(id)}
+                  fresh={fresh.includes(id)}
+                  open={id === selected}
+                  closing={id === closing}
+                  disabled={!allowed(id)}
+                  waiting={i === focus && !selected}
+                  focused={i === focus}
+                  shakeKey={shake.id === id ? shake.n : 0}
+                  onPick={pick}
+                />
+                {!pvp && id === selected && i === focus && <LidTokens mode={mode} unlocked={modesOpen} onChange={chooseMode} />}
+              </>
+            )}
+          </CaseCarousel>
+
+          {/* na frente do balcão: a plaquinha de latão com o nome e as setas com as bolinhas */}
+          <p className={`cl-plate ${locked ? 'is-locked' : ''}`} aria-hidden="true">
+            {focused.short}
+          </p>
+          <div className="cl-dots">
+            <button type="button" className="cl-nav" onClick={() => focusTo(focus - 1)} disabled={focus === 0} aria-label="Maleta anterior">
+              <ArrowGlyph dir="prev" size={14} />
+            </button>
+            <div className="cl-dot-row" role="tablist" aria-label="Escolher maleta">
+              {MALETA_IDS.map((id, i) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === focus}
+                  aria-label={MALETAS[id].name}
+                  className={`cl-dot ${i === focus ? 'is-on' : ''} ${unlocked.includes(id) ? '' : 'is-locked'}`}
+                  onClick={() => focusTo(i)}
+                />
+              ))}
+            </div>
+            <button type="button" className="cl-nav" onClick={() => focusTo(focus + 1)} disabled={focus === MALETA_IDS.length - 1} aria-label="Próxima maleta">
+              <ArrowGlyph dir="next" size={14} />
+            </button>
+          </div>
+
+          {/* o quadro-negro: a ficha da maleta do meio */}
+          <section
+            key={`ficha-${info.id}-${maleta ? 'aberta' : 'fechada'}-${shake.id === focusId ? shake.n : 0}`}
+            className={`cl-board ${maleta ? 'is-open' : ''} ${shake.id === focusId ? 'animate-shop-alert' : ''}`}
+            aria-live="polite"
+          >
+            <p className="cl-name">{info.name.toUpperCase()}</p>
+            <p className="cl-title">{info.title}</p>
+            <span aria-hidden="true" className="cl-rule" />
+            {locked ? (
+              <>
+                <p className="cl-goal-head">COMO DESBLOQUEAR</p>
+                <p className="cl-goal">{focused.goal}</p>
+                {progressOf(focusId, progress) && <p className="cl-progress">{progressOf(focusId, progress)}</p>}
+              </>
+            ) : !allowed(focusId) ? (
+              <p className="cl-text">
+                {rule?.name}: só a {MALETAS[rule?.maleta]?.name}.
+              </p>
+            ) : (
+              <>
+                <p className="cl-buff">+ {info.buff}</p>
+                {info.debuff && <p className="cl-debuff">− {pvp?.debuff?.[info.id] ?? info.debuff}</p>}
+                {!maleta && <p className="cl-hint">◂ Toque na maleta para abrir</p>}
+              </>
+            )}
+            {maleta && !pvp && (
+              <div className="cl-setup">
+                <p className={`cl-mode cl-mode-${mode}`}>
+                  {MODES[mode].name.toUpperCase()} · {MODES[mode].tag}
+                </p>
+                {warn.n > 0 && (
+                  <p key={warn.n} className="cl-warn animate-shop-alert" role="alert">
+                    {warn.text}
+                  </p>
+                )}
+                {seedField}
+              </div>
+            )}
+          </section>
+
+          {maleta && (
+            <DominoKey
+              key={`iniciar-${selected}`}
+              label={pvp ? pvp.start : 'INICIAR'}
+              pips={6}
+              tone={mode === 'normal' ? 'ivory' : 'blood'}
+              w={320}
+              h={58}
+              className="cl-start is-main"
+              onClick={() => onStart({ maleta: selected, mode, challenge, seed })}
+            />
+          )}
+          <DominoKey label={pvp?.back ?? 'VOLTAR'} pips={1} w={156} h={46} className="cl-back" onClick={onBack} />
+        </LandStage>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -504,28 +677,7 @@ export default function CaseCounter({ unlocked, seen, blackUnlocked, silverUnloc
                 {warn.text}
               </p>
             )}
-            {!pvp && (
-            <label className="seed-field">
-              <span className="seed-field-label">SEMENTE (OPCIONAL)</span>
-              <input
-                className="seed-field-input"
-                type="text"
-                value={seed}
-                onChange={(e) => setSeed(e.target.value.toUpperCase().slice(0, SEED_MAX_LENGTH))}
-                placeholder="BUX-9K2 · em branco: sorteia"
-                maxLength={SEED_MAX_LENGTH}
-                autoCapitalize="characters"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="go"
-                aria-describedby="seed-field-hint"
-              />
-              <span id="seed-field-hint" className="seed-field-hint">
-                {normalizeSeed(seed) ? `A run sai igual para quem usar ${normalizeSeed(seed)}.` : 'Cole uma semente para repetir uma run.'}
-              </span>
-            </label>
-            )}
+            {!pvp && seedField}
             <button
               type="button"
               data-tone={mode === 'normal' ? 'play' : 'blood'}
