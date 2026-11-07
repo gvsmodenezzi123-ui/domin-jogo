@@ -181,3 +181,6 @@ export function paintCounterBack(seed = 23, mode = 'normal') {
   vignetteBox(raw, PX, PY, COUNTER_W, COUNTER_H, 0.6, 0.45);
   return { w: raw.w, h: raw.h, data: raw.data };
 }
+
+/** As peças desta cena que as outras telas deitadas também usam (a loja, o beco). */
+export const counterKit = Object.freeze({ subwayTiles, longCounter, canLight });

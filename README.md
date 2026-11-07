@@ -172,6 +172,30 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.11: as telas deitadas desenhadas do zero
+
+- Cada tela deitada agora é uma cena inteira pintada para o 16:9, num palco fixo de 1000 × 450
+  (`LandStage.jsx`) que cresce ou encolhe inteiro para caber: a composição é a mesma em qualquer
+  celular, tablet ou computador, e a pintura tem sobra em volta (teto, chão e paredes) para as
+  telas mais altas ou mais largas não mostrarem faixa preta.
+- A luz é pintada (`art/lightPass.js`): a cena sai nas cores de verdade e a luz de cada lâmpada,
+  neon, TV ou janela passa por cima, em degraus pontilhados. A placa, o neon e a tela da TV
+  brilham por si.
+- **Menu**: meia-noite no boteco. O letreiro do BUXARIA iluminado na parede, a mesa de dominó com
+  o jogo correndo sob a lâmpada e o rival da sua run (ou o Tio Zé) sentado do outro lado,
+  esperando; atrás dele a estante acesa, o neon do BOTECO, a TV no futebol e a chuva na janela.
+  O menu são pedras de dominó (a de marfim é a principal); o Livro e o Caderno de Fiado ficam em
+  cima da mesa, do seu lado.
+- **Maletas**: o carrossel arrastável, uma maleta por vez sob o canhão de luz e as vizinhas no
+  escuro; a ficha a giz no quadro, as fichas da dificuldade na tampa aberta e o INICIAR no balcão.
+  As Peças Pretas esfriam a sala; as Prateadas acendem o inferno.
+- **Mapa**: as três regiões são três folhas do caderno de fiado lado a lado na mesa (rolam de
+  lado), e a comanda presa na prancheta mostra o que tem no nó escolhido, em letra escura.
+- **Loja do Valtinho**, **Mercado Negro**, **Seu Tião** e os **imprevistos** ganharam cenários
+  próprios: a estante de veludo e cortiça, o beco molhado com o forro do sobretudo, o porão com o
+  facho da grade e o poste de luz com o lambe-lambe da escolha.
+- A faixa preta embaixo da tela no iPhone: a altura do app agora é a da tela de verdade.
+
 ### 2.10: o jogo inteiro deitado (etapas 3 e 4)
 
 - O jogo agora é todo de tela deitada (16:9). O APK e o app instalado abrem deitados; em pé,

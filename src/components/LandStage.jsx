@@ -22,7 +22,9 @@ export default function LandStage({ paint, cacheKey, pad = null, bleed = '#0b090
   const px = pad?.x ?? 0;
   const py = pad?.y ?? 0;
   const ref = useRef(null);
-  const [scale, setScale] = useState(0);
+  // já nasce na escala certa (a moldura é a tela inteira): quem mede posições no primeiro
+  // efeito (as moedas do Seu Tião) não pega o palco encolhido
+  const [scale, setScale] = useState(() => (typeof window === 'undefined' ? 0 : Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H)));
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;

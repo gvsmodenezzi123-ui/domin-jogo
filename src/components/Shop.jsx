@@ -20,6 +20,10 @@ import { NpcPortrait, PackArt, ShopSprite } from './ShopArt.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { prefersReducedMotion } from './motion.js';
 import { useFitScale } from './useFitScale.js';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { SHOP_PAD, paintShopBack } from './art/landShop.js';
 
 /** Falas do Valtinho ao abrir a loja (uma por visita) e reagindo ao que você faz. */
 const GREETINGS = ['Só mercadoria quente...', 'Vai levar ou vai ficar só olhando?', 'O Tio Zé mandou te cobrar o dobro...'];
@@ -198,6 +202,231 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
     onSell(sellId);
     setSellId(null);
   };
+
+  const landscape = useLandscape();
+  const sellModal = selling && (
+    <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">
+      <div className="shop-receipt w-full max-w-[280px] px-4 py-4 text-center">
+        <p className="shop-receipt-head">VALTINHO DO BAR · COMPRA</p>
+        <div className="mx-auto mt-2 w-fit">
+          <RelicIcon relic={selling} size={48} />
+        </div>
+        <p id="sell-title" className="mt-2 font-pixel text-[9px] leading-snug">
+          {selling.name.toUpperCase()}
+        </p>
+        <p className="shop-receipt-note">{getRarity(selling.rarity).label} · revenda a 50%</p>
+        <div className="mt-3 grid gap-2">
+          <button type="button" data-tone="blood" className="btn-pixel" onClick={confirmSell}>
+            VENDER POR ${sellPriceFor(state, selling.id)}
+          </button>
+          <button type="button" className="btn-pixel" onClick={() => setSellId(null)}>
+            FICAR COM ELE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (landscape) {
+    const slots = relicSlotsFor(state);
+    return (
+      <div className={`shop-scene shop-land map-atmo-${region.atmosphere}`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
+        <LandStage paint={() => paintShopBack(41, region.atmosphere)} cacheKey={`land-loja-${region.atmosphere}`} pad={SHOP_PAD} bleed="#0a0705" label="Loja do Valtinho" role="presentation">
+          {/* o Valtinho atrás do balcão, sob a lâmpada dele */}
+          <div className="sl-lamp" aria-hidden="true">
+            <LampRig part="light" lamp={52} cord={110} beamWidth={260} />
+            <LampRig part="body" lamp={52} cord={110} beamWidth={260} />
+          </div>
+          <div className="sl-npc" aria-hidden="true">
+            <NpcPortrait who="valtinho" size={184} speaking={talking} />
+          </div>
+          <RivalSpeech key={line.key} text={line.text} voice="valtinho" tail="down" tailX="50%" linger={false} onMouth={setTalking} className="sl-speech" />
+
+          {/* a placa na cornija da estante e o seu dinheiro */}
+          <h1 id="shop-title" className="sl-sign">
+            LOJA CLANDESTINA <span>· {region.name}</span>
+          </h1>
+          <span className="sl-cash" aria-label={`Seu saldo: ${coins} moedas`}>
+            <CoinCount value={coins} className="text-[16px]" />
+            {coinFx && (
+              <span key={coinFx.seq} className={`coin-float sl-cash-fx ${coinFx.amount > 0 ? 'is-gain' : 'is-loss'}`}>
+                {coinFx.amount > 0 ? `+$${coinFx.amount}` : `−$${-coinFx.amount}`}
+              </span>
+            )}
+          </span>
+
+          {/* fileira de cima: os talismãs no veludo, cada um sob o seu foquinho */}
+          <ul className="sl-relics" aria-label="Talismãs à venda">
+            {shop.relics.map((offer, index) => {
+              const relic = getRelic(offer.id);
+              const tier = getRarity(relic.rarity);
+              const block = relicBuyBlock(state, offer);
+              return (
+                <li key={`${offer.id}-${shop.rerolls}`} style={{ '--rarity': tier.color, '--float-delay': `${-index * 0.8}s` }}>
+                  <button
+                    type="button"
+                    className={`scene-tap sl-relic ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
+                    onClick={() => buyRelic(index)}
+                    aria-label={offer.sold ? `${relic.name}: vendido` : `Comprar ${relic.name} (${tier.label.toLowerCase()}) por ${offer.price} moedas`}
+                    {...press({ kind: 'relic', id: offer.id, owner: 'shop' })}
+                  >
+                    <span className="sl-relic-stage" aria-hidden="true">
+                      <ShopSprite name="almofada" scale={2.4} className="sl-cushion" />
+                      {!offer.sold && (
+                        <span className="sl-relic-art">
+                          <RelicIcon relic={relic} size={60} />
+                        </span>
+                      )}
+                    </span>
+                    <span className="sl-tag">
+                      <span className="sl-tag-rarity">{tier.label}</span>
+                      <span className="sl-tag-name">{relic.short}</span>
+                      {offer.sold ? <span className="shop-tag-sold">VENDIDO</span> : <Price amount={offer.price} />}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* embaixo: os bilhetes das pedras de grife na cortiça */}
+          <div className="sl-notes" aria-label="Pedras de grife">
+            {shop.tiles.map((offer, index) => {
+              const enhancement = ENHANCEMENTS[offer.enhancement];
+              const [a, b] = offer.tileId.split('-').map(Number);
+              const label = tileLabel(offer.tileId);
+              const block = tileBuyBlock(state, offer);
+              return (
+                <button
+                  key={`${offer.tileId}-${shop.rerolls}`}
+                  type="button"
+                  className={`scene-tap sl-grife ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
+                  style={{ '--tilt': `${index ? 2 : -2}deg` }}
+                  onClick={() => buyTile(index)}
+                  aria-label={offer.sold ? `${label} de ${enhancement.name}: vendido` : `Comprar ${label} de ${enhancement.name} por ${offer.price} moedas, substitui o seu ${label} comum`}
+                  {...press({ kind: 'offerTile', tileId: offer.tileId, enhancement: offer.enhancement })}
+                >
+                  <ShopSprite name="alfinete" scale={2} className="sl-pin" />
+                  <span className="sl-note-name">{enhancement.name.toUpperCase()}</span>
+                  <span className="sl-grife-tile">{!offer.sold && <DominoTile values={[a, b]} unit={18} depth={5} enhancement={offer.enhancement} shimmer />}</span>
+                  {offer.sold ? (
+                    <span className="shop-tag-sold">VENDIDO</span>
+                  ) : (
+                    <>
+                      <span className="sl-note-hand">Substitui {label}</span>
+                      <Price amount={offer.price} short />
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* e a prateleira dos pacotes lacrados */}
+          {shop.packs?.length > 0 && (
+            <ul className="sl-packs" aria-label="Mercadoria lacrada">
+              {shop.packs.map((offer, index) => {
+                const pack = PACKS[offer.id];
+                const block = packBuyBlock(state, offer);
+                return (
+                  <li key={offer.id}>
+                    <button
+                      type="button"
+                      className={`scene-tap sl-pack ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
+                      style={{ '--breath-delay': `${-index * 0.9}s` }}
+                      onClick={() => buyPack(index)}
+                      aria-label={offer.sold ? `${pack.name}: já aberto` : `Comprar ${pack.name} por ${offer.price} moedas: ${pack.blurb}`}
+                      {...press({ kind: 'pack', id: offer.id })}
+                    >
+                      <span className="sl-pack-art" aria-hidden="true">
+                        {!offer.sold && <PackArt id={offer.id} size={72} />}
+                        {offer.sold && <span className="shop-pack-torn" />}
+                      </span>
+                      <span className="sl-pack-name">{pack.short}</span>
+                      {offer.sold ? <span className="shop-tag-sold">ABERTO</span> : <Price amount={offer.price} short />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* na frente do balcão: a bolsa (toque para vender), o copo de dados e a saída */}
+          <div key={`pouch-${alert}`} className={`sl-pouch ${alert ? 'animate-hotbar-full' : ''}`}>
+            <p className="sl-pouch-label">
+              BOLSA DE TALISMÃS {state.relics.player.length}/{slots} <span>· toque para vender (50%)</span>
+            </p>
+            <div className="sl-niches" role="group" aria-label="Seus talismãs (toque para vender)">
+              {Array.from({ length: slots }, (_, i) => {
+                const relic = getRelic(state.relics.player[i]);
+                if (!relic)
+                  return (
+                    <span key={`empty-${i}`} className="sl-niche is-empty" aria-hidden="true">
+                      <ShopSprite name="nicho" scale={2.2} />
+                    </span>
+                  );
+                return (
+                  <button
+                    key={relic.id}
+                    type="button"
+                    className="scene-tap sl-niche relic-slot"
+                    style={{ '--rarity': getRarity(relic.rarity).color }}
+                    onClick={() => setSellId(relic.id)}
+                    aria-label={`${relic.name}: vender por ${sellPriceFor(state, relic.id)} moedas`}
+                    {...press({ kind: 'relic', id: relic.id, owner: 'player' })}
+                  >
+                    <ShopSprite name="nicho" scale={2.2} />
+                    <span className="sl-niche-relic">
+                      <RelicIcon relic={relic} size={36} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {alert > 0 && (
+            <p key={`alert-${alert}`} className="shop-alert animate-shop-alert sl-alert" role="alert">
+              BOLSA CHEIA! VENDA UM TALISMÃ ANTES
+            </p>
+          )}
+          <button type="button" className={`scene-tap sl-dice ${canReroll ? '' : 'is-short'}`} onClick={reroll} aria-label={`Reembaralhar a vitrine por ${shop.rerollCost} moedas`}>
+            <span key={shaking} className={shaking ? 'shop-dice-shake' : ''}>
+              <ShopSprite name="copo" scale={1.5} />
+            </span>
+            <span className="sl-dice-label">REEMBARALHAR</span>
+            {shop.rerollCost === 0 && (state.run?.freeRerolls ?? 0) > 0 ? <span className="shop-price shop-price-short">GRÁTIS ×{state.run.freeRerolls}</span> : <Price amount={shop.rerollCost} short />}
+          </button>
+          {upgraded.length > 0 && (
+            <div className="sl-deck" aria-label={`Seu baralho tem ${upgraded.length} pedras de grife`}>
+              <span>SEU BARALHO</span>
+              <span className="sl-deck-tiles">
+                {upgraded.map(([tileId, enhancement]) => {
+                  const [a, b] = tileId.split('-').map(Number);
+                  return (
+                    <span key={tileId} {...press({ kind: 'offerTile', tileId, enhancement })}>
+                      <DominoTile values={[a, b]} unit={9} depth={1} enhancement={enhancement} still />
+                    </span>
+                  );
+                })}
+              </span>
+            </div>
+          )}
+          <DominoKey
+            label={leaveTitle.replace(/\s*→$/, '')}
+            note={leaveNote ?? (exits > 1 ? `${exits} caminhos seguem daqui` : 'a trilha segue em frente')}
+            pips={4}
+            tone="ivory"
+            w={290}
+            h={62}
+            className="sl-leave is-main"
+            onClick={onLeave}
+          />
+        </LandStage>
+        {shop.opening && <PackOpening opening={shop.opening} onPick={onPackPick} press={press} />}
+        {sellModal}
+      </div>
+    );
+  }
 
   return (
     <div className={`shop-scene shop-v22 map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="shop-title">
@@ -462,28 +691,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
 
       {shop.opening && <PackOpening opening={shop.opening} onPick={onPackPick} press={press} />}
 
-      {selling && (
-        <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">
-          <div className="shop-receipt w-full max-w-[280px] px-4 py-4 text-center">
-            <p className="shop-receipt-head">VALTINHO DO BAR · COMPRA</p>
-            <div className="mx-auto mt-2 w-fit">
-              <RelicIcon relic={selling} size={48} />
-            </div>
-            <p id="sell-title" className="mt-2 font-pixel text-[9px] leading-snug">
-              {selling.name.toUpperCase()}
-            </p>
-            <p className="shop-receipt-note">{getRarity(selling.rarity).label} · revenda a 50%</p>
-            <div className="mt-3 grid gap-2">
-              <button type="button" data-tone="blood" className="btn-pixel" onClick={confirmSell}>
-                VENDER POR ${sellPriceFor(state, selling.id)}
-              </button>
-              <button type="button" className="btn-pixel" onClick={() => setSellId(null)}>
-                FICAR COM ELE
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {sellModal}
     </div>
   );
 }

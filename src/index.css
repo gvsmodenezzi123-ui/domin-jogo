@@ -19029,6 +19029,10 @@
   color: #ffe9d8;
 }
 
+.tl-key.is-blood .tl-key-note {
+  color: #ffc8b8;
+}
+
 .tl-key.is-main {
   filter: drop-shadow(0 0 12px rgba(255, 214, 140, 0.32));
 }
@@ -19977,4 +19981,1038 @@
   line-height: 1.5;
   text-align: center;
   color: #b8261c;
+}
+
+/* --- a Loja do Valtinho: o canto dele e a estante da mercadoria (art/landShop.js) ------ */
+.shop-land .land-stage-wrap {
+  z-index: 55;
+}
+
+.sl-lamp {
+  position: absolute;
+  left: 168px;
+  top: -90px;
+  width: 260px;
+  height: 440px;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.sl-lamp .lamp-rig {
+  width: 260px;
+}
+
+.sl-lamp .lamp-beam {
+  opacity: 0.5;
+}
+
+.sl-lamp .lamp-pool {
+  opacity: 0.35;
+}
+
+.sl-npc {
+  position: absolute;
+  left: 76px;
+  top: 146px;
+  width: 184px;
+  height: 184px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
+
+.sl-speech.speech-balloon {
+  position: absolute;
+  left: 168px;
+  bottom: 300px;
+  translate: -50% 0;
+  max-width: 300px;
+  font-size: 19px;
+  z-index: 20;
+}
+
+/* a placa de latão na cornija e o dinheiro */
+.sl-sign {
+  position: absolute;
+  left: 352px;
+  top: 50px;
+  width: 636px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: #ffd98a;
+  text-shadow:
+    0 1px 0 #3a1c06,
+    0 0 6px rgba(255, 190, 90, 0.45);
+  white-space: nowrap;
+}
+
+.sl-sign span {
+  font-size: 8px;
+  color: #e8c48a;
+}
+
+.sl-cash {
+  position: absolute;
+  right: 18px;
+  top: 12px;
+  padding: 5px 12px;
+  background: rgba(10, 6, 3, 0.7);
+  border: 2px solid #0b0705;
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 204, 120, 0.3),
+    0 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.sl-cash-fx {
+  position: absolute;
+  right: 4px;
+  top: -14px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+}
+
+.sl-cash-fx.is-gain {
+  color: #9fe08a;
+}
+
+.sl-cash-fx.is-loss {
+  color: #ff8c7a;
+}
+
+/* os talismãs no veludo (a fileira é 352..988 × 72..186) */
+.sl-relics {
+  position: absolute;
+  left: 352px;
+  top: 74px;
+  width: 636px;
+  height: 112px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sl-relics li {
+  display: flex;
+  justify-content: center;
+}
+
+.sl-relic {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 112px;
+  padding: 0;
+  border: 0;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sl-relic-stage {
+  position: relative;
+  width: 106px;
+  height: 108px;
+}
+
+.sl-cushion {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  image-rendering: pixelated;
+}
+
+.sl-relic-art {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  translate: -50% 0;
+  filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 8px color-mix(in srgb, var(--rarity) 55%, transparent));
+  animation: slFloat 3.2s ease-in-out var(--float-delay, 0s) infinite;
+}
+
+@keyframes slFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.reduce-motion .sl-relic-art {
+  animation: none;
+}
+
+.sl-relic:active .sl-relic-art {
+  transform: translateY(2px) scale(0.96);
+}
+
+/* a etiqueta de papel pardo pendurada do lado */
+.sl-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 92px;
+  margin-bottom: 10px;
+  padding: 6px 7px 7px;
+  text-align: left;
+  color: #2a1a08;
+  background: linear-gradient(180deg, #eedcae, #d2b47c);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(90, 60, 20, 0.35);
+  transform: rotate(2deg);
+}
+
+.sl-tag-rarity {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--rarity);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.sl-tag-name {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.sl-relic .shop-price,
+.sl-grife .shop-price,
+.sl-pack .shop-price,
+.sl-dice .shop-price {
+  font-size: 11px;
+}
+
+.sl-relic.is-sold .sl-tag {
+  opacity: 0.7;
+}
+
+.sl-relic.is-short .shop-price,
+.sl-grife.is-short .shop-price,
+.sl-pack.is-short .shop-price {
+  color: #b8261c;
+}
+
+/* os bilhetes na cortiça, com a pedra presa embaixo do alfinete (364..660 × 198..320) */
+.sl-notes {
+  position: absolute;
+  left: 368px;
+  top: 202px;
+  width: 288px;
+  height: 116px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sl-grife {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 6px 6px;
+  border: 0;
+  color: #2a1a08;
+  background: linear-gradient(180deg, #f4ead2, #dccaa0);
+  box-shadow:
+    0 3px 2px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(90, 60, 20, 0.3);
+  transform: rotate(var(--tilt, 0deg));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sl-grife:active {
+  transform: rotate(var(--tilt, 0deg)) translateY(2px);
+}
+
+.sl-pin {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  translate: -50% 0;
+  image-rendering: pixelated;
+}
+
+.sl-note-name {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.sl-grife-tile {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+}
+
+.sl-note-hand {
+  font-family: var(--font-term);
+  font-size: 15px;
+  line-height: 1;
+  color: #26408a;
+}
+
+/* os pacotes lacrados na prateleira (668..982 × 198..320) */
+.sl-packs {
+  position: absolute;
+  left: 670px;
+  top: 200px;
+  width: 310px;
+  height: 118px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+}
+
+.sl-pack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f4ecd2;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sl-pack-art {
+  position: relative;
+  display: block;
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.6));
+  animation: slBreath 3s ease-in-out var(--breath-delay, 0s) infinite;
+}
+
+@keyframes slBreath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.reduce-motion .sl-pack-art {
+  animation: none;
+}
+
+.sl-pack:active .sl-pack-art {
+  transform: translateY(2px) scale(0.96);
+}
+
+.sl-pack-name {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  text-shadow: 0 2px 0 #000;
+  white-space: nowrap;
+}
+
+/* a frente do balcão: a bolsa, o copo de dados, o baralho e a saída */
+.sl-pouch {
+  position: absolute;
+  left: 24px;
+  top: 348px;
+  width: 340px;
+}
+
+.sl-pouch-label {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: #f4ecd2;
+  text-shadow: 0 2px 0 #000;
+}
+
+.sl-pouch-label span {
+  font-family: var(--font-term);
+  font-size: 15px;
+  color: #d8c8a8;
+}
+
+.sl-niches {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sl-niche {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  image-rendering: pixelated;
+}
+
+.sl-niche-relic {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+
+.sl-niche.is-empty {
+  opacity: 0.8;
+}
+
+.sl-alert {
+  position: absolute;
+  left: 24px;
+  top: 300px;
+  width: 340px;
+  padding: 5px 8px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  text-align: center;
+}
+
+.sl-dice {
+  position: absolute;
+  left: 392px;
+  top: 342px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f4ecd2;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sl-dice > span:first-child {
+  display: block;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.6));
+}
+
+.sl-dice-label {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  text-shadow: 0 2px 0 #000;
+}
+
+.sl-dice.is-short .shop-price {
+  color: #ff8c7a;
+}
+
+.sl-deck {
+  position: absolute;
+  left: 520px;
+  top: 352px;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: #e8d4a8;
+  text-shadow: 0 2px 0 #000;
+}
+
+.sl-deck-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sl-leave {
+  position: absolute;
+  left: 696px;
+  top: 366px;
+}
+
+.sl-leave .tl-key-note {
+  font-size: 15px;
+}
+
+.tl-key.sl-leave .tl-key-label {
+  font-size: 14px;
+}
+
+/* --- o beco do Corvo (art/landAlley.js) ------------------------------------------------ */
+.bm-land .land-stage-wrap,
+.tiao-land .land-stage-wrap,
+.ev-land .land-stage-wrap {
+  z-index: 55;
+}
+
+.bl-rain {
+  position: absolute;
+  inset: -90px -50px;
+  background: repeating-linear-gradient(105deg, transparent 0 13px, rgba(170, 190, 220, 0.16) 13px 14px, transparent 14px 31px);
+  background-size: 62px 80px;
+  animation: blRain 0.6s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+@keyframes blRain {
+  to {
+    background-position: -20px 80px;
+  }
+}
+
+.bl-fog {
+  position: absolute;
+  left: -50px;
+  right: -50px;
+  top: 300px;
+  height: 120px;
+  background:
+    radial-gradient(ellipse 40% 50% at 30% 60%, rgba(160, 150, 170, 0.22), transparent),
+    radial-gradient(ellipse 35% 45% at 75% 50%, rgba(160, 150, 170, 0.16), transparent);
+  animation: blFog 14s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes blFog {
+  to {
+    transform: translateX(60px);
+  }
+}
+
+.reduce-motion .bl-rain,
+.reduce-motion .bl-fog {
+  animation: none;
+}
+
+.bl-neon {
+  position: absolute;
+  left: 24px;
+  top: 26px;
+  width: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  line-height: 1;
+  color: #ffe0d8;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 8px rgba(255, 50, 40, 0.95),
+    0 0 20px rgba(255, 30, 20, 0.6),
+    0 3px 0 #2a0402;
+  animation: clNeon 5.2s steps(1, end) infinite;
+}
+
+.bl-neon span {
+  font-size: 8px;
+  color: #ffb8a8;
+  text-shadow:
+    0 0 6px rgba(255, 50, 40, 0.8),
+    0 2px 0 #000;
+}
+
+.reduce-motion .bl-neon {
+  animation: none;
+}
+
+.bl-npc {
+  position: absolute;
+  left: 82px;
+  top: 150px;
+  width: 204px;
+  height: 204px;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+}
+
+.bl-speech.speech-balloon {
+  position: absolute;
+  left: 184px;
+  bottom: 296px;
+  translate: -50% 0;
+  max-width: 300px;
+  font-size: 19px;
+  z-index: 20;
+}
+
+/* os talismãs pendurados no forro (o forro é 360..988 × 52..336; presilhas em 466, 674, 882) */
+.bl-goods {
+  position: absolute;
+  left: 362px;
+  top: 92px;
+  width: 624px;
+  height: 240px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bl-goods li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bl-good {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bl-string {
+  display: block;
+  width: 2px;
+  height: 22px;
+  background: linear-gradient(180deg, #8a7a5a, #5a4a32);
+}
+
+.bl-good-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-top: -4px;
+  transform-origin: 50% -26px;
+  animation: blSwing 3.4s ease-in-out var(--swing-delay, 0s) infinite;
+  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px color-mix(in srgb, var(--rarity) 60%, transparent));
+}
+
+@keyframes blSwing {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+.reduce-motion .bl-good-art {
+  animation: none;
+}
+
+.bl-good:active .bl-good-art {
+  transform: scale(0.95);
+}
+
+.bl-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 120px;
+  padding: 6px 10px 7px;
+  color: #2a1a10;
+  background: linear-gradient(180deg, #d8ccb0, #b0a080);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(60, 40, 20, 0.35);
+}
+
+.bl-tag-rarity {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: #6a0e2a;
+}
+
+.bl-tag-name {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  text-align: center;
+}
+
+.bl-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #2a1a10;
+}
+
+.bl-good.is-short .bl-price {
+  color: #b8261c;
+}
+
+.bl-good.is-sold .bl-tag {
+  opacity: 0.65;
+}
+
+.bl-desc {
+  max-width: 190px;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1.02;
+  text-align: center;
+  color: #e8d4f0;
+  text-shadow: 0 2px 0 #000;
+}
+
+.bl-pouch {
+  top: 362px;
+}
+
+/* --- o porão do Seu Tião ---------------------------------------------------------------- */
+.ti-stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 450px;
+}
+
+.ti-beam {
+  position: absolute;
+  left: 220px;
+  top: 20px;
+  width: 400px;
+  height: 340px;
+  background: conic-gradient(
+    at 50% 0%,
+    transparent 0deg 160deg,
+    rgba(210, 230, 255, 0.08) 168deg,
+    rgba(220, 236, 255, 0.18) 180deg,
+    rgba(210, 230, 255, 0.08) 192deg,
+    transparent 200deg 360deg
+  );
+  -webkit-mask: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+  mask: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.ti-fog {
+  position: absolute;
+  left: -50px;
+  right: -50px;
+  top: 300px;
+  height: 140px;
+  background:
+    radial-gradient(ellipse 40% 50% at 30% 60%, rgba(200, 210, 220, 0.18), transparent),
+    radial-gradient(ellipse 30% 40% at 70% 50%, rgba(200, 210, 220, 0.12), transparent);
+  animation: blFog 16s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.reduce-motion .ti-fog {
+  animation: none;
+}
+
+.ti-sign {
+  position: absolute;
+  left: 30px;
+  top: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  line-height: 1;
+  color: #ffd98a;
+  text-shadow:
+    0 2px 0 #000,
+    0 0 10px rgba(255, 190, 90, 0.35);
+}
+
+.ti-sign span {
+  font-size: 8px;
+  color: #d8c8a8;
+}
+
+.ti-pocket {
+  position: absolute;
+  left: 716px;
+  top: 40px;
+  width: 250px;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(10, 8, 6, 0.72);
+  border: 2px solid #0b0705;
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 204, 120, 0.35),
+    0 4px 0 rgba(0, 0, 0, 0.55);
+  transition: box-shadow 300ms ease-out;
+}
+
+.ti-pocket.is-full {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 217, 138, 0.8),
+    0 0 18px rgba(255, 200, 90, 0.35),
+    0 4px 0 rgba(0, 0, 0, 0.55);
+}
+
+.ti-pocket-label {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: #d8c8a8;
+}
+
+.ti-count {
+  display: inline-block;
+  transform-origin: 20% 50%;
+}
+
+.ti-npc {
+  position: absolute;
+  left: 316px;
+  top: 132px;
+  width: 208px;
+  height: 208px;
+  pointer-events: none;
+}
+
+.ti-crate {
+  position: absolute;
+  left: 298px;
+  top: 300px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.ti-speech.speech-balloon {
+  position: absolute;
+  left: 540px;
+  top: 236px;
+  max-width: 260px;
+  font-size: 19px;
+  z-index: 20;
+}
+
+.ti-stamp {
+  position: absolute;
+  left: 716px;
+  top: 150px;
+  width: 250px;
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 38px;
+  color: #ffd98a;
+  text-shadow:
+    0 4px 0 #2a1406,
+    0 0 18px rgba(255, 200, 90, 0.55);
+  animation: tiStamp 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes tiStamp {
+  from {
+    opacity: 0;
+    transform: scale(1.8) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-4deg);
+  }
+}
+
+.ti-note {
+  position: absolute;
+  left: 30px;
+  top: 384px;
+  width: 250px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1.05;
+  color: #e6dcc4;
+  text-shadow: 0 2px 0 #000;
+}
+
+/* --- o imprevisto da noite --------------------------------------------------------------- */
+.ev-art {
+  position: absolute;
+  left: 210px;
+  top: 190px;
+  width: 200px;
+  height: 160px;
+  display: grid;
+  place-items: center;
+  transform: scale(1.7);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.ev-purse {
+  position: absolute;
+  left: 30px;
+  top: 400px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  background: rgba(8, 6, 4, 0.6);
+  border: 2px solid #0b0705;
+}
+
+/* o lambe-lambe: papel colado no tijolo, um pouco torto */
+.ev-card {
+  position: absolute;
+  left: 556px;
+  top: 30px;
+  width: 420px;
+  min-height: 300px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #1c140c;
+  background:
+    repeating-linear-gradient(0deg, rgba(120, 100, 70, 0.06) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #efe4c8, #ddcca4);
+  box-shadow:
+    0 6px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(90, 60, 20, 0.3),
+    inset 0 0 30px rgba(120, 80, 30, 0.25);
+  transform: rotate(-1deg);
+  animation: counterCardIn 260ms ease-out both;
+}
+
+.ev-kicker {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.4;
+  color: #8a3a1a;
+}
+
+.ev-title {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  line-height: 1.3;
+  color: #140a02;
+}
+
+.ev-text {
+  font-family: var(--font-term);
+  font-size: 20px;
+  line-height: 1.05;
+  color: #3a2a18;
+}
+
+.ev-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ev-option {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  color: #1c140c;
+  background: #f8f0dc;
+  border: 2px solid #3a2a18;
+  box-shadow: 0 3px 0 #3a2a18;
+  transition: transform 100ms ease-out;
+}
+
+.ev-option:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #3a2a18;
+}
+
+.ev-option.tone-blood {
+  border-color: #8a1a10;
+  box-shadow: 0 3px 0 #8a1a10;
+}
+
+.ev-option.tone-brass {
+  border-color: #8a6014;
+  box-shadow: 0 3px 0 #8a6014;
+}
+
+.ev-option.is-blocked {
+  opacity: 0.5;
+}
+
+.ev-option-key {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #f8f0dc;
+  background: #2a1a0c;
+}
+
+.tone-blood .ev-option-key {
+  background: #8a1a10;
+}
+
+.tone-brass .ev-option-key {
+  background: #8a6014;
+}
+
+.ev-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ev-option-label {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.ev-option-detail {
+  font-family: var(--font-term);
+  font-size: 17px;
+  line-height: 1;
+  color: #4a3a28;
+}
+
+.ev-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 2px dashed rgba(60, 40, 20, 0.5);
+}
+
+.ev-outcome-head {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: #3a2a18;
+}
+
+.ev-outcome.is-good .ev-outcome-head {
+  color: #2a6a1a;
+}
+
+.ev-outcome.is-bad .ev-outcome-head {
+  color: #9a1a10;
+}
+
+.ev-outcome-line {
+  font-family: var(--font-term);
+  font-size: 19px;
+  line-height: 1.05;
+  color: #2a1a0c;
+}
+
+.ev-leave {
+  left: 686px;
+  top: 372px;
 }

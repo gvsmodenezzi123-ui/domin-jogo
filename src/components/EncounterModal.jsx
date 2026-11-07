@@ -9,6 +9,10 @@ import { HeartsBar } from './PixelHeart.jsx';
 import { CoinGlyph } from './UiGlyphs.jsx';
 import { EncounterIcon } from './art/EncounterArt.jsx';
 import { useFitScale } from './useFitScale.js';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { ALLEY_PAD, paintAlleyBack } from './art/landAlley.js';
 
 /** A arte do dilema: a própria bucha de Rubi, a moeda do jogo ou o pixel art do evento. */
 function EncounterArtFor({ encounter }) {
@@ -33,11 +37,70 @@ function EncounterArtFor({ encounter }) {
  */
 export default function EncounterModal({ state, onChoose, onLeave }) {
   const [fitOuter, fitInner, fitStyle] = useFitScale();
+  const landscape = useLandscape();
   const enc = state.encounter;
   const data = encounterOf(enc?.id);
   if (!enc || !data) return null;
   const outcome = enc.outcome;
   const region = REGIONS[regionIdOf(state) - 1];
+
+  if (landscape) {
+    return (
+      <div className={`ev-land map-atmo-${region.atmosphere}`} role="dialog" aria-modal="true" aria-labelledby="encounter-title">
+        <LandStage paint={() => paintAlleyBack(13, region.atmosphere, 'event')} cacheKey={`land-imprevisto-${region.atmosphere}`} pad={ALLEY_PAD} bleed="#07060a" label="Imprevisto da noite" role="presentation">
+          <span className="bl-rain ev-rain" aria-hidden="true" />
+          {/* o imprevisto, embaixo do poste */}
+          <div className="ev-art" aria-hidden="true">
+            <EncounterArtFor encounter={data} />
+          </div>
+          <span className="bl-fog ev-fog" aria-hidden="true" />
+          <div className="ev-purse" aria-label="O que você tem agora">
+            <HeartsBar current={state.hearts.player} max={state.maxHearts.player} pixel={2} label={`Você: ${state.hearts.player} de ${state.maxHearts.player} corações`} />
+            <CoinCount value={state.coins.player} />
+          </div>
+
+          {/* o lambe-lambe colado no tijolo: o que aconteceu e as duas escolhas */}
+          <section className="ev-card">
+            <p className="ev-kicker">[?] IMPREVISTO DA NOITE · {region.name}</p>
+            <h1 id="encounter-title" className="ev-title">
+              {data.title.toUpperCase()}
+            </h1>
+            <p className="ev-text">
+              {data.text[0]} {data.text[1]}
+            </p>
+            {!outcome ? (
+              <div className="ev-options" role="group" aria-label="Escolhas">
+                {data.options.map((opt) => {
+                  const block = encounterOptionBlock(state, enc.id, opt.id);
+                  return (
+                    <button key={opt.id} type="button" className={`ev-option tone-${opt.tone} ${block ? 'is-blocked' : ''}`} disabled={Boolean(block)} onClick={() => onChoose(opt.id)}>
+                      <span className="ev-option-key" aria-hidden="true">
+                        {opt.id.toUpperCase()}
+                      </span>
+                      <span className="ev-option-body">
+                        <span className="ev-option-label">{opt.label}</span>
+                        <span className="ev-option-detail">{block ?? opt.detail}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div key={enc.choice} className={`ev-outcome is-${outcome.tone}`} role="status">
+                <p className="ev-outcome-head">{outcome.head ?? (outcome.tone === 'good' ? 'DEU BOM' : outcome.tone === 'bad' ? 'DEU RUIM' : 'NADA DEMAIS')}</p>
+                {outcome.lines.map((line) => (
+                  <p key={line} className="ev-outcome-line">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )}
+          </section>
+          {outcome && <DominoKey label="VOLTAR AO MAPA" pips={1} tone="ivory" w={290} h={62} className="sl-leave ev-leave is-main" onClick={onLeave} />}
+        </LandStage>
+      </div>
+    );
+  }
 
   return (
     <div className={`encounter-scene map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="encounter-title">

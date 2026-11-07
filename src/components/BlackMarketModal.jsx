@@ -14,6 +14,10 @@ import { paintAlley, paintCoatLining, paintRoughPlank } from './art/shopPixels.j
 import PaintedBox from './PaintedBox.jsx';
 import { NpcPortrait, ShopSprite } from './ShopArt.jsx';
 import { useFitScale } from './useFitScale.js';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { ALLEY_PAD, paintAlleyBack } from './art/landAlley.js';
 
 /** Falas do Corvo da Madrugada: ao abrir o beco e reagindo ao que você faz. */
 const GREETINGS = ['Psiu... aqui, no escuro.', 'Coisa que o Valtinho não tem coragem de vender.', 'Paga em dinheiro. Sem recibo, sem pergunta.'];
@@ -81,6 +85,97 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTi
     }
     onBuy(index);
   };
+
+  const landscape = useLandscape();
+  if (landscape) {
+    const slots = relicSlotsFor(state);
+    return (
+      <div className={`bm-land map-atmo-${region.atmosphere}`} role="dialog" aria-modal="true" aria-labelledby="bm-title">
+        <LandStage paint={() => paintAlleyBack(7, region.atmosphere, 'market')} cacheKey={`land-beco-${region.atmosphere}`} pad={ALLEY_PAD} bleed="#07060a" label="Mercado Negro" role="presentation">
+          <span className="bl-rain" aria-hidden="true" />
+          <h1 id="bm-title" className="bl-neon">
+            MERCADO NEGRO
+            <span>BECO DO CORVO DA MADRUGADA</span>
+          </h1>
+          <span className="sl-cash" aria-label={`Seu saldo: ${coins} moedas`}>
+            <CoinCount value={coins} className="text-[16px]" />
+          </span>
+
+          {/* o Corvo na porta, de olhos vermelhos */}
+          <div className="bl-npc" aria-hidden="true">
+            <NpcPortrait who="corvo" size={204} speaking={talking} />
+          </div>
+          <RivalSpeech key={line.key} text={line.text} voice="corvo" tail="down" tailX="50%" linger={false} onMouth={setTalking} className="bl-speech" />
+          <span className="bl-fog" aria-hidden="true" />
+
+          {/* o forro do sobretudo: os talismãs pendurados nas presilhas */}
+          <ul className="bl-goods" aria-label="Talismãs Necróticos à venda">
+            {market.offers.map((offer, index) => {
+              const relic = getRelic(offer.id);
+              const tier = getRarity(relic.rarity);
+              const block = marketBuyBlock(state, offer);
+              return (
+                <li key={offer.id} style={{ '--rarity': tier.color, '--swing-delay': `${-index * 0.7}s` }}>
+                  <button
+                    type="button"
+                    className={`scene-tap bl-good ${offer.sold ? 'is-sold' : ''} ${block === 'coins' && !offer.sold ? 'is-short' : ''}`}
+                    onClick={() => buy(index)}
+                    aria-label={offer.sold ? `${relic.name}: vendido` : `Comprar ${relic.name} (necrótico) por ${offer.price} moedas: ${relic.description}`}
+                    {...press({ kind: 'relic', id: offer.id, owner: 'market' })}
+                  >
+                    <span className="bl-string" aria-hidden="true" />
+                    <span className="bl-good-art" aria-hidden="true">
+                      {!offer.sold && <RelicIcon relic={relic} size={58} />}
+                    </span>
+                    <span className="bl-tag">
+                      <span className="bl-tag-rarity">{tier.label}</span>
+                      <span className="bl-tag-name">{relic.short}</span>
+                      {offer.sold ? (
+                        <span className="bm-tag-sold">VENDIDO</span>
+                      ) : (
+                        <span className="bl-price">
+                          <CoinGlyph size={12} />${offer.price}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  {!offer.sold && <p className="bl-desc">{relic.description}</p>}
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* a sua bolsa (aqui só se compra) e a saída */}
+          <div key={`pouch-${alert}`} className={`sl-pouch bl-pouch ${alert ? 'animate-hotbar-full' : ''}`} aria-label="Seus talismãs">
+            <p className="sl-pouch-label">
+              SUA BOLSA {state.relics.player.length}/{slots} <span>· o Corvo não compra nada</span>
+            </p>
+            <div className="sl-niches">
+              {Array.from({ length: slots }, (_, i) => {
+                const relic = getRelic(state.relics.player[i]);
+                return (
+                  <span key={relic?.id ?? `empty-${i}`} className={`sl-niche ${relic ? '' : 'is-empty'}`} {...(relic ? press({ kind: 'relic', id: relic.id, owner: 'player' }) : {})}>
+                    <ShopSprite name="nicho" scale={2.2} />
+                    {relic && (
+                      <span className="sl-niche-relic">
+                        <RelicIcon relic={relic} size={36} />
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          {alert > 0 && (
+            <p key={`alert-${alert}`} className="shop-alert animate-shop-alert sl-alert" role="alert">
+              BOLSA CHEIA! VENDA UM TALISMÃ NA LOJA DO VALTINHO
+            </p>
+          )}
+          <DominoKey label={leaveTitle.replace(/\s*→$/, '')} note={leaveNote?.toLowerCase()} pips={2} tone="blood" w={290} h={62} className="sl-leave" onClick={onLeave} />
+        </LandStage>
+      </div>
+    );
+  }
 
   return (
     <div className={`bm-scene bm-v22 map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="bm-title">

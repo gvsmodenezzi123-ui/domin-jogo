@@ -10,6 +10,10 @@ import PaintedBox from './PaintedBox.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import { NpcPortrait, ShopSprite } from './ShopArt.jsx';
 import { useFitScale } from './useFitScale.js';
+import DominoKey from './DominoKey.jsx';
+import LandStage from './LandStage.jsx';
+import { useLandscape } from './useLandscape.js';
+import { ALLEY_PAD, paintCellarBack } from './art/landAlley.js';
 
 /** Espera a cena clarear, voo de cada moeda e intervalo entre elas (ms). */
 const START_MS = 1350; // depois da entrada (a luz acende, o caixote cai, o Seu Tião sobe)
@@ -54,6 +58,7 @@ export default function CoinEventModal({ state, onLeave }) {
   const tiaoRef = useRef(null);
   const pocketRef = useRef(null);
   const countRef = useRef(null);
+  const landscape = useLandscape();
 
   // de onde a moeda sai (a mão dele) e onde chega (o bolso), em px de layout do palco
   useLayoutEffect(() => {
@@ -104,6 +109,61 @@ export default function CoinEventModal({ state, onLeave }) {
     timers.push(setTimeout(() => sound.playCoinJingle(), START_MS + reward * GAP_MS + FLIGHT_MS + 120));
     return () => timers.forEach(clearTimeout);
   }, [reward]);
+
+  if (landscape) {
+    return (
+      <div className={`tiao-v22 tiao-land map-atmo-${region.atmosphere}`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
+        <LandStage paint={() => paintCellarBack(9, region.atmosphere)} cacheKey={`land-porao-${region.atmosphere}`} pad={ALLEY_PAD} bleed="#060505" label="Seu Tião das Moedas" role="presentation">
+          <section ref={stageRef} className="ti-stage" aria-label="Gorjeta do Seu Tião">
+            <span className="ti-beam" aria-hidden="true" />
+            <span className="ti-fog" aria-hidden="true" />
+            <h1 id="tiao-title" className="ti-sign">
+              SEU TIÃO DAS MOEDAS
+              <span>{region.name}</span>
+            </h1>
+
+            {/* o bolso, onde as moedas pousam */}
+            <div ref={pocketRef} className={`ti-pocket ${done ? 'is-full' : ''}`} aria-live="polite">
+              <span className="ti-pocket-label">SEU BOLSO</span>
+              <span ref={countRef} className="ti-count">
+                <CoinCount value={before + Math.min(landed, reward)} className="text-[22px]" size={24} />
+              </span>
+            </div>
+
+            {/* o Seu Tião sob o facho, atrás do caixote de feira */}
+            <div ref={tiaoRef} className="ti-npc" aria-hidden="true">
+              <NpcPortrait who="seuTiao" size={208} speaking={talking} />
+            </div>
+            <ShopSprite name="caixote" scale={3.2} className="ti-crate" />
+            <RivalSpeech text={line} voice="seuTiao" tail="left" linger={false} onMouth={setTalking} className="ti-speech" />
+
+            {path && (
+              <div className="tiao-lane" aria-hidden="true" style={{ left: path.x, top: path.y, '--dx': `${path.dx}px`, '--dy': `${path.dy}px` }}>
+                {Array.from({ length: reward }, (_, i) => (
+                  <span key={i} className={`tiao-coin-x ${i < landed ? 'is-landed' : ''}`} style={{ animationDelay: `${START_MS + i * GAP_MS}ms`, animationDuration: `${FLIGHT_MS}ms` }}>
+                    <span className="tiao-coin-y" style={{ animationDelay: `${START_MS + i * GAP_MS}ms`, animationDuration: `${FLIGHT_MS}ms` }}>
+                      <ShopSprite name="moeda" scale={2} className="tiao-coin-px" />
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {done && (
+              <p className="ti-stamp" role="status">
+                +${reward}
+              </p>
+            )}
+
+            <p className="ti-note">
+              Gorjeta sorteada de $1 a $12. {done ? `Você levou $${reward}.` : 'Contando...'}
+            </p>
+            <DominoKey label="VOLTAR AO MAPA" pips={1} tone="ivory" w={290} h={62} className="sl-leave is-main" onClick={onLeave} />
+          </section>
+        </LandStage>
+      </div>
+    );
+  }
 
   return (
     <div className={`tiao-scene tiao-v22 map-atmo-${region.atmosphere} fixed inset-0 z-[55]`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
