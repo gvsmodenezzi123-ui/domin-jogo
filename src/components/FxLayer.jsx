@@ -35,7 +35,6 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
     }
     let raf = 0;
     let last = 0;
-    let frame = 0;
     let size = { w: 0, h: 0, cssW: 0, cssH: 0 };
     let room = null;
     let tiles = [];
@@ -67,7 +66,16 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
         if (!kind || el.closest('[style*="visibility: hidden"]')) continue;
         const r = el.getBoundingClientRect();
         if (r.width < 2 || r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom) continue;
-        list.push({ x: (r.left - box.left) * kx, y: (r.top - box.top) * ky, w: r.width * kx, h: r.height * ky, kind: KIND[kind] });
+        // os quatro cantos de verdade (os pontinhos .fx-corner seguem o giro do leque e a
+        // perspectiva da mesa); a caixa reta do getBoundingClientRect não serve
+        const corners = el.querySelectorAll(':scope > .fx-corner');
+        if (corners.length !== 4) continue;
+        const q = [];
+        for (const c of corners) {
+          const cr = c.getBoundingClientRect();
+          q.push((cr.left - box.left) * kx, (cr.top - box.top) * ky);
+        }
+        list.push({ q, kind: KIND[kind] });
       }
       tiles = list;
       const ids = new Set();
@@ -114,13 +122,15 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
 
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
-      if (document.visibilityState === 'hidden' || now - last < FRAME_MS) return;
+      if (document.visibilityState === 'hidden') return;
       // com animações reduzidas, a luz fica parada: só redesenha devagar (pedras novas, tela)
-      if (reduced() && now - last < 400) return;
+      if (reduced() && !tiles.length && now - last < 400) return;
+      // com pedra aprimorada na tela, a aura segue a pedra a cada quadro (60 por segundo);
+      // sem ela, a luz da sala basta a 30
+      if (!tiles.length && !bursts.length && now - last < FRAME_MS) return;
       last = now;
       resize();
-      if (frame % 3 === 0) measure(now);
-      frame += 1;
+      measure(now);
       draw(now);
     };
     raf = requestAnimationFrame(loop);

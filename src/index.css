@@ -23042,6 +23042,34 @@
 }
 
 /* ---------- Versão 2.13: o shader da luz (FxLayer.jsx), somado à tela ---------- */
+/* os cantos da pedra aprimorada: pontos sem tamanho que seguem toda transformação dela */
+.fx-corner {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.fx-c0 {
+  left: 0;
+  top: 0;
+}
+
+.fx-c1 {
+  right: 0;
+  top: 0;
+}
+
+.fx-c2 {
+  right: 0;
+  bottom: 0;
+}
+
+.fx-c3 {
+  left: 0;
+  bottom: 0;
+}
+
 .fx-layer {
   z-index: 6;
   width: 100%;

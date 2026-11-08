@@ -222,6 +222,12 @@ function DominoTile({
         <>
           <span aria-hidden="true" className="tile-enh-layer" />
           <span aria-hidden="true" className="tile-enh-glow" />
+          {/* versão 2.13: os quatro cantos da pedra, para o shader (FxLayer.jsx) achar onde ela
+              está de verdade na tela: girada no leque, deitada em perspectiva na mesa */}
+          <span aria-hidden="true" className="fx-corner fx-c0" />
+          <span aria-hidden="true" className="fx-corner fx-c1" />
+          <span aria-hidden="true" className="fx-corner fx-c2" />
+          <span aria-hidden="true" className="fx-corner fx-c3" />
           {/* Ouro: o feixe especular cruza a pedra (só na selecionada e nas pontas abertas) */}
           {enh.id === 'ouro' && !still && (
             <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0, borderRadius: radius }} />

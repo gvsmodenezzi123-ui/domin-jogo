@@ -172,6 +172,13 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.13.1: a aura das pedras aprimoradas no lugar certo
+
+- A aura do shader nas pedras aprimoradas agora segue a pedra de verdade: cada uma marca os seus
+  quatro cantos na tela (girada no leque, deitada em perspectiva na mesa) e a luz contorna esse
+  formato, só por fora, sem cobrir a cara da pedra nem virar um retângulo torto. Com pedra
+  aprimorada na tela, a aura acompanha a cada quadro (o leque balançando, a pedra arrastada).
+
 ### 2.13.0: uma sala para cada região, as velas do Dono da Noite, a luz em shader e a sala no online
 
 - **Uma sala para cada região**, pintadas do zero com a luz da tela inicial (as cores de verdade

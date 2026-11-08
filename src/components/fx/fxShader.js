@@ -36,7 +36,8 @@ uniform float u_motion;
 uniform vec4 u_light[${MAX_LIGHTS}];
 uniform vec4 u_lcol[${MAX_LIGHTS}];
 uniform int u_nl;
-uniform vec4 u_tile[${MAX_TILES}];
+uniform vec4 u_tA[${MAX_TILES}];
+uniform vec4 u_tB[${MAX_TILES}];
 uniform float u_tkind[${MAX_TILES}];
 uniform int u_nt;
 uniform vec4 u_burst[${MAX_BURSTS}];
@@ -77,9 +78,23 @@ float flick(float kind, float i, float t) {
   return 0.55 + 0.6 * (exp(-beat * 18.0) + 0.6 * exp(-max(0.0, beat - 0.18) * 18.0) * step(0.18, beat));
 }
 
-float sdBox(vec2 p, vec2 b) {
-  vec2 d = abs(p) - b;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+float sdSeg(vec2 p, vec2 a, vec2 b) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+float crossz(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
+/* a distância até a pedra de verdade: o quadrilátero dos quatro cantos dela na tela (girada no
+   leque, deitada em perspectiva na mesa); negativa dentro */
+float sdQuad(vec2 p, vec2 a, vec2 b, vec2 c, vec2 d) {
+  float dist = min(min(sdSeg(p, a, b), sdSeg(p, b, c)), min(sdSeg(p, c, d), sdSeg(p, d, a)));
+  float s1 = crossz(b - a, p - a);
+  float s2 = crossz(c - b, p - b);
+  float s3 = crossz(d - c, p - c);
+  float s4 = crossz(a - d, p - d);
+  bool inside = (s1 >= 0.0 && s2 >= 0.0 && s3 >= 0.0 && s4 >= 0.0) || (s1 <= 0.0 && s2 <= 0.0 && s3 <= 0.0 && s4 <= 0.0);
+  return inside ? -dist : dist;
 }
 
 vec3 hue(float h) { return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); }
@@ -155,13 +170,19 @@ void main() {
   // --- a aura das pedras aprimoradas
   for (int i = 0; i < ${MAX_TILES}; i++) {
     if (i >= u_nt) break;
-    vec4 T = u_tile[i];
+    vec2 qa = u_tA[i].xy;
+    vec2 qb = u_tA[i].zw;
+    vec2 qc = u_tB[i].xy;
+    vec2 qd = u_tB[i].zw;
     float k = u_tkind[i];
-    vec2 c = T.xy + T.zw * 0.5;
-    float sd = sdBox(p - c, T.zw * 0.5);
+    vec2 c = (qa + qb + qc + qd) * 0.25;
+    float tw2 = length(qb - qa);
+    float th2 = length(qd - qa);
+    float sd = sdQuad(p, qa, qb, qc, qd);
     float fi = float(i);
-    float aura = exp(-max(sd, 0.0) / (5.0 * u));
-    float edge = exp(-abs(sd) / (1.6 * u));
+    // a aura começa rente à pedra e cai rápido (só por fora; a cara da pedra fica limpa)
+    float aura = exp(-max(sd, 0.0) / (3.2 * u)) * step(0.35 * u, sd);
+    float edge = exp(-max(sd, 0.0) / (1.2 * u)) * step(0.35 * u, sd);
     vec3 tint;
     float amt;
     if (k < 1.5) {
@@ -175,7 +196,8 @@ void main() {
       vec2 dd = abs(p - sp);
       float cross = step(min(dd.x, dd.y), 0.5) * step(max(dd.x, dd.y), 1.6 * u);
       float tw = step(0.9, h) * pow(max(0.0, sin(t * 2.4 * u_motion + h * 40.0)), 10.0);
-      col += vec3(1.0, 0.95, 0.7) * tw * cross * step(sdBox(sp - c, T.zw * 0.5), 6.0 * u) * step(-0.5 * u, sdBox(sp - c, T.zw * 0.5)) * (1.0 - 0.5 * step(0.6, max(dd.x, dd.y)));
+      float sds = sdQuad(sp, qa, qb, qc, qd);
+      col += vec3(1.0, 0.95, 0.7) * tw * cross * step(sds, 6.0 * u) * step(1.5 * u, sds) * (1.0 - 0.5 * step(0.6, max(dd.x, dd.y)));
     } else if (k < 2.5) {
       // rubi: bate como um coração
       tint = vec3(1.0, 0.1, 0.16);
@@ -186,7 +208,7 @@ void main() {
       float a = atan(p.y - c.y, p.x - c.x);
       tint = mix(vec3(0.45, 0.9, 1.0), hue(fract(a / 6.2832 + t * 0.15 * u_motion)), 0.55);
       amt = 0.55 + 0.25 * noise(vec2(a * 3.0, t * 2.0));
-      col += tint * edge * 0.5;
+      col += tint * edge * 0.45;
     } else if (k < 4.5) {
       // chumbo: pesado, cinza azulado, quase sem luz
       tint = vec3(0.5, 0.52, 0.68);
@@ -196,8 +218,9 @@ void main() {
       tint = vec3(0.6, 1.0, 0.86);
       vec2 q = (p - c) / (6.0 * u) + vec2(0.0, t * 0.9 * u_motion);
       float w = smoothstep(0.55, 0.85, fbm(q + fi));
-      float above = smoothstep(T.w * 0.5 + 12.0 * u, 0.0, c.y - p.y) * step(c.y - p.y, T.w * 0.5 + 12.0 * u);
-      col += tint * w * above * exp(-abs(p.x - c.x) / (T.z * 0.6)) * 0.7;
+      float reach = th2 * 0.5 + 12.0 * u;
+      float above = smoothstep(reach, 0.0, c.y - p.y) * step(c.y - p.y, reach) * step(0.35 * u, sd);
+      col += tint * w * above * exp(-abs(p.x - c.x) / max(1.0, tw2 * 0.6)) * 0.6;
       amt = 0.4 + 0.15 * sin(t * 1.7 + fi);
     } else if (k < 6.5) {
       // âmbar: o mel morno respirando
@@ -209,7 +232,7 @@ void main() {
       amt = 0.35 + 0.2 * pow(max(0.0, sin(t * 0.9 + fi)), 6.0);
       col += tint * edge * 0.35;
     }
-    col += tint * aura * amt * step(0.0, sd + 0.5 * u);
+    col += tint * aura * amt;
   }
 
   // --- o clarão da pedra que caiu: o anel abrindo e o lampejo no meio
@@ -247,7 +270,7 @@ function compile(gl, type, src) {
 
 /**
  * Liga o shader no `canvas`. Devolve { draw(frame), dispose() } ou null (sem WebGL).
- * frame: { w, h, time, unit, motion, lights, tiles, bursts, haze, hazeBand, moon, stripe }
+ * frame: { w, h, time, unit, motion, lights, tiles: [{ q: [8 números: os 4 cantos], kind }], bursts, haze, hazeBand, moon, stripe }
  */
 export function createFx(canvas) {
   const gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'low-power' });
@@ -279,7 +302,8 @@ export function createFx(canvas) {
     light: loc('u_light'),
     lcol: loc('u_lcol'),
     nl: loc('u_nl'),
-    tile: loc('u_tile'),
+    tA: loc('u_tA'),
+    tB: loc('u_tB'),
     tkind: loc('u_tkind'),
     nt: loc('u_nt'),
     burst: loc('u_burst'),
@@ -291,7 +315,8 @@ export function createFx(canvas) {
   };
   const lightBuf = new Float32Array(MAX_LIGHTS * 4);
   const lcolBuf = new Float32Array(MAX_LIGHTS * 4);
-  const tileBuf = new Float32Array(MAX_TILES * 4);
+  const tileA = new Float32Array(MAX_TILES * 4);
+  const tileB = new Float32Array(MAX_TILES * 4);
   const kindBuf = new Float32Array(MAX_TILES);
   const burstBuf = new Float32Array(MAX_BURSTS * 4);
   const bcolBuf = new Float32Array(MAX_BURSTS * 3);
@@ -316,14 +341,18 @@ export function createFx(canvas) {
       gl.uniform4fv(U.lcol, lcolBuf);
       gl.uniform1i(U.nl, nl);
       const nt = Math.min(MAX_TILES, f.tiles.length);
-      tileBuf.fill(0);
+      tileA.fill(0);
+      tileB.fill(0);
       kindBuf.fill(0);
       for (let i = 0; i < nt; i += 1) {
-        const T = f.tiles[i];
-        tileBuf.set([T.x, T.y, T.w, T.h], i * 4);
-        kindBuf[i] = T.kind;
+        // os quatro cantos, na ordem: em cima à esquerda, em cima à direita, embaixo à direita, embaixo à esquerda
+        const q = f.tiles[i].q;
+        tileA.set([q[0], q[1], q[2], q[3]], i * 4);
+        tileB.set([q[4], q[5], q[6], q[7]], i * 4);
+        kindBuf[i] = f.tiles[i].kind;
       }
-      gl.uniform4fv(U.tile, tileBuf);
+      gl.uniform4fv(U.tA, tileA);
+      gl.uniform4fv(U.tB, tileB);
       gl.uniform1fv(U.tkind, kindBuf);
       gl.uniform1i(U.nt, nt);
       burstBuf.fill(0);
