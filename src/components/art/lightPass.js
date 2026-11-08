@@ -93,9 +93,13 @@ export function lightAt(lights, x, y, ambient) {
   let lb = ambient[2];
   for (const L of lights) {
     const dx = x - L.x;
+    // versão 2.13: descarta antes da raiz quem está fora do alcance (a conta é a mesma)
+    if (dx >= L.r || dx <= -L.r) continue;
     const dy = (y - L.y) * (L.sy ?? 1);
-    const d = Math.hypot(dx, dy);
-    if (d >= L.r) continue;
+    if (dy >= L.r || dy <= -L.r) continue;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= L.r * L.r) continue;
+    const d = Math.sqrt(d2);
     let f = 1 - d / L.r;
     f *= f;
     if (L.cone) {

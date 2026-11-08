@@ -27,7 +27,18 @@ import { pixelText, textWidth } from './pixelFont.js';
 import { landCandleSpots, landCorners } from '../seatGeometry.js';
 import { CANDLE_FLAME } from './candleArt.js';
 
-const { hex, mixRgb, shift, rngOf, bayer, buffer, shelf } = paintKit;
+const { mixRgb, shift, rngOf, bayer, buffer, shelf } = paintKit;
+
+// as cores e as rampas são lidas uma vez só (a pintura pede a mesma cor em cada pixel)
+const HEX = new Map();
+const hex = (c) => {
+  let v = HEX.get(c);
+  if (!v) {
+    v = paintKit.hex(c);
+    HEX.set(c, v);
+  }
+  return v;
+};
 
 const BLACK = [0, 0, 0];
 
@@ -46,7 +57,42 @@ function ramp(pal, t, x, y) {
   return pal[Math.min(n, v - i > bayer(x, y) ? i + 1 : i)];
 }
 
-const pal = (...cs) => cs.map(hex);
+const PALS = new Map();
+const pal = (...cs) => {
+  const key = cs.join();
+  let v = PALS.get(key);
+  if (!v) {
+    v = cs.map(hex);
+    PALS.set(key, v);
+  }
+  return v;
+};
+
+/** As rampas de cor usadas pixel a pixel (lidas uma vez). */
+const RAMP_1 = pal('#26406a', '#30508a', '#4064a0');
+const RAMP_2 = pal('#9a9070', '#b8ae8a', '#cfc6a2', '#e0d8b8');
+const RAMP_3 = pal('#3a3832', '#4a4840', '#5a564c');
+const RAMP_4 = pal('#16301e', '#1e4028', '#285234');
+const RAMP_5 = pal('#e8b030', '#f8d050', '#fff0a0');
+const RAMP_6 = pal('#5a0a08', '#8a1810', '#b8261c', '#d84a30');
+const RAMP_7 = pal('#4a2218', '#5e2c1e', '#723826');
+const RAMP_8 = pal('#2a1608', '#3a2010', '#4a2c16', '#5a3820');
+const RAMP_9 = pal('#0a2414', '#145a30', '#2a8a4a', '#6ac888');
+const RAMP_10 = pal('#c8b48a', '#e2d2a8', '#efe2c0');
+const RAMP_11 = pal('#1e1e22', '#26262a', '#2e2c30');
+const RAMP_12 = pal('#3a0a10', '#4a1016', '#561419');
+const RAMP_13 = pal('#100c08', '#1e180e', '#2c2414', '#3a301a');
+const RAMP_14 = pal('#8a7e62', '#b8ac8c', '#e0d4b4', '#f4ecd4');
+const RAMP_15 = pal('#b89a68', '#d4c094', '#e6d6ae', '#efe2c0');
+const RAMP_16 = pal('#8a4a1a', '#d08a3a', '#f0c070', '#ffe2a0');
+const RAMP_17 = pal('#0a3a1a', '#1a6a32', '#3aa858', '#8ae8a0');
+const RAMP_18 = pal('#3e0a10', '#4e0e14', '#5a1218');
+const RAMP_19 = pal('#1e1a26', '#2e2838', '#423a50', '#5a5068');
+const RAMP_20 = pal('#a8a8b8', '#c8c8d4', '#e4e2e8', '#fbf8f0');
+const RAMP_21 = pal('#05061a', '#0b1030', '#16204a', '#2a3a6a', '#4a5a8a');
+const RAMP_22 = pal('#141a36', '#20284a', '#2e3860');
+const RAMP_23 = pal('#040308', '#09070e', '#110d16');
+const RAMP_24 = pal('#16121e', '#201a2a', '#2c2438');
 
 /**
  * A geometria da sala: os cantos do tampo (seatGeometry.js, em px da cena: a cena tem metade dos
@@ -154,8 +200,8 @@ const PLASTER = pal('#1a2620', '#24342a', '#2e4034', '#3a4e40', '#4a6050');
 /** Azulejo português: creme com o desenho azul (os quartos de círculo dos cantos fecham a roda entre as peças). */
 function azulejo(b, r, x0, y0, x1, y1, g) {
   const T = g.S(10);
-  const blue = pal('#26406a', '#30508a', '#4064a0');
-  const cream = pal('#9a9070', '#b8ae8a', '#cfc6a2', '#e0d8b8');
+  const blue = RAMP_1;
+  const cream = RAMP_2;
   for (let ty = y0; ty < y1; ty += T) {
     for (let tx = 0; tx < g.w; tx += T) {
       const missing = r() < 0.03;
@@ -166,7 +212,7 @@ function azulejo(b, r, x0, y0, x1, y1, g) {
           const x = tx + xx;
           const y = ty + yy;
           if (missing) {
-            b.put(x, y, ramp(pal('#3a3832', '#4a4840', '#5a564c'), 0.5 + Math.sin(x * 1.3 + y) * 0.3, x, y));
+            b.put(x, y, ramp(RAMP_3, 0.5 + Math.sin(x * 1.3 + y) * 0.3, x, y));
             continue;
           }
           const u = xx / (T - 1);
@@ -197,7 +243,7 @@ function fiadoSign(b, x, y) {
   b.line(x + W - 6, y, x + W / 2, y - 6, hex('#c8b890'));
   b.rect(x + W / 2 - 1, y - 7, 2, 2, hex('#6a6a6a'));
   b.rect(x + 2, y + 2, W, H, BLACK, 0.45);
-  for (let yy = 0; yy < H; yy += 1) for (let xx = 0; xx < W; xx += 1) b.put(x + xx, y + yy, ramp(pal('#16301e', '#1e4028', '#285234'), 0.6 - (yy % 5 === 0 ? 0.3 : 0) + Math.sin(xx * 0.5) * 0.1, xx, yy));
+  for (let yy = 0; yy < H; yy += 1) for (let xx = 0; xx < W; xx += 1) b.put(x + xx, y + yy, ramp(RAMP_4, 0.6 - (yy % 5 === 0 ? 0.3 : 0) + Math.sin(xx * 0.5) * 0.1, xx, yy));
   b.rect(x, y, W, 1, hex('#5a8a5a'));
   b.rect(x, y + H - 1, W, 1, hex('#0a140c'));
   pixelText(b, 'FIADO', x + Math.round((W - textWidth('FIADO')) / 2), y + 3, hex('#f4e6b0'));
@@ -235,7 +281,7 @@ function pennant(b, x, y) {
 function beerLightbox(b, G, x, y, w) {
   const h = 12;
   b.rect(x - 1, y - 1, w + 2, h + 2, hex('#2a2a2c'));
-  for (let yy = 0; yy < h; yy += 1) for (let xx = 0; xx < w; xx += 1) G.put(x + xx, y + yy, ramp(pal('#e8b030', '#f8d050', '#fff0a0'), 0.9 - Math.abs(yy - h / 2) / h, xx, yy));
+  for (let yy = 0; yy < h; yy += 1) for (let xx = 0; xx < w; xx += 1) G.put(x + xx, y + yy, ramp(RAMP_5, 0.9 - Math.abs(yy - h / 2) / h, xx, yy));
   G.rect(x, y, w, 2, hex('#c81e14'));
   G.rect(x, y + h - 2, w, 2, hex('#c81e14'));
   pixelText(G, 'CERVEJA GELADA', x + Math.round((w - textWidth('CERVEJA GELADA')) / 2), y + 4, hex('#a01410'));
@@ -263,7 +309,7 @@ function bareBulb(b, G, x, top, y) {
 
 /** A cadeira de plástico vermelha de boteco e a pilha de engradados amarelos com os cascos. */
 function plasticChair(b, x, y) {
-  const red = pal('#5a0a08', '#8a1810', '#b8261c', '#d84a30');
+  const red = RAMP_6;
   // o encosto com os rasgos e o assento
   for (let yy = 0; yy < 14; yy += 1) for (let xx = 0; xx < 18; xx += 1) b.put(x + xx, y + yy, ramp(red, 0.75 - xx / 40 - (yy > 11 ? 0.2 : 0), xx, yy));
   for (let k = 0; k < 3; k += 1) b.rect(x + 4 + k * 4, y + 3, 2, 6, hex('#2a0604'));
@@ -333,7 +379,7 @@ function sceneBoteco(b, G, r, g) {
         else {
           const row = Math.floor((y - cy) / 3);
           const mortar = (y - cy + 99) % 3 === 0 || (x + (row % 2 ? 3 : 0) + 99) % 7 === 0;
-          b.put(x, y, mortar ? hex('#2a1a12') : ramp(pal('#4a2218', '#5e2c1e', '#723826'), 0.5 + Math.sin(x * 2.1 + row) * 0.3, x, y));
+          b.put(x, y, mortar ? hex('#2a1a12') : ramp(RAMP_7, 0.5 + Math.sin(x * 2.1 + row) * 0.3, x, y));
         }
       }
     }
@@ -387,7 +433,7 @@ function sceneBoteco(b, G, r, g) {
     for (let x = 0; x < w; x += 1) {
       const u = (x - g.cx) / (w / 2);
       const seam = Math.abs((u * (1 + t * 2.2) * 9) % 1) < 0.05;
-      b.put(x, y, seam ? hex('#1a0e06') : ramp(pal('#2a1608', '#3a2010', '#4a2c16', '#5a3820'), 0.55 - t * 0.25 + (row % 2 ? 0.1 : 0) + Math.sin(x * 0.4 + row * 3) * 0.08, x, y));
+      b.put(x, y, seam ? hex('#1a0e06') : ramp(RAMP_8, 0.55 - t * 0.25 + (row % 2 ? 0.1 : 0) + Math.sin(x * 0.4 + row * 3) * 0.08, x, y));
     }
   }
   b.rect(0, floor, w, S(3), hex('#24140a'));
@@ -445,7 +491,7 @@ function poolLamp(b, G, x, y, w, top) {
     b.rect(sx, y + 2, 1, 2, hex('#3a2a10'));
     for (let row = 0; row < 6; row += 1) {
       const half = 2 + Math.round(row * 1.25);
-      for (let xx = -half; xx <= half; xx += 1) b.put(sx + xx, y + 4 + row, ramp(pal('#0a2414', '#145a30', '#2a8a4a', '#6ac888'), 0.25 + (1 - Math.abs(xx) / (half + 1)) * 0.55 - row * 0.05, sx + xx, row));
+      for (let xx = -half; xx <= half; xx += 1) b.put(sx + xx, y + 4 + row, ramp(RAMP_9, 0.25 + (1 - Math.abs(xx) / (half + 1)) * 0.55 - row * 0.05, sx + xx, row));
     }
     b.rect(sx - 8, y + 9, 17, 1, hex('#c8a040'));
     G.rect(sx - 7, y + 10, 15, 1, hex('#fff2c8'));
@@ -642,7 +688,7 @@ function tourneyPoster(b, x, y) {
   const W = 26;
   const H = 34;
   b.rect(x + 1, y + 1, W, H, BLACK, 0.45);
-  for (let yy = 0; yy < H; yy += 1) for (let xx = 0; xx < W; xx += 1) b.put(x + xx, y + yy, ramp(pal('#c8b48a', '#e2d2a8', '#efe2c0'), 0.9 - yy / H / 2, xx, yy));
+  for (let yy = 0; yy < H; yy += 1) for (let xx = 0; xx < W; xx += 1) b.put(x + xx, y + yy, ramp(RAMP_10, 0.9 - yy / H / 2, xx, yy));
   b.rect(x, y, W, 8, hex('#b8281e'));
   pixelText(b, 'SINUCA', x + 2, y + 2, hex('#f8ecc8'));
   // a bola 8 grande
@@ -741,7 +787,7 @@ function sceneSinuca(b, G, r, g) {
     for (let x = 0; x < w; x += 1) {
       const n = Math.sin(x * 0.11 + y * 0.3) + Math.sin(x * 0.031 - y * 0.07) * 1.4;
       const seam = Math.abs(((x - cx) / (1 + t * 3)) % S(40)) < 0.6;
-      b.put(x, y, seam ? hex('#141416') : ramp(pal('#1e1e22', '#26262a', '#2e2c30'), 0.5 + n * 0.18 - t * 0.2, x, y));
+      b.put(x, y, seam ? hex('#141416') : ramp(RAMP_11, 0.5 + n * 0.18 - t * 0.2, x, y));
     }
   }
   b.rect(0, floor, w, S(2), hex('#120e0e'));
@@ -864,7 +910,7 @@ const BICHOS = [
 function ogeeWallpaper(b, r, x0, y0, x1, y1, g) {
   const S = g.S(14);
   const P = g.S(24);
-  const base = pal('#3a0a10', '#4a1016', '#561419');
+  const base = RAMP_12;
   for (let y = y0; y < y1; y += 1) {
     const sn = Math.sin(((y - y0) * Math.PI * 2) / P);
     for (let x = x0; x < x1; x += 1) {
@@ -969,12 +1015,12 @@ function patronPortrait(b, x, y, k = 1) {
   const oy = 4;
   const cw = W - 8;
   const ch = H - 8;
-  for (let yy = 0; yy < ch; yy += 1) for (let xx = 0; xx < cw; xx += 1) p(ox + xx, oy + yy, ramp(pal('#100c08', '#1e180e', '#2c2414', '#3a301a'), 0.7 - Math.hypot(xx - cw * 0.4, yy - ch * 0.35) / ch, x + xx, y + yy));
+  for (let yy = 0; yy < ch; yy += 1) for (let xx = 0; xx < cw; xx += 1) p(ox + xx, oy + yy, ramp(RAMP_13, 0.7 - Math.hypot(xx - cw * 0.4, yy - ch * 0.35) / ch, x + xx, y + yy));
   const cx = ox + 11;
   // o terno branco: os ombros, a lapela e a camisa vinho com a corrente
   for (let yy = 24; yy < ch + oy; yy += 1) {
     const half = Math.min(11, 6 + Math.round((yy - 24) * 0.8));
-    for (let xx = -half; xx <= half; xx += 1) p(cx + xx, yy, ramp(pal('#8a7e62', '#b8ac8c', '#e0d4b4', '#f4ecd4'), 0.85 - (xx + half) / (half * 2) * 0.7, xx, yy));
+    for (let xx = -half; xx <= half; xx += 1) p(cx + xx, yy, ramp(RAMP_14, 0.85 - (xx + half) / (half * 2) * 0.7, xx, yy));
   }
   for (let yy = 24; yy < 33; yy += 1) {
     const half = Math.max(0, 3 - Math.round((yy - 24) * 0.35));
@@ -1030,7 +1076,7 @@ function bichoChart(b, x, y, k = 1) {
   for (let yy = 0; yy < H; yy += 1) {
     for (let xx = 0; xx < W; xx += 1) {
       const edge = Math.min(xx, yy, W - 1 - xx, H - 1 - yy);
-      rect(xx, yy, 1, 1, ramp(pal('#b89a68', '#d4c094', '#e6d6ae', '#efe2c0'), 0.9 - Math.max(0, 4 - edge) * 0.15 - (Math.sin(xx * 0.3 + yy * 0.2) > 0.9 ? 0.25 : 0), x + xx, y + yy));
+      rect(xx, yy, 1, 1, ramp(RAMP_15, 0.9 - Math.max(0, 4 - edge) * 0.15 - (Math.sin(xx * 0.3 + yy * 0.2) > 0.9 ? 0.25 : 0), x + xx, y + yy));
     }
   }
   // o cabeçalho
@@ -1117,7 +1163,7 @@ function floorLamp(b, G, x, top, base) {
   b.rect(x - 3, base - 1, 7, 1, hex('#d8a84a'));
   for (let row = 0; row < 10; row += 1) {
     const half = 4 + Math.round(row * 0.5);
-    for (let xx = -half; xx <= half; xx += 1) G.put(x + xx, top + row, ramp(pal('#8a4a1a', '#d08a3a', '#f0c070', '#ffe2a0'), 0.95 - Math.abs(xx) / (half + 1) * 0.6 - (row < 2 ? 0.3 : 0), x + xx, row));
+    for (let xx = -half; xx <= half; xx += 1) G.put(x + xx, top + row, ramp(RAMP_16, 0.95 - Math.abs(xx) / (half + 1) * 0.6 - (row < 2 ? 0.3 : 0), x + xx, row));
   }
   for (let xx = -9; xx <= 9; xx += 2) b.rect(x + xx, top + 10, 1, 2, hex('#c8a040'));
 }
@@ -1206,7 +1252,7 @@ function bookieDesk(b, G, x, y, w) {
   b.rect(lx, top - 8, 1, 8, hex('#c8a040'));
   for (let row = 0; row < 4; row += 1) {
     const half = 7 - Math.max(0, 2 - row);
-    for (let xx = -half; xx <= half; xx += 1) G.put(lx + xx, top - 12 + row, ramp(pal('#0a3a1a', '#1a6a32', '#3aa858', '#8ae8a0'), 0.95 - row * 0.12 - Math.abs(xx) / half * 0.35, lx + xx, row));
+    for (let xx = -half; xx <= half; xx += 1) G.put(lx + xx, top - 12 + row, ramp(RAMP_17, 0.95 - row * 0.12 - Math.abs(xx) / half * 0.35, lx + xx, row));
   }
   G.rect(lx - 6, top - 8, 13, 1, hex('#fff6c8'));
   b.rect(lx - 7, top - 13, 15, 1, hex('#e8c060'));
@@ -1269,7 +1315,7 @@ function parquetAndRug(b, r, y0, h, g) {
       const u2 = ((x % 24) - 12) / 12;
       const v2 = (((y - ry) % 16) - 8) / 8;
       const med = Math.abs(u2) + Math.abs(v2);
-      const c = med < 0.35 ? hex('#1a1e3a') : med < 0.5 ? hex('#8a6a2a') : med > 0.95 && med < 1.05 ? hex('#6a1018') : ramp(pal('#3e0a10', '#4e0e14', '#5a1218'), 0.5 + Math.sin(x * 0.7 + y) * 0.3, x, y);
+      const c = med < 0.35 ? hex('#1a1e3a') : med < 0.5 ? hex('#8a6a2a') : med > 0.95 && med < 1.05 ? hex('#6a1018') : ramp(RAMP_18, 0.5 + Math.sin(x * 0.7 + y) * 0.3, x, y);
       b.put(x, y, c);
     }
   }
@@ -1395,7 +1441,7 @@ function gothicWindow(b, G, r, g) {
         const ang = Math.atan2(y - spring, x - cx);
         const joint = y < spring ? Math.abs(((ang * 9) % 1 + 1) % 1 - 0.5) < 0.06 : (y - spring) % g.S(10) === 0;
         const edge = inside(x, y, frame - 1) ? 0.85 : inside(x, y, 1) ? 0.5 : 0.25;
-        b.put(x, y, joint ? hex('#0c0a10') : ramp(pal('#1e1a26', '#2e2838', '#423a50', '#5a5068'), edge, x, y));
+        b.put(x, y, joint ? hex('#0c0a10') : ramp(RAMP_19, edge, x, y));
         continue;
       }
       // o céu: azul da noite clareando perto da lua, as estrelas
@@ -1403,11 +1449,11 @@ function gothicWindow(b, G, r, g) {
       if (d <= moon.r) {
         const shade = 0.95 - Math.max(0, (x - moon.x) / moon.r) * 0.25 - (d / moon.r) * 0.15;
         const crater = Math.sin(x * 0.9) * Math.sin(y * 1.1 + x * 0.3) > 0.55 || Math.hypot(x - moon.x + g.S(5), y - moon.y + g.S(3)) < g.S(4) || Math.hypot(x - moon.x - g.S(4), y - moon.y - g.S(6)) < g.S(3);
-        G.put(x, y, ramp(pal('#a8a8b8', '#c8c8d4', '#e4e2e8', '#fbf8f0'), shade - (crater ? 0.3 : 0), x, y));
+        G.put(x, y, ramp(RAMP_20, shade - (crater ? 0.3 : 0), x, y));
         continue;
       }
       const glow = Math.max(0, 1 - (d - moon.r) / g.S(46));
-      G.put(x, y, ramp(pal('#05061a', '#0b1030', '#16204a', '#2a3a6a', '#4a5a8a'), 0.15 + glow * 0.75 - (y / sill) * 0.1, x, y));
+      G.put(x, y, ramp(RAMP_21, 0.15 + glow * 0.75 - (y / sill) * 0.1, x, y));
       if (r() < 0.012 && glow < 0.3) G.put(x, y, hex('#d8e0ff'));
     }
   }
@@ -1429,7 +1475,7 @@ function gothicWindow(b, G, r, g) {
         const d = Math.hypot((x - ccx) / rrx, (y - ccy) / rry);
         if (d > 1 || !inside(x, y, frame)) continue;
         const rim = y < ccy - rry * 0.35 && d > 0.55;
-        G.put(x, y, rim ? hex('#9aa2c4') : ramp(pal('#141a36', '#20284a', '#2e3860'), 0.8 - d * 0.6 + (ccy - y) / rry * 0.2, x, y));
+        G.put(x, y, rim ? hex('#9aa2c4') : ramp(RAMP_22, 0.8 - d * 0.6 + (ccy - y) / rry * 0.2, x, y));
       }
     }
   }
@@ -1612,7 +1658,7 @@ function marbleFloor(b, r, y0, y1, g) {
       const fx = xr - col;
       const dark = ((row + col) % 2 + 2) % 2 === 0;
       const vein = Math.sin(xr * 5 + zr * 9 + Math.sin(xr * 2) * 2) > 0.94;
-      let c = ramp(dark ? pal('#040308', '#09070e', '#110d16') : pal('#16121e', '#201a2a', '#2c2438'), 0.45 + Math.sin(xr * 3.1 + zr * 1.7) * 0.25, x, y);
+      let c = ramp(dark ? RAMP_23 : RAMP_24, 0.45 + Math.sin(xr * 3.1 + zr * 1.7) * 0.25, x, y);
       if (vein) c = dark ? hex('#1e1a28') : hex('#4a3e58');
       // a junta fina entre as pedras
       if (fz < 0.06 || fx < 0.03) c = hex('#020104');
