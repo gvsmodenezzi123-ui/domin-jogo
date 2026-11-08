@@ -72,17 +72,6 @@ export function lateralShake(el, px = 3, ms = 200) {
   );
 }
 
-/** Clarão rápido por cima de `el` (a mesa): uma camada branca/dourada que some em `ms`. */
-export function flashOver(el, { color = 'rgba(255, 246, 214, 0.55)', ms = 170 } = {}) {
-  if (!el || off()) return;
-  const flash = document.createElement('span');
-  flash.className = 'juice-flash';
-  flash.style.background = color;
-  el.appendChild(flash);
-  const anim = flash.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'ease-out' });
-  dropAfter(anim, flash);
-}
-
 /**
  * O número dourado gigante da pontuação. Versão 2.8 (com peso): surge grande (1,45) no alto,
  * cai com gravidade até a pedra, bate achatando, quica duas vezes cada vez mais baixo e, no

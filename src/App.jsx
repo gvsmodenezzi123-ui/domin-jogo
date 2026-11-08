@@ -26,7 +26,8 @@ import { PACKS } from './data/packs.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/tileFlight.js';
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
-import IntroScene from './intro/IntroScene.jsx';
+import AccessGate from './opening/AccessGate.jsx';
+import OpeningScene from './opening/OpeningScene.jsx';
 import DangerFx from './components/DangerFx.jsx';
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from './components/tableSweep.js';
 import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf } from './components/finale.js';
@@ -37,7 +38,7 @@ import { parseTableInput } from './table/tableProtocol.js';
 import { loadSavedTable } from './pvp/controller.js';
 import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
-import { coinRain, flashOver, goldPop, hitstop, lateralShake, sparkBurst } from './components/juice.js';
+import { coinRain, goldPop, hitstop, lateralShake, sparkBurst } from './components/juice.js';
 import { useLongPress } from './components/useLongPress.js';
 import { useStableHandler, useStableValue } from './components/useStable.js';
 import { useTripleTap } from './components/useTripleTap.js';
@@ -151,14 +152,6 @@ function linkedTable() {
 
 /** O jogo abre direto numa mesa online (o link ?mesa= / ?roda= ou uma mesa guardada)? */
 const startsOnline = () => Boolean(linkedRoom() || linkedTable() || loadSavedTable());
-
-/** Onde a tela inicial tem o logo e a lâmpada: o último quadro da abertura casa com eles. */
-function titleTarget() {
-  const logo = document.querySelector('.title-screen .title-logo-svg');
-  const lamp = document.querySelector('.title-screen .swinging-lamp .lamp-sprite');
-  if (!logo || !lamp) return null;
-  return { logo: logo.getBoundingClientRect(), lamp: lamp.getBoundingClientRect() };
-}
 
 const DEV_KEY = 'buxaria:dev';
 /**
@@ -596,10 +589,13 @@ export default function App() {
   const [silverSeen, setSilverSeen] = useState(isSilverTilesUnlocked);
   // Patch 0.9.0: entrada do chefe já vista nesta partida (chave da partida)
   const [introDone, setIntroDone] = useState(null);
-  // Patch 1.1: a abertura (rua → boteco → bucha → logo) roda toda vez que o jogo abre; na
+  // Patch 1.1: a abertura (versão 2.12: o Efeito Dominó, deitada) roda toda vez que o jogo abre; na
   // primeira vez inteira, daí em diante com PULAR
   // (o jogo que abre direto numa mesa online — link ?mesa= ou mesa guardada — pula a abertura)
   const [opening, setOpening] = useState(() => ({ on: !startsOnline(), skippable: openingSeen() }));
+  // Versão 2.12: o toque de entrada (abre a gelada, liga o som e deita a tela) vem antes de tudo
+  const [entered, setEntered] = useState(false);
+  const enter = useCallback(() => setEntered(true), []);
   const openingDone = useCallback(() => {
     markOpeningSeen();
     setOpening((o) => ({ ...o, on: false }));
@@ -650,7 +646,7 @@ export default function App() {
   const onlineOn = Boolean(online);
   useEffect(() => {
     if (sound.ctx && !openingSound && !onlineOn) sound.playTrack(musicTrack);
-  }, [musicTrack, openingSound, onlineOn]);
+  }, [musicTrack, openingSound, onlineOn, entered]);
 
   // Camada de tensão da trilha: alguém na mesa com 1 ou 2 corações.
   const tense =
@@ -750,10 +746,12 @@ export default function App() {
           sound.playBoneSlam(ev.double, ev.enhancement);
           kickLamp(ev.double ? 1.4 : 1);
           if (ev.double) {
-            // Versão 2.0: bucha: a tela treme 3 px para os lados, a mesa dá um clarão, a mão
-            // espalmada bate pesada na fórmica e o celular dá a vibração pesada
+            // Versão 2.0: bucha: a tela treme 3 px para os lados, a mão espalmada bate pesada na
+            // fórmica e o celular dá a vibração pesada. Versão 2.12: sem o clarão da mesa inteira
+            // (piscava branco); a batida solta um punhado de faíscas só em volta da pedra.
             lateralShake(shellRef.current, 3, 220);
-            flashOver(tableRef.current);
+            const box = document.querySelector(`[data-tile-id="${ev.tileId}"]`)?.getBoundingClientRect();
+            if (box) sparkBurst({ x: box.left + box.width / 2, y: box.top + box.height / 2 }, { count: 9, spread: Math.max(36, Math.min(70, box.width)) });
             sound.playPalmSlap();
             haptic([70, 30, 100]);
           } else {
@@ -1449,7 +1447,8 @@ export default function App() {
           }}
         />
       </div>
-      {opening.on && <IntroScene skippable={opening.skippable} onDone={openingDone} measureTarget={titleTarget} />}
+      {!entered && <AccessGate onEnter={enter} />}
+      {entered && opening.on && <OpeningScene skippable={opening.skippable} onDone={openingDone} />}
       {veil}
       </TileSkinContext.Provider>
     );

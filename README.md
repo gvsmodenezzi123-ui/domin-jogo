@@ -172,6 +172,23 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.12.0: a abertura nova deitada, o toque de entrada e o fim do clarão da bucha
+
+- **Abertura nova, "Efeito Dominó"**, feita do zero para a tela deitada: madrugada, o boteco
+  fechado e vazio. A gelada no balcão destampa sozinha, a tampinha voa e derruba a primeira pedra
+  de uma fileira que atravessa o salão inteiro: o balcão, a escadinha de engradados, a mesa de
+  lata, a outra escadinha e o chão de ladrilho, passando pela jukebox, pela sinuca, pelo gato que
+  dormia no saco de juta (ele acorda e pula na geladeira) até o carretão gigante, que despenca no
+  chão e acende o neon do BUXARIA. A câmera corre de lado atrás da onda; o som (o psssst da
+  gelada, o tec-tec das pedras embalando, o surdo, o miado, a pancada e o zumbido do neon) é todo
+  sintetizado e casado com a cena. Da segunda vez em diante tem PULAR.
+- **Toque de entrada**: o jogo abre no gargalo de uma gelada ("TOQUE PARA ABRIR A GELADA"). O
+  toque liga o som e, no celular, pede a tela cheia e trava a tela deitada. Onde o sistema não
+  deixa travar (o Safari do iPhone), o aviso de GIRE O CELULAR cobre a tela e a abertura espera; o
+  aviso ganhou o botão DEITAR A TELA para quem saiu da tela cheia.
+- **Bucha na campanha**: a mesa não pisca mais de branco quando um carretão é deitado; a batida
+  solta um punhado de faíscas em volta da pedra.
+
 ### 2.11.2: o fim da run, o Livro e o Caderno de Fiado deitados
 
 - **Fim da run**: virou uma cena só, sem páginas. À esquerda, quem te nocauteou rindo atrás do
