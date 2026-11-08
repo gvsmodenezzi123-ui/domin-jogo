@@ -9,14 +9,13 @@
 import { paintKit } from '../components/art/botecoScene.js';
 import { glowLayer, halo, lightAt, relight, shifted } from '../components/art/lightPass.js';
 import { pixelText, textWidth } from '../components/art/pixelFont.js';
-import { BOTTLE, CAT, FLOORS, GIANT, NEON, PAD, PANO_W, TILE_H, TILE_W, TILES, VIEW_H } from './openingPlan.js';
+import { BOTTLE, CAT, FLOORS, GIANT, NEON, PAD, PANO_W, TILE_H, TILE_W, VIEW_H } from './openingPlan.js';
 
 const { hex, mixRgb, shift, rngOf, buffer, plank, bottle, bayer } = paintKit;
 
 const X0 = -PAD.x;
 const X1 = PANO_W + PAD.x;
 const Y0 = -PAD.y;
-const Y1 = VIEW_H + PAD.y;
 const BLACK = [0, 0, 0];
 const WARM = [1, 0.8, 0.54];
 
