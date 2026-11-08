@@ -399,7 +399,7 @@ function sceneBoteco(b, G, r, g) {
 }
 
 function lightsBoteco(g) {
-  const { M, L, R, Y, u } = g;
+  const { M, L, Y, u } = g;
   return {
     ambient: [0.19, 0.2, 0.2],
     lights: [
@@ -1651,7 +1651,7 @@ function candleLights(g, k = 1) {
 }
 
 function lightsNoite(g) {
-  const { M, L, Y, u } = g;
+  const { L, Y, u } = g;
   return {
     ambient: [0.07, 0.06, 0.12],
     lights: [
@@ -1663,7 +1663,7 @@ function lightsNoite(g) {
 }
 
 function finishNoite(raw, g) {
-  const { M, L, Y, u } = g;
+  const { L, Y, u } = g;
   halo(raw, g.cx, Y(30), 64 * u, hex('#b8c4ff'), 0.42, 1);
   for (const c of candleLights(g)) halo(raw, c.x, c.y, 16 * u, hex('#ffb060'), 0.45, 1.1);
   for (let k = 0; k < 4; k += 1) halo(raw, L(34) + k * 16 * u + 8 * u - 3 * u + 4 * u, Y(68) - 9 * u, 7 * u, hex('#ff3040'), 0.45);
