@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import RivalAvatar from '../components/RivalAvatar.jsx';
+import { TABLE_MAPS, mapOf, mapUnlocked } from '../data/tableMaps.js';
+import { loadCollection } from '../engine/progress.js';
 import { TentoCap } from '../components/TentoCap.jsx';
 import { useFitScale } from '../components/useFitScale.js';
 import LandStage from '../components/LandStage.jsx';
@@ -32,14 +35,37 @@ export function LobbyChip({ on, onClick, children, label, disabled = false }) {
  * regras (`options`) e os botões (`footer`).
  *
  *   slots: as cadeiras pela ordem da mesa (null = vazia)  ·  you: a sua cadeira
- *   onFace(±1): troca o seu rosto  ·  onAddBot / onRemoveBot(id): só o anfitrião
+ *   onFace(±1): troca o seu rosto  ·  onAddBot(posição) / onRemoveBot(id): só o anfitrião
+ *   Versão 2.13: onMove(posição): sentar na cadeira vazia, trocar com o bot, ou pedir a troca
+ *   a quem está nela; swaps: os pedidos ({ from, to }); onAnswer(from, sim?): responder.
  */
-export default function TableLobby({ title, code = null, onCopy = null, copied = false, slots, you, onFace = null, onAddBot = null, onRemoveBot = null, options = null, footer = null, note = null, teams = false }) {
+export default function TableLobby({
+  title,
+  code = null,
+  onCopy = null,
+  copied = false,
+  slots,
+  you,
+  onFace = null,
+  onAddBot = null,
+  onRemoveBot = null,
+  options = null,
+  footer = null,
+  note = null,
+  teams = false,
+  onMove = null,
+  swaps = [],
+  onAnswer = null,
+}) {
   const [fitOuter, fitInner, fitStyle] = useFitScale();
   const landscape = useLandscape();
   const count = slots.length;
   const at = Math.max(0, slots.findIndex((s, i) => (s ? s.id === you : `s${i}` === you)));
   const order = [...slots.slice(at), ...slots.slice(0, at)].map((s, k) => ({ seat: s, index: (at + k) % count }));
+  const nameOf = (id) => slots.find((s) => s?.id === id)?.name ?? '';
+  // quem pediu para trocar de lugar com você (o primeiro pedido aparece no feltro)
+  const asked = swaps.find((r) => r.to === you && slots.some((s) => s?.id === r.from));
+  const mineAsked = new Set(swaps.filter((r) => r.from === you).map((r) => r.to));
   const spots = SPOTS[count] ?? SPOTS[4];
   const head = (
     <h1 id="lobby-title" className="lobby-sign font-pixel">
@@ -56,16 +82,31 @@ export default function TableLobby({ title, code = null, onCopy = null, copied =
     <>
       {/* a mesa vista de cima, com as cadeiras em volta */}
       <section className={`lobby-table lobby-n${count} ${teams ? 'is-teams' : ''}`} aria-label="Cadeiras da mesa">
-        <span className="lobby-felt" aria-hidden="true">
+        <span className="lobby-felt" aria-hidden={!asked}>
           <span className="lobby-turn" aria-hidden="true" />
           {/* versão 2.7: nas duplas, quem senta de frente joga junto */}
-          {teams && <span className="lobby-duo font-pixel">DUPLAS</span>}
+          {teams && !asked && <span className="lobby-duo font-pixel">DUPLAS</span>}
+          {/* versão 2.13: alguém pediu para trocar de lugar com você */}
+          {asked && onAnswer && (
+            <span className="lobby-ask" role="alertdialog" aria-label={`${nameOf(asked.from)} quer trocar de lugar com você`}>
+              <span className="lobby-ask-text font-pixel">{plateName(nameOf(asked.from))} QUER TROCAR DE LUGAR</span>
+              <span className="lobby-ask-keys">
+                <button type="button" className="lobby-mini is-yes font-pixel" onClick={() => onAnswer(asked.from, true)}>
+                  TROCAR
+                </button>
+                <button type="button" className="lobby-mini font-pixel" onClick={() => onAnswer(asked.from, false)}>
+                  NÃO
+                </button>
+              </span>
+            </span>
+          )}
         </span>
         {['bottom', 'right', 'top', 'left'].map((spot) => {
           const k = spots.indexOf(spot);
           if (k < 0) return null;
           const { seat, index } = order[k];
-          const color = SEAT_COLORS[index % SEAT_COLORS.length];
+          // a cor é de quem senta (a mesma na partida); a cadeira vazia usa a da posição
+          const color = SEAT_COLORS[(seat ? seatIndex(seat.id) : index) % SEAT_COLORS.length];
           const team = teams ? teamOfIndex(index) : null;
           const teamTag = team && (
             <span className={`lobby-team font-pixel is-${team}`} aria-label={`dupla ${team}`}>
@@ -75,12 +116,21 @@ export default function TableLobby({ title, code = null, onCopy = null, copied =
           if (!seat) {
             return (
               <div key={spot} className={`lobby-seat at-${spot} is-empty`} aria-label={team ? `Cadeira vazia da dupla ${team}` : 'Cadeira vazia'} style={{ '--seat': color }}>
-                <span className="lobby-chair" aria-hidden="true">
-                  {teamTag}
-                </span>
+                {onMove ? (
+                  <button type="button" className="lobby-chair is-free" aria-label={team ? `Sentar aqui (dupla ${team})` : 'Sentar aqui'} onClick={() => onMove(index)}>
+                    {teamTag}
+                    <span className="lobby-sit font-pixel" aria-hidden="true">
+                      SENTAR
+                    </span>
+                  </button>
+                ) : (
+                  <span className="lobby-chair" aria-hidden="true">
+                    {teamTag}
+                  </span>
+                )}
                 <span className="lobby-seat-name font-pixel">VAZIA</span>
                 {onAddBot && (
-                  <button type="button" className="lobby-mini font-pixel" onClick={onAddBot}>
+                  <button type="button" className="lobby-mini font-pixel" onClick={() => onAddBot(index)}>
                     + BOT
                   </button>
                 )}
@@ -88,6 +138,19 @@ export default function TableLobby({ title, code = null, onCopy = null, copied =
             );
           }
           const mine = seat.id === you;
+          const waiting = mineAsked.has(seat.id);
+          // trocar com bot é na hora; com gente, vira pedido (tocar de novo cancela)
+          const swap = !mine && onMove && !seat.lost && (
+            <button
+              type="button"
+              className={`lobby-swap font-pixel ${waiting ? 'is-waiting' : ''}`}
+              aria-pressed={waiting}
+              aria-label={waiting ? `Cancelar o pedido de troca com ${seat.name}` : seat.bot ? `Trocar de lugar com ${seat.name}` : `Pedir para trocar de lugar com ${seat.name}`}
+              onClick={() => onMove(index)}
+            >
+              {waiting ? '…' : '⇄'}
+            </button>
+          );
           return (
             <div key={spot} className={`lobby-seat at-${spot} ${mine ? 'is-me' : ''} ${seat.lost ? 'is-lost' : ''}`} style={{ '--seat': color }}>
               <span className="lobby-photo avatar-frame">
@@ -97,6 +160,7 @@ export default function TableLobby({ title, code = null, onCopy = null, copied =
                 </span>
                 {seat.bot && <span className="seat-tag">BOT</span>}
                 {teamTag}
+                {swap}
               </span>
               <span className="lobby-seat-name font-pixel">{mine ? 'VOCÊ' : plateName(seat.name)}</span>
               {mine && onFace ? (
@@ -113,6 +177,8 @@ export default function TableLobby({ title, code = null, onCopy = null, copied =
                 <button type="button" className="lobby-mini font-pixel" onClick={() => onRemoveBot(seat.id)}>
                   TIRAR
                 </button>
+              ) : waiting ? (
+                <span className="lobby-ready font-pixel is-wait">PEDIDO DE TROCA</span>
               ) : (
                 <span className={`lobby-ready font-pixel ${seat.ready ? '' : 'is-wait'}`}>{seat.lost ? 'CAIU' : seat.host ? 'ANFITRIÃO' : seat.ready ? 'PRONTO' : 'ESPERANDO'}</span>
               )}
@@ -179,6 +245,9 @@ const BATIDA_LABEL = { todos: 'TODOS', pesada: 'A MÃO + PESADA' };
  */
 export function TableRules({ config, onChange = null, minSeats = 2, turn = true }) {
   const set = (key, value) => onChange?.({ ...config, [key]: value });
+  // versão 2.13: a sala (com a trilha dela); a do Dono da Noite só para quem já sentou com ele
+  const [collection] = useState(loadCollection);
+  const sala = mapOf(config.map);
   const ro = !onChange;
   const tentos = config.scoring === 'tentos';
   const teams = config.seats === 4 && Boolean(config.teams);
@@ -245,6 +314,22 @@ export function TableRules({ config, onChange = null, minSeats = 2, turn = true 
               )}
             </LobbyChip>
           ))}
+        </span>
+      </div>
+      <div className="lobby-opt is-sala">
+        <span className="lobby-opt-label font-pixel">
+          SALA
+          <span className="lobby-song">♪ {sala.song}</span>
+        </span>
+        <span className="lobby-chips">
+          {TABLE_MAPS.map((m) => {
+            const locked = !ro && !mapUnlocked(m, collection);
+            return (
+              <LobbyChip key={m.id} on={sala.id === m.id} disabled={ro || locked} onClick={() => set('map', m.id)} label={locked ? 'Sala secreta' : `${m.name}: ${m.song}`}>
+                {locked ? '???' : m.label}
+              </LobbyChip>
+            );
+          })}
         </span>
       </div>
       {turn && (

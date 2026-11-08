@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useRef } from 'react';
 import { SCENE_PX, paintProp, paintScene, propSize } from './art/botecoScene.js';
+import { LAND_ROOM_IDS, paintLandRoom } from './art/landRooms.js';
 
 /** Cenas já pintadas, por nome e tamanho (trocar de tela e voltar não pinta de novo). */
 const cache = new Map();
@@ -9,7 +10,8 @@ function sceneImage(name, w, h, seed) {
   const key = `${name}:${w}x${h}:${seed}`;
   let img = cache.get(key);
   if (!img) {
-    const painted = paintScene(name, w, h, seed);
+    // versão 2.13: as salas das regiões (art/landRooms.js) têm a luz delas
+    const painted = LAND_ROOM_IDS.includes(name) ? paintLandRoom(name, w, h, seed) : paintScene(name, w, h, seed);
     img = new ImageData(painted.data, painted.w, painted.h);
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
     cache.set(key, img);

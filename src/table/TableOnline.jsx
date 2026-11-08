@@ -7,6 +7,7 @@ import { createPeerTransport } from '../pvp/transport.js';
 import { useSecondsLeft } from '../pvp/useNow.js';
 import TableLobby, { TableRules } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
+import { mapOf } from '../data/tableMaps.js';
 import { TABLE_FACES, tableNote } from './seats.js';
 import { formatTableId, tablePeerId } from './tableProtocol.js';
 import { createTableSession } from './tableSession.js';
@@ -112,7 +113,7 @@ function TableMenu({ playing, host, muted, onToggleMute, onResume, onQuit }) {
  * estrela (tableSession.js) pelo mesmo PeerJS do duelo e mostra o saguão, a mesa, o resultado
  * e o pódio. `role` 'host' abre a roda com `code`; 'guest' entra nela.
  */
-export default function TableOnline({ role, code, me, config = null, onExit, muted, onToggleMute }) {
+export default function TableOnline({ role, code, me, config = null, onExit, muted, onToggleMute, onTrack = null }) {
   const [face, setFace] = useState(loadFace);
   // a sessão vale para esta roda (o PvpApp troca a key a cada roda nova)
   const [session] = useState(() =>
@@ -127,6 +128,9 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
   }, [session]);
 
   const snap = useSyncExternalStore(session.subscribe, session.getSnapshot, () => null);
+  // versão 2.13: a roda toca a trilha da sala que o anfitrião escolheu (o PvpApp toca)
+  const track = mapOf(snap?.lobby?.config?.map).music;
+  useEffect(() => onTrack?.(track), [onTrack, track]);
 
   const tap = () => {
     sound.init();
@@ -199,9 +203,12 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
           slots={seats}
           you={snap.you}
           onFace={cycleFace}
-          onAddBot={host ? () => (tap(), session.addBot()) : null}
+          onAddBot={host ? (place) => (tap(), session.addBot(place)) : null}
           onRemoveBot={host ? (id) => (tap(), session.removeBot(id)) : null}
           teams={Boolean(cfg.teams)}
+          onMove={(place) => (tap(), session.moveTo(place))}
+          swaps={snap.lobby.swaps ?? []}
+          onAnswer={(from, yes) => (tap(), session.answerSwap(from, yes))}
           options={<TableRules config={cfg} minSeats={highest} onChange={host ? (next) => (tap(), session.setConfig(next)) : null} />}
           note={
             host
@@ -246,6 +253,7 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
       <div className="app-shell h-full">
         <TableScreen
           view={snap.view}
+          map={snap.lobby?.config?.map}
           me={snap.you}
           clock={snap.clock}
           links={snap.links}

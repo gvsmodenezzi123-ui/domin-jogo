@@ -48,6 +48,13 @@ export function lightingFor(x, y, light, hand, lamp = light) {
   return { lx, ly, lit };
 }
 
+/** A vela mais perto de (x, y). */
+export function nearestCandle(candles, x, y) {
+  let best = candles[0];
+  for (const c of candles) if (Math.hypot(c.x - x, c.y - y) < Math.hypot(best.x - x, best.y - y)) best = c;
+  return best;
+}
+
 /**
  * Liga a luz nas pedras enquanto a mesa estiver na tela.
  * @param root  a mesa (`.felt-table`), onde fica a lâmpada
@@ -62,7 +69,9 @@ export function startTileLighting(root) {
 
   const relight = () => {
     const els = [...document.querySelectorAll('[data-tile-id], [data-hand-tile]')];
-    const sig = `${root.clientWidth}x${root.clientHeight}|${els.map((el) => el.getAttribute('data-tile-id') ?? el.getAttribute('data-hand-tile')).join(',')}`;
+    // versão 2.13: na mesa das velas (Dono da Noite), cada pedra pega a luz da vela mais perto
+    const flames = [...root.querySelectorAll('[data-candle]')];
+    const sig = `${root.clientWidth}x${root.clientHeight}|${flames.length}|${els.map((el) => el.getAttribute('data-tile-id') ?? el.getAttribute('data-hand-tile')).join(',')}`;
     if (sig !== signature) {
       signature = sig;
       settle = SETTLE_PASSES;
@@ -75,9 +84,17 @@ export function startTileLighting(root) {
     const lamp = { x: light.x, y: box.top + box.height * 0.04 };
     // 1º mede tudo, depois escreve (escrever no meio das medições trava o quadro)
     const spots = els.map((el) => [el, el.getBoundingClientRect()]);
+    const candles = flames.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height };
+    });
     for (const [el, r] of spots) {
       if (!r.width) continue;
-      const { lx, ly, lit } = lightingFor(r.left + r.width / 2, r.top + r.height / 2, light, el.hasAttribute('data-hand-tile'), lamp);
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const hand = el.hasAttribute('data-hand-tile');
+      const near = candles.length ? nearestCandle(candles, cx, cy) : null;
+      const { lx, ly, lit } = near ? lightingFor(cx, cy, near, hand, near) : lightingFor(cx, cy, light, hand, lamp);
       const key = `${lx}|${ly}|${lit}`;
       if (written.get(el) === key) continue;
       written.set(el, key);

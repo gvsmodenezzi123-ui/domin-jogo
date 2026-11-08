@@ -781,7 +781,16 @@ function sceneMap(b, r) {
   });
 }
 
-const SCENES = { title: sceneTitle, counter: sceneCounter, match: sceneMatch, wide: sceneWide, map: sceneMap, tableroom: sceneTableRoom, landroom: sceneLandRoom };
+
+const SCENES = {
+  title: sceneTitle,
+  counter: sceneCounter,
+  match: sceneMatch,
+  wide: sceneWide,
+  map: sceneMap,
+  tableroom: sceneTableRoom,
+  landroom: sceneLandRoom,
+};
 export const SCENE_IDS = Object.freeze(Object.keys(SCENES));
 
 /** Pinta a cena `name` numa grade de `w`×`h` pixels. */

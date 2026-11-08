@@ -172,6 +172,45 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.13.0: uma sala para cada região, as velas do Dono da Noite, a luz em shader e a sala no online
+
+- **Uma sala para cada região**, pintadas do zero com a luz da tela inicial (as cores de verdade
+  de cada coisa e a luz por cima, em degraus pontilhados; o que brilha por si ganha o halo):
+  - **Boteco da Esquina**: o reboco verde descascando no tijolo, a faixa de azulejo português,
+    a placa do FIADO SÓ AMANHÃ, a flâmula, o relógio parado, o letreiro CERVEJA GELADA, a
+    lâmpada nua sobre a prateleira de garrafas (com o vidro de ovo colorido), a cadeira de
+    plástico, os engradados e o freezer.
+  - **Clube da Sinuca Clandestino**: o porão de tijolo com a tubulação, o neon SINUCA com a
+    bola 8, a porta de ferro com a SAÍDA acesa, a régua de tacos (um quebrado) sob a arandela
+    de gaiola, o marcador de bolinhas, o cartaz do torneio e as duas mesas de sinuca do fundo
+    sob as luminárias verdes, com um jogador passando giz no taco e a fumaça nos fachos.
+  - **Submundo do Jogo do Bicho**: o papel de parede vinho em ogiva, o lambri de mogno, o
+    retrato do patrão de terno branco e a tabela dos 25 bichos sob as luzes de quadro, a luz
+    vermelha da rua pela persiana, a poltrona chesterfield com o charuto, o abajur de franja,
+    a mesa do bicheiro com a luminária de banqueiro, os maços e o telefone, e o cofre.
+  - **O Dono da Noite**: a janela gótica com a lua cheia presa na rosácea atrás dele, as
+    cortinas de veludo amarradas, a coleção de corações nas redomas (uma vazia, esperando), o
+    relógio parado à meia-noite e o mármore preto em xadrez.
+- **As velas do Dono da Noite**: sem lâmpada no teto. Quatro castiçais de latão cravados no meio
+  do canto do aro (a mesma conta da perspectiva da mesa), as de lá menores; a cera derramada no
+  aro e escorrendo pela saia, a luz quente de cada canto pintada no tampo e a chama em pixel
+  art, cada vela tremendo no seu tempo. As pedras pegam a luz da vela mais perto, e a fala
+  dele não cobre mais a vela do canto.
+- **A luz em shader** (WebGL), por cima da sala, da mesa e das pedras: o neon que pisca, a vela
+  que tremula, a lâmpada que zumbe, a poeira dançando no facho das luminárias, a fumaça que só
+  aparece onde a luz bate, o luar entrando em fachos, a persiana piscando, a aura das pedras
+  aprimoradas (ouro com faíscas, rubi batendo, cristal com o arco-íris na borda, chumbo,
+  fantasma soltando fiapos, âmbar, obsidiana), na mesa e atrás da sua mão, e o clarão de cada
+  pedra que cai (a bucha mais forte, na cor da pedra). Na grade de pixels da cena, a 30 quadros
+  por segundo; sem WebGL o jogo fica como era, e com animações reduzidas a luz para.
+- **Online, a sala e a trilha**: quem abre a mesa escolhe onde se joga, no duelo (SALA E
+  TRILHA) e na roda (SALA, nas regras da casa): Boteco, Sinuca, Bicho ou Noite; a sala vem com a
+  música dela e vale para todos. A Noite (com as velas) só aparece para quem já sentou com o
+  Dono da Noite na campanha.
+- **Roda online, trocar de lugar no saguão**: toque numa cadeira vazia (ou de bot) para sentar
+  nela, ou no ⇄ de alguém para pedir para trocar (a pessoa aceita ou recusa). Assim você escolhe
+  a sua dupla. O protocolo da roda mudou: todos na mesa precisam estar na 2.13.
+
 ### 2.12.1: o leque vivo, a mão arrumada no arraste, a Rubi nova e as pedras em pixel art
 
 - **Leque vivo**: as pedras da mão balançam de leve, cada uma no seu tempo; a pedra tocada (ou

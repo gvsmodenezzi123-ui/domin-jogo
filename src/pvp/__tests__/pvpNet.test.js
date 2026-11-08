@@ -161,7 +161,7 @@ describe('Patch PvP: queda de conexão, W.O. e volta para a mesa', () => {
         if (g.duel?.clock?.totalMs) clockTotal = g.duel.clock.totalMs;
       },
     });
-    expect(m.guest.getSnapshot().room).toEqual(room);
+    expect(m.guest.getSnapshot().room).toEqual({ ...room, map: 'boteco' });
     expect(guestStart).toEqual({ coins: 300, max: 3, rarity: 'lendarios' });
     expect(clockTotal).toBe(15000);
     expect(m.host.getSnapshot().over?.reason).toBe('hearts');

@@ -67,7 +67,7 @@ function RivalSeat({
   return (
     <header
       ref={seatRef}
-      className={`rival-bench rival-seat ${isTurn ? 'rival-bench-active is-turn' : ''}`}
+      className={`rival-bench rival-seat ${isTurn ? 'rival-bench-active is-turn' : ''} ${rival.light === 'candles' ? 'is-candles' : ''}`}
       style={{
         '--rail-y': `${SEAT_RAIL * 100}%`,
         '--seat-h': `${size.h}px`,
@@ -87,7 +87,8 @@ function RivalSeat({
       </div>
 
       {/* a lâmpada pende sobre a mesa, na frente dele (o facho fica no TableBoard) */}
-      <LampRig part="body" lamp={Math.round(bust.h * 0.22)} cord={2} beamWidth={300} className="seat-lamp" />
+      {/* (versão 2.13: na mesa das velas, do Dono da Noite, não tem lâmpada no teto) */}
+      {rival.light !== 'candles' && <LampRig part="body" lamp={Math.round(bust.h * 0.22)} cord={2} beamWidth={300} className="seat-lamp" />}
 
       {/* as pedras dele de pé na beirada, viradas para você */}
       <div className="seat-rack" data-danger-anchor>

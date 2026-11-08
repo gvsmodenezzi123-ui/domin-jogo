@@ -13,7 +13,7 @@
  */
 import { paintKit } from './botecoScene.js';
 
-const { hex, shift, rngOf, buffer } = paintKit;
+const { hex, shift, rngOf, buffer, bayer } = paintKit;
 
 const INK = hex('#0b0705');
 
@@ -389,7 +389,7 @@ function paintFeltBase(data, w, h, L, M, D, seed) {
  *   o feltro: trama em sarja, manchas grandes, o miolo gasto pelas pedras, fiapos, poeira,
  *   bebida derramada, marca de copo, queimado de cigarro e pó de giz.
  */
-export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark = '#1f2a17', seed = 11, mahogany = false }) {
+export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark = '#1f2a17', seed = 11, mahogany = false, candles = false }) {
   const b = buffer(w, h);
   const r = rngOf(seed);
   const wood = mahogany ? RAIL_WOOD.mogno : RAIL_WOOD.pinho;
@@ -587,7 +587,86 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
     b.rect(RAIL + k, RAIL, 1, h - RAIL * 2, [0, 0, 0], a);
     b.rect(w - RAIL - 1 - k, RAIL, 1, h - RAIL * 2, [0, 0, 0], a);
   }
+  if (candles) candleTable(b, r);
   return b;
+}
+
+// ---------------------------------------------------------------------------
+// Versão 2.13: a mesa do Dono da Noite, à luz das quatro velas (art/candleArt.js)
+// ---------------------------------------------------------------------------
+
+const WAX = { hi: hex('#fffaf0'), mid: hex('#efe2c0'), lo: hex('#c8b48a'), deep: hex('#8a7450') };
+const CANDLE_WARM = [1, 0.7, 0.4];
+const CANDLE_AMBIENT = [0.46, 0.44, 0.56];
+
+/** O meio do canto do aro de cada canto (onde o castiçal crava), em px da pintura da mesa. */
+export const candleCorners = (w, h) => [
+  [WOOD_W / 2, WOOD_W / 2, -1, -1],
+  [w - 1 - WOOD_W / 2, WOOD_W / 2, 1, -1],
+  [WOOD_W / 2, h - 1 - WOOD_W / 2, -1, 1],
+  [w - 1 - WOOD_W / 2, h - 1 - WOOD_W / 2, 1, 1],
+];
+
+/** Uma gota de cera escorrendo de (x, y) na direção (dx, dy), com a bolinha na ponta. */
+function waxRun(b, x, y, dx, dy, len) {
+  for (let k = 0; k < len; k += 1) {
+    const px = Math.round(x + dx * k);
+    const py = Math.round(y + dy * k);
+    b.put(px, py, k < 2 ? WAX.hi : WAX.mid);
+    b.put(px + (dy ? 1 : 0), py + (dx ? 1 : 0), WAX.lo);
+  }
+  const ex = Math.round(x + dx * len);
+  const ey = Math.round(y + dy * len);
+  b.rect(ex, ey, 2, 2, WAX.mid);
+  b.put(ex, ey, WAX.hi);
+  b.put(ex + 1, ey + 1, WAX.deep);
+}
+
+/**
+ * A cera derramada em volta de cada castiçal (o pé dele cobre o meio do canto) e escorrendo até
+ * a quina de fora do aro, e a luz: a sala no escuro azulado e o calor de cada vela caindo com a
+ * distância, em degraus pontilhados (como a luz das cenas).
+ */
+function candleTable(b, r) {
+  const { w, h, data } = b;
+  const corners = candleCorners(w, h);
+  for (const [cx, cy, sx, sy] of corners) {
+    // os pingos em volta do pé
+    for (let i = 0; i < 7; i += 1) {
+      const a = r() * Math.PI * 2;
+      const d = 8 + r() * 4;
+      const px = cx + Math.cos(a) * d;
+      const py = cy + Math.sin(a) * d * 0.9;
+      b.ellipse(px, py, 1.2 + r(), 0.9 + r() * 0.6, WAX.mid);
+      b.put(px - 0.5, py - 0.5, WAX.hi);
+    }
+    // a poça que escorreu do prato e desce até a quina de fora, dos dois lados
+    b.ellipse(cx + sx * 6, cy + 2, 3, 2, WAX.mid);
+    b.ellipse(cx + 1, cy + sy * 6, 2.5, 2, WAX.mid);
+    waxRun(b, cx + sx * 7, cy + 1, sx, 0, Math.max(1, Math.round(WOOD_W / 2 - 3)));
+    waxRun(b, cx - 1, cy + sy * 7, 0, sy, Math.max(1, Math.round(WOOD_W / 2 - 3)));
+    waxRun(b, cx + sx * 5, cy + sy * 6, sx * 0.7, sy * 0.7, 3);
+  }
+  // a luz das velas
+  const R = Math.max(w, h) * 0.42;
+  const bands = 7;
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      let f = 0;
+      for (const [cx, cy] of corners) {
+        const d = Math.hypot(x - cx, (y - cy) * 1.15);
+        if (d < R) f += (1 - d / R) * (1 - d / R) * 1.5;
+      }
+      const L = [CANDLE_AMBIENT[0] + CANDLE_WARM[0] * f, CANDLE_AMBIENT[1] + CANDLE_WARM[1] * f, CANDLE_AMBIENT[2] + CANDLE_WARM[2] * f];
+      const top = Math.max(L[0], L[1], L[2]);
+      const q = Math.min(1.7, Math.max(0, Math.round(top * bands + bayer(x, y) - 0.5) / bands));
+      const k = q / top;
+      const i = (y * w + x) * 4;
+      data[i] = Math.min(255, data[i] * L[0] * k);
+      data[i + 1] = Math.min(255, data[i + 1] * L[1] * k);
+      data[i + 2] = Math.min(255, data[i + 2] * L[2] * k);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -601,7 +680,7 @@ export const APRON_H = 12;
  * A frente da mesa, de `w` pixels: o lábio do aro (luz em cima), a tábua com veio na
  * horizontal, chanfro, pregos, lascas, a cantoneira de latão nas pontas e a sombra no chão.
  */
-export function paintApron(w, { mahogany = false, seed = 5 } = {}) {
+export function paintApron(w, { mahogany = false, seed = 5, candles = false } = {}) {
   const h = APRON_H;
   const b = buffer(w, h);
   const r = rngOf(seed);
@@ -642,6 +721,29 @@ export function paintApron(w, { mahogany = false, seed = 5 } = {}) {
     b.put(x0 + 3, 3, hex('#3a2a08'));
     b.put(x0 + 3, h - 7, hex('#3a2a08'));
     b.put(x0 + 2, 2, hex('#fff0b0'));
+  }
+  if (candles) {
+    // a cera das velas de perto escorrendo pela frente, por cima das cantoneiras
+    for (const [x0, dir] of [
+      [2, 1],
+      [w - 4, -1],
+    ]) {
+      waxRun(b, x0, 0, 0, 1, 4 + (seed % 3));
+      waxRun(b, x0 + dir * 3, 0, 0, 1, 2);
+      waxRun(b, x0 + dir * 6, 0, 0, 1, 5);
+    }
+    // a luz: forte nas pontas, embaixo das velas, e o meio no escuro
+    for (let y = 0; y < h; y += 1) {
+      for (let x = 0; x < w; x += 1) {
+        const d = Math.min(x, w - 1 - x) / (w * 0.4);
+        const f = d < 1 ? (1 - d) * (1 - d) * 1.4 : 0;
+        const L = [CANDLE_AMBIENT[0] + CANDLE_WARM[0] * f, CANDLE_AMBIENT[1] + CANDLE_WARM[1] * f, CANDLE_AMBIENT[2] + CANDLE_WARM[2] * f];
+        const top = Math.max(L[0], L[1], L[2]);
+        const q = Math.min(1.7, Math.max(0, Math.round(top * 7 + bayer(x, y) - 0.5) / 7));
+        const i = (y * w + x) * 4;
+        for (let c = 0; c < 3; c += 1) b.data[i + c] = Math.min(255, (b.data[i + c] * L[c] * q) / top);
+      }
+    }
   }
   return b;
 }

@@ -67,12 +67,18 @@ describe('Patch PvP: mensagens JSON', () => {
 
 describe('Patch PvP: a configuração da mesa e a rota', () => {
   it('padrão: $100, 5 corações, todas as raridades, 30 s; valores fora da lista voltam ao padrão', () => {
-    expect(DEFAULT_ROOM).toEqual({ coins: 100, hearts: 5, rarity: 'todas', turn: 30 });
-    expect(sanitizeRoom({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15 })).toEqual({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15 });
+    expect(DEFAULT_ROOM).toEqual({ coins: 100, hearts: 5, rarity: 'todas', turn: 30, map: 'boteco' });
+    expect(sanitizeRoom({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15 })).toEqual({ coins: 300, hearts: 9, rarity: 'lendarios', turn: 15, map: 'boteco' });
     expect(sanitizeRoom({ coins: 7, hearts: 'x', rarity: 'ouro' })).toEqual(DEFAULT_ROOM);
     expect(isRoom(DEFAULT_ROOM)).toBe(true);
     expect(isRoom({ ...DEFAULT_ROOM, turn: 31 })).toBe(false);
-    expect(describeRoom(DEFAULT_ROOM)).toBe('$100 · 5♥ · TALISMÃS: TODAS · 30 S POR JOGADA');
+    expect(describeRoom(DEFAULT_ROOM)).toBe('$100 · 5♥ · TALISMÃS: TODAS · 30 S POR JOGADA · BOTECO');
+    // versão 2.13: a sala do duelo; quem tem a versão de antes manda sem ela (vale o boteco)
+    expect(sanitizeRoom({ ...DEFAULT_ROOM, map: 'sinuca' }).map).toBe('sinuca');
+    expect(sanitizeRoom({ ...DEFAULT_ROOM, map: 'lua' }).map).toBe('boteco');
+    expect(isRoom({ coins: 100, hearts: 5, rarity: 'todas', turn: 30 })).toBe(true);
+    expect(isRoom({ ...DEFAULT_ROOM, map: 'noite' })).toBe(true);
+    expect(isRoom({ ...DEFAULT_ROOM, map: 'lua' })).toBe(false);
   });
 
   it('a run começa com as moedas e os corações da mesa, sem melhorias, todos os talismãs liberados', () => {

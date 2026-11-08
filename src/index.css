@@ -22878,3 +22878,261 @@
   border: 2px solid #1a0f08;
   box-shadow: 0 3px 0 #000;
 }
+
+/* ---------- Versão 2.13: trocar de lugar no saguão (sentar na vazia, trocar, pedir a troca) ---------- */
+.lobby-chair.is-free {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lobby-seat.is-empty:has(.lobby-chair.is-free) {
+  opacity: 0.85;
+}
+
+.lobby-chair.is-free:active {
+  scale: 0.95;
+}
+
+.lobby-sit {
+  font-size: 6px;
+  color: #f4ecd2;
+  letter-spacing: 0.04em;
+}
+
+.lobby-chair.is-free:hover .lobby-sit,
+.lobby-chair.is-free:focus-visible .lobby-sit {
+  color: #ffd98a;
+}
+
+.lobby-swap {
+  position: absolute;
+  left: -8px;
+  bottom: 12px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: #1a0f06;
+  background: #e8c98a;
+  box-shadow:
+    inset 0 0 0 1px #1a0f06,
+    0 2px 0 #000;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lobby-swap.is-waiting {
+  color: #f4ecd2;
+  background: #6a4a8a;
+  animation: lobbyWait 1s steps(2, jump-none) infinite;
+}
+
+@keyframes lobbyWait {
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
+.lobby-ask {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 160px;
+  padding: 7px 8px;
+  translate: -50% -50%;
+  text-align: center;
+  background: rgba(14, 9, 5, 0.92);
+  box-shadow:
+    inset 0 0 0 1px #e8c98a,
+    0 3px 0 #000;
+  animation: lobbyAsk 260ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes lobbyAsk {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+.lobby-ask-text {
+  font-size: 6px;
+  line-height: 1.6;
+  color: #ffd98a;
+}
+
+.lobby-ask-keys {
+  display: flex;
+  gap: 6px;
+}
+
+.lobby-mini.is-yes {
+  color: #10200c;
+  background: #9fe08a;
+  box-shadow:
+    inset 0 0 0 1px #10200c,
+    0 2px 0 #000;
+}
+
+.table-lobby-land .lobby-sit {
+  font-size: 8px;
+}
+
+.table-lobby-land .lobby-ask {
+  max-width: 176px;
+  padding: 10px;
+}
+
+.table-lobby-land .lobby-ask-text {
+  font-size: 8px;
+}
+
+.table-lobby-land .lobby-swap {
+  width: 26px;
+  height: 22px;
+  font-size: 13px;
+}
+
+/* ---------- Versão 2.13: a sala das mesas online e a trilha dela ---------- */
+.ol-song,
+.lobby-song {
+  font-family: var(--font-term, monospace);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: #b8c8a0;
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+}
+
+/* na folha das regras da roda: a trilha embaixo do SALA e as quatro salas mais justas */
+.lobby-opt.is-sala .lobby-opt-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lobby-opt.is-sala .lobby-chip {
+  min-width: 0;
+  padding: 0 5px;
+}
+
+.table-lobby-land .lobby-song {
+  font-size: 12px;
+  color: #6a4a24;
+  text-shadow: none;
+}
+
+.ol-seg-btn:disabled,
+.pvp-seg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Versão 2.13: o shader da luz (FxLayer.jsx), somado à tela ---------- */
+.fx-layer {
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  mix-blend-mode: screen;
+}
+
+/* ---------- Versão 2.13: a mesa das velas (Dono da Noite) ---------- */
+.table-candles {
+  z-index: 5;
+}
+
+/* o castiçal crava no meio do canto do aro: o pé fica no ponto, e encolhe a partir dele */
+.table-candle {
+  position: absolute;
+  transform: scale(var(--s, 1));
+}
+
+.table-candle .candle-body {
+  position: absolute;
+  inset: 0;
+  image-rendering: pixelated;
+}
+
+/* a chama: a tira de 6 quadros passando em degraus (só transform: barato no iPhone) */
+.candle-flame {
+  position: absolute;
+  overflow: hidden;
+}
+
+.candle-flame-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+  animation: candleStrip var(--flick, 0.7s) steps(6) infinite var(--delay, 0s);
+}
+
+@keyframes candleStrip {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* o halo em volta da chama, respirando em dois degraus */
+.candle-glow {
+  position: absolute;
+  left: 50%;
+  width: 132px;
+  height: 132px;
+  margin: -66px 0 0 -66px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 120, 0.5) 0, rgba(255, 160, 80, 0.2) 22%, rgba(255, 120, 40, 0.07) 48%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: candleGlow calc(var(--flick, 0.7s) * 2.3) steps(1, end) infinite var(--delay, 0s);
+}
+
+@keyframes candleGlow {
+  0% {
+    opacity: 0.9;
+  }
+  30% {
+    opacity: 0.74;
+  }
+  55% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.82;
+  }
+}
+
+/* a fala dele não cobre a vela do canto de lá, à direita */
+.rival-seat.is-candles .speech-balloon.speech-rival.speech-seat {
+  max-width: min(140px, calc(50% - var(--bust-w) * 0.34 - 150px));
+}
+
+/* o busto dele pega a luz das velas por baixo (quente, mais escuro em cima) */
+.rival-seat.is-candles .seat-bust {
+  filter: brightness(0.82) sepia(0.18) saturate(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candle-flame-strip,
+  .candle-glow {
+    animation: none;
+  }
+}
+
+.reduce-motion .candle-flame-strip,
+.reduce-motion .candle-glow {
+  animation: none;
+}

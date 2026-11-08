@@ -115,6 +115,58 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     const nextReady = new Set();
 
     const seatById = (id) => seats.find((s) => s?.id === id) ?? null;
+    /**
+     * Versão 2.13: a cadeira é de quem senta (o id não muda quando a pessoa troca de lugar); a
+     * posição na mesa (o índice em `seats`) é que decide a vez e as duplas. Quem chega pega o
+     * primeiro número livre.
+     */
+    const freeId = () => {
+      const used = new Set(seats.filter(Boolean).map((s) => s.id));
+      for (let n = 0; n < 4; n += 1) if (!used.has(`s${n}`)) return `s${n}`;
+      return `s${seats.length}`;
+    };
+    /** Os pedidos de troca de lugar entre duas pessoas (quem pediu → com quem). */
+    let swaps = [];
+    const dropSwaps = (id) => {
+      swaps = swaps.filter((r) => r.from !== id && r.to !== id);
+    };
+    /** Troca duas posições da mesa (uma pode estar vazia). */
+    const swapPlaces = (a, b) => {
+      [seats[a], seats[b]] = [seats[b], seats[a]];
+    };
+    /**
+     * Mudar de lugar: cadeira vazia ou de bot, na hora; cadeira de outra pessoa, vira um pedido
+     * que ela aceita ou recusa (tocar de novo cancela).
+     */
+    function moveSeat(seat, place) {
+      if (engine || !seat || !Number.isInteger(place) || place < 0 || place >= seats.length) return;
+      const from = seats.indexOf(seat);
+      if (from < 0 || from === place) return;
+      const other = seats[place];
+      if (!other || other.bot) {
+        dropSwaps(seat.id);
+        swapPlaces(from, place);
+        publishLobby();
+        return;
+      }
+      const pending = swaps.some((r) => r.from === seat.id && r.to === other.id);
+      swaps = swaps.filter((r) => r.from !== seat.id);
+      if (!pending) swaps.push({ from: seat.id, to: other.id });
+      publishLobby();
+    }
+    function answerSwap(seat, fromId, yes) {
+      if (engine || !seat) return;
+      const asked = swaps.some((r) => r.from === fromId && r.to === seat.id);
+      if (!asked) return;
+      swaps = swaps.filter((r) => !(r.from === fromId && r.to === seat.id));
+      const other = seatById(fromId);
+      if (yes && other) {
+        dropSwaps(seat.id);
+        dropSwaps(other.id);
+        swapPlaces(seats.indexOf(seat), seats.indexOf(other));
+      }
+      publishLobby();
+    }
     const usedFaces = () => new Set(seats.filter(Boolean).map((s) => s.face));
     const freeFace = (wanted) => (wanted && !usedFaces().has(wanted) ? wanted : (TABLE_FACES.find((f) => !usedFaces().has(f)) ?? TABLE_FACES[0]));
     const publicSeat = (s) => s && { id: s.id, name: s.name, face: s.face, bot: s.bot, ready: s.ready, host: Boolean(s.host), lost: s.lost };
@@ -132,7 +184,8 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       Object.fromEntries(Object.entries(links).map(([id, l]) => [id, { lost: l.lost, graceEndsAt: l.lost ? clock.now() + l.graceMs : null, ping: l.ping }]));
 
     function publishLobby() {
-      const lobby = { config: cfg, seats: seats.map(publicSeat), started: Boolean(engine) };
+      swaps = swaps.filter((r) => seatById(r.from) && seatById(r.to));
+      const lobby = { config: cfg, seats: seats.map(publicSeat), started: Boolean(engine), swaps: engine ? [] : swaps.map((r) => ({ ...r })) };
       for (const s of humans()) if (!s.lost) send(s.connId, TMSG.LOBBY, { ...lobby, you: s.id });
       set({ lobby, stage: engine ? 'table' : 'lobby' });
     }
@@ -216,7 +269,8 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
 
     function freeSeat(seat) {
       const i = seats.indexOf(seat);
-      if (i > 0) seats[i] = null;
+      if (i >= 0 && !seat.host) seats[i] = null;
+      dropSwaps(seat.id);
       if (seat.connId != null) connSeat.delete(seat.connId);
       cancel(`grace:${seat.id}`);
     }
@@ -266,13 +320,14 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         send(connId, TMSG.FULL, { reason: 'started' });
         return;
       }
-      const at = seats.findIndex((s, i) => i > 0 && !s);
+      const at = seats.findIndex((s) => !s);
       if (at < 0) {
         send(connId, TMSG.FULL, { reason: 'full' });
         return;
       }
-      seats[at] = { id: `s${at}`, playerId: p.id, name: cleanName(p.name), face: freeFace(p.face), bot: false, ready: false, host: false, connId, lost: false, lostAt: null, ping: null };
-      connSeat.set(connId, `s${at}`);
+      const id = freeId();
+      seats[at] = { id, playerId: p.id, name: cleanName(p.name), face: freeFace(p.face), bot: false, ready: false, host: false, connId, lost: false, lostAt: null, ping: null };
+      connSeat.set(connId, id);
       publishLobby();
     }
 
@@ -299,7 +354,9 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
           if (engine) return;
           if (p.face) seat.face = freeFace(p.face) === p.face ? p.face : seat.face;
           if (typeof p.ready === 'boolean') seat.ready = p.ready;
-          publishLobby();
+          if (p.place != null) moveSeat(seat, p.place);
+          else if (p.answer) answerSwap(seat, p.answer.from, p.answer.yes);
+          else publishLobby();
           break;
         case TMSG.INTENT: {
           if (!engine) return;
@@ -349,11 +406,19 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         timers.ping = clock.setInterval(pinger, PING_MS);
       },
       setFace(face) {
-        if (engine) return;
-        seats[0].face = freeFace(face) === face ? face : seats[0].face;
+        const me0 = seatById('s0');
+        if (engine || !me0) return;
+        me0.face = freeFace(face) === face ? face : me0.face;
         publishLobby();
       },
       setReady() {},
+      /** Versão 2.13: mudar de cadeira (ou pedir a troca a quem está nela). */
+      moveTo(place) {
+        moveSeat(seatById('s0'), place);
+      },
+      answerSwap(fromId, yes) {
+        answerSwap(seatById('s0'), fromId, yes);
+      },
       /** As regras, ainda no saguão: a mesa não encolhe para menos cadeiras do que as ocupadas. */
       setConfig(patch) {
         if (engine) return;
@@ -364,13 +429,13 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         seats.length = cfg.seats;
         publishLobby();
       },
-      addBot() {
+      addBot(place = null) {
         if (engine) return;
-        const at = seats.findIndex((s, i) => i > 0 && !s);
+        const at = Number.isInteger(place) && place >= 0 && place < seats.length && !seats[place] ? place : seats.findIndex((s) => !s);
         if (at < 0) return;
         const names = new Set(seats.filter(Boolean).map((s) => s.name));
         const bot = TABLE_BOTS.find((b) => !names.has(b.name)) ?? TABLE_BOTS[0];
-        seats[at] = { id: `s${at}`, playerId: null, name: bot.name, face: freeFace(bot.face), bot: true, ready: true, host: false, connId: null, lost: false, lostAt: null, ping: null };
+        seats[at] = { id: freeId(), playerId: null, name: bot.name, face: freeFace(bot.face), bot: true, ready: true, host: false, connId: null, lost: false, lostAt: null, ping: null };
         publishLobby();
       },
       removeBot(id) {
@@ -398,6 +463,7 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         });
         engine = null;
         lastTurnKey = null;
+        swaps = [];
         apply(tableReducer(table, { type: 'START_ROUND' }));
         publishLobby();
       },
@@ -518,6 +584,12 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       },
       setReady(ready) {
         send(hostConn, TMSG.SEAT, { ready });
+      },
+      moveTo(place) {
+        send(hostConn, TMSG.SEAT, { place });
+      },
+      answerSwap(fromId, yes) {
+        send(hostConn, TMSG.SEAT, { answer: { from: fromId, yes } });
       },
       setConfig() {},
       addBot() {},

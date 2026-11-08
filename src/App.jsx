@@ -48,6 +48,7 @@ import { BOSS_INTRO_IDS, REGIONS, bossMusicOf } from './data/campaign.js';
 import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { SECRET_BOSS, TUTOR, getRival, rivalFor, rivalOf } from './data/rivals.js';
+import { LAND_ROOMS } from './components/art/landRooms.js';
 import { TUTORIAL_STEPS } from './data/tutorial.js';
 import { modeOf } from './data/difficulty.js';
 import {
@@ -1628,6 +1629,8 @@ export default function App() {
         felt={rival.felt}
         decor={rival.decor}
         atmosphere={atmosphere}
+        lighting={rival.light ?? 'lamp'}
+        room={rival.room ?? LAND_ROOMS[atmosphere] ?? 'landroom'}
         incoming={incoming}
         finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}
         finaleTone={state.roundResult?.winner === 'player' ? 'player' : 'enemy'}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FloatingTexts from '../components/FloatingTexts.jsx';
 import PlayerRack from '../components/PlayerRack.jsx';
 import TableBoard from '../components/TableBoard.jsx';
+import { mapTable } from '../data/tableMaps.js';
 import { kickLamp } from '../components/lampKick.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from '../components/tileFlight.js';
 import { centerOf, useFloats } from '../components/useFloats.js';
@@ -84,7 +85,9 @@ function roundLine(result, view, me, partner) {
   return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
 }
 
-export default function TableScreen({ view, me, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
+export default function TableScreen({ view, me, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
+  // versão 2.13: a sala que o anfitrião escolheu (o cenário, a luz e o feltro; a trilha vem de fora)
+  const sala = useMemo(() => mapTable(map, TABLE_FELT), [map]);
   const [selectedId, setSelectedId] = useState(null);
   const [handZone, setHandZone] = useState(0);
   // versão 2.9: tela deitada, todos sentados em volta da mesa
@@ -375,7 +378,7 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
     <div
       ref={shellRef}
       className={`app-shell table-v24 flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
-      style={{ '--felt-light': TABLE_FELT.light, '--felt-mid': TABLE_FELT.mid, '--felt-dark': TABLE_FELT.dark, '--me': colorOf(view, me) }}
+      style={{ '--felt-light': sala.felt.light, '--felt-mid': sala.felt.mid, '--felt-dark': sala.felt.dark, '--me': colorOf(view, me) }}
     >
       <SeatBench landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
 
@@ -404,9 +407,11 @@ export default function TableScreen({ view, me, clock = null, onIntent, onNextRo
           previewDouble={Boolean(selectedTile && selectedTile.a === selectedTile.b)}
           frameRef={tableRef}
           endMarks={NO_MARKS}
-          felt={TABLE_FELT}
-          decor={NONE}
-          atmosphere="boteco"
+          felt={sala.felt}
+          decor={sala.decor}
+          atmosphere={sala.atmosphere}
+          lighting={sala.lighting}
+          room={sala.room}
           incoming={flying}
           finaleId={finaleHold && playEv ? playEv.tileId : null}
           finaleTone={view.result?.kind === 'batida' && view.result.by === me ? 'player' : 'enemy'}

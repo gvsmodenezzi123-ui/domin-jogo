@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { mapOf } from '../data/tableMaps.js';
 import { sound } from '../engine/audioSynth.js';
 import TableLobby, { TableRules } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
@@ -12,12 +13,13 @@ const BOTS = Object.freeze([
   { id: 's3', name: 'Sofia', face: 'sofia', bot: true, ready: true },
 ]);
 
-function LocalTable({ seats, seed, hearts, rule, teams = false, scoring = 'coracoes', onLeave, muted, onToggleMute }) {
+function LocalTable({ seats, seed, hearts, rule, teams = false, scoring = 'coracoes', map = null, onLeave, muted, onToggleMute }) {
   const rules = useMemo(() => ({ batida: rule, teams, scoring }), [rule, teams, scoring]);
   const { view, clock, act, nextRound, rematch } = useLocalTable({ seats, seed, hearts, coins: 100, rules, turnSec: 30 });
   return (
     <TableScreen
       view={view}
+      map={map}
       me="s0"
       clock={clock}
       onIntent={act}
@@ -35,17 +37,28 @@ function LocalTable({ seats, seed, hearts, rule, teams = false, scoring = 'corac
  * Versão 2.4: a mesa de 2 a 4 com bots, sem internet (o TREINAR COM BOTS do modo online, e a
  * prévia do HUD). A mesa online troca os bots por pessoas.
  */
-export default function TablePreview({ onExit = null, muted: mutedProp, onToggleMute: toggleProp }) {
-  const [config, setConfig] = useState({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes' });
+export default function TablePreview({ onExit = null, muted: mutedProp, onToggleMute: toggleProp, onTrack = null }) {
+  const [config, setConfig] = useState({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes', map: 'boteco' });
+  // versão 2.13: a trilha da sala escolhida (o modo online toca)
+  const track = mapOf(config.map).music;
+  useEffect(() => onTrack?.(track), [onTrack, track]);
   const [myFace, setMyFace] = useState(TABLE_FACES[0]);
+  // versão 2.13: no treino, você escolhe a cadeira (os bots trocam de lugar com você)
+  const [myPlace, setMyPlace] = useState(0);
   const [game, setGame] = useState(null);
   const [mutedLocal, setMutedLocal] = useState(() => Boolean(sound.isMuted));
   const muted = mutedProp ?? mutedLocal;
 
+  /** As cadeiras na ordem da mesa, com você na posição escolhida. */
+  const arrange = (n) => {
+    const out = [...BOTS.slice(0, n - 1)];
+    out.splice(Math.min(myPlace, n - 1), 0, { id: 's0', name: 'Você', face: myFace, ready: true });
+    return out;
+  };
   const start = () => {
     sound.init();
     sound.playClick();
-    const seats = [{ id: 's0', name: 'Você', face: myFace }, ...BOTS.slice(0, config.seats - 1)];
+    const seats = arrange(config.seats).map((s) => (s.id === 's0' ? { id: 's0', name: 'Você', face: myFace } : s));
     setGame({ seats, seed: (Date.now() & 0xffffff) >>> 0, key: Date.now() });
   };
   const toggleMute = () => {
@@ -72,13 +85,14 @@ export default function TablePreview({ onExit = null, muted: mutedProp, onToggle
         rule={config.batida}
         teams={config.seats === 4 && config.teams}
         scoring={config.scoring}
+        map={config.map}
         onLeave={() => setGame(null)}
         muted={muted}
         onToggleMute={toggleMute}
       />
     );
   }
-  const slots = [{ id: 's0', name: 'Você', face: myFace, ready: true }, ...BOTS.slice(0, config.seats - 1)];
+  const slots = arrange(config.seats);
   return (
     <TableLobby
       title={`MESA DE ${config.seats}${config.seats === 4 && config.teams ? ' · DUPLAS' : ''}`}
@@ -86,6 +100,10 @@ export default function TablePreview({ onExit = null, muted: mutedProp, onToggle
       slots={slots}
       you="s0"
       onFace={face}
+      onMove={(place) => {
+        sound.playClick();
+        setMyPlace(place);
+      }}
       options={
         <TableRules
           config={config}

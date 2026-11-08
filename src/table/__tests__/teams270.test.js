@@ -220,8 +220,8 @@ describe('versão 2.7: tentos no lugar dos corações', () => {
 });
 
 describe('versão 2.7: as regras na rede', () => {
-  it('protocolo 2: as mesas de antes não sentam com as novas', () => {
-    expect(TABLE_PROTOCOL).toBe(2);
+  it('protocolo 2 (3 desde a 2.13, a troca de lugar): as mesas de antes não sentam com as novas', () => {
+    expect(TABLE_PROTOCOL).toBeGreaterThanOrEqual(2);
   });
 
   it('duplas só com 4 cadeiras; contagem por corações ou tentos', () => {

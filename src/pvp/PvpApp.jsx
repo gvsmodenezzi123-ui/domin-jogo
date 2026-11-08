@@ -6,7 +6,8 @@ import ScreenVeil from '../components/ScreenTransition.jsx';
 import Shop from '../components/Shop.jsx';
 import { useSceneTransition } from '../components/useSceneTransition.js';
 import { useLongPress } from '../components/useLongPress.js';
-import { BOSS_TRACKS, REGIONS } from '../data/campaign.js';
+import { REGIONS } from '../data/campaign.js';
+import { mapOf } from '../data/tableMaps.js';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { MALETA_IDS } from '../data/maletas.js';
 import { describeRoom } from '../data/pvpRoom.js';
@@ -81,10 +82,11 @@ function inspectInfo(payload, run) {
   return { title: relic.name.toUpperCase(), rarity: relic.rarity, description: relic.description, extra };
 }
 
-/** Faixa da trilha: a da loja, a do beco e, no duelo, a do chefe. */
-function musicOf(view) {
+/** Faixa da trilha: a da loja, a do beco e, no duelo, a da sala escolhida (versão 2.13). */
+function musicOf(view, rodaTrack) {
+  if (rodaTrack) return rodaTrack;
   if (!view) return REGIONS[0].music;
-  if (view.duel) return BOSS_TRACKS.comendador;
+  if (view.duel) return mapOf(view.net?.room?.map).music;
   const run = view.run;
   if (run.phase === 'shop') return SHOP_MUSIC;
   if (run.phase === 'blackMarket') return MARKET_MUSIC;
@@ -155,7 +157,9 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
   }, [ctl]);
 
   // a trilha da tela
-  const track = musicOf(view);
+  // versão 2.13: a roda toca a trilha da sala que o anfitrião escolheu
+  const [rodaTrack, setRodaTrack] = useState(null);
+  const track = musicOf(view, roda ? rodaTrack : null);
   useEffect(() => {
     if (sound.ctx) sound.playTrack(track);
   }, [track]);
@@ -289,9 +293,9 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     return (
       <div className="app-shell h-full">
         {roda.practice ? (
-          <TablePreview key={roda.key} onExit={back} muted={muted} onToggleMute={onToggleMute} />
+          <TablePreview key={roda.key} onExit={back} muted={muted} onToggleMute={onToggleMute} onTrack={setRodaTrack} />
         ) : (
-          <TableOnline key={roda.key} role={roda.role} code={roda.code} me={{ id: me.id, name: cleanName(me.name) || 'Jogador' }} onExit={back} muted={muted} onToggleMute={onToggleMute} />
+          <TableOnline key={roda.key} role={roda.role} code={roda.code} me={{ id: me.id, name: cleanName(me.name) || 'Jogador' }} onExit={back} muted={muted} onToggleMute={onToggleMute} onTrack={setRodaTrack} />
         )}
         {veil}
       </div>
@@ -342,6 +346,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
       <PvpDuel
         key={net.duel.id}
         duel={net.duel}
+        map={net.room?.map}
         opp={opp}
         relicSlots={relicSlotsFor(run)}
         link={net.link}

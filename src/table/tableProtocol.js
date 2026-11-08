@@ -5,8 +5,10 @@
  * (tableEngine.js) e manda a cada cadeira o espelho dela (viewFor), nunca o estado inteiro.
  *
  *   T_HELLO   (convidado) { id, name, face, version }        quem chegou
- *   T_LOBBY   (anfitrião) { config, seats, you, started }    o saguão (cadeiras, rostos, PRONTO)
- *   T_SEAT    (convidado) { face?, ready? }                  troca de rosto / PRONTO
+ *   T_LOBBY   (anfitrião) { config, seats, you, started, swaps }  o saguão (cadeiras, rostos,
+ *                                                            PRONTO e os pedidos de troca)
+ *   T_SEAT    (convidado) { face?, ready?, place?, answer? } troca de rosto / PRONTO / mudar de
+ *                                                            cadeira / responder a um pedido de troca
  *   T_STATE   (anfitrião) { view, clock, ready, links }      a mesa vista da sua cadeira
  *   T_INTENT  (convidado) { action }                         PLAY · DRAW · PASS
  *   T_REJECT  (anfitrião) { reason }                         jogada recusada (a mesa mudou)
@@ -16,13 +18,16 @@
  *   T_FULL    (anfitrião) { reason }                         'full' · 'started' · 'version'
  *   T_END     (anfitrião) { reason }                         a mesa acabou (o anfitrião saiu)
  */
+import { DEFAULT_MAP, MAP_IDS } from '../data/tableMaps.js';
 import { ROOM_ALPHABET, ROOM_LENGTH } from '../pvp/protocol.js';
 
 /**
  * Sobe quando o formato muda: mesas de versões diferentes não sentam juntas.
  * 2 (versão 2.7): as duplas e a contagem por tentos (o espelho traz `team`, `tentos`, `target`).
+ * 3 (versão 2.13): trocar de lugar no saguão (`place`, `answer`, `swaps`): a cadeira é de quem
+ * senta (o id não muda), a posição na mesa é que muda.
  */
-export const TABLE_PROTOCOL = 2;
+export const TABLE_PROTOCOL = 3;
 
 export const TMSG = Object.freeze({
   HELLO: 'T_HELLO',
@@ -81,13 +86,15 @@ export const TABLE_OPTIONS = Object.freeze({
   teams: Object.freeze([false, true]),
   /** versão 2.7: a partida conta por corações (perde quem zera) ou por tentos (vence quem faz a meta) */
   scoring: Object.freeze(['coracoes', 'tentos']),
+  /** versão 2.13: a sala da mesa (data/tableMaps.js), com a trilha dela */
+  map: MAP_IDS,
 });
-export const DEFAULT_TABLE_CONFIG = Object.freeze({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes' });
+export const DEFAULT_TABLE_CONFIG = Object.freeze({ seats: 4, batida: 'todos', hearts: 5, turn: 30, teams: false, scoring: 'coracoes', map: DEFAULT_MAP });
 
 export function sanitizeTableConfig(config) {
   const pick = (key) => (TABLE_OPTIONS[key].includes(config?.[key]) ? config[key] : DEFAULT_TABLE_CONFIG[key]);
   const seats = pick('seats');
-  return { seats, batida: pick('batida'), hearts: pick('hearts'), turn: pick('turn'), teams: seats === 4 && pick('teams'), scoring: pick('scoring') };
+  return { seats, batida: pick('batida'), hearts: pick('hearts'), turn: pick('turn'), teams: seats === 4 && pick('teams'), scoring: pick('scoring'), map: pick('map') };
 }
 
 export const makeTableMessage = (type, payload = {}) => ({ type, v: TABLE_PROTOCOL, payload });
@@ -96,6 +103,8 @@ const isObj = (x) => Boolean(x) && typeof x === 'object' && !Array.isArray(x);
 const isStr = (x, max = 64) => typeof x === 'string' && x.length <= max;
 const optStr = (x, max) => x == null || isStr(x, max);
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
+const isPlace = (x) => x == null || (Number.isInteger(x) && x >= 0 && x < 4);
+const isAnswer = (x) => x == null || (isObj(x) && isStr(x.from, 4) && typeof x.yes === 'boolean');
 const isAction = (a) =>
   isObj(a) && (a.type === 'PLAY' ? isStr(a.tileId, 8) && (a.side === 'left' || a.side === 'right' || a.side === 'root') : a.type === 'DRAW' || a.type === 'PASS');
 
@@ -103,7 +112,7 @@ const isAction = (a) =>
 const CHECKS = {
   T_HELLO: (p) => isStr(p.id, 64) && isStr(p.name, 40) && optStr(p.face, 24) && Number.isInteger(p.version),
   T_LOBBY: (p) => isObj(p.config) && Array.isArray(p.seats) && optStr(p.you, 4),
-  T_SEAT: (p) => optStr(p.face, 24) && (p.ready == null || typeof p.ready === 'boolean'),
+  T_SEAT: (p) => optStr(p.face, 24) && (p.ready == null || typeof p.ready === 'boolean') && isPlace(p.place) && isAnswer(p.answer),
   T_STATE: (p) => isObj(p.view) && Array.isArray(p.view.seats) && isObj(p.view.board),
   T_INTENT: (p) => isAction(p.action),
   T_REJECT: (p) => optStr(p.reason, 60),

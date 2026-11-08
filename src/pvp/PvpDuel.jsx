@@ -5,6 +5,7 @@ import InfoBalloon from '../components/InfoBalloon.jsx';
 import PlayerRack from '../components/PlayerRack.jsx';
 import RivalBench from '../components/RivalBench.jsx';
 import TableBoard from '../components/TableBoard.jsx';
+import { mapTable } from '../data/tableMaps.js';
 import MaletaSprite from '../components/MaletaPixel.jsx';
 import { kickLamp } from '../components/lampKick.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from '../components/tileFlight.js';
@@ -62,7 +63,7 @@ function inspectInfo(payload, oppName) {
  * corações e talismãs de verdade, o cronômetro de 30 s da jogada e nenhuma IA.
  * `duel.view` é a mesa vista daqui (você é sempre a cadeira 'player').
  */
-export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onToggleMute, onIntent, onMenu, onNextRound, onFinish, frame = null }) {
+export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping, muted, onToggleMute, onIntent, onMenu, onNextRound, onFinish, frame = null }) {
   const view = duel.view;
   const [selectedId, setSelectedId] = useState(null);
   // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
@@ -85,7 +86,9 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
   // eventos já tratados (a mesa que já estava aberta ao montar não toca tudo de novo)
   const processed = useRef({ duel: duel.id, seq: Math.max(0, ...view.events.map((e) => e.seq)) });
 
-  const oppRival = useMemo(() => ({ id: 'tioZe', name: opp.name, art: null, felt: PVP_FELT, decor: [] }), [opp.name]);
+  // versão 2.13: a sala que quem abriu a mesa escolheu (o cenário, a luz, o feltro e a trilha)
+  const sala = useMemo(() => mapTable(map, PVP_FELT), [map]);
+  const oppRival = useMemo(() => ({ id: 'tioZe', name: opp.name, art: null, felt: sala.felt, decor: sala.decor, light: sala.lighting }), [opp.name, sala]);
   const avatar = useMemo(() => <MaletaSprite id={opp.maleta ?? 'classica'} className="block h-12 w-12" />, [opp.maleta]);
 
   useEffect(
@@ -365,7 +368,7 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
     <div
       ref={shellRef}
       className={`app-shell pvp-duel flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
-      style={{ '--felt-light': PVP_FELT.light, '--felt-mid': PVP_FELT.mid, '--felt-dark': PVP_FELT.dark }}
+      style={{ '--felt-light': sala.felt.light, '--felt-mid': sala.felt.mid, '--felt-dark': sala.felt.dark }}
     >
       <RivalBench
         landscape={landscape}
@@ -409,9 +412,11 @@ export default function PvpDuel({ duel, opp, relicSlots, link, ping, muted, onTo
           previewDouble={Boolean(selectedTile && !pickMode && selectedTile.a === selectedTile.b)}
           frameRef={tableRef}
           endMarks={endMarks}
-          felt={PVP_FELT}
-          decor={[]}
-          atmosphere="boteco"
+          felt={sala.felt}
+          decor={sala.decor}
+          atmosphere={sala.atmosphere}
+          lighting={sala.lighting}
+          room={sala.room}
           incoming={incoming}
           finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}
           finaleTone={rr?.winner === 'player' ? 'player' : 'enemy'}

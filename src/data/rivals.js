@@ -1071,6 +1071,9 @@ export const RIVALS = Object.freeze({
     prizeBonus: 66,
     felt: { light: '#1c1418', mid: '#110b0e', dark: '#060405' },
     decor: ['runes'],
+    // versão 2.13: sem lâmpada no teto: quatro velas, uma em cada canto da mesa, e a sala dele
+    light: 'candles',
+    room: 'landnoite',
     lines: {
       intro: ['Três almas penduradas no seu cinto. Eu senti o cheiro.', 'Sente. A noite é longa.'],
       play: ['Hm.', 'Escuro.', 'Mais uma vela apagada.'],

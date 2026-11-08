@@ -47,6 +47,24 @@ export function landCorners(w, h) {
   return { ...c, xAt };
 }
 
+/**
+ * Versão 2.13: as velas do Dono da Noite, na tela (px de CSS): o meio do canto do aro de cada
+ * canto do tampo (onde o castiçal crava: 7 px da pintura da mesa, de 1,5 px de CSS, da quina de
+ * fora), a escala da perspectiva ali e se é de lá (`far`). Ordem: lá à esquerda, lá à direita,
+ * perto à esquerda, perto à direita.
+ */
+export function landCandleSpots(w, h) {
+  const c = landCorners(w, h);
+  const tableW = c.nearR - c.nearL;
+  const depth = landSpanFor(c.yNear - c.yFar);
+  const inset = 7 * 1.5 + 0.75;
+  const at = (side, d) => {
+    const s = LAND.persp / (LAND.persp + d * LAND_SIN);
+    return { x: w / 2 + side * (tableW / 2 - inset) * s, y: c.yNear - d * LAND_COS * s, s };
+  };
+  return [at(-1, depth - inset), at(1, depth - inset), at(-1, inset), at(1, inset)].map((p, i) => ({ ...p, i, far: i < 2 }));
+}
+
 /** Lado (px) de cada metade das pedras de pé do rival: pequenas, do tamanho do busto. */
 export const seatUnit = (h) => Math.max(8, Math.min(16, Math.round((h || 390) * 0.028)));
 

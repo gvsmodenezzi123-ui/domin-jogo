@@ -158,6 +158,10 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
                   ))}
                 </optgroup>
               ))}
+              {/* versão 2.13: o chefe secreto também (para ver a mesa das velas) */}
+              <optgroup label="SEGREDO">
+                <option value="donoDaNoite">{RIVALS.donoDaNoite.name} — {RIVALS.donoDaNoite.title}</option>
+              </optgroup>
               <optgroup label="Secreto">
                 <option value="donoDaNoite">19. {RIVALS.donoDaNoite.name} — {RIVALS.donoDaNoite.title}</option>
               </optgroup>

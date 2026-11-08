@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import LampRig from '../components/LampRig.jsx';
 import { PRIVACY_URL } from '../data/privacy.js';
-import { DEFAULT_ROOM, RARITY_LABEL, ROOM_OPTIONS, describeRoom, sanitizeRoom } from '../data/pvpRoom.js';
+import { DEFAULT_ROOM, RARITY_LABEL, ROOM_MAPS, ROOM_OPTIONS, describeRoom, sanitizeRoom } from '../data/pvpRoom.js';
+import { mapOf, mapUnlocked } from '../data/tableMaps.js';
+import { loadCollection } from '../engine/progress.js';
 import NetBadge from './NetBadge.jsx';
 import { webrtcAvailable } from './peerLoader.js';
 import { ROOM_LENGTH, ROOM_PREFIX, formatRoomId, maskRoomInput } from './protocol.js';
@@ -44,33 +46,43 @@ function saveRoom(room) {
 
 /** Os itens da configuração da mesa: rótulo e como cada escolha aparece no botão. */
 const SETUP_ROWS = [
-  { key: 'coins', label: 'MOEDAS DE CADA UM', show: (v) => `$${v}` },
-  { key: 'hearts', label: 'CORAÇÕES NO DUELO', show: (v) => `${v}♥` },
-  { key: 'rarity', label: 'TALISMÃS NA LOJA', show: (v) => RARITY_LABEL[v] },
-  { key: 'turn', label: 'TEMPO POR JOGADA', show: (v) => `${v}S` },
+  { key: 'coins', label: 'MOEDAS DE CADA UM', options: ROOM_OPTIONS.coins, show: (v) => `$${v}` },
+  { key: 'hearts', label: 'CORAÇÕES NO DUELO', options: ROOM_OPTIONS.hearts, show: (v) => `${v}♥` },
+  { key: 'rarity', label: 'TALISMÃS NA LOJA', options: ROOM_OPTIONS.rarity, show: (v) => RARITY_LABEL[v] },
+  { key: 'turn', label: 'TEMPO POR JOGADA', options: ROOM_OPTIONS.turn, show: (v) => `${v}S` },
+  // versão 2.13: a sala do duelo, com a trilha dela (a do Dono da Noite só para quem já o viu)
+  { key: 'map', label: 'SALA E TRILHA', options: ROOM_MAPS, show: (v) => mapOf(v).label, song: (v) => mapOf(v).song },
 ];
+
+/** A sala que ainda não abriu para você (a secreta, antes de ver o Dono da Noite). */
+const lockedMap = (key, v, collection) => key === 'map' && !mapUnlocked(mapOf(v), collection);
 
 /**
  * Versão 1.3: a configuração da mesa, antes de abrir (só quem cria escolhe; vale para os dois).
  */
 function RoomSetup({ room, onChange, onOpen, onBack, nameOk }) {
+  const [collection] = useState(loadCollection);
   return (
     <div className="pvp-room-card pvp-setup" role="group" aria-label="Configurar a mesa">
       <span className="pvp-field-label">CONFIGURAR A MESA</span>
       {SETUP_ROWS.map((row) => (
         <div key={row.key} className="pvp-setup-row">
-          <span className="pvp-setup-label">{row.label}</span>
+          <span className="pvp-setup-label">
+            {row.label}
+            {row.song && <span className="ol-song"> ♪ {row.song(room[row.key])}</span>}
+          </span>
           <div className="pvp-seg" role="radiogroup" aria-label={row.label}>
-            {ROOM_OPTIONS[row.key].map((v) => (
+            {row.options.map((v) => (
               <button
                 key={v}
                 type="button"
                 role="radio"
                 aria-checked={room[row.key] === v}
+                disabled={lockedMap(row.key, v, collection)}
                 className={`pvp-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
                 onClick={() => onChange({ ...room, [row.key]: v })}
               >
-                {row.show(v)}
+                {lockedMap(row.key, v, collection) ? '???' : row.show(v)}
               </button>
             ))}
           </div>
@@ -125,6 +137,8 @@ export default function LobbyView({
   // CRIAR MESA CLANDESTINA abre a configuração; ABRIR A MESA cria de verdade
   const [setup, setSetup] = useState(false);
   const [room, setRoom] = useState(loadRoom);
+  // versão 2.13: a sala secreta (do Dono da Noite) só aparece para quem já sentou com ele
+  const [collection] = useState(loadCollection);
   const landscape = useLandscape();
   const busy = Boolean(snap);
   const hosting = snap?.role === 'host';
@@ -290,21 +304,25 @@ export default function LobbyView({
               <div className="ol-setup" role="group" aria-label="Configurar a mesa">
                 {SETUP_ROWS.map((row) => (
                   <div key={row.key} className="ol-setup-row">
-                    <span className="ol-label">{row.label}</span>
+                    <span className="ol-label">
+                      {row.label}
+                      {row.song && <span className="ol-song"> ♪ {row.song(room[row.key])}</span>}
+                    </span>
                     <div className="ol-seg" role="radiogroup" aria-label={row.label}>
-                      {ROOM_OPTIONS[row.key].map((v) => (
+                      {row.options.map((v) => (
                         <button
                           key={v}
                           type="button"
                           role="radio"
                           aria-checked={room[row.key] === v}
+                          disabled={lockedMap(row.key, v, collection)}
                           className={`ol-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
                           onClick={() => {
                             onTap?.();
                             setRoom({ ...room, [row.key]: v });
                           }}
                         >
-                          {row.show(v)}
+                          {lockedMap(row.key, v, collection) ? '???' : row.show(v)}
                         </button>
                       ))}
                     </div>
