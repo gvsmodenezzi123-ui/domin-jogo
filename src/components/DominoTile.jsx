@@ -124,7 +124,8 @@ function DominoTile({
   const width = horizontal ? unit * 2 : unit;
   const height = horizontal ? unit : unit * 2;
   const Tag = onClick ? 'button' : 'div';
-  const radius = Math.max(2, Math.round(unit * 0.12));
+  // versão 2.12.1: quina curta (2 px), de pixel art
+  const radius = Math.max(1, Math.round(unit * 0.06));
 
   const shared = {
     width,
@@ -166,31 +167,24 @@ function DominoTile({
     : silver
       ? {
           '--d': `${depth}px`,
+          // versão 2.12.1: o sombreado em faixas chapadas (pixel art), com o escovado do metal
           background: [
-            `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.55), transparent 44%)`,
-            'repeating-linear-gradient(100deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px)',
-            'linear-gradient(150deg, #f4f6f8 0%, #cfd4da 38%, #9aa1a8 72%, #7d848b 100%)',
+            'repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 3px)',
+            'linear-gradient(180deg, #fbfcfd 0 2px, #e6eaee 2px 28%, #cfd4da 28% 56%, #b4bbc2 56% 82%, #8e959c 82%)',
           ].join(','),
           boxShadow: tileMesh('silver', depth),
         }
       : onyx
         ? {
             '--d': `${depth}px`,
-            background: [
-              `radial-gradient(circle at ${100 - stain.x}% ${100 - stain.y}%, rgba(255,255,255,.07), transparent 46%)`,
-              'linear-gradient(150deg, #2b2724 0%, #1c1917 45%, #0f0d0c 100%)',
-            ].join(','),
+            background: 'linear-gradient(180deg, #4a423c 0 2px, #2e2a26 2px 30%, #24201d 30% 62%, #1a1715 62% 86%, #100e0c 86%)',
             boxShadow: tileMesh('onyx', depth),
           }
         : {
             '--d': `${depth}px`,
-            // versão 2.8: marfim limpo (o desenho de referência): a luz de cima, um tico de
-            // encardido em cada pedra e o pé da face um pouco mais escuro
-            background: [
-              `radial-gradient(circle at ${stain.x}% ${stain.y}%, rgba(150,110,50,${(stain.alpha * 0.55).toFixed(3)}), transparent 42%)`,
-              'linear-gradient(180deg, rgba(255,255,250,.35) 0%, transparent 18%)',
-              'linear-gradient(172deg, #f8eecd 0%, #efe1b3 48%, #e1cd95 100%)',
-            ].join(','),
+            // versão 2.8: marfim limpo (o desenho de referência). Versão 2.12.1: em faixas
+            // chapadas de pixel art (a quina de luz em cima, o pé da face mais escuro)
+            background: `linear-gradient(180deg, #fffbe6 0 2px, #f8eed0 2px 30%, #f1e3b8 30% 64%, #e8d6a2 64% ${88 - Math.round(stain.alpha * 20)}%, #dcc68e ${88 - Math.round(stain.alpha * 20)}%)`,
             boxShadow: tileMesh('bone', depth),
           };
   const rivet = Math.max(3, Math.round(unit * 0.16));
@@ -209,6 +203,8 @@ function DominoTile({
       } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
       style={{ ...shared, ...surface }}
     >
+      {/* versão 2.12.1: o pontilhado de pixel art na metade de baixo (a sombra em dither) */}
+      <span aria-hidden="true" className="tile-grain" />
       <Half value={values[0]} horizontal={horizontal} unit={unit} />
       <Half value={values[1]} horizontal={horizontal} unit={unit} />
       <span

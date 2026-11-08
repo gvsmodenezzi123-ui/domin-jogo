@@ -259,19 +259,20 @@
 
   /* Versão 2.8: o pip é um furo preto cavado (o desenho de referência): quase chapado, com a
      borda de baixo clara de quem foi entalhado na pedra */
+  /* Versão 2.12.1: pip de pixel art: o furo chapado, a quina de cima/esquerda preta e o lábio
+     claro embaixo (sem desfoque) */
   .domino-pip {
-    border-radius: 9999px;
-    background: radial-gradient(circle at 50% 62%, #2a1e12 0%, #0c0805 58%, #000 100%);
+    border-radius: 30%;
+    background: #160e07;
     box-shadow:
-      inset 0 1px 1px rgba(0, 0, 0, 0.95),
-      0 1px 0 rgba(255, 250, 230, 0.7);
+      inset 1px 1px 0 #000,
+      0 1px 0 rgba(255, 250, 230, 0.75);
   }
 
   /* o friso do meio: a linha preta entalhada de ponta a ponta, com a quina clara embaixo */
   .domino-divider {
     background: #1e140a;
     box-shadow: 0 1px 0 rgba(255, 250, 230, 0.6);
-    border-radius: 1px;
   }
 
   /* o pino de latão no meio do friso (o mesmo em toda pedra; o material só muda o metal) */
@@ -279,11 +280,11 @@
     left: 50%;
     top: 50%;
     translate: -50% -50%;
-    border-radius: 1px;
-    background: linear-gradient(135deg, #fff0a8 0%, #e2b442 40%, #8a5e14 100%);
+    background: #d8a83a;
     box-shadow:
       0 0 0 1px #2a1804,
-      inset -1px -1px 0 rgba(70, 40, 4, 0.55);
+      inset 1px 1px 0 #fff0a8,
+      inset -1px -1px 0 #8a5e14;
   }
 
   .domino-back {
@@ -350,8 +351,8 @@
   .tile-enh-ouro {
     --cast-a: 0.55;
     background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 24%),
-      linear-gradient(150deg, #fff1b8 0%, #f0cc78 18%, #c8962e 46%, #f6d98a 62%, #9c6a1c 100%);
+      linear-gradient(135deg, transparent 0 14%, rgba(255, 255, 255, 0.5) 14% 22%, transparent 22%),
+      linear-gradient(180deg, #fff4c4 0 2px, #f6d98a 2px 22%, #e6bc5c 22% 46%, #cf9e3a 46% 64%, #e8c46e 64% 72%, #b07c22 72% 88%, #8a5c14 88%);
     box-shadow:
       inset 1px 1px 0 rgba(255, 250, 220, 0.95),
       inset -1px -1px 0 rgba(90, 55, 10, 0.75),
@@ -363,10 +364,10 @@
   }
 
   .tile-enh-ouro .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #4a3008 0%, #1a0f02 60%, #000 100%);
+    background: #2a1a04;
     box-shadow:
-      inset 0 1px 1px rgba(0, 0, 0, 0.9),
-      0 1px 0 rgba(255, 240, 190, 0.75);
+      inset 1px 1px 0 #000,
+      0 1px 0 rgba(255, 240, 190, 0.8);
   }
 
   .tile-enh-ouro .domino-divider {
@@ -374,76 +375,87 @@
     box-shadow: 1px 1px 0 rgba(255, 240, 190, 0.6);
   }
 
-  /* Rubi (Sanguinária): carmesim brilhante, pulsando, com sombra vermelha */
+  /* Versão 2.12.1 — Rubi (Sanguinária): uma gema lapidada cor de sangue. As facetas são
+     planos chapados (luz em cima à esquerda, sombra embaixo à direita), os pips são poços de
+     granada escura com a quina acesa, e o brilho em volta é um halo em degraus de pixel. Na
+     selecionada (e nas pontas da mesa): o halo bate como coração (duas batidas e pausa), uma
+     faixa de luz atravessa as facetas e uma estrelinha de pixel pisca na quina. */
   .tile-enh-rubi {
     --cast-a: 0.55;
     background:
-      radial-gradient(circle at 32% 24%, rgba(255, 205, 210, 0.7), transparent 30%),
-      linear-gradient(150deg, #ff5a6a 0%, #d0142f 42%, #7a0718 78%, #4a030e 100%);
+      linear-gradient(135deg, rgba(255, 206, 214, 0.55) 0 14%, transparent 14%),
+      linear-gradient(135deg, transparent 0 47%, rgba(255, 160, 175, 0.38) 47% 51%, transparent 51%),
+      linear-gradient(315deg, rgba(40, 0, 8, 0.5) 0 22%, transparent 22%),
+      linear-gradient(45deg, rgba(255, 96, 118, 0.3) 0 25%, transparent 25%),
+      linear-gradient(225deg, rgba(255, 140, 155, 0.22) 0 18%, transparent 18%),
+      linear-gradient(180deg, #ff6c7c 0 2px, #e42a42 2px 24%, #c41732 24% 50%, #9a0c26 50% 76%, #6a0518 76%);
     box-shadow:
-      inset 1px 1px 0 rgba(255, 200, 205, 0.85),
-      inset -1px -1px 0 rgba(60, 0, 10, 0.8),
+      inset 1px 1px 0 rgba(255, 210, 215, 0.9),
+      inset -1px -1px 0 rgba(50, 0, 10, 0.85),
       inset 0 0 0 1px rgba(60, 0, 12, 0.5),
       0 var(--d) 0 #5a0412,
       0 calc(var(--d) + 1px) 0 #1f0106,
       var(--cast);
   }
 
-  /* pips em brasa incandescente */
+  /* pips: poço de granada, a quina de cima escura e a de baixo pegando a luz do rubi */
   .tile-enh-rubi .domino-pip {
-    background: radial-gradient(circle at 45% 40%, #fff3b0 0%, #ffb02e 30%, #ff4a1a 62%, #6a0410 100%);
+    background: #2a0410;
     box-shadow:
-      0 0 3px rgba(255, 140, 40, 0.95),
-      0 0 6px rgba(255, 60, 20, 0.6);
-    animation: ember-pip 1.6s ease-in-out infinite;
+      inset 1px 1px 0 #0e0004,
+      0 1px 0 rgba(255, 150, 160, 0.75);
   }
 
   .tile-enh-rubi .domino-divider {
-    background: rgba(50, 0, 8, 0.75);
-    box-shadow: 1px 1px 0 rgba(255, 170, 175, 0.45);
+    background: #3a0210;
+    box-shadow: 0 1px 0 rgba(255, 160, 170, 0.5);
   }
 
+  /* o halo em degraus (dois anéis chapados, sem desfoque) */
   .tile-enh-rubi .tile-enh-glow {
+    opacity: 0.55;
     box-shadow:
-      0 0 6px 2px rgba(255, 40, 70, 0.9),
-      0 6px 14px 3px rgba(200, 0, 40, 0.6);
-    animation: enh-pulse 1.4s ease-in-out infinite;
+      0 0 0 2px rgba(255, 40, 70, 0.5),
+      0 0 0 4px rgba(200, 10, 40, 0.22);
+    animation: rubyPulse 1.9s steps(1, end) infinite;
   }
 
-  /* brasas subindo por dentro da pedra */
-  .tile-enh-rubi .tile-enh-layer::before,
+  /* a faixa de luz atravessando as facetas */
   .tile-enh-rubi .tile-enh-layer::after {
     content: '';
     position: absolute;
-    inset: 0 0 -100% 0;
-    background-image:
-      radial-gradient(circle, rgba(255, 210, 120, 0.95) 0 1px, transparent 1.6px),
-      radial-gradient(circle, rgba(255, 120, 60, 0.85) 0 1px, transparent 1.6px);
-    background-size:
-      9px 13px,
-      13px 17px;
-    background-position:
-      2px 0,
-      7px 5px;
-    animation: ember-rise 2.4s linear infinite;
-    mix-blend-mode: screen;
+    top: -20%;
+    bottom: -20%;
+    left: -60%;
+    width: 30%;
+    background: linear-gradient(90deg, transparent 0 30%, rgba(255, 225, 230, 0.5) 30% 45%, rgba(255, 225, 230, 0.2) 45% 60%, transparent 60%);
+    transform: skewX(-20deg);
+    animation: rubySweep 3.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    will-change: transform;
   }
 
-  .tile-enh-rubi .tile-enh-layer::after {
-    background-size:
-      11px 19px,
-      7px 23px;
-    opacity: 0.7;
-    animation-duration: 3.4s;
-    animation-delay: -1.2s;
+  /* a estrelinha de pixel na quina de cima */
+  .tile-enh-rubi .tile-enh-layer::before {
+    content: '';
+    position: absolute;
+    left: 16%;
+    top: 7%;
+    width: 7px;
+    height: 7px;
+    background:
+      linear-gradient(#fff 0 0) 3px 0 / 1px 7px no-repeat,
+      linear-gradient(#fff 0 0) 0 3px / 7px 1px no-repeat,
+      linear-gradient(#ffd0d8 0 0) 2px 2px / 3px 3px no-repeat;
+    opacity: 0;
+    animation: rubyTwinkle 3.2s steps(1, end) infinite;
   }
 
   /* Cristal (Camaleão): ciano translúcido com brilho neon */
   .tile-enh-cristal {
     --cast-a: 0.45;
     background:
-      linear-gradient(125deg, rgba(255, 255, 255, 0.6) 0%, transparent 28%, rgba(255, 255, 255, 0.2) 50%, transparent 66%),
-      linear-gradient(160deg, rgba(160, 252, 255, 0.62) 0%, rgba(60, 205, 235, 0.42) 50%, rgba(20, 120, 170, 0.55) 100%);
+      linear-gradient(125deg, transparent 0 16%, rgba(255, 255, 255, 0.55) 16% 24%, transparent 24% 48%, rgba(255, 255, 255, 0.2) 48% 53%, transparent 53%),
+      linear-gradient(180deg, rgba(180, 252, 255, 0.66) 0 28%, rgba(96, 216, 242, 0.5) 28% 60%, rgba(44, 160, 205, 0.52) 60% 84%, rgba(20, 116, 165, 0.6) 84%);
     box-shadow:
       inset 0 0 0 1px rgba(170, 252, 255, 0.95),
       inset 0 0 7px rgba(190, 255, 255, 0.75),
@@ -453,8 +465,11 @@
   }
 
   .tile-enh-cristal .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #f2ffff 0%, #59dcff 55%, #0b6b8a 100%);
-    box-shadow: 0 0 4px rgba(120, 250, 255, 0.95);
+    background: #59dcff;
+    box-shadow:
+      inset 1px 1px 0 #f2ffff,
+      inset -1px -1px 0 #0b6b8a,
+      0 0 0 1px rgba(120, 250, 255, 0.55);
   }
 
   .tile-enh-cristal .domino-divider {
@@ -497,7 +512,7 @@
     background:
       var(--crack-texture),
       var(--felt-noise),
-      linear-gradient(155deg, #3d4247 0%, #2b2f34 48%, #181b1e 100%);
+      linear-gradient(180deg, #50565c 0 2px, #3d4247 2px 32%, #33383d 32% 64%, #26292d 64% 86%, #181b1e 86%);
     background-size:
       100% 100%,
       90px 90px,
@@ -512,10 +527,11 @@
   }
 
   .tile-enh-chumbo .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #eef1f3 0%, #a3aab1 70%, #6c737a 100%);
+    background: #a3aab1;
     box-shadow:
-      inset 0 -1px 1px rgba(0, 0, 0, 0.45),
-      0 0 0 1px rgba(0, 0, 0, 0.45);
+      inset 1px 1px 0 #eef1f3,
+      inset -1px -1px 0 #6c737a,
+      0 0 0 1px rgba(0, 0, 0, 0.5);
   }
 
   .tile-enh-chumbo .domino-divider {
@@ -534,9 +550,7 @@
   /* Fantasma: roxo translúcido, pulsação espectral leve */
   .tile-enh-fantasma {
     --cast-a: 0.35;
-    background:
-      radial-gradient(ellipse at 50% 28%, rgba(235, 220, 255, 0.55), transparent 60%),
-      linear-gradient(160deg, rgba(195, 155, 255, 0.6) 0%, rgba(125, 75, 215, 0.48) 55%, rgba(60, 22, 125, 0.58) 100%);
+    background: linear-gradient(180deg, rgba(232, 216, 255, 0.66) 0 22%, rgba(186, 148, 252, 0.56) 22% 50%, rgba(132, 82, 220, 0.52) 50% 78%, rgba(78, 32, 150, 0.6) 78%);
     box-shadow:
       inset 0 0 0 1px rgba(225, 205, 255, 0.65),
       inset 0 0 8px rgba(235, 215, 255, 0.5),
@@ -545,8 +559,11 @@
   }
 
   .tile-enh-fantasma .domino-pip {
-    background: radial-gradient(circle, #ffffff 0%, #dcc8ff 55%, #8a5cff 100%);
-    box-shadow: 0 0 4px rgba(225, 195, 255, 0.95);
+    background: #dcc8ff;
+    box-shadow:
+      inset 1px 1px 0 #ffffff,
+      inset -1px -1px 0 #8a5cff,
+      0 0 0 1px rgba(225, 195, 255, 0.45);
   }
 
   .tile-enh-fantasma .domino-divider {
@@ -574,9 +591,8 @@
   .tile-enh-ambar {
     --cast-a: 0.45;
     background:
-      radial-gradient(ellipse at 32% 20%, rgba(255, 240, 200, 0.6), transparent 34%),
-      radial-gradient(ellipse 80% 60% at 55% 60%, rgba(255, 150, 40, 0.35), transparent 70%),
-      linear-gradient(160deg, rgba(255, 190, 90, 0.95) 0%, rgba(226, 120, 28, 0.92) 48%, rgba(140, 58, 10, 0.95) 100%);
+      linear-gradient(135deg, transparent 0 14%, rgba(255, 244, 210, 0.5) 14% 22%, transparent 22%),
+      linear-gradient(180deg, rgba(255, 214, 140, 0.97) 0 22%, rgba(246, 162, 62, 0.95) 22% 50%, rgba(214, 112, 26, 0.95) 50% 78%, rgba(150, 60, 10, 0.96) 78%);
     box-shadow:
       inset 0 0 0 1px rgba(255, 214, 150, 0.85),
       inset 0 0 8px rgba(255, 200, 120, 0.5),
@@ -588,10 +604,10 @@
   }
 
   .tile-enh-ambar .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #8a4a12 0%, #4a2206 65%, #240e02 100%);
+    background: #4a2206;
     box-shadow:
-      inset 0 1px 1px rgba(0, 0, 0, 0.7),
-      0 1px 0 rgba(255, 220, 170, 0.55);
+      inset 1px 1px 0 #240e02,
+      0 1px 0 rgba(255, 220, 170, 0.6);
   }
 
   .tile-enh-ambar .domino-divider {
@@ -623,10 +639,9 @@
   .tile-enh-obsidiana {
     --cast-a: 0.6;
     background:
-      linear-gradient(122deg, transparent 16%, rgba(255, 255, 255, 0.34) 22%, rgba(255, 255, 255, 0.07) 29%, transparent 33%),
-      radial-gradient(ellipse 75% 38% at 80% 84%, rgba(130, 100, 190, 0.38), transparent 62%),
-      radial-gradient(ellipse 60% 32% at 20% 16%, rgba(190, 170, 235, 0.3), transparent 60%),
-      linear-gradient(160deg, #2c2436 0%, #110c17 46%, #050307 100%);
+      linear-gradient(122deg, transparent 0 17%, rgba(255, 255, 255, 0.32) 17% 23%, rgba(255, 255, 255, 0.08) 23% 30%, transparent 30%),
+      linear-gradient(300deg, rgba(130, 100, 190, 0.32) 0 16%, transparent 16%),
+      linear-gradient(180deg, #34293f 0 2px, #2a2234 2px 26%, #1c1626 26% 54%, #110c17 54% 80%, #060408 80%);
     box-shadow:
       inset 1px 1px 0 rgba(235, 225, 255, 0.6),
       inset -1px -1px 0 rgba(0, 0, 0, 0.85),
@@ -637,10 +652,11 @@
   }
 
   .tile-enh-obsidiana .domino-pip {
-    background: radial-gradient(circle at 40% 35%, #ffe1ad 0%, #ff8a32 36%, #8a2008 76%, #1c0503 100%);
+    background: #ff8a32;
     box-shadow:
-      0 0 2px rgba(255, 130, 50, 0.75),
-      inset 0 -1px 1px rgba(0, 0, 0, 0.55);
+      inset 1px 1px 0 #ffe1ad,
+      inset -1px -1px 0 #8a2008,
+      0 0 0 1px rgba(28, 5, 3, 0.8);
   }
 
   .tile-enh-obsidiana .domino-divider {
@@ -665,7 +681,7 @@
 
   /* versão 2.8: o pino do friso no metal de cada material (a peça é a mesma, muda o material) */
   .tile-enh-ouro .domino-rivet {
-    background: linear-gradient(135deg, #fff6c8 0%, #b07a1a 55%, #5c3a08 100%);
+    background: #b07a1a;
   }
   .tile-enh-chumbo .domino-rivet {
     background: linear-gradient(135deg, #f2f5f7 0%, #9aa2a9 50%, #4a5056 100%);
@@ -1153,7 +1169,15 @@
   /* versão 2.8: as pedras se acomodam devagar quando uma sai (sem teletransporte) */
   .hand-slot {
     transform-origin: 50% 100%;
-    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    /* 2.12.1: o leque é vivo: as pedras assentam com um tico de mola */
+    transition: transform 360ms cubic-bezier(0.34, 1.32, 0.64, 1);
+    touch-action: none;
+  }
+
+  /* a pedra arrastada segue o dedo (sem atraso) e balança com o embalo */
+  .hand-slot.is-dragging {
+    transition: transform 70ms linear;
+    cursor: grabbing;
   }
 
   .hand-float {
@@ -2129,15 +2153,6 @@
   }
 }
 
-@keyframes ember-rise {
-  from {
-    translate: 0 0;
-  }
-  to {
-    translate: 0 -50%;
-  }
-}
-
 @keyframes neon-buzz {
   0%,
   100% {
@@ -2192,16 +2207,6 @@
     opacity: 0;
     translate: 0 -4px;
     visibility: hidden;
-  }
-}
-
-@keyframes ember-pip {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.35);
   }
 }
 
@@ -2430,18 +2435,6 @@
   }
 }
 
-@keyframes rubyHeartbeat {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 12px rgba(185, 28, 28, 0.5));
-    transform: scale(1);
-  }
-  50% {
-    filter: drop-shadow(0 0 8px #f87171) drop-shadow(0 0 20px rgba(239, 68, 68, 0.85));
-    transform: scale(1.025);
-  }
-}
-
 @keyframes ghostEthereal {
   0%,
   100% {
@@ -2582,11 +2575,7 @@
   z-index: 20;
 }
 
-/* pedras de grife (DominoTile.jsx): rubi bate como coração, fantasma flutua */
-.tile-enh-rubi {
-  animation: rubyHeartbeat 1.6s ease-in-out infinite;
-}
-
+/* pedras de grife (DominoTile.jsx): o fantasma flutua (o rubi pulsa no halo, 2.12.1) */
 .tile-enh-fantasma {
   animation: ghostEthereal 3.4s ease-in-out infinite;
 }
@@ -2698,8 +2687,36 @@
    --lit:     quanta luz chega nela (longe da mancha ou com a lâmpada falhando = escuro)
    Sem a lâmpada (loja, livro) valem os padrões: luz de cima, sem escuro. */
 .domino-face {
-  --cast: calc(var(--lx, 0) * 12px) calc(var(--d, 2px) + 2px + var(--ly, 0) * 7px) calc(var(--d, 2px) + 4px)
-    rgba(0, 0, 0, calc(var(--cast-a, 0.55) * (0.55 + 0.6 * var(--lit, 0.75))));
+  /* versão 2.12.1: a sombra no pano é chapada (pixel art), sem desfoque */
+  --cast: calc(var(--lx, 0) * 8px) calc(var(--d, 2px) + 2px + var(--ly, 0) * 5px) 0
+    rgba(0, 0, 0, calc(var(--cast-a, 0.55) * (0.45 + 0.5 * var(--lit, 0.75))));
+}
+
+/* versão 2.12.1: o pontilhado de pixel art (xadrez de 2 px) na parte de baixo da face */
+.tile-grain {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58%;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: conic-gradient(rgba(70, 44, 10, 0.1) 25%, transparent 0 50%, rgba(70, 44, 10, 0.1) 0 75%, transparent 0) 0 0 / 4px 4px;
+}
+
+.tile-onyx .tile-grain,
+.tile-enh-obsidiana .tile-grain,
+.tile-enh-chumbo .tile-grain {
+  background: conic-gradient(rgba(0, 0, 0, 0.22) 25%, transparent 0 50%, rgba(0, 0, 0, 0.22) 0 75%, transparent 0) 0 0 / 4px 4px;
+}
+
+.tile-enh-cristal .tile-grain,
+.tile-enh-fantasma .tile-grain {
+  background: conic-gradient(rgba(20, 10, 60, 0.12) 25%, transparent 0 50%, rgba(20, 10, 60, 0.12) 0 75%, transparent 0) 0 0 / 4px 4px;
+}
+
+.tile-enh-rubi .tile-grain {
+  background: conic-gradient(rgba(40, 0, 8, 0.2) 25%, transparent 0 50%, rgba(40, 0, 8, 0.2) 0 75%, transparent 0) 0 0 / 4px 4px;
 }
 
 .tile-lamp-light {
@@ -2707,12 +2724,14 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
+  /* versão 2.12.1: a luz em anéis chapados (degraus de pixel art), não em degradê */
   background:
     radial-gradient(
       70% 50% at calc(50% - var(--lx, 0) * 75%) calc(4% - var(--ly, 0) * 30%),
-      rgba(255, 252, 238, calc(0.85 * var(--lit, 0.6))) 0%,
-      rgba(255, 240, 200, calc(0.35 * var(--lit, 0.6))) 45%,
-      transparent 100%
+      rgba(255, 252, 238, calc(0.7 * var(--lit, 0.6))) 0 30%,
+      rgba(255, 244, 214, calc(0.4 * var(--lit, 0.6))) 30% 56%,
+      rgba(255, 240, 200, calc(0.16 * var(--lit, 0.6))) 56% 80%,
+      transparent 80%
     ),
     radial-gradient(
       130% 95% at calc(50% + var(--lx, 0) * 70%) calc(100% + var(--ly, 0) * 25%),
@@ -2931,13 +2950,18 @@
   will-change: transform;
 }
 
+/* 2.12.1: além de boiar, cada pedra balança um tico (cada uma no seu tempo) */
 @keyframes floatY {
   from {
-    transform: translateY(0);
+    transform: translateY(0) rotate(-0.8deg);
   }
   to {
-    transform: translateY(-3px);
+    transform: translateY(-3px) rotate(0.8deg);
   }
+}
+
+.hand-float {
+  transform-origin: 50% 100%;
 }
 
 /* pontas abertas: o brilho fica parado e só a opacidade pulsa */
@@ -2987,47 +3011,53 @@
   opacity: 0.55;
 }
 
-/* material das pedras de grife quando anima: sem filter/background animados */
-.tile-enh-rubi {
-  animation: rubyBeat 1.6s ease-in-out infinite;
-}
-
-@keyframes rubyBeat {
+/* material das pedras de grife quando anima: sem filter/background animados.
+   Versão 2.12.1: o rubi saiu daqui (nem coração de escala, nem brasas subindo): o novo fica
+   em .tile-enh-rubi, com rubyPulse / rubySweep / rubyTwinkle. */
+@keyframes rubyPulse {
   0%,
+  44%,
   100% {
-    transform: scale(1);
+    opacity: 0.55;
   }
-  50% {
-    transform: scale(1.025);
-  }
-}
-
-.tile-enh-rubi .domino-pip {
-  animation-name: emberPipGlow;
-}
-
-@keyframes emberPipGlow {
-  0%,
-  100% {
-    opacity: 0.8;
-  }
-  50% {
+  8% {
     opacity: 1;
   }
-}
-
-.tile-enh-rubi .tile-enh-layer::before,
-.tile-enh-rubi .tile-enh-layer::after {
-  animation-name: emberRiseY;
-  will-change: transform;
-}
-
-@keyframes emberRiseY {
-  from {
-    transform: translateY(0);
+  16% {
+    opacity: 0.7;
   }
-  to {
-    transform: translateY(-50%);
+  24% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes rubySweep {
+  0%,
+  45% {
+    transform: translateX(0) skewX(-20deg);
+  }
+  85%,
+  100% {
+    transform: translateX(560%) skewX(-20deg);
+  }
+}
+
+@keyframes rubyTwinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  62% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  78% {
+    opacity: 0;
   }
 }
 

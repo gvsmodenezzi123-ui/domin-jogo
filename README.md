@@ -172,6 +172,24 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.12.1: o leque vivo, a mão arrumada no arraste, a Rubi nova e as pedras em pixel art
+
+- **Leque vivo**: as pedras da mão balançam de leve, cada uma no seu tempo; a pedra tocada (ou
+  com o mouse em cima) sobe um tico e as vizinhas abrem espaço; quando uma pedra sai ou chega,
+  as outras assentam com um tico de mola.
+- **Arrumar a mão**: arraste uma pedra para o lado e solte onde quiser. Ela segue o dedo e balança
+  com o embalo, e as outras deslizam para dar lugar. A ordem é só da tela (vale até o fim da
+  rodada; as compradas entram no fim): a regra, a semente e a IA não mudam. Um toque rápido
+  continua selecionando a pedra.
+- **Rubi Sanguinária**: saíram as bolinhas subindo. Agora é uma gema lapidada cor de sangue:
+  facetas chapadas, pips de granada escura com a quina acesa e um halo em degraus de pixel. A
+  selecionada bate como coração no halo, uma faixa de luz atravessa as facetas e uma estrelinha
+  pisca na quina.
+- **Pedras em pixel art** (normais, pretas, prateadas e todas as aprimoradas): a face em faixas
+  chapadas em vez de degradê, o pontilhado de 2 px na sombra de baixo, os pips e o pino do friso
+  chapados com a quina dura, a quina da pedra mais curta, a luz da lâmpada em anéis e a sombra no
+  pano sem desfoque.
+
 ### 2.12.0: a abertura nova deitada, o toque de entrada e o fim do clarão da bucha
 
 - **Abertura nova, "Efeito Dominó"**, feita do zero para a tela deitada: madrugada, o boteco

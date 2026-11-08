@@ -33,3 +33,38 @@ export function computeFan(count, width, { baseUnit = 44, minUnit = 32, angle = 
 export const DEAL_STEP_MS = 60;
 /** Versão 2.0: quanto a pedra leva do dorme até assentar no leque (o estalo sai aí). */
 export const DEAL_LAND_MS = 520;
+
+/**
+ * Versão 2.12.1: a mão na ordem em que o jogador arrumou (arrastando no leque). `pref` são os
+ * ids na ordem da tela; as pedras que chegaram depois (compradas) entram no fim, na ordem do
+ * jogo. Sem arrumação, é a ordem do jogo mesmo.
+ */
+export function arrangeHand(hand, pref) {
+  if (!pref?.length) return hand;
+  const byId = new Map(hand.map((t) => [t.id, t]));
+  const out = [];
+  for (const id of pref) {
+    const tile = byId.get(id);
+    if (tile) {
+      out.push(tile);
+      byId.delete(id);
+    }
+  }
+  for (const tile of hand) if (byId.has(tile.id)) out.push(tile);
+  return out;
+}
+
+/** Em que vaga do leque a pedra arrastada cai (a vaga mais perto do x dela). */
+export function dropIndex(xs, x) {
+  let best = 0;
+  for (let i = 1; i < xs.length; i += 1) if (Math.abs(xs[i] - x) < Math.abs(xs[best] - x)) best = i;
+  return best;
+}
+
+/** Quanto a pedra `i` se afasta da pedra em foco `focus` (as vizinhas abrem espaço). */
+export function spreadOffset(i, focus, unit, amount = 0.26) {
+  const d = i - focus;
+  if (d === 0) return 0;
+  const k = Math.max(0, 1 - (Math.abs(d) - 1) * 0.45);
+  return Math.sign(d) * Math.round(unit * amount * k);
+}

@@ -1,7 +1,7 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
-import { DEAL_STEP_MS, computeFan } from './handFan.js';
+import { DEAL_STEP_MS, arrangeHand, computeFan, dropIndex, spreadOffset } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import { TentoCap, TentosBar } from './TentoCap.jsx';
@@ -217,16 +217,57 @@ function usePresence(show, ms = 220) {
  * Uma pedra do leque. Só ela re-renderiza quando muda (selecionar outra pedra não
  * redesenha a mão inteira). A selecionada brilha e anima o material; as em repouso
  * ficam em gradiente estático.
+ * Versão 2.12.1: o leque é vivo. A pedra tocada (ou com o mouse em cima) sobe um tico e as
+ * vizinhas abrem espaço; arrastando para o lado, a pedra segue o dedo, balança com o embalo e
+ * as outras deslizam para dar lugar (é só a arrumação da mão: a regra não muda).
  */
-const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, base = FAN_BASE, selected, active, playable, discardMode, known, onSelectTile, press, rivalName }) {
+const HandSlot = memo(function HandSlot({
+  tile,
+  index,
+  x,
+  drop,
+  angle,
+  unit,
+  base = FAN_BASE,
+  selected,
+  active,
+  playable,
+  discardMode,
+  known,
+  onSelectTile,
+  press,
+  rivalName,
+  spread = 0,
+  lifted = false,
+  dragging = false,
+  tilt = 0,
+  onGrab,
+  onHover,
+}) {
   const power = selected && tile.a === tile.b && !discardMode;
   const handleClick = useCallback(() => onSelectTile(tile), [onSelectTile, tile]);
   const enterRef = useEnterFromDorme(x, angle);
+  const pressProps = tile.enhancement && press ? press({ kind: 'tile', tile }) : null;
+  const lift = dragging ? SELECT_LIFT + 6 : selected ? SELECT_LIFT : lifted ? 7 : 0;
+  const px = x + spread;
+  let transform = `translateX(${px}px) translateY(${drop}px) rotate(${angle}deg)`;
+  if (dragging) transform = `translateX(${px}px) translateY(-${lift}px) rotate(${tilt.toFixed(2)}deg) scale(1.1)`;
+  else if (selected) transform = `translateX(${px}px) translateY(-${lift}px) rotate(${(angle * 0.3).toFixed(2)}deg) scale(1.08)`;
+  else if (lifted) transform = `translateX(${px}px) translateY(${drop - lift}px) rotate(${(angle * 0.6).toFixed(2)}deg) scale(1.03)`;
   return (
     <div
       data-hand-tile={tile.id}
-      {...(tile.enhancement && press ? press({ kind: 'tile', tile }) : {})}
-      className="hand-slot absolute"
+      {...(pressProps ?? {})}
+      onPointerDown={(event) => {
+        pressProps?.onPointerDown?.(event);
+        onGrab?.(event, tile.id, pressProps?.onPointerCancel);
+      }}
+      onPointerEnter={(event) => event.pointerType === 'mouse' && onHover?.(tile.id)}
+      onPointerLeave={(event) => {
+        pressProps?.onPointerLeave?.(event);
+        if (event.pointerType === 'mouse') onHover?.(null);
+      }}
+      className={`hand-slot absolute ${dragging ? 'is-dragging' : ''}`}
       style={{
         // versão 2.8: a vaga anda por transform (não por `left`): quando uma pedra sai, as outras
         // deslizam até fechar o vão, na GPU
@@ -234,14 +275,11 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, bas
         bottom: base,
         width: unit,
         height: unit * 2,
-        zIndex: selected ? 30 : index + 1,
-        // selecionada: sai do leque (sobe 16 px, cresce 8% e inclina um tico)
-        transform: selected
-          ? `translateX(${x}px) translateY(-${SELECT_LIFT}px) rotate(${(angle * 0.3).toFixed(2)}deg) scale(1.08)`
-          : `translateX(${x}px) translateY(${drop}px) rotate(${angle}deg)`,
+        zIndex: dragging ? 40 : selected ? 30 : lifted ? 25 : index + 1,
+        transform,
       }}
     >
-      <div className={`hand-float ${selected ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
+      <div className={`hand-float ${selected || dragging ? 'hand-float-lifted' : ''}`} style={{ animationDelay: `${-index * 0.45}s` }}>
         {/* Versão 2.0: a pedra sai do dorme, virada, voa até o leque e desvira ao assentar (na
             mão nova, uma a cada 60 ms; na compra, só a comprada). Ver useEnterFromDorme. */}
         <div ref={enterRef} className="hand-enter">
@@ -258,9 +296,9 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, bas
               enhancement={tile.enhancement}
               // reflexo e material animado só na pedra selecionada (Patch 0.5.4: GPU do iPhone)
               shimmer={selected}
-              still={!selected}
+              still={!selected && !dragging}
               playable={playable && !selected}
-              dimmed={active && !playable}
+              dimmed={active && !playable && !dragging}
               disabled={!active || !playable}
               // desabilitada não recebe toque: o toque longo cai no slot de baixo
               className={!active || !playable ? 'pointer-events-none' : ''}
@@ -278,36 +316,164 @@ const HandSlot = memo(function HandSlot({ tile, index, x, drop, angle, unit, bas
   );
 });
 
+/** Quanto o dedo precisa andar para o lado (px) até virar arrasto (antes disso é toque). */
+const DRAG_START = 9;
+
+/**
+ * Versão 2.12.1: arrastar uma pedra do leque para o lado muda a ordem dela na mão. A ordem fica
+ * só na tela (por rodada); o motor do jogo não muda. Devolve o que o leque precisa desenhar.
+ */
+function useHandArrange({ hand, dealKey, areaRef }) {
+  const [arranged, setArranged] = useState({ key: dealKey, ids: [] });
+  const [drag, setDrag] = useState(null);
+  const [touched, setTouched] = useState(null);
+  const grab = useRef(null);
+  const pref = arranged.key === dealKey ? arranged.ids : null;
+  const ordered = useMemo(() => arrangeHand(hand, pref), [hand, pref]);
+  // a ordem que a tela está mostrando durante o arrasto (o leque calcula; soltar grava)
+  const dragOrder = useRef(null);
+  useEffect(() => {
+    if (drag?.order) dragOrder.current = drag.order;
+  }, [drag]);
+
+  const end = useCallback(() => {
+    const g = grab.current;
+    grab.current = null;
+    setTouched(null);
+    if (!g) return;
+    window.removeEventListener('pointermove', g.move);
+    window.removeEventListener('pointerup', g.up);
+    window.removeEventListener('pointercancel', g.cancel);
+    clearTimeout(g.settle);
+  }, []);
+
+  useEffect(() => end, [end]);
+
+  const onGrab = useCallback(
+    (event, id, cancelPress) => {
+      if (event.button > 0 || grab.current) return;
+      const area = areaRef.current;
+      const scale = area && area.offsetWidth ? area.getBoundingClientRect().width / area.offsetWidth || 1 : 1;
+      const g = { id, x0: event.clientX, y0: event.clientY, pointerId: event.pointerId, started: false, cancelPress, el: event.currentTarget, scale, lastX: event.clientX, lastT: performance.now(), tilt: 0 };
+      grab.current = g;
+      setTouched(id);
+      g.move = (e) => {
+        if (e.pointerId !== g.pointerId) return;
+        const dx = (e.clientX - g.x0) / g.scale;
+        const dy = (e.clientY - g.y0) / g.scale;
+        if (!g.started) {
+          if (Math.abs(dx) < DRAG_START || Math.abs(dx) < Math.abs(dy) * 1.1) return;
+          g.started = true;
+          g.cancelPress?.();
+          try {
+            g.el.setPointerCapture?.(g.pointerId);
+          } catch {
+            /* sem captura: o arrasto segue pelo window */
+          }
+          navigator.vibrate?.(6);
+        }
+        const now = performance.now();
+        const vx = (e.clientX - g.lastX) / Math.max(8, now - g.lastT);
+        g.lastX = e.clientX;
+        g.lastT = now;
+        // a pedra balança para o lado contrário do embalo (como pendurada pelo dedo)
+        g.tilt = Math.max(-16, Math.min(16, g.tilt * 0.5 + vx * 9));
+        setDrag({ id: g.id, dx, tilt: g.tilt });
+        clearTimeout(g.settle);
+        g.settle = setTimeout(() => {
+          if (!grab.current?.started) return;
+          g.tilt = 0;
+          setDrag((d) => (d ? { ...d, tilt: 0 } : d));
+        }, 90);
+      };
+      g.up = (e) => {
+        if (e.pointerId !== g.pointerId) return;
+        if (g.started) {
+          // o clique que vem depois de soltar não seleciona a pedra
+          const swallow = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+          };
+          window.addEventListener('click', swallow, { capture: true, once: true });
+          setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 320);
+          if (dragOrder.current) setArranged({ key: dealKey, ids: dragOrder.current });
+          dragOrder.current = null;
+          setDrag(null);
+        }
+        end();
+      };
+      g.cancel = (e) => {
+        if (e.pointerId !== g.pointerId) return;
+        dragOrder.current = null;
+        setDrag(null);
+        end();
+      };
+      window.addEventListener('pointermove', g.move);
+      window.addEventListener('pointerup', g.up);
+      window.addEventListener('pointercancel', g.cancel);
+    },
+    [areaRef, dealKey, end],
+  );
+
+  return { ordered, drag, setDrag, touched, onGrab };
+}
+
 /** O leque da sua mão. Não depende de moedas, dica nem botões: muda só com a mão e a seleção. */
 const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '', fan = null }) {
   const [areaRef, width] = useWidth();
+  const [hover, setHover] = useState(null);
+  // o leque é desenhado na ordem em que você arrumou a mão (arrastando)
+  const count = hand.length + (leaving && !hand.some((t) => t.id === leaving.id) ? 1 : 0);
+  // (2.9: deitada, as pedras seguem a altura da tela e o arco é mais raso)
+  const { unit, spots } = computeFan(count, width, fan ? { baseUnit: fan.unit, minUnit: Math.round(fan.unit * 0.74), angle: 16, drop: 14 } : undefined);
+  const { ordered, drag, setDrag, touched, onGrab } = useHandArrange({ hand, dealKey, areaRef });
   // Versão 2.6: a pedra jogada continua na vaga dela (levantada, como estava) até a cópia do
   // voo levantar dali; só então o leque fecha o buraco. Antes ela sumia, piscava na mesa e
   // "voltava" para a mão no 1º quadro do voo.
-  const [order, setOrder] = useState(() => hand.map((t) => t.id));
-  let shown = hand;
+  const [order, setOrder] = useState(() => ordered.map((t) => t.id));
+  let shown = ordered;
   if (leaving && !hand.some((t) => t.id === leaving.id)) {
     const at = order.indexOf(leaving.id);
-    shown = [...hand];
-    shown.splice(at >= 0 ? Math.min(at, hand.length) : hand.length, 0, leaving);
+    shown = [...ordered];
+    shown.splice(at >= 0 ? Math.min(at, ordered.length) : ordered.length, 0, leaving);
   }
   const shownKey = shown.map((t) => t.id).join(',');
   if (order.join(',') !== shownKey) setOrder(shown.map((t) => t.id));
-  // (2.9: deitada, as pedras seguem a altura da tela e o arco é mais raso)
-  const { unit, spots } = computeFan(shown.length, width, fan ? { baseUnit: fan.unit, minUnit: Math.round(fan.unit * 0.74), angle: 16, drop: 14 } : undefined);
+
+  // arrastando: a pedra segue o dedo e a ordem da tela já mostra onde ela vai cair
+  let display = shown;
+  let dragX = 0;
+  if (drag) {
+    const from = shown.findIndex((t) => t.id === drag.id);
+    if (from >= 0 && spots[from]) {
+      const xs = spots.map((sp) => sp.x);
+      dragX = Math.max(xs[0] - unit * 0.4, Math.min(xs[xs.length - 1] + unit * 0.4, spots[from].x + drag.dx));
+      const target = dropIndex(xs, dragX);
+      display = shown.filter((t) => t.id !== drag.id);
+      display.splice(target, 0, shown[from]);
+      const ids = display.map((t) => t.id);
+      if (drag.order?.join(',') !== ids.join(',')) setDrag({ ...drag, order: ids });
+    }
+  }
+  const focusId = drag ? drag.id : (touched ?? hover);
+  const focus = display.findIndex((t) => t.id === focusId);
+  const selectedAt = display.findIndex((t) => t.id === selectedId);
   const active = isTurn || discardMode;
   return (
-    <div ref={areaRef} data-tut="hand" className="relative mx-1" style={{ height: fan ? fan.height : FAN_HEIGHT }}>
-      {shown.map((tile, i) => {
+    <div ref={areaRef} data-tut="hand" className="hand-fan relative mx-1" style={{ height: fan ? fan.height : FAN_HEIGHT }}>
+      {display.map((tile, i) => {
         const spot = spots[i];
         if (!spot) return null;
         const going = leaving?.id === tile.id;
+        const dragging = drag?.id === tile.id;
+        // as vizinhas abrem espaço para a pedra tocada/arrastada (e um tico para a selecionada)
+        const spread = dragging ? 0 : focus >= 0 ? spreadOffset(i, focus, unit, 0.26) : selectedAt >= 0 ? spreadOffset(i, selectedAt, unit, 0.14) : 0;
         return (
           <HandSlot
             key={`${dealKey}:${tile.id}`}
             tile={tile}
             index={i}
-            x={spot.x}
+            x={dragging ? dragX : spot.x}
             drop={spot.drop}
             angle={spot.angle}
             unit={unit}
@@ -320,6 +486,12 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
             onSelectTile={onSelectTile}
             press={press}
             rivalName={rivalName}
+            spread={spread}
+            lifted={!dragging && tile.id === focusId && tile.id !== selectedId}
+            dragging={dragging}
+            tilt={dragging ? drag.tilt : 0}
+            onGrab={going ? undefined : onGrab}
+            onHover={setHover}
           />
         );
       })}
