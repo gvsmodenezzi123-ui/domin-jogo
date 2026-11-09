@@ -172,6 +172,40 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.14.0: os armarinhos da mesa, a roda mais limpa e os avisos da partida refeitos
+
+- **Os armarinhos**: na mesa deitada, as peças soltas pela tela (a coluna de nichos, os
+  corações, o MENU redondo, o dinheiro no alto, o dorme na parede, a soma das pontas e as tábuas
+  de COMPRAR e PASSAR) viraram dois móveis de madeira, um em cada canto de baixo, pintados em
+  pixel art na mesma madeira dos nichos da hotbar (cornija, colunas de pinho, painel de imbuia e
+  pregos de latão, com a luz da lâmpada batendo do lado da mesa):
+  - **o seu, à esquerda (baixinho)**: os talismãs nos nichos (até 3 por fileira, sempre em 2
+    fileiras: 4 vagas ficam 2 + 2, 5 ficam 3 + 2 e 6 ficam 3 + 3, sem o móvel crescer), a vida
+    num sulco forrado de veludo vermelho e, embaixo, o nicho do MENU ao lado da plaquinha de latão
+    com o dinheiro;
+  - **o da mesa, à direita**: a lousa com a pilha do dorme, quantas sobram, as 3 compras a giz e,
+    depois do risco, a soma das PONTAS; embaixo, as teclas-nicho de COMPRAR (com o preço) e PASSAR,
+    e a que é o caminho acende por dentro, com o friso de latão pulsando. Tocar na lousa compra.
+  - Nas telas mais quadradas (16:9) os dois encolhem um pouco para não cobrir os cantos da mesa.
+  - No duelo on-line, igual ao solo (com os nichos dos talismãs); na mesa de 2 a 4, sem talismãs e
+    sem dinheiro, o da esquerda fica só com a vida e uma tecla MENU larga.
+- **A mesa de 2 a 4**: quem senta na roda ficou um tiquinho menor, as pedras na mão de cada um
+  são as mesmas do rival da campanha (de pé na beirada, com as costas de ébano e o losango de
+  latão) e a parede não muda mais de cor a cada vez (sai a luz na cor da cadeira atrás de quem
+  joga; a plaquinha de quem joga acende com luz de lâmpada). A jogada de cada um (JOGOU 5|5,
+  PASSOU) virou uma etiqueta ao lado da plaquinha, sem cobrir o rosto.
+- **Os avisos da partida, num jeito só** (solo, duelo e roda):
+  - o grito (NAS DUAS PONTAS!, BATEU!, TRANCOU!, SEM JOGADA!) virou um letreiro em pixel numa
+    faixa escura que some nas pontas, com fio de latão (ou vermelho, quando é contra você) em cima
+    e embaixo; carimba e assenta, sem girar, sem balão de quadrinho, sem caixa listrada e sem
+    escurecer a tela;
+  - os talismãs, as regras e o dano saem numa etiqueta escura com o fio na cor de quem ganhou ou
+    perdeu, e o nome do talismã acende ("CANECA: +1♥");
+  - o múltiplo de 5 é o número dourado da soma com o +$ embaixo, numa peça só (sem o rótulo
+    amarelo à parte), igual no solo, no duelo e na roda;
+  - a pedra que o rival jogou aparece só em texto, sem caixa;
+  - o balão de fala é papel liso de borda fina, sem as pautas.
+
 ### 2.13.1: a aura das pedras aprimoradas no lugar certo
 
 - A aura do shader nas pedras aprimoradas agora segue a pedra de verdade: cada uma marca os seus

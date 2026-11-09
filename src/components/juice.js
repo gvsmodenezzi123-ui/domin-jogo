@@ -75,15 +75,21 @@ export function lateralShake(el, px = 3, ms = 200) {
 /**
  * O número dourado gigante da pontuação. Versão 2.8 (com peso): surge grande (1,45) no alto,
  * cai com gravidade até a pedra, bate achatando, quica duas vezes cada vez mais baixo e, no
- * 1º impacto, solta faíscas; depois sobe sumindo.
+ * 1º impacto, solta faíscas; depois sobe sumindo. Versão 2.14: `sub` (o +$) vem embaixo dele.
  */
-export function goldPop(at, text, { tone = 'player' } = {}) {
+export function goldPop(at, text, { tone = 'player', sub = null } = {}) {
   const root = juiceLayer();
   if (!root || !at || off()) return;
   const el = document.createElement('span');
   el.className = 'juice-gold';
   el.dataset.tone = tone;
   el.textContent = text;
+  // versão 2.14: o que a pontuação rendeu (+$3) vem junto, embaixo do número (sem rótulo à parte)
+  if (sub) {
+    const small = document.createElement('small');
+    small.textContent = sub;
+    el.appendChild(small);
+  }
   el.style.left = `${at.x}px`;
   el.style.top = `${at.y}px`;
   root.appendChild(el);

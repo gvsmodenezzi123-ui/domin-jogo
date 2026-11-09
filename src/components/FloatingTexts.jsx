@@ -22,12 +22,14 @@ function Float({ item, onDone }) {
     if (!el.animate || prefersReducedMotion()) return () => clearTimeout(timer);
     const dx = item.to ? item.to.x - item.from.x : 0;
     const dy = item.to ? item.to.y - item.from.y : item.kind === 'label' ? -26 : -38;
+    // versão 2.14: o letreiro carimba (cresce e assenta) sem girar e sobe um tico ao sumir
     const callout = [
-      { transform: 'translate(-50%, -50%) scale(0.3) rotate(-8deg)', opacity: 0 },
-      { transform: 'translate(-50%, -50%) scale(1.18) rotate(3deg)', opacity: 1, offset: 0.12 },
-      { transform: 'translate(-50%, -50%) scale(1) rotate(-2deg)', opacity: 1, offset: 0.24 },
-      { transform: 'translate(-50%, -50%) scale(1) rotate(-2deg)', opacity: 1, offset: 0.8 },
-      { transform: 'translate(-50%, calc(-50% - 14px)) scale(0.94) rotate(-2deg)', opacity: 0 },
+      { transform: 'translate(-50%, -50%) scale(1.45)', opacity: 0 },
+      { transform: 'translate(-50%, -50%) scale(0.95)', opacity: 1, offset: 0.12 },
+      { transform: 'translate(-50%, -50%) scale(1.03)', opacity: 1, offset: 0.2 },
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.28 },
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.8 },
+      { transform: 'translate(-50%, calc(-50% - 8px)) scale(1)', opacity: 0 },
     ];
     const frames = item.kind === 'callout'
       ? callout
@@ -53,8 +55,24 @@ function Float({ item, onDone }) {
   }, []);
   return (
     <span ref={ref} className={`float-text float-${item.kind ?? 'text'}`} data-tone={item.tone} style={{ left: item.from.x, top: item.from.y }}>
-      {item.text}
+      <TagText item={item} />
     </span>
+  );
+}
+
+/**
+ * Versão 2.14: na etiqueta (talismã, regra, dano), o nome antes dos dois-pontos acende na cor de
+ * quem ganhou ou perdeu e o resto fica creme ("CANECA: +1♥").
+ */
+function TagText({ item }) {
+  const text = String(item.text ?? '');
+  const cut = item.kind ? -1 : text.indexOf(': ');
+  if (cut <= 0) return text;
+  return (
+    <>
+      <span className="float-name">{text.slice(0, cut + 1)}</span>
+      {text.slice(cut + 1)}
+    </>
   );
 }
 

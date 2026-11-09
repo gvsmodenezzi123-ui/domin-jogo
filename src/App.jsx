@@ -807,15 +807,16 @@ export default function App() {
       if (ev.type === 'bonus5') {
         const info = bonusFloat(ev);
         // Versão 2.0: o número dourado gigante pula na pedra (1,5 → 1,0) e a chuva de moedas voa
-        // da pedra até o contador, que pulsa quando a última chega; o +$ sobe da pedra
+        // da pedra até o contador, que pulsa quando a última chega (o +$ vem embaixo do número)
         pushFloat(() => {
           const from = centerOf(`[data-tile-id="${tileId}"]`);
           if (!from) return null;
           const targetEl = document.querySelector(`[data-coin-target="${info.to}"]`);
           const to = centerOf(targetEl);
-          goldPop({ x: from.x, y: from.y - 26 }, `${ev.sum}`, { tone: info.tone });
-          if (to) coinRain(from, to, { count: 4 + Math.min(8, ev.amount * 2), targetEl, onArrive: (i) => sound.playCoinTing(i) });
-          return { from: { x: from.x, y: from.y + 18 }, text: info.text, tone: info.tone, kind: 'label' };
+          goldPop({ x: from.x, y: from.y - 26 }, `${ev.sum}`, { tone: info.tone, sub: `+$${ev.amount}` });
+          if (to) coinRain(from, to, { count: 3 + Math.min(6, ev.amount * 2), targetEl, onArrive: (i) => sound.playCoinTing(i) });
+          // (versão 2.14: sem o rótulo à parte; o +$ vem no próprio número)
+          return null;
         }, offset + FX_DELAY.bonus5);
       }
       if (ev.type === 'proc') {

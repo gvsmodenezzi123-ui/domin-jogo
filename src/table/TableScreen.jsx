@@ -4,6 +4,7 @@ import PlayerRack from '../components/PlayerRack.jsx';
 import TableBoard from '../components/TableBoard.jsx';
 import { mapTable } from '../data/tableMaps.js';
 import { kickLamp } from '../components/lampKick.js';
+import { goldPop } from '../components/juice.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from '../components/tileFlight.js';
 import { centerOf, useFloats } from '../components/useFloats.js';
 import { useStableHandler, useStableValue } from '../components/useStable.js';
@@ -117,7 +118,6 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
   );
 
   const names = useMemo(() => Object.fromEntries(view.seats.map((s) => [s.id, s.id === me ? 'você' : s.name])), [view.seats, me]);
-  const coinTarget = useCallback((id) => (id === me ? 'player' : id), [me]);
   // versão 2.7: a linha embaixo do grito lê a mesa de agora (duplas, tentos), sem refazer o efeito
   const lineFor = useStableHandler((r) => roundLine(r, view, me, view.rules?.teams ? partnerOf(view, me) : null));
 
@@ -197,10 +197,14 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
       if (ev.type === 'pass') later(() => sound.playPass(), 40);
       if (ev.type === 'five') {
         const at = tileId;
+        // versão 2.14: o mesmo placar do solo e do duelo: a soma das pontas em dourado, o +$ embaixo
+        const ends = getOpenEnds(view.board);
+        const sum = ends ? ends.left + ends.right : null;
         pushFloat(() => {
           const from = centerOf(`[data-tile-id="${at}"]`);
-          const to = centerOf(`[data-coin-target="${coinTarget(ev.by)}"]`);
-          return from && { from, to, text: `+$${ev.amount}`, tone: ev.by === me ? 'player' : 'enemy', kind: 'coin' };
+          if (!from) return null;
+          goldPop({ x: from.x, y: from.y - 26 }, sum === null ? `+$${ev.amount}` : `${sum}`, { tone: ev.by === me ? 'player' : 'enemy', sub: sum === null ? null : `+$${ev.amount}` });
+          return null;
         }, offset + 140);
         later(() => sound.playCoinJingle(), offset + 140);
       }
@@ -245,7 +249,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
       if (ev.type === 'eliminated') later(() => sound.playHeartBreak?.(), offset + 1000);
       if (ev.type === 'matchOver') later(() => ((ev.winners ?? [ev.winner]).includes(me) ? sound.playVictory() : sound.playDefeat()), offset + 1500);
     }
-  }, [view.seq, view.events, me, stagePlay, pushFloat, clearFloats, later, coinTarget, lineFor]);
+  }, [view.seq, view.events, view.board, me, stagePlay, pushFloat, clearFloats, later, lineFor]);
 
   const playing = view.phase === 'playing';
   // a pedra que acabou de chegar pela rede e ainda vai voar conta como "voando" desde já
@@ -380,7 +384,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
       className={`app-shell table-v24 flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': sala.felt.light, '--felt-mid': sala.felt.mid, '--felt-dark': sala.felt.dark, '--me': colorOf(view, me) }}
     >
-      <SeatBench landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} />
+      <SeatBench landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} roundKey={`mesa:${view.round}`} />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
         {/* o relógio grande só na sua vez; a dos outros está no anel e nos segundos da cadeira */}

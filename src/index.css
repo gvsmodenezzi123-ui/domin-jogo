@@ -18331,54 +18331,24 @@
   height: 50%;
 }
 
-/* a vez dele: a luz esquenta atrás do busto, na cor da cadeira */
-.chair-clip::before {
-  content: '';
-  position: absolute;
-  left: var(--x);
-  bottom: 0;
-  width: calc(var(--bust-w) * 1.8);
-  height: var(--bust-h);
-  translate: -50% 0;
-  background: radial-gradient(ellipse 50% 60% at 50% 72%, color-mix(in srgb, var(--seat) 40%, transparent), transparent 72%);
-  opacity: 0;
-  transition: opacity 300ms ease;
-}
+/* (versão 2.14: sem a luz na cor da cadeira atrás de quem joga: a parede não muda mais de cor a
+   cada vez; quem joga se vê pelos segundos e pela plaquinha acesa) */
 
-.chair.is-turn .chair-clip::before {
-  opacity: 1;
-}
-
-/* as pedras dele de pé na beirada, viradas (o verso de madeira) */
+/* as pedras dele de pé na beirada, com as costas das pedras do rival da campanha */
 .chair-rack {
   position: absolute;
   left: var(--x);
   top: var(--rail-y);
-  translate: -50% calc(-100% + 5px);
+  translate: -50% calc(-100% + 6px);
   z-index: 2;
 }
 
-.chair-rack .seat-fan {
-  gap: 2px;
+.chair-fan {
+  display: block;
 }
 
-.chair-rack .seat-fan-tile {
-  border-radius: 2px;
-  background:
-    radial-gradient(circle at 50% 50%, #b8863a 0 1.5px, transparent 2px),
-    linear-gradient(180deg, rgba(255, 220, 170, 0.18) 0 1px, transparent 1px),
-    linear-gradient(180deg, #3e2e20, #1c130b);
-  box-shadow:
-    0 0 0 1px #0b0705,
-    0 2px 0 #120b06,
-    0 3px 0 1px rgba(0, 0, 0, 0.5);
-}
-
-.chair-rack .seat-fan-n {
-  align-self: center;
-  margin-left: 4px;
-  font-size: 7px;
-  text-shadow: 0 1px 0 #000;
+.chair-rack .rival-slot {
+  transition: right 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* em cima da cabeça: só a plaquinha do nome e a vida (sem caixa); a fala da jogada embaixo */
@@ -18401,9 +18371,9 @@
   transition: filter 300ms ease;
 }
 
-/* a vez dele: a plaquinha acende na cor da cadeira, com os segundos ao lado */
+/* a vez dele: a plaquinha acende (luz de lâmpada, a mesma para todos), com os segundos ao lado */
 .chair-plate.is-on .seat-plate {
-  filter: drop-shadow(0 0 4px var(--seat)) drop-shadow(0 0 2px var(--seat));
+  filter: drop-shadow(0 0 3px rgba(255, 214, 140, 0.85)) drop-shadow(0 0 1px rgba(255, 230, 180, 0.9));
 }
 
 .chair-secs.chair-secs {
@@ -23521,4 +23491,422 @@
 
 .ends-sum.is-cab.is-blank {
   opacity: 0.3;
+}
+
+/* =====================================================================================
+   Versão 2.14: os avisos da partida, num jeito só (solo, duelo e roda)
+   - o grito (NAS DUAS PONTAS!, BATEU!, TRANCOU!, SEM JOGADA): letreiro em pixel com contorno,
+     numa faixa escura que some nas pontas, com fio de latão em cima e embaixo; sem balão de
+     quadrinho, sem caixa listrada, sem escurecer a tela, sem girar
+   - a etiqueta (talismãs, dano, regras): chapinha escura com o fio na cor de quem ganhou ou
+     perdeu; o nome do talismã acende, o resto fica creme
+   - os pontos do múltiplo de 5: o número dourado com o +$ embaixo, numa peça só (sem rótulo)
+   - a fala: papel liso, borda fina, sem as pautas
+   ===================================================================================== */
+:root {
+  --grito-ink: #120806;
+  --grito-ol:
+    2px 0 0 var(--grito-ink), -2px 0 0 var(--grito-ink), 0 2px 0 var(--grito-ink), 0 -2px 0 var(--grito-ink), 2px 2px 0 var(--grito-ink),
+    -2px 2px 0 var(--grito-ink), 2px -2px 0 var(--grito-ink), -2px -2px 0 var(--grito-ink), 0 4px 0 var(--grito-ink);
+  --tag-ol: 1px 0 0 #0b0503, -1px 0 0 #0b0503, 0 1px 0 #0b0503, 0 -1px 0 #0b0503, 0 2px 0 #0b0503;
+  --fio-latao: rgba(255, 222, 140, 0.95);
+  --fio-sangue: rgba(255, 128, 104, 0.9);
+}
+
+/* ---------- o grito ---------- */
+.finale-callout,
+.table-callout,
+.float-text.float-callout,
+.no-moves-banner {
+  --fio: var(--fio-latao);
+  isolation: isolate;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  text-shadow: var(--grito-ol);
+}
+
+.finale-callout::before,
+.table-callout::before,
+.float-text.float-callout::before,
+.no-moves-banner::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -10px -58px -11px;
+  background:
+    linear-gradient(90deg, transparent, var(--fio) 26%, var(--fio) 74%, transparent) top / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, var(--fio) 26%, var(--fio) 74%, transparent) bottom / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(10, 6, 4, 0.84) 22%, rgba(10, 6, 4, 0.84) 78%, transparent);
+  pointer-events: none;
+}
+
+.finale-callout.is-enemy,
+.float-text.float-callout[data-tone='enemy'],
+.no-moves-banner {
+  --fio: var(--fio-sangue);
+}
+
+/* o grito do fim da rodada: carimba (cresce e assenta), sem girar */
+.finale-callout {
+  gap: 7px;
+  font-size: 22px;
+  animation: gritoStamp 1300ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+.finale-callout.is-player {
+  color: #ffd86e;
+}
+
+.finale-callout.is-enemy {
+  color: #ff705a;
+}
+
+.finale-sub {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #f4ecd2;
+  text-shadow: var(--tag-ol);
+}
+
+.finale-callout > .finale-sub:first-of-type {
+  margin-top: 1px;
+}
+
+@keyframes gritoStamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  20% {
+    transform: scale(1.03);
+  }
+  28%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* o grito da roda: o mesmo letreiro, na cor de quem bateu, e some sozinho */
+.table-callout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 18px;
+  animation: gritoRoda 1800ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes gritoRoda {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  18%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.reduce-motion .finale-callout,
+.reduce-motion .table-callout {
+  animation: none;
+  opacity: 1;
+}
+
+/* NAS DUAS PONTAS!: o letreiro menor, no alto do feltro */
+.float-text.float-callout {
+  z-index: 2;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: #ffd86e;
+}
+
+.float-text.float-callout[data-tone='enemy'] {
+  color: #ff705a;
+  background: none;
+  box-shadow: none;
+  text-shadow: var(--grito-ol);
+}
+
+.float-text.float-callout::after {
+  content: none;
+}
+
+.float-text.float-callout::before {
+  inset: -8px -46px -9px;
+}
+
+/* SEM JOGADA: o letreiro vermelho no meio do feltro, sem escurecer a tela */
+.no-moves-banner {
+  position: relative;
+  width: max-content;
+  gap: 7px;
+  color: #ff705a;
+}
+
+.no-moves-banner .no-moves-line-top {
+  font-size: 17px;
+  line-height: 1;
+  color: #ff705a;
+}
+
+.no-moves-banner .no-moves-line-bottom {
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: #f4ecd2;
+  text-shadow: var(--tag-ol);
+}
+
+.no-moves-banner {
+  animation: semJogada 1500ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes semJogada {
+  0% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  20%,
+  82% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.reduce-motion .no-moves-banner {
+  animation: semJogadaFade 1500ms linear both;
+}
+
+@keyframes semJogadaFade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- a etiqueta (talismãs, dano, regras) ---------- */
+.float-text {
+  --tag-edge: rgba(214, 164, 72, 0.9);
+  --tag-ink: #ffd86e;
+  padding: 5px 7px 5px;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #f4ecd2;
+  background: linear-gradient(180deg, rgba(34, 22, 13, 0.95), rgba(14, 9, 5, 0.95));
+  border: 0;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px var(--tag-edge),
+    0 0 0 2px rgba(0, 0, 0, 0.75),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 0 #000;
+}
+
+.float-text[data-tone='enemy'] {
+  --tag-edge: rgba(226, 92, 70, 0.9);
+  --tag-ink: #ff8a72;
+  color: #f4ecd2;
+  background: linear-gradient(180deg, rgba(40, 14, 10, 0.95), rgba(16, 6, 4, 0.95));
+}
+
+.float-text[data-tone='info'] {
+  --tag-edge: rgba(110, 196, 210, 0.9);
+  --tag-ink: #a6eef8;
+  color: #f4ecd2;
+  background: linear-gradient(180deg, rgba(12, 26, 30, 0.95), rgba(5, 12, 14, 0.95));
+}
+
+.float-text .float-name {
+  color: var(--tag-ink);
+}
+
+/* a pedra que o rival jogou (4|3) e o dinheiro que voa: só o texto, sem caixa */
+.float-text.float-label,
+.float-text.float-coin {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 9px;
+  text-shadow: var(--tag-ol);
+}
+
+.float-text.float-label {
+  color: #f4ecd2;
+}
+
+.float-text.float-label[data-tone='enemy'] {
+  color: #ffb4a2;
+  background: none;
+}
+
+.float-text.float-coin {
+  color: #ffe08a;
+}
+
+.float-text.float-coin[data-tone='enemy'] {
+  color: #ff9a84;
+}
+
+/* ---------- os pontos do múltiplo de 5: o número e o +$ numa peça só ---------- */
+.juice-gold {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 28px;
+  color: #ffd84a;
+  -webkit-text-stroke: 0;
+  text-shadow:
+    2px 0 0 #3a1e04,
+    -2px 0 0 #3a1e04,
+    0 2px 0 #3a1e04,
+    0 -2px 0 #3a1e04,
+    2px 2px 0 #3a1e04,
+    -2px 2px 0 #3a1e04,
+    2px -2px 0 #3a1e04,
+    -2px -2px 0 #3a1e04,
+    0 4px 0 #1c0e02,
+    0 0 16px rgba(255, 190, 60, 0.45);
+}
+
+.juice-gold[data-tone='enemy'] {
+  color: #ff8a6a;
+  text-shadow:
+    2px 0 0 #3a0a04,
+    -2px 0 0 #3a0a04,
+    0 2px 0 #3a0a04,
+    0 -2px 0 #3a0a04,
+    2px 2px 0 #3a0a04,
+    -2px 2px 0 #3a0a04,
+    2px -2px 0 #3a0a04,
+    -2px -2px 0 #3a0a04,
+    0 4px 0 #1c0402,
+    0 0 16px rgba(255, 90, 60, 0.4);
+}
+
+.juice-gold small {
+  font-size: 9px;
+  color: #fff0b8;
+  text-shadow: var(--tag-ol);
+}
+
+.juice-gold[data-tone='enemy'] small {
+  color: #ffd6c8;
+}
+
+/* ---------- a fala: papel liso, borda fina, sem pautas ---------- */
+.speech-balloon.speech-balloon {
+  --speech-bg: #f2e7ca;
+  --speech-solid: #f0e4c4;
+  --speech-edge: #3a2610;
+  padding: 6px 10px 7px;
+  line-height: 1.02;
+  color: #2a1a0a;
+  border-width: 2px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f6ecd2, #ebddb8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 0 rgba(140, 104, 56, 0.22),
+    0 3px 0 rgba(0, 0, 0, 0.45),
+    0 8px 14px rgba(0, 0, 0, 0.35);
+}
+
+.speech-balloon.speech-rival.speech-seat {
+  font-size: 17px;
+}
+
+/* ---------- a roda: a jogada de cada um numa etiqueta ao lado da plaquinha ---------- */
+.chair-bubble.chair-bubble {
+  top: 0;
+  right: calc(100% + 7px);
+  left: auto;
+  bottom: auto;
+  translate: 0 0;
+  padding: 4px 6px 4px;
+  font-size: 6px;
+  color: #f4ecd2;
+  background: linear-gradient(180deg, rgba(34, 22, 13, 0.95), rgba(14, 9, 5, 0.95));
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(214, 164, 72, 0.75),
+    0 0 0 2px rgba(0, 0, 0, 0.75),
+    0 3px 6px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 0 #000;
+}
+
+.chair-bubble.chair-bubble::before {
+  content: none;
+}
+
+/* quem senta à esquerda (perto do relógio da vez): a etiqueta vai para a direita da plaquinha e os
+   segundos para a esquerda */
+.chair.is-west .chair-bubble.chair-bubble {
+  right: auto;
+  left: calc(100% + 7px);
+}
+
+.chair.is-west .chair-secs.chair-secs {
+  left: auto;
+  right: calc(100% + 5px);
+}
+
+.chair-bubble.chair-bubble.is-strong {
+  color: #ffd86e;
+  background: linear-gradient(180deg, rgba(34, 22, 13, 0.95), rgba(14, 9, 5, 0.95));
+  box-shadow:
+    0 0 0 1px rgba(255, 216, 110, 0.95),
+    0 0 0 2px rgba(0, 0, 0, 0.75),
+    0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- o aviso do perigo (ÚLTIMA PEDRA!): a mesma etiqueta, em vermelho ---------- */
+.danger-banner,
+.app-shell.is-landscape .danger-banner.is-seal {
+  background: linear-gradient(180deg, rgba(40, 10, 8, 0.95), rgba(16, 4, 3, 0.95));
+  box-shadow:
+    0 0 0 1px rgba(255, 96, 72, 0.9),
+    0 0 0 2px rgba(0, 0, 0, 0.8),
+    0 0 14px rgba(220, 40, 30, 0.45),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.danger-banner b {
+  color: #ff705a;
+  text-shadow: var(--tag-ol);
+}
+
+.app-shell.is-landscape .danger-banner.is-seal {
+  border-radius: 3px;
 }

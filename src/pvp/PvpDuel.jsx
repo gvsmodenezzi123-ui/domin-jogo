@@ -8,6 +8,7 @@ import TableBoard from '../components/TableBoard.jsx';
 import { mapTable } from '../data/tableMaps.js';
 import MaletaSprite from '../components/MaletaPixel.jsx';
 import { kickLamp } from '../components/lampKick.js';
+import { coinRain, goldPop } from '../components/juice.js';
 import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from '../components/tileFlight.js';
 import { centerOf, useFloats } from '../components/useFloats.js';
 import { useLongPress } from '../components/useLongPress.js';
@@ -171,10 +172,15 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
       const tileId = lastTileId;
       if (ev.type === 'bonus5') {
         const info = bonusFloat(ev);
+        // versão 2.14: o mesmo placar do solo: o número dourado com o +$ embaixo e as moedas voando
         pushFloat(() => {
           const from = centerOf(`[data-tile-id="${tileId}"]`);
-          const to = centerOf(`[data-coin-target="${info.to}"]`);
-          return from && { from, to, text: info.text, tone: info.tone, kind: 'coin' };
+          if (!from) return null;
+          const targetEl = document.querySelector(`[data-coin-target="${info.to}"]`);
+          const to = centerOf(targetEl);
+          goldPop({ x: from.x, y: from.y - 26 }, `${ev.sum}`, { tone: info.tone, sub: `+$${ev.amount}` });
+          if (to) coinRain(from, to, { count: 3 + Math.min(6, ev.amount * 2), targetEl });
+          return null;
         }, offset + 140);
       }
       if (ev.type === 'proc') {
