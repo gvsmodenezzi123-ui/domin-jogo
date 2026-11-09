@@ -172,6 +172,13 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.14.1: a roda não pinta mais a tela na cor de quem joga
+
+- Na mesa de 2 a 4 deitada, a tela inteira ganhava um véu e uma borda na cor da cadeira da vez
+  (a cadeira ocupa a cena toda, e o destaque feito para o cartão em pé pintava tudo). Saiu: a
+  cena fica igual em todas as vezes; quem joga se vê pela plaquinha acesa com luz de lâmpada e
+  pelos segundos, numa chapinha de latão igual para todos.
+
 ### 2.14.0: os armarinhos da mesa, a roda mais limpa e os avisos da partida refeitos
 
 - **Os armarinhos**: na mesa deitada, as peças soltas pela tela (a coluna de nichos, os

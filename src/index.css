@@ -18334,6 +18334,24 @@
 /* (versão 2.14: sem a luz na cor da cadeira atrás de quem joga: a parede não muda mais de cor a
    cada vez; quem joga se vê pelos segundos e pela plaquinha acesa) */
 
+/* versão 2.14.1: a cadeira deitada ocupa a cena inteira (inset 0); o véu e o aro na cor da
+   cadeira da vez (.seat::before/::after, feitos para o cartão em pé) pintavam a TELA toda e a
+   borda dela na cor de quem jogava. Na mesa deitada eles não existem. */
+.chair::before,
+.chair::after {
+  content: none;
+}
+
+.chair.is-turn .seat-plate.rival-nameplate {
+  filter: drop-shadow(0 0 3px rgba(255, 214, 140, 0.85)) drop-shadow(0 0 1px rgba(255, 230, 180, 0.9));
+}
+
+/* os segundos de quem joga: a mesma chapinha de latão para todos (sem a cor da cadeira) */
+.chair-secs.chair-secs:not(.is-urgent) {
+  color: #1a0f06;
+  background: #e8c066;
+}
+
 /* as pedras dele de pé na beirada, com as costas das pedras do rival da campanha */
 .chair-rack {
   position: absolute;
