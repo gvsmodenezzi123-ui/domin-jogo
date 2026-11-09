@@ -430,6 +430,7 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
           onDraw={handleDraw}
           drawsUsed={isPlayerTurn ? view.drawsThisTurn : 0}
           drawCost={canDraw ? (draw?.cost?.type === 'free' ? 'GRÁTIS' : draw?.cost?.type === 'coins' ? `$${draw.cost.amount}` : draw?.cost ? `${draw.cost.amount}♥` : null) : null}
+          dormeInHud={landscape}
         />
 
       <PlayerRack
@@ -453,6 +454,9 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
         maxHearts={view.maxHearts.player}
         coins={view.coins.player}
         endsSum={ends ? ends.left + ends.right : null}
+        boneyardCount={view.boneyard.length}
+        drawUrge={canDraw && !pickMode && playableIds.size === 0}
+        drawsUsed={isPlayerTurn ? view.drawsThisTurn : 0}
         hint={duel.awaiting ? 'Mandando a jogada...' : hint}
         discardMode={pickMode}
         pickLabels={caniveteMode ? CANIVETE_LABELS : grampoMode ? GRAMPO_LABELS : undefined}

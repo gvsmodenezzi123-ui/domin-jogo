@@ -19,6 +19,8 @@ import { ShopSprite } from './ShopArt.jsx';
  *          sobre o feltro, só o desenho e a sombra de cada um. Vaga vazia não aparece.
  * niche:   versão 2.11, na mesa deitada: cada vaga é o nicho de madeira da bolsa da loja (a
  *          vazia também aparece), com o talismã dentro. `vertical` empilha numa coluna.
+ * painted: versão 2.14, no armarinho da mesa deitada: os nichos já estão pintados no móvel
+ *          (o mesmo desenho), então aqui só vão os talismãs, na mesma grade.
  */
 function Hotbar({
   relics,
@@ -34,6 +36,7 @@ function Hotbar({
   owner = 'player',
   bare = false,
   niche = false,
+  painted = false,
   className = '',
 }) {
   const pixel = size >= 38 ? 3 : size >= 28 ? 2 : 1.5;
@@ -47,7 +50,7 @@ function Hotbar({
           if (!relic) {
             return (
               <span key={`empty-${i}`} aria-hidden="true" className="relic-niche is-empty" style={{ width: size, height: h }}>
-                <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />
+                {!painted && <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />}
               </span>
             );
           }
@@ -65,7 +68,7 @@ function Hotbar({
               onClick={onTap ? () => onTap(relic.id) : undefined}
               {...(press ? press({ kind: 'relic', id: relic.id, owner }) : {})}
             >
-              <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />
+              {!painted && <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />}
               <span key={flashes[relic.id] ?? 0} className={`relic-niche-icon ${flashes[relic.id] ? 'animate-relic-proc' : ''}`}>
                 <RelicIcon relic={relic} size={Math.round(size * 0.66)} />
               </span>

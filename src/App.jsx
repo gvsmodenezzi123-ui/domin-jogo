@@ -1646,6 +1646,7 @@ export default function App() {
         onDraw={handleDraw}
         drawsUsed={isPlayerTurn ? state.drawsThisTurn : 0}
         drawCost={canDraw ? drawCostLabel(draw) : null}
+        dormeInHud={landscape}
       />
       {/* versão 2.6: a hora da batida: o grito do golpe na mesa enquanto a última pedra brilha */}
       {finaleHold && state.roundResult && (
@@ -1715,6 +1716,10 @@ export default function App() {
         leaving={incoming?.by === 'player' && incoming.stage === 'flight' ? leavingTileOf(state.board, incoming.tileId) : null}
         dealKey={`${state.run.match}:${state.round}`}
         rivalName={rival.name}
+        boneyardCount={state.boneyard.length}
+        boneyardHide={state.tableMod === 'fumacaDensa' ? 'smoke' : boneyardHidden ? 'cova' : null}
+        drawUrge={canDraw && !pickMode && playableIds.size === 0}
+        drawsUsed={isPlayerTurn ? state.drawsThisTurn : 0}
       />
       </div>
 

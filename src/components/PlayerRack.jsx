@@ -7,8 +7,9 @@ import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import { TentoCap, TentosBar } from './TentoCap.jsx';
 import { CoinGlyph, EyeGlyph, MenuGlyph } from './UiGlyphs.jsx';
 import { prefersReducedMotion } from './motion.js';
-import PixelCanvas from './PixelCanvas.jsx';
-import { paintPlank, paintRoundButton } from './art/hudPixels.js';
+import { BoneyardPile, EndsSum } from './BoneyardPile.jsx';
+import { CabKey, CabSlot, Cabinet } from './LandCabinets.jsx';
+import { CAB_W, cabBox, leftCabinet, rightCabinet } from './landCabinets.js';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 150;
@@ -26,8 +27,6 @@ const landFan = (h) => {
   const unit = Math.max(28, Math.min(46, Math.round((h || 390) * 0.088)));
   return { unit, height: unit * 2 + 30, base: 8 };
 };
-/** A tábua dos botões táticos (pixels da pintura, ampliada 3×). */
-const PLANK_PX = { w: 42, h: 15 };
 
 function useWidth() {
   const ref = useRef(null);
@@ -119,14 +118,15 @@ const RelicRow = memo(function RelicRow({ relics, relicSlots, relicFlashes, spen
         <Hotbar
           relics={relics}
           slots={relicSlots}
-          cols={1}
-          size={36}
+          cols={2}
+          size={28}
           flashes={relicFlashes}
           spent={spentRelics}
           ready={ready}
           press={press}
           onTap={abilities ? tapRelic : undefined}
           niche
+          painted
           label="Seus talismãs"
         />
       ) : (
@@ -595,30 +595,32 @@ const ActionChips = memo(function ActionChips({
   );
 });
 
-/** A tábua pintada atrás do texto de um botão tático. */
-function PlankArt({ tone }) {
-  return (
-    <PixelCanvas
-      cacheKey={`tabua-${tone}`}
-      paint={() => paintPlank(PLANK_PX.w, PLANK_PX.h, { tone, seed: tone === 'sangue' ? 23 : 11 })}
-      w={PLANK_PX.w}
-      h={PLANK_PX.h}
-      scale={1}
-      className="tac-plank-px"
-      style={{ width: '100%', height: '100%' }}
-    />
-  );
-}
-
 /**
- * Versão 2.9: os botões táticos da mesa deitada (o desenho de referência), com o MENU redondo
- * no canto de baixo à esquerda. Versão 2.11: as tábuas moram no canto de baixo à direita: a
- * COMPRAR (com o preço da compra) sempre no lugar, acendendo quando é o caminho, e a PASSAR VEZ
- * só aparece em cima dela depois da compra (as mesmas regras das fichas da mesa em pé). No modo
- * de escolha (Giz, Canivete, Grampo) viram PULAR (embaixo) e a confirmação (em cima); os poderes
- * prontos dos talismãs sobem em fichas em cima das tábuas.
+ * Versão 2.14: o HUD da mesa deitada em dois armarinhos de madeira, um em cada canto de baixo,
+ * no lugar das peças soltas (a coluna de nichos, os corações, o MENU redondo, o dinheiro no alto,
+ * o dorme na parede e as tábuas de COMPRAR/PASSAR):
+ *   o da esquerda, o seu: o dinheiro na plaquinha de latão, os talismãs nos nichos (os mesmos da
+ *     hotbar), a vida no sulco de veludo e a tecla-nicho do MENU
+ *   o da direita, a mesa: a lousa com a pilha do dorme e a soma das pontas, e as teclas-nicho de
+ *     COMPRAR (com o preço) e PASSAR; a que é o caminho acende por dentro. No modo de escolha
+ *     (Giz, Canivete, Grampo) viram PULAR e a confirmação, como antes.
+ * As regras de quando cada tecla acende são as mesmas das tábuas de antes.
  */
-const TacticalPlanks = memo(function TacticalPlanks({
+const LandConsoles = memo(function LandConsoles({
+  sceneW = 0,
+  relicRow,
+  slots,
+  life,
+  lifeMax,
+  coins,
+  onOpenMenu,
+  devUnlocked = false,
+  onOpenDev,
+  boneyardCount = null,
+  boneyardHide = null,
+  drawUrge = false,
+  drawsUsed = 0,
+  endsSum = null,
   discardMode,
   pickLabels = DISCARD_LABELS,
   hasSelection,
@@ -639,33 +641,46 @@ const TacticalPlanks = memo(function TacticalPlanks({
   onCanivete,
   canGrampo = false,
   onGrampo,
-  onOpenMenu,
-  devUnlocked = false,
-  onOpenDev,
 }) {
+  const left = useMemo(() => leftCabinet({ slots: relicRow ? slots : 0, hearts: lifeMax, coins: coins !== null }), [relicRow, slots, lifeMax, coins]);
+  const right = useMemo(() => rightCabinet({ dorme: boneyardCount !== null }), [boneyardCount]);
   const drawOn = discardMode || (showDraw && canDraw);
   const passOn = discardMode ? hasSelection : showPass && canPass;
-  // versão 2.11: as duas tábuas no canto de baixo à direita: COMPRAR sempre no lugar e o PASSAR
-  // VEZ só aparece (em cima dela) depois da compra, quando passar é o caminho
-  const passShown = discardMode || passOn;
+  const L = left.boxes;
+  const R = right.boxes;
+  // nas telas mais quadradas (16:9) a mesa chega mais perto da beirada: os armarinhos encolhem um
+  // pouco para não cobrir o canto da mesa (a frente da mesa começa em 15% da largura)
+  const scale = sceneW ? Math.max(0.8, Math.min(1, Math.round(((sceneW * 0.15 - 10) / CAB_W) * 20) / 20)) : 1;
   return (
     <>
-      <div className="tac-corner tac-left">
+      <Cabinet plan={left} side="left" seed={7} scale={scale}>
+        {L.coins && (
+          <CabSlot box={L.coins} className="cab-coins">
+            <CoinCount value={coins} target="player" className="cab-coins-count" size={12} />
+          </CabSlot>
+        )}
+        {relicRow && L.niches && (
+          <CabSlot box={L.niches} className="cab-relics">
+            {relicRow}
+          </CabSlot>
+        )}
+        <CabSlot box={L.hearts} className={`cab-life ${L.hearts.rows > 1 ? 'is-two' : ''}`}>
+          {life}
+        </CabSlot>
         {onOpenMenu && (
-          <button type="button" onClick={onOpenMenu} className="tac-menu" aria-label="Menu">
-            <PixelCanvas cacheKey="botao-menu" paint={() => paintRoundButton(15)} w={15} h={16} scale={1} className="tac-menu-px" style={{ width: '100%', height: '100%' }} />
+          <CabKey box={L.menu} title={L.menu.w < 60 ? null : 'MENU'} onClick={onOpenMenu} label="Menu" tone="menu">
             <MenuGlyph size={16} />
-          </button>
+          </CabKey>
         )}
         {devUnlocked && (
-          <button type="button" className="dev-chip tac-dev" onClick={onOpenDev} aria-label="Abrir painel de testes">
+          <button type="button" className="dev-chip cab-dev" onClick={onOpenDev} aria-label="Abrir painel de testes">
             DEV
           </button>
         )}
-      </div>
-      <div className="tac-corner tac-right">
+      </Cabinet>
+      <Cabinet plan={right} side="right" seed={9} scale={scale}>
         {(canUndo || canCanivete || canGrampo) && !discardMode && (
-          <div className="tac-abilities">
+          <div className="tac-abilities cab-abilities">
             {canUndo && (
               <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onUndo}>
                 DESFAZER
@@ -683,38 +698,41 @@ const TacticalPlanks = memo(function TacticalPlanks({
             )}
           </div>
         )}
-        {passShown && (
-          <button
-            type="button"
-            data-tut={discardMode ? undefined : 'pass'}
-            className={`tac-plank tac-plank-blood tac-pass-in ${passOn ? 'is-on' : ''}`}
-            disabled={!passOn}
-            onClick={discardMode ? onDiscard : onPass}
-            aria-label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
-          >
-            <PlankArt tone="sangue" />
-            <span className="tac-title font-pixel">{discardMode ? pickLabels.confirm : 'PASSAR VEZ'}</span>
-            {!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) && (
-              <span className="tac-cost font-pixel">{passRule.fiado ? 'FIADO' : `$${passRule.cost}`}</span>
-            )}
-          </button>
+        {R.slate && (
+          <CabSlot box={R.slate} className="cab-slate" style={{ ...cabBox(R.slate), '--split': `${R.slate.split}px` }}>
+            <BoneyardPile
+              count={boneyardCount}
+              hidden={boneyardHide}
+              canDraw={canDraw && !discardMode}
+              urge={drawUrge && !discardMode}
+              onDraw={onDraw}
+              drawsUsed={drawsUsed}
+              cab
+            />
+            <EndsSum sum={endsSum} cab />
+          </CabSlot>
         )}
-        <button
-          type="button"
-          data-tut={discardMode ? undefined : 'draw'}
-          className={`tac-plank ${drawOn ? 'is-on' : ''}`}
+        <CabKey
+          box={R.draw}
+          on={drawOn}
           disabled={!drawOn}
+          tut={discardMode ? undefined : 'draw'}
           onClick={discardMode ? onSkipDiscard : onDraw}
-        >
-          <PlankArt tone="pinho" />
-          <span className="tac-title font-pixel">{discardMode ? pickLabels.skip : 'COMPRAR'}</span>
-          {!discardMode && myTurn && (
-            <span className="tac-cost font-pixel">
-              <DrawCost draw={draw} />
-            </span>
-          )}
-        </button>
-      </div>
+          title={discardMode ? pickLabels.skip : 'COMPRAR'}
+          cost={!discardMode && myTurn ? <DrawCost draw={draw} /> : null}
+        />
+        <CabKey
+          box={R.pass}
+          on={passOn}
+          disabled={!passOn}
+          tone="sangue"
+          tut={discardMode ? undefined : 'pass'}
+          onClick={discardMode ? onDiscard : onPass}
+          label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
+          title={discardMode ? pickLabels.confirm : 'PASSAR'}
+          cost={!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) ? (passRule.fiado ? 'FIADO' : `$${passRule.cost}`) : null}
+        />
+      </Cabinet>
     </>
   );
 });
@@ -776,6 +794,14 @@ function PlayerRack({
   tentos = null,
   // versão 2.9: a mesa deitada (o leque no meio de baixo, as tábuas nas pontas)
   landscape = false,
+  // versão 2.14: na mesa deitada, a lousa do armarinho da direita mostra o dorme e as pontas
+  endsSum = null,
+  boneyardCount = null,
+  boneyardHide = null,
+  drawUrge = false,
+  drawsUsed = 0,
+  // na roda o dinheiro não aparece (lá ele não compra nada que importe)
+  showCoins = true,
 }) {
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
@@ -793,10 +819,14 @@ function PlayerRack({
   // deitada, a altura da cena decide o tamanho das pedras do leque
   const sceneRef = useRef(null);
   const [sceneH, setSceneH] = useState(0);
+  const [sceneW, setSceneW] = useState(0);
   useLayoutEffect(() => {
     const el = sceneRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(([entry]) => setSceneH(Math.round(entry.contentRect.height)));
+    const observer = new ResizeObserver(([entry]) => {
+      setSceneH(Math.round(entry.contentRect.height));
+      setSceneW(Math.round(entry.contentRect.width));
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, [landscape]);
@@ -818,9 +848,9 @@ function PlayerRack({
       <span data-tut="hearts" className="life-hearts">
         {/* versão 2.7: na roda por tentos, as tampinhas amassadas no lugar dos corações */}
         {tentos ? (
-          <TentosBar current={tentos.current} max={tentos.max} size={landscape ? 17 : tentos.max <= 5 ? 24 : 19} label={`Você: ${tentos.current} de ${tentos.max} tentos`} />
+          <TentosBar current={tentos.current} max={tentos.max} size={landscape ? 16 : tentos.max <= 5 ? 24 : 19} label={`Você: ${tentos.current} de ${tentos.max} tentos`} />
         ) : (
-          <HeartsBar current={hearts} max={maxHearts} pixel={landscape || maxHearts > 6 ? 2 : 3} label={`Você: ${hearts} de ${maxHearts} corações`} />
+          <HeartsBar current={hearts} max={maxHearts} pixel={landscape || maxHearts > 6 ? 2 : 3} size={landscape ? 16 : undefined} label={`Você: ${hearts} de ${maxHearts} corações`} />
         )}
       </span>
     </button>
@@ -869,7 +899,22 @@ function PlayerRack({
             fan={fan}
           />
         </div>
-        <TacticalPlanks
+        {/* versão 2.14: os dois armarinhos, um em cada canto de baixo, no lugar das peças soltas */}
+        <LandConsoles
+          sceneW={sceneW}
+          relicRow={relicSlots > 0 || relics.length > 0 ? relicRow : null}
+          slots={Math.max(relicSlots ?? 0, relics.length)}
+          life={life}
+          lifeMax={tentos ? tentos.max : maxHearts}
+          coins={showCoins ? coins : null}
+          onOpenMenu={onOpenMenu}
+          devUnlocked={devUnlocked}
+          onOpenDev={onOpenDev}
+          boneyardCount={boneyardCount}
+          boneyardHide={boneyardHide}
+          drawUrge={drawUrge}
+          drawsUsed={drawsUsed}
+          endsSum={endsSum}
           discardMode={discardMode}
           pickLabels={pickLabels}
           hasSelection={Boolean(selectedId)}
@@ -890,21 +935,7 @@ function PlayerRack({
           onCanivete={onCanivete}
           canGrampo={canGrampo}
           onGrampo={onGrampo}
-          onOpenMenu={onOpenMenu}
-          devUnlocked={devUnlocked}
-          onOpenDev={onOpenDev}
         />
-        {/* versão 2.11: seus talismãs numa coluna de nichos na beirada da esquerda e, embaixo, a vida */}
-        <div className="land-relics">{relicRow}</div>
-        <div className="land-side land-left">
-          <div className="player-life-row">{life}</div>
-        </div>
-        {/* o seu dinheiro: no alto à direita, embaixo do dorme */}
-        <div className="player-coins-row land-coins">
-          <span className="coins-led">
-            <CoinCount value={coins} target="player" className="player-coins" />
-          </span>
-        </div>
       </section>
     );
   }

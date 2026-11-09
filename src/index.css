@@ -23164,3 +23164,361 @@
 .reduce-motion .candle-glow {
   animation: none;
 }
+
+/* =====================================================================================
+   Versão 2.14: os dois armarinhos da mesa deitada (components/LandCabinets.jsx)
+   o da esquerda: dinheiro, talismãs, vida e MENU; o da direita: a lousa do dorme e das
+   pontas e as teclas-nicho de COMPRAR e PASSAR. A pintura é 1:1 (art/cabinetPixels.js).
+   ===================================================================================== */
+.cab {
+  position: absolute;
+  bottom: max(calc(env(safe-area-inset-bottom) - 3px), 3px);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cab-left {
+  left: max(env(safe-area-inset-left), 8px);
+  transform-origin: 0 100%;
+}
+
+.cab-right {
+  right: max(env(safe-area-inset-right), 8px);
+  transform-origin: 100% 100%;
+}
+
+.cab-art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+.cab-slot {
+  position: absolute;
+  pointer-events: none;
+}
+
+.cab-slot button {
+  pointer-events: auto;
+}
+
+/* o dinheiro gravado na plaquinha de latão */
+.cab-coins {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 1px;
+}
+
+.cab-coins .cab-coins-count {
+  gap: 4px;
+  font-size: 11px;
+  color: #2a1802;
+  text-shadow: 0 1px 0 rgba(255, 240, 184, 0.6);
+}
+
+.cab-coins .cab-coins-count svg {
+  filter: drop-shadow(0 1px 0 rgba(58, 38, 4, 0.7));
+}
+
+/* os talismãs nos nichos pintados (28 × 26, vão de 4; cada fileira centrada, como na pintura) */
+.cab-relics .relic-row,
+.cab-relics .player-relics {
+  position: static;
+  filter: none;
+}
+
+.cab-relics .hotbar-niches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.cab-relics .relic-niche.is-empty {
+  opacity: 1;
+}
+
+.cab-relics .relic-niche.relic-slot-ready {
+  filter: none;
+}
+
+.cab-relics .relic-niche.relic-slot-ready::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 2px;
+  background: radial-gradient(ellipse 70% 70% at 50% 60%, rgba(255, 200, 96, 0.5), transparent 75%);
+  box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.85);
+  animation: tacPulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.reduce-motion .cab-relics .relic-niche.relic-slot-ready::before {
+  animation: none;
+}
+
+/* a vida no sulco de veludo */
+.cab-life {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cab-life .player-life {
+  pointer-events: auto;
+}
+
+.cab-life .life-hearts > span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 1px;
+  width: 84px;
+  filter: drop-shadow(0 1px 0 #1a0408) drop-shadow(0 2px 1px rgba(0, 0, 0, 0.45));
+}
+
+.cab-life .life-hearts::before {
+  inset: -2px -4px;
+  background: radial-gradient(ellipse 55% 60% at 50% 50%, rgba(255, 60, 50, 0.32), transparent 72%);
+}
+
+.cab-life .player-life.is-low .life-hearts {
+  transform-origin: 50% 50%;
+}
+
+/* a tecla-nicho: o mesmo nicho da hotbar, com o texto a fogo e a luz de dentro */
+.cab-key {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f6e2bc;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cab-key-glow {
+  position: absolute;
+  inset: 4px;
+  border-radius: 1px;
+  background: radial-gradient(ellipse 75% 95% at 50% 80%, rgba(255, 180, 70, 0.5), rgba(255, 130, 40, 0.14) 60%, transparent 85%);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.cab-key.is-sangue .cab-key-glow {
+  background: radial-gradient(ellipse 75% 95% at 50% 80%, rgba(255, 96, 64, 0.5), rgba(200, 40, 30, 0.16) 60%, transparent 85%);
+}
+
+.cab-key-face {
+  position: absolute;
+  inset: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cab-key-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cab-key-title,
+.cab-key-cost {
+  line-height: 1;
+  text-shadow:
+    0 1px 0 #0b0503,
+    1px 0 0 #0b0503,
+    -1px 0 0 #0b0503,
+    0 -1px 0 #0b0503;
+}
+
+.cab-key-title {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.cab-key-cost {
+  font-size: 7px;
+  color: #ffe2a0;
+}
+
+.cab-key svg {
+  flex: none;
+  filter: drop-shadow(0 1px 0 #0b0503);
+}
+
+/* apagada: o nicho fica escuro, o texto some no fundo */
+.cab-key:disabled .cab-key-face {
+  opacity: 0.42;
+}
+
+/* acesa (é o caminho): a luz quente sobe de dentro do nicho e o friso de latão pulsa */
+.cab-key.is-on .cab-key-glow {
+  opacity: 1;
+  animation: cabGlow 1.1s ease-in-out infinite;
+}
+
+.cab-key.is-on::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid #ffd36b;
+  border-radius: 3px;
+  box-shadow:
+    0 0 10px rgba(255, 200, 90, 0.5),
+    inset 0 0 6px rgba(255, 200, 90, 0.3);
+  animation: tacPulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.cab-key.is-on.is-sangue::after {
+  border-color: #ff9a7a;
+  box-shadow:
+    0 0 10px rgba(255, 110, 80, 0.5),
+    inset 0 0 6px rgba(255, 110, 80, 0.3);
+}
+
+.cab-key.is-on .cab-key-title {
+  color: #fff6e0;
+}
+
+.cab-key:not(:disabled):active .cab-key-face {
+  transform: translateY(1px) scale(0.96);
+}
+
+@keyframes cabGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.reduce-motion .cab-key.is-on .cab-key-glow,
+.reduce-motion .cab-key.is-on::after {
+  animation: none;
+}
+
+.cab-dev {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  pointer-events: auto;
+}
+
+.cab-abilities {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  pointer-events: auto;
+}
+
+/* a lousa: a pilha do dorme em cima, o número a giz embaixo e, depois do risco, as pontas */
+.cab-slate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.boneyard-side {
+  display: contents;
+}
+
+.boneyard-pile.is-cab,
+.boneyard-pile.is-cab.is-low {
+  position: relative;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.boneyard-pile.is-cab.is-callable {
+  pointer-events: auto;
+}
+
+.boneyard-pile.is-cab .boneyard-stack-px canvas {
+  display: block;
+}
+
+.boneyard-pile.is-cab .boneyard-info {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+}
+
+.boneyard-pile.is-cab .boneyard-count {
+  font-size: 17px;
+}
+
+.boneyard-pile.is-cab .boneyard-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.boneyard-pile.is-cab .boneyard-label {
+  font-size: 7px;
+}
+
+.boneyard-pile.is-cab .boneyard-steps {
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
+.boneyard-pile.is-cab.is-urge::after {
+  inset: -3px -6px;
+  border-radius: 3px;
+}
+
+.ends-sum.is-cab,
+.px-skins .ends-sum.is-cab {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--split) + 2px);
+  bottom: 5px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-image: none;
+}
+
+.ends-sum.is-cab .ends-sum-label {
+  font-size: 6px;
+}
+
+.ends-sum.is-cab .ends-sum-value {
+  font-size: 12px;
+}
+
+.ends-sum.is-cab.is-blank {
+  opacity: 0.3;
+}

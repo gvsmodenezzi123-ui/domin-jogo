@@ -437,6 +437,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
                       : null
               : null
           }
+          dormeInHud={landscape}
         />
 
         <PlayerRack
@@ -460,7 +461,11 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
           maxHearts={view.maxHearts}
           tentos={tentosMode ? { current: mine.tentos ?? 0, max: view.target } : null}
           coins={mine.coins}
+          showCoins={false}
           endsSum={ends ? ends.left + ends.right : null}
+          boneyardCount={view.boneyardCount ?? null}
+          drawUrge={canDraw && playableIds.size === 0}
+          drawsUsed={myTurn ? view.drawsThisTurn : 0}
           hint={hint}
           discardMode={false}
           onDiscard={noop}

@@ -496,24 +496,30 @@ export function paintCushion(seed = 3) {
   });
 }
 
-/** O nicho entalhado no balcão (2.5D): borda clara, paredes de dentro e o fundo na sombra. */
-export function paintNiche() {
-  const b = buffer(26, 24);
+/**
+ * O nicho entalhado no balcão (2.5D): borda clara, paredes de dentro e o fundo na sombra.
+ * Versão 2.14: em qualquer tamanho (os armarinhos da mesa deitada usam o mesmo nicho, largo, nas
+ * teclas); o padrão continua o 26×24 da hotbar.
+ */
+export function paintNiche(w = 26, h = 24) {
+  const b = buffer(w, h);
   const k = kit(b);
-  k.box(0, 0, 26, 24, mat('#8a5a30'), { r: 2 });
+  const x1 = w - 4;
+  const y1 = h - 4;
+  k.box(0, 0, w, h, mat('#8a5a30'), { r: 2 });
   // a cavidade: em cima o fundo some na sombra, embaixo o chão do nicho pega luz
-  k.each(3, 3, 22, 20, (x, y) => {
-    const t = (y - 3) / 17;
-    const side = Math.min(x - 3, 22 - x);
+  k.each(3, 3, x1, y1, (x, y) => {
+    const t = (y - 3) / (y1 - 3);
+    const side = Math.min(x - 3, x1 - x);
     let c = mix(hex('#0a0503'), hex('#3a2010'), Math.max(0, t - 0.35) * 1.4);
     if (side < 2) c = mix(c, hex('#000000'), 0.4);
-    if (y >= 18) c = mix(hex('#5a3418'), hex('#2a1608'), (22 - y) / 4);
+    if (y >= y1 - 2) c = mix(hex('#5a3418'), hex('#2a1608'), (y1 + 2 - y) / 4);
     return rgb(c);
   });
-  for (let x = 3; x < 23; x += 1) k.px(x, 3, hex('#000000'));
-  for (let y = 3; y < 21; y += 1) {
+  for (let x = 3; x <= x1; x += 1) k.px(x, 3, hex('#000000'));
+  for (let y = 3; y <= y1; y += 1) {
     k.px(3, y, hex('#1a0c04'));
-    k.px(22, y, hex('#4a2a12'), 0.8);
+    k.px(x1, y, hex('#4a2a12'), 0.8);
   }
   outline(b);
   return b;
