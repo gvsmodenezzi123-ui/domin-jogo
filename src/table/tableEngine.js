@@ -530,7 +530,13 @@ function forfeit(state, { seat }) {
   if (next.phase === 'playing') {
     const passStreak = Math.min(next.passStreak, survivors.length - 1);
     next = { ...next, passStreak };
-    if (next.turn === seat) next = advance(next, seat);
+    // versão 2.15: quem ia abrir saiu antes da 1ª pedra: a abertura passa para a maior pedra de
+    // quem ficou (antes a mesa travava esperando uma pedra que ninguém tinha)
+    const opener = !next.board.root && next.openingTileId && (state.hands[seat] ?? []).some((t) => t.id === next.openingTileId);
+    if (opener) {
+      const opening = findTableOpening(next.hands, survivors.map((s) => s.id));
+      next = { ...next, openingTileId: opening?.tileId ?? null, turn: opening?.starter ?? next.turn };
+    } else if (next.turn === seat) next = advance(next, seat);
     const lock = next.board.root ? blocked(next) : null;
     if (lock) return finishRound(next, { kind: 'tranca', reason: lock }, events);
   }
@@ -562,11 +568,28 @@ export function tableReducer(state, action) {
 export function viewFor(state, seat) {
   const handCounts = Object.fromEntries(Object.entries(state.hands).map(([id, hand]) => [id, hand.length]));
   const reveal = state.phase === 'roundOver' || state.phase === 'matchOver';
+  const watch = watchableFor(state, seat);
   const hands = reveal ? state.hands : { [seat]: state.hands[seat] ?? [] };
+  if (!reveal) for (const id of watch) hands[id] = state.hands[id] ?? [];
   const { boneyard, seed, ...rest } = state;
   void boneyard;
   void seed;
-  return { ...rest, me: seat, hands, handCounts, boneyardCount: state.boneyard.length };
+  return { ...rest, me: seat, hands, handCounts, boneyardCount: state.boneyard.length, watch };
+}
+
+/**
+ * Versão 2.15: quem perdeu todas as vidas sai da roda e fica assistindo: vê a mão de quem
+ * continua (e troca de cadeira para ver por outro ângulo). Nas duplas, enquanto o seu parceiro
+ * ainda joga, você só assiste a ele (as pedras dos adversários não vazam pela dupla).
+ */
+export function watchableFor(state, seat) {
+  const me = seatOf(state, seat);
+  if (!me || me.alive || state.phase === 'lobby' || state.phase === 'matchOver') return [];
+  // a rodada em que você caiu termina na sua cadeira (o X de giz é seu); a próxima já é assistida
+  if (state.phase === 'roundOver' && (state.events ?? []).some((e) => e.type === 'eliminated' && e.who === seat)) return [];
+  const alive = aliveSeats(state);
+  const mates = state.rules?.teams && me.team ? alive.filter((s) => s.team === me.team) : [];
+  return (mates.length ? mates : alive).map((s) => s.id);
 }
 
 /**

@@ -86,7 +86,22 @@ function roundLine(result, view, me, partner) {
   return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
 }
 
-export default function TableScreen({ view, me, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
+export default function TableScreen({ view, me: seatMe, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
+  // versão 2.15: fora da roda, você assiste: a tela inteira passa a ser a de quem você escolheu
+  // (a mão dele na sua bancada, a roda girada a partir dele); as ações ficam travadas
+  const watchList = view.watch ?? NONE;
+  const spectating = watchList.length > 0;
+  const [watchPick, setWatchPick] = useState(null);
+  const watchId = spectating ? (watchList.includes(watchPick) ? watchPick : (seatsFrom(view.seats, seatMe).find((s) => watchList.includes(s.id))?.id ?? watchList[0])) : null;
+  const me = watchId ?? seatMe;
+  const stepWatch = (dir) => {
+    const ring = seatsFrom(view.seats, me).filter((s) => watchList.includes(s.id));
+    if (ring.length < 2) return;
+    const next = dir > 0 ? ring[1] : ring[ring.length - 1];
+    sound.playBoneTick?.(true);
+    setSelectedId(null);
+    setWatchPick(next.id);
+  };
   // versão 2.13: a sala que o anfitrião escolheu (o cenário, a luz e o feltro; a trilha vem de fora)
   const sala = useMemo(() => mapTable(map, TABLE_FELT), [map]);
   const [selectedId, setSelectedId] = useState(null);
@@ -117,9 +132,9 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
     [],
   );
 
-  const names = useMemo(() => Object.fromEntries(view.seats.map((s) => [s.id, s.id === me ? 'você' : s.name])), [view.seats, me]);
+  const names = useMemo(() => Object.fromEntries(view.seats.map((s) => [s.id, s.id === me && !spectating ? 'você' : s.name])), [view.seats, me, spectating]);
   // versão 2.7: a linha embaixo do grito lê a mesa de agora (duplas, tentos), sem refazer o efeito
-  const lineFor = useStableHandler((r) => roundLine(r, view, me, view.rules?.teams ? partnerOf(view, me) : null));
+  const lineFor = useStableHandler((r) => roundLine(r, view, seatMe, view.rules?.teams ? partnerOf(view, seatMe) : null));
 
   /** A pedra voa da mão de quem jogou até a ponta da mesa. */
   const stagePlay = useCallback(
@@ -222,7 +237,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
           sound.playHeartHit();
           setHits((h) => ({ ...h, [who]: view.seq }));
           later(() => setHits((h) => (h[who] === view.seq ? { ...h, [who]: null } : h)), HIT_MS);
-          if (who === me) {
+          if (who === seatMe && !spectating) {
             setMyHurt(view.seq);
             shake(shellRef.current, ev.amount >= 2 ? 9 : 6);
             haptic(ev.amount >= 2 ? [70, 40, 90] : 60);
@@ -247,15 +262,15 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
         }, offset + 640);
       }
       if (ev.type === 'eliminated') later(() => sound.playHeartBreak?.(), offset + 1000);
-      if (ev.type === 'matchOver') later(() => ((ev.winners ?? [ev.winner]).includes(me) ? sound.playVictory() : sound.playDefeat()), offset + 1500);
+      if (ev.type === 'matchOver') later(() => ((ev.winners ?? [ev.winner]).includes(seatMe) ? sound.playVictory() : sound.playDefeat()), offset + 1500);
     }
-  }, [view.seq, view.events, view.board, me, stagePlay, pushFloat, clearFloats, later, lineFor]);
+  }, [view.seq, view.events, view.board, me, seatMe, spectating, stagePlay, pushFloat, clearFloats, later, lineFor]);
 
   const playing = view.phase === 'playing';
   // a pedra que acabou de chegar pela rede e ainda vai voar conta como "voando" desde já
   const playEv = view.events.find((e) => e.type === 'play');
   const flying = tableAnim ?? (playEv && view.seq > stagedSeq ? { key: view.seq, tileId: playEv.tileId, by: playEv.by, stage: 'flight' } : null);
-  const myTurn = playing && view.turn === me && !flying;
+  const myTurn = playing && view.turn === me && !flying && !spectating;
   const optsNow = turnOptions(view, me);
   const opts = useStableValue(optsNow, `${view.seq}:${me}`);
   const hand = view.hands[me] ?? NONE;
@@ -298,7 +313,9 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
   const noop = useStableHandler(() => {});
 
   // a fileira de cima: os rivais na ordem de jogo a partir de você
-  const ordered = seatsFrom(view.seats, me);
+  // versão 2.15: quem saiu some da roda (o X de giz fica só até o fim da rodada em que caiu)
+  const goneNow = new Set(view.events.filter((e) => e.type === 'eliminated').map((e) => e.who));
+  const ordered = seatsFrom(view.seats, me).filter((s, i) => i === 0 || s.alive || (!playing && goneNow.has(s.id)));
   const mine = ordered[0];
   // versão 2.7: duplas (o seu parceiro) e a contagem por tentos
   const teams = Boolean(view.rules?.teams);
@@ -340,7 +357,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
   const clockMine = actor === me && !(flying && flying.by !== me);
   const urgent = secondsLeft != null && secondsLeft <= 10;
   const ends = getOpenEnds(view.board);
-  const hint = hintFor({ view, me, opts, selected: selectedTile, names, partner });
+  const hint = spectating ? '' : hintFor({ view, me, opts, selected: selectedTile, names, partner });
   // versão 2.6: a hora da batida: a mesa segura acesa com a última pedra brilhando antes do placar
   const finaleKey = !playing && !flying && view.phase !== 'lobby' ? `${view.round}:${view.phase}` : null;
   useEffect(() => {
@@ -366,7 +383,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
     };
   }, [sweepKey, autoNext]);
   const waitingFor =
-    view.phase === 'roundOver' && ready?.includes(me) ? view.seats.filter((s) => s.alive && !s.bot && s.id !== me && !ready.includes(s.id)).map((s) => plateName(s.name)) : [];
+    view.phase === 'roundOver' && ready?.includes(seatMe) ? view.seats.filter((s) => s.alive && !s.bot && s.id !== seatMe && !ready.includes(s.id)).map((s) => plateName(s.name)) : [];
   // versão 2.5: encurralado (alguém por uma pedra, você no último coração)
   // (por tentos ninguém sangra: só vale o rival por uma pedra; nas duplas, só os adversários)
   const danger = dangerOf({
@@ -376,7 +393,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
       .filter((s) => s.alive && s.id !== partner)
       .map((s) => ({ id: s.id, name: s.name, count: view.handCounts[s.id] ?? 0 })),
   });
-  const dangerOn = playing && mine.alive;
+  const dangerOn = playing && mine.alive && !spectating;
 
   return (
     <div
@@ -395,7 +412,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
             role="timer"
             aria-live="off"
           >
-            <span className="pvp-clock-who">{actor === me ? 'SUA VEZ' : `VEZ DE ${String(names[actor]).toUpperCase()}`}</span>
+            <span className="pvp-clock-who">{actor === me && !spectating ? 'SUA VEZ' : `VEZ DE ${plateName(names[actor])}`}</span>
             {secondsLeft != null && <span className="pvp-clock-sec">{secondsLeft}s</span>}
             {secondsLeft != null && <span className="pvp-clock-bar" style={{ '--left': Math.min(1, secondsLeft / (totalMs / 1000)) }} aria-hidden="true" />}
           </div>
@@ -490,8 +507,26 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
           knownIds={null}
           rivalName="os rivais"
           leaving={flying?.by === me && flying.stage === 'flight' ? leavingTileOf(view.board, flying.tileId) : null}
-          dealKey={`mesa:${view.round}`}
+          dealKey={`mesa:${view.round}:${me}`}
         />
+        {spectating && (
+          <div className="spectate-bar" style={{ bottom: landscape ? handZone - 14 : handZone + 8 }} role="group" aria-label="Assistindo">
+            {watchList.length > 1 && (
+              <button type="button" className="spectate-arrow font-pixel" onClick={() => stepWatch(-1)} aria-label="Assistir o anterior">
+                ◀
+              </button>
+            )}
+            <span className="spectate-name font-pixel" style={{ '--who': colorOf(view, me) }}>
+              <small>ASSISTINDO</small>
+              {plateName(names[me])}
+            </span>
+            {watchList.length > 1 && (
+              <button type="button" className="spectate-arrow font-pixel" onClick={() => stepWatch(1)} aria-label="Assistir o próximo">
+                ▶
+              </button>
+            )}
+          </div>
+        )}
         {callout && (
           <p key={callout.key} className="table-callout font-pixel" style={{ '--who': callout.by ? colorOf(view, callout.by) : '#f4ecd2' }} aria-live="polite">
             {callout.text}
@@ -502,6 +537,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
 
       {myHurt > 0 && <div key={myHurt} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
       <DangerFx danger={danger} myHearts={mine.hearts} active={dangerOn} />
+      {spectating && <div className="spectate-veil pointer-events-none" aria-hidden="true" />}
       <FloatingTexts items={floatItems} onDone={floatDone} />
       {waitingFor.length > 0 && (
         <p className="sweep-wait font-pixel" aria-live="polite">
@@ -509,7 +545,7 @@ export default function TableScreen({ view, me, map = null, clock = null, onInte
           <span className="sweep-wait-dots" aria-hidden="true" />
         </p>
       )}
-      {showResult && <TableResult view={view} me={me} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
+      {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );
 }

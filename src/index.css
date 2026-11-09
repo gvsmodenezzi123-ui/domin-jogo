@@ -23928,3 +23928,84 @@
 .app-shell.is-landscape .danger-banner.is-seal {
   border-radius: 3px;
 }
+
+/* versão 2.15: fora da roda, assistindo: a plaquinha com as setas acima da mão de quem você vê */
+.spectate-bar {
+  position: absolute;
+  z-index: 45;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  animation: sweepWaitIn 0.25s ease-out both;
+}
+.spectate-name {
+  --who: #f4ecd2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 112px;
+  padding: 5px 12px 6px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--who);
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 222, 140, 0.9) 26%, rgba(255, 222, 140, 0.9) 74%, transparent) top / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(255, 222, 140, 0.9) 26%, rgba(255, 222, 140, 0.9) 74%, transparent) bottom / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(24, 12, 8, 0.94), rgba(10, 6, 4, 0.94));
+  box-shadow: 0 3px 0 #0b0907;
+  text-shadow: 0 1px 0 #000;
+  pointer-events: none;
+}
+.spectate-name small {
+  font-size: 6px;
+  letter-spacing: 0.18em;
+  color: rgba(244, 236, 210, 0.62);
+}
+.spectate-arrow {
+  width: 34px;
+  min-height: 34px;
+  font-size: 10px;
+  color: #f4ecd2;
+  background: linear-gradient(180deg, #3a2716, #1f140b);
+  border: 2px solid #0b0907;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 222, 140, 0.35),
+    0 3px 0 #0b0907;
+  cursor: pointer;
+  touch-action: manipulation;
+  transform: translateZ(0);
+}
+.spectate-arrow:active {
+  translate: 0 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 222, 140, 0.35),
+    0 1px 0 #0b0907;
+}
+/* a mesa de quem assiste: um véu de cinema nas bordas (a mão é dele, não sua) */
+.spectate-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 62%, rgba(4, 2, 1, 0.5));
+}
+/* deitada: uma linha só, rente à mão (o meio da mesa fica livre para as pedras) */
+.is-landscape .spectate-bar {
+  gap: 3px;
+}
+.is-landscape .spectate-name {
+  flex-direction: row;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 8px;
+}
+.is-landscape .spectate-arrow {
+  width: 26px;
+  min-height: 24px;
+  font-size: 8px;
+}

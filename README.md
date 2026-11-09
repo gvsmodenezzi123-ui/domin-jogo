@@ -172,6 +172,19 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.15.0: quem sai da roda fica assistindo
+
+- Na roda online (e no treino com bots), quem perde todas as vidas some da mesa: a cadeira sai
+  e ficam só os que continuam (o X de giz aparece só até o fim da rodada em que a pessoa caiu).
+- Quem saiu vira espectador: a tela passa a ser a de um dos que seguem jogando, com a mão dele
+  aberta na bancada, os corações dele no armarinho e a roda girada a partir dele. As setas da
+  plaquinha "ASSISTINDO" trocam de jogador; as teclas de jogar ficam travadas. Nas duplas, com o
+  parceiro ainda na mesa, você assiste só a ele (as pedras dos adversários não vazam).
+- O anfitrião manda para quem saiu as mãos de quem continua (`viewFor` ganhou `watch`); quem
+  joga continua recebendo só a própria mão.
+- Correção: se quem ia abrir a rodada saía (W.O.) antes da 1ª pedra, a mesa travava esperando
+  uma pedra que ninguém tinha. Agora a abertura passa para a maior pedra de quem ficou.
+
 ### 2.14.1: a roda não pinta mais a tela na cor de quem joga
 
 - Na mesa de 2 a 4 deitada, a tela inteira ganhava um véu e uma borda na cor da cadeira da vez
