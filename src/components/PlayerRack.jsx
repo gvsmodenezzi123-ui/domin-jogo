@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import CoinCount from './CoinCount.jsx';
 import DominoTile from './DominoTile.jsx';
-import { DEAL_STEP_MS, arrangeHand, computeFan, dropIndex, spreadOffset } from './handFan.js';
+import { DEAL_STEP_MS, arrangeHand, computeFan, dropIndex, fanDrop, spreadOffset } from './handFan.js';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar, PixelHeart } from './PixelHeart.jsx';
 import { TentoCap, TentosBar } from './TentoCap.jsx';
@@ -12,9 +12,9 @@ import { CabKey, CabSlot, Cabinet } from './LandCabinets.jsx';
 import { CAB_W, cabBox, leftCabinet, rightCabinet } from './landCabinets.js';
 
 /** Altura da área do leque (px). */
-const FAN_HEIGHT = 150;
+const FAN_HEIGHT = 162;
 /** Distância da base do leque até o rodapé (as pedras das pontas descem até aqui). */
-const FAN_BASE = 26;
+const FAN_BASE = 40;
 /** Quanto a pedra selecionada sobe para fora do leque (-translate-y-6). */
 /** Versão 2.8: a pedra tocada sobe 16 px e cresce 8% (inclinando um tico para o lado dela). */
 const SELECT_LIFT = 16;
@@ -25,7 +25,9 @@ const SELECT_LIFT = 16;
  */
 const landFan = (h) => {
   const unit = Math.max(28, Math.min(46, Math.round((h || 390) * 0.088)));
-  return { unit, height: unit * 2 + 30, base: 8 };
+  // versão 2.15: o arco da referência desce nas pontas: a base sobe para a pedra caber inteira
+  const base = fanDrop(unit) + 6;
+  return { unit, height: unit * 2 + base + 22, base };
 };
 
 function useWidth() {
@@ -425,7 +427,7 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
   // o leque é desenhado na ordem em que você arrumou a mão (arrastando)
   const count = hand.length + (leaving && !hand.some((t) => t.id === leaving.id) ? 1 : 0);
   // (2.9: deitada, as pedras seguem a altura da tela e o arco é mais raso)
-  const { unit, spots } = computeFan(count, width, fan ? { baseUnit: fan.unit, minUnit: Math.round(fan.unit * 0.74), angle: 16, drop: 14 } : undefined);
+  const { unit, spots } = computeFan(count, width, fan ? { baseUnit: fan.unit, minUnit: Math.round(fan.unit * 0.74) } : undefined);
   const { ordered, drag, setDrag, touched, onGrab } = useHandArrange({ hand, dealKey, areaRef });
   // Versão 2.6: a pedra jogada continua na vaga dela (levantada, como estava) até a cópia do
   // voo levantar dali; só então o leque fecha o buraco. Antes ela sumia, piscava na mesa e

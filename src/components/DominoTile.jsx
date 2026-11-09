@@ -1,76 +1,8 @@
 import { memo, useContext } from 'react';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { TileSkinContext } from './tileSkin.js';
-import { tileMesh } from './tileMaterials.js';
+import { pixelClip, tileGrid, tileSprite } from './art/tilePixels.js';
 import { sameTileProps } from './tileMemo.js';
-
-/**
- * Posições dos pips numa grade 3x3 [linha, coluna], pensadas para a metade de
- * uma pedra em pé. Na pedra deitada a grade é transposta (o 6 vira 2 linhas de 3).
- */
-const PIP_LAYOUT = Object.freeze({
-  0: [],
-  1: [[1, 1]],
-  2: [
-    [0, 2],
-    [2, 0],
-  ],
-  3: [
-    [0, 2],
-    [1, 1],
-    [2, 0],
-  ],
-  4: [
-    [0, 0],
-    [0, 2],
-    [2, 0],
-    [2, 2],
-  ],
-  5: [
-    [0, 0],
-    [0, 2],
-    [1, 1],
-    [2, 0],
-    [2, 2],
-  ],
-  6: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [0, 2],
-    [1, 2],
-    [2, 2],
-  ],
-});
-
-/** Manchas de envelhecimento estáveis por pedra (sem aleatoriedade no render). */
-function stainFor(values) {
-  const seed = (values[0] * 7 + values[1] * 13 + 3) % 17;
-  return { x: 18 + ((seed * 11) % 64), y: 20 + ((seed * 23) % 60), alpha: 0.1 + (seed % 5) * 0.025 };
-}
-
-function Half({ value, horizontal, unit }) {
-  // versão 2.8: pips maiores e mais perto das bordas (o desenho de referência)
-  const pad = Math.max(2, Math.round(unit * 0.13));
-  const pip = Math.max(2, Math.round(unit * 0.23));
-  const pips = (PIP_LAYOUT[value] ?? []).map(([r, c]) => (horizontal ? [c, r] : [r, c]));
-  return (
-    <div
-      // versão 2.8: os pips ficam por cima da luz da lâmpada e dos brilhos (preto chapado nas
-      // duas metades, como na referência)
-      className="domino-half relative z-[1] grid grid-cols-3 grid-rows-3"
-      style={{ width: unit, height: unit, padding: pad, boxSizing: 'border-box' }}
-    >
-      {pips.map(([r, c]) => (
-        <span
-          key={`${r}${c}`}
-          className="domino-pip place-self-center"
-          style={{ gridRow: r + 1, gridColumn: c + 1, width: pip, height: pip }}
-        />
-      ))}
-    </div>
-  );
-}
 
 /**
  * Pedra de dominó em marfim (ou ébano, nas Peças Pretas: TileSkinContext).
@@ -124,17 +56,26 @@ function DominoTile({
   const width = horizontal ? unit * 2 : unit;
   const height = horizontal ? unit : unit * 2;
   const Tag = onClick ? 'button' : 'div';
-  // versão 2.12.1: quina curta (2 px), de pixel art
-  const radius = Math.max(1, Math.round(unit * 0.06));
+  // versão 2.15: a pedra em pixel art de verdade (a referência do jogador): pintada numa grade
+  // baixa (art/tilePixels.js) e recortada com a quina em degraus
+  const { hw, s, corner } = tileGrid(unit);
+  const artW = horizontal ? hw * 2 : hw;
+  const artH = horizontal ? hw : hw * 2;
+  const clip = pixelClip(width, height, s, corner);
+  const radius = Math.max(1, Math.round(corner[0] * s * 0.7));
 
   const shared = {
     width,
     height,
     borderRadius: radius,
+    '--d': `${depth}px`,
+    '--tile-clip': clip,
+    boxShadow: 'var(--cast, 0 0 0 transparent)',
     ...style,
   };
 
   if (faceDown) {
+    const sprite = tileSprite({ mat: 'back', back: true, w: artW, h: artH, horizontal, depth });
     return (
       <Tag
         type={onClick ? 'button' : undefined}
@@ -142,52 +83,21 @@ function DominoTile({
         disabled={onClick ? disabled : undefined}
         aria-label={label ?? 'Pedra virada'}
         className={`domino-back relative shrink-0 ${className}`}
-        style={{
-          ...shared,
-          '--d': `${depth}px`,
-          boxShadow: tileMesh('back', depth),
-        }}
+        style={{ ...shared, background: 'none' }}
       >
-        <span className="domino-back-sigil" />
+        <span aria-hidden="true" className="tile-body tile-px" style={{ clipPath: clip, backgroundImage: sprite ?? undefined }} />
       </Tag>
     );
   }
 
-  const stain = stainFor(values);
-  const dividerThickness = Math.max(1, Math.round(unit * 0.07));
   const enh = getEnhancement(enhancement);
   const onyx = !enh && skin === 'onyx';
   const silver = !enh && skin === 'silver';
-  // osso envelhecido (padrão), ébano (Peças Pretas), prata (Peças Prateadas, Patch 0.9.0) ou
-  // material da peça aprimorada, que vem do CSS
-  // a malha é a mesma para todo material (contorno, chanfro, lateral e sombra no pano);
-  // só a face muda: a da aprimorada vem do CSS (.tile-enh-<id>)
-  const surface = enh
-    ? { '--d': `${depth}px`, boxShadow: tileMesh(enh.id, depth) }
-    : silver
-      ? {
-          '--d': `${depth}px`,
-          // versão 2.12.1: o sombreado em faixas chapadas (pixel art), com o escovado do metal
-          background: [
-            'repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 3px)',
-            'linear-gradient(180deg, #fbfcfd 0 2px, #e6eaee 2px 28%, #cfd4da 28% 56%, #b4bbc2 56% 82%, #8e959c 82%)',
-          ].join(','),
-          boxShadow: tileMesh('silver', depth),
-        }
-      : onyx
-        ? {
-            '--d': `${depth}px`,
-            background: 'linear-gradient(180deg, #4a423c 0 2px, #2e2a26 2px 30%, #24201d 30% 62%, #1a1715 62% 86%, #100e0c 86%)',
-            boxShadow: tileMesh('onyx', depth),
-          }
-        : {
-            '--d': `${depth}px`,
-            // versão 2.8: marfim limpo (o desenho de referência). Versão 2.12.1: em faixas
-            // chapadas de pixel art (a quina de luz em cima, o pé da face mais escuro)
-            background: `linear-gradient(180deg, #fffbe6 0 2px, #f8eed0 2px 30%, #f1e3b8 30% 64%, #e8d6a2 64% ${88 - Math.round(stain.alpha * 20)}%, #dcc68e ${88 - Math.round(stain.alpha * 20)}%)`,
-            boxShadow: tileMesh('bone', depth),
-          };
-  const rivet = Math.max(3, Math.round(unit * 0.16));
+  // todas saem inteiras da pintura (marfim, ébano das Peças Pretas, prata das Prateadas e as
+  // aprimoradas); nas aprimoradas, as camadas animadas do CSS (.tile-enh-<id>) ficam por cima
+  const mat = enh ? enh.id : onyx ? 'onyx' : silver ? 'silver' : 'bone';
+  const sprite = tileSprite({ mat, w: artW, h: artH, horizontal, depth, values });
+  const enhClass = enh ? `tile-enh tile-enh-${enh.id} ${dimmed ? 'tile-enh-still' : ''} ${still ? 'tile-enh-rest' : ''}` : 'tile-px';
 
   return (
     <Tag
@@ -196,53 +106,28 @@ function DominoTile({
       disabled={onClick ? disabled : undefined}
       aria-label={label ?? `Pedra ${values[0]} e ${values[1]}${enh ? ` (${enh.name})` : ''}`}
       aria-pressed={onClick ? selected : undefined}
-      className={`domino-face relative flex shrink-0 select-none ${horizontal ? 'flex-row' : 'flex-col'} ${dimmed ? 'tile-dimmed' : ''} ${
-        crosswise ? 'tile-crosswise' : ''
-      } ${enh ? `tile-enh tile-enh-${enh.id}` : ''} ${
-        enh && dimmed ? 'tile-enh-still' : ''
-      } ${enh && still ? 'tile-enh-rest' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
-      style={{ ...shared, ...surface }}
+      className={`domino-face relative shrink-0 select-none ${dimmed ? 'tile-dimmed' : ''} ${crosswise ? 'tile-crosswise' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
+      style={shared}
     >
-      {/* versão 2.12.1: o pontilhado de pixel art na metade de baixo (a sombra em dither) */}
-      <span aria-hidden="true" className="tile-grain" />
-      <Half value={values[0]} horizontal={horizontal} unit={unit} />
-      <Half value={values[1]} horizontal={horizontal} unit={unit} />
-      <span
-        aria-hidden="true"
-        className="domino-divider pointer-events-none absolute"
-        style={
-          horizontal
-            ? { left: '50%', top: '10%', bottom: '10%', width: dividerThickness, transform: 'translateX(-50%)' }
-            : { top: '50%', left: '10%', right: '10%', height: dividerThickness, transform: 'translateY(-50%)' }
-        }
-      />
-      {/* o pino de latão no meio do friso */}
-      <span aria-hidden="true" className="domino-rivet pointer-events-none absolute" style={{ width: rivet, height: rivet }} />
-      {enh && (
-        <>
-          <span aria-hidden="true" className="tile-enh-layer" />
-          <span aria-hidden="true" className="tile-enh-glow" />
-          {/* versão 2.13: os quatro cantos da pedra, para o shader (FxLayer.jsx) achar onde ela
-              está de verdade na tela: girada no leque, deitada em perspectiva na mesa */}
-          <span aria-hidden="true" className="fx-corner fx-c0" />
-          <span aria-hidden="true" className="fx-corner fx-c1" />
-          <span aria-hidden="true" className="fx-corner fx-c2" />
-          <span aria-hidden="true" className="fx-corner fx-c3" />
-          {/* Ouro: o feixe especular cruza a pedra (só na selecionada e nas pontas abertas) */}
-          {enh.id === 'ouro' && !still && (
-            <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0, borderRadius: radius }} />
-          )}
-        </>
-      )}
-      {shimmer && (
-        <span
-          aria-hidden="true"
-          className="tile-shimmer-effect pointer-events-none"
-          style={{ position: 'absolute', inset: 0, borderRadius: radius, '--shimmer-delay': `${shimmerDelay}s` }}
-        />
-      )}
-      {/* luz da lâmpada na pedra: brilho do lado virado para ela, escuro longe dela */}
-      <span aria-hidden="true" className="tile-lamp-light" />
+      <span className={`tile-body ${enhClass} ${horizontal ? 'flex-row' : 'flex-col'}`} style={{ clipPath: clip, backgroundImage: sprite ?? undefined }}>
+        {enh && (
+          <>
+            <span aria-hidden="true" className="tile-enh-layer" />
+            <span aria-hidden="true" className="tile-enh-glow" />
+            {/* versão 2.13: os quatro cantos da pedra, para o shader (FxLayer.jsx) achar onde ela
+                está de verdade na tela: girada no leque, deitada em perspectiva na mesa */}
+            <span aria-hidden="true" className="fx-corner fx-c0" />
+            <span aria-hidden="true" className="fx-corner fx-c1" />
+            <span aria-hidden="true" className="fx-corner fx-c2" />
+            <span aria-hidden="true" className="fx-corner fx-c3" />
+            {/* Ouro: o feixe especular cruza a pedra (só na selecionada e nas pontas abertas) */}
+            {enh.id === 'ouro' && !still && <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0 }} />}
+          </>
+        )}
+        {shimmer && <span aria-hidden="true" className="tile-shimmer-effect pointer-events-none" style={{ position: 'absolute', inset: 0, '--shimmer-delay': `${shimmerDelay}s` }} />}
+        {/* luz da lâmpada na pedra: brilho do lado virado para ela, escuro longe dela */}
+        <span aria-hidden="true" className="tile-lamp-light" />
+      </span>
       {selected && (
         <span
           aria-hidden="true"

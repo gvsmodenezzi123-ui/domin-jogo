@@ -172,6 +172,17 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.15.1: as pedras em pixel art de verdade e o leque da referência
+
+- Todas as pedras (as comuns, as Peças Pretas e Prateadas, todas as aprimoradas e o verso) são
+  pintadas pixel a pixel (`components/art/tilePixels.js`) e mostradas ampliadas sem suavização,
+  no desenho de referência: a quina arredondada em degraus, o contorno escuro, o marfim em faixas
+  com a luz em cima e à esquerda, a lateral grossa embaixo e fininha à direita, os pips redondos
+  de pixel (sempre com folga entre eles, nunca colados), o friso preto e o pino de latão. As
+  aprimoradas guardam por cima as camadas vivas do CSS (brilho, rachaduras, faíscas).
+- A mão no arco da referência: as pedras lado a lado, quase encostadas, cada uma girando 6,4° a
+  mais a partir do centro reto e descendo em parábola nas pontas, inteiras na tela.
+
 ### 2.15.0: quem sai da roda fica assistindo
 
 - Na roda online (e no treino com bots), quem perde todas as vidas some da mesa: a cadeira sai

@@ -60,7 +60,7 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
       const kx = size.w / Math.max(1, box.width);
       const ky = size.h / Math.max(1, box.height);
       const list = [];
-      for (const el of document.querySelectorAll('.domino-face.tile-enh')) {
+      for (const el of document.querySelectorAll('.tile-body.tile-enh')) {
         if (list.length >= MAX_TILES) break;
         const kind = enhOf(el);
         if (!kind || el.closest('[style*="visibility: hidden"]')) continue;
@@ -86,7 +86,7 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
         if (seen && !seen.has(id)) {
           const face = el.querySelector('.domino-face');
           const r = (face ?? el).getBoundingClientRect();
-          const enh = face ? enhOf(face) : null;
+          const enh = face ? enhOf(face.querySelector('.tile-enh') ?? face) : null;
           bursts.push({
             x: (r.left + r.width / 2 - box.left) * kx,
             y: (r.top + r.height / 2 - box.top) * ky,

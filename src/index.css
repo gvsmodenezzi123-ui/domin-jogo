@@ -1168,7 +1168,8 @@
   /* cada pedra gira em torno da base, formando o arco do leque */
   /* versão 2.8: as pedras se acomodam devagar quando uma sai (sem teletransporte) */
   .hand-slot {
-    transform-origin: 50% 100%;
+    /* versão 2.15: cada pedra gira em torno do próprio centro (o arco da referência) */
+    transform-origin: 50% 50%;
     /* 2.12.1: o leque é vivo: as pedras assentam com um tico de mola */
     transition: transform 360ms cubic-bezier(0.34, 1.32, 0.64, 1);
     touch-action: none;
@@ -24008,4 +24009,39 @@
   width: 26px;
   min-height: 24px;
   font-size: 8px;
+}
+
+/* versão 2.15: as pedras em pixel art (art/tilePixels.js): a pintura ampliada sem suavização,
+   recortada com a quina em degraus; nas aprimoradas, a moldura pintada por cima da face em CSS */
+.tile-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+}
+.tile-frame {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+}
+.tile-body .tile-lamp-light {
+  z-index: 4;
+  border-radius: 0;
+}
+.domino-face.tile-dimmed::after {
+  border-radius: 0;
+  clip-path: var(--tile-clip, none);
+}
+/* a face e a moldura das aprimoradas vêm da pintura; o CSS delas fica só com as camadas vivas */
+.tile-body.tile-enh {
+  box-shadow: none !important;
+  background-color: transparent;
 }

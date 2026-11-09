@@ -41,6 +41,7 @@ describe('Versão 2.12.1: o leque vivo e a mão arrumada no arraste', () => {
     expect(rubi).not.toContain('radial-gradient');
     expect(css).toContain('.tile-grain {');
     const tile = readFileSync(new URL('../../components/DominoTile.jsx', import.meta.url), 'utf8');
-    expect(tile).toContain('className="tile-grain"');
+    // versão 2.15: a pedra inteira é pintada pixel a pixel (art/tilePixels.js)
+    expect(tile).toContain('tileSprite(');
   });
 });
