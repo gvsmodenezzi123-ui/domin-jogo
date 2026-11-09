@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { createFx, MAX_BURSTS, MAX_TILES } from './fx/fxShader.js';
+import { createFx, MAX_BURSTS } from './fx/fxShader.js';
 import { roomFx } from './art/landRooms.js';
 import { prefersReducedMotion } from './motion.js';
 
@@ -59,24 +59,9 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
       const box = root.getBoundingClientRect();
       const kx = size.w / Math.max(1, box.width);
       const ky = size.h / Math.max(1, box.height);
+      // versão 2.15.2: o brilho das aprimoradas saiu daqui (o shader não fica na grade de pixels
+      // da pedra); agora é pintado quadro a quadro na própria pedra (art/tileFx.js)
       const list = [];
-      for (const el of document.querySelectorAll('.tile-body.tile-enh')) {
-        if (list.length >= MAX_TILES) break;
-        const kind = enhOf(el);
-        if (!kind || el.closest('[style*="visibility: hidden"]')) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 2 || r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom) continue;
-        // os quatro cantos de verdade (os pontinhos .fx-corner seguem o giro do leque e a
-        // perspectiva da mesa); a caixa reta do getBoundingClientRect não serve
-        const corners = el.querySelectorAll(':scope > .fx-corner');
-        if (corners.length !== 4) continue;
-        const q = [];
-        for (const c of corners) {
-          const cr = c.getBoundingClientRect();
-          q.push((cr.left - box.left) * kx, (cr.top - box.top) * ky);
-        }
-        list.push({ q, kind: KIND[kind] });
-      }
       tiles = list;
       const ids = new Set();
       for (const el of root.querySelectorAll('.board-world [data-tile-id]')) {

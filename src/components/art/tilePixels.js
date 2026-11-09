@@ -164,17 +164,34 @@ export const pipSize = (hw) => pipFit(hw - 3 - 2 * pipPad(hw));
  * Pinta a pedra. `w`×`h` em pixels; `depth`: linhas de lateral embaixo. `frame` pinta só a
  * moldura (contorno, lateral e quinas de luz), com a face transparente.
  */
-export function paintTileArt({ w, h, horizontal = false, values = [0, 0], mat = 'bone', depth = 1, frame = false, back = false }) {
-  const M = frame ? PX_FRAMES[mat] : PX_MATERIALS[mat];
-  const data = new Uint8ClampedArray(w * h * 4);
+/**
+ * A forma da pedra na grade: quem está dentro (com a quina em degraus), onde a face termina
+ * (a lateral embaixo e à direita). A pintura e os efeitos (tileFx.js) usam a mesma.
+ */
+export function tileShape(w, h, horizontal = false, depth = 1) {
   const hw = horizontal ? h : w;
-  const corner = cornerOf(Math.min(hw, horizontal ? h : w));
+  const corner = cornerOf(hw);
   const indent = (y) => {
     if (y < corner.length) return corner[y];
     if (h - 1 - y < corner.length) return corner[h - 1 - y];
     return 0;
   };
   const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h && x >= indent(y) && x <= w - 1 - indent(y);
+  const d = Math.max(1, Math.round(hw * 0.08), depth > 3 ? 2 : 1);
+  const rs = hw >= 14 ? Math.max(1, Math.round(hw * 0.05)) : 0;
+  const faceTop = 1;
+  const faceBot = h - 2 - d;
+  const faceRight = w - 2 - rs;
+  const edge = (x, y) => !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
+  /** Dentro da face (fora do contorno e das laterais). */
+  const onFace = (x, y) => inside(x, y) && !edge(x, y) && y >= faceTop && y <= faceBot && x <= faceRight;
+  return { hw, corner, indent, inside, edge, onFace, d, rs, faceTop, faceBot, faceRight };
+}
+
+export function paintTileArt({ w, h, horizontal = false, values = [0, 0], mat = 'bone', depth = 1, frame = false, back = false }) {
+  const M = frame ? PX_FRAMES[mat] : PX_MATERIALS[mat];
+  const data = new Uint8ClampedArray(w * h * 4);
+  const { hw, inside, edge, d, faceTop, faceBot, faceRight } = tileShape(w, h, horizontal, depth);
   const put = (x, y, c) => {
     if (!c || !inside(x, y)) return;
     const i = (y * w + x) * 4;
@@ -194,13 +211,6 @@ export function paintTileArt({ w, h, horizontal = false, values = [0, 0], mat = 
   const side = M.side.map(hexRgba);
   const hi = hexRgba(M.hi);
   const lo = hexRgba(M.lo);
-  // a lateral grossa embaixo e a fininha à direita (a luz vem de cima e da esquerda)
-  const d = Math.max(1, Math.round(hw * 0.08), depth > 3 ? 2 : 1);
-  const rs = hw >= 14 ? Math.max(1, Math.round(hw * 0.05)) : 0;
-  const faceTop = 1;
-  const faceBot = h - 2 - d;
-  const faceRight = w - 2 - rs;
-  const edge = (x, y) => !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
   const face = frame ? null : M.face.map(hexRgba);
   const hiRows = Math.max(1, Math.round(hw * 0.06));
   for (let y = 0; y < h; y += 1) {
@@ -296,7 +306,87 @@ export function paintTileArt({ w, h, horizontal = false, values = [0, 0], mat = 
       for (const [dx, dy] of disc) put(px + dx, py + dy, pip);
     }
   });
+  if (mat === 'chumbo' || mat === 'ambar') paintDetails({ put, mat, w, h, values, onFace: tileShape(w, h, horizontal, depth).onFace, data, avoid: [hexRgba(M.pip), hexRgba(M.divider)] });
   return { w, h, data };
+}
+
+/** Um gerador pseudoaleatório pequeno e fixo (a mesma pedra sai sempre igual). */
+export function rng(seed) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * O que fica gravado na pedra: no Chumbo, a trinca (a fenda escura com a quina clara); no
+ * Âmbar, as bolhas de ar e o mosquito preso na resina. Por cima dos pips, só onde não tem pip.
+ */
+function paintDetails({ put, mat, w, h, values, onFace, data, avoid }) {
+  const rand = rng(values[0] * 7 + values[1] * 13 + w * 31 + h);
+  // não pinta por cima dos pips, do friso nem do pino (nem rente a eles: 1 pixel de folga)
+  const taken = (x, y) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return false;
+    const i = (y * w + x) * 4;
+    if (data[i + 3] === 0) return false;
+    const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+    if (avoid.some((c) => c[0] === r && c[1] === g && c[2] === b)) return true;
+    return r > 200 && g > 150 && b < 120 && r - b > 120 && g < 240 && mat === 'chumbo';
+  };
+  const free = (x, y) => onFace(x, y) && !taken(x, y) && !taken(x - 1, y) && !taken(x + 1, y) && !taken(x, y - 1) && !taken(x, y + 1);
+  if (mat === 'chumbo') {
+    const dark = hexRgba('#0c0e10');
+    const lite = hexRgba('rgba(190,198,206,0.55)');
+    let x = Math.round(w * (0.25 + rand() * 0.5));
+    for (let y = 2; y < h - 3; y += 1) {
+      if (free(x, y)) {
+        put(x, y, dark);
+        if (free(x + 1, y)) put(x + 1, y, lite);
+      }
+      const r = rand();
+      if (r < 0.3) x -= 1;
+      else if (r > 0.7) x += 1;
+      if (rand() < 0.08) {
+        // um galho da trinca
+        let bx = x;
+        const dir = rand() < 0.5 ? -1 : 1;
+        for (let k = 0; k < 4; k += 1) {
+          bx += dir;
+          if (free(bx, y + k)) put(bx, y + k, dark);
+        }
+      }
+    }
+    return;
+  }
+  // âmbar: bolhas (um anel de 1 pixel claro) e o mosquito (corpo, asas)
+  const bubble = hexRgba('rgba(255,248,226,0.8)');
+  for (let k = 0; k < 3; k += 1) {
+    const bx = Math.round(2 + rand() * (w - 6));
+    const by = Math.round(2 + rand() * (h - 8));
+    if (free(bx, by)) put(bx, by, bubble);
+    if (w >= 20 && free(bx + 1, by + 1)) put(bx + 1, by + 1, hexRgba('rgba(255,248,226,0.4)'));
+  }
+  if (w < 14) return;
+  const body = hexRgba('rgba(48,18,2,0.92)');
+  const wing = hexRgba('rgba(255,244,222,0.6)');
+  const cx = Math.round(w * 0.55);
+  const cy = Math.round(h * 0.6);
+  for (const [dx, dy, c] of [
+    [0, 0, body],
+    [1, 0, body],
+    [2, 0, body],
+    [-1, 0, body],
+    [0, -1, wing],
+    [1, -1, wing],
+    [2, -2, wing],
+    [-1, -1, wing],
+    [0, 1, body],
+    [2, 1, body],
+  ])
+    if (free(cx + dx, cy + dy)) put(cx + dx, cy + dy, c);
 }
 
 const sprites = new Map();

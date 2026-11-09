@@ -2,6 +2,10 @@ import { memo, useContext } from 'react';
 import { getEnhancement } from '../data/enhancedTiles.js';
 import { TileSkinContext } from './tileSkin.js';
 import { pixelClip, tileGrid, tileSprite } from './art/tilePixels.js';
+import { HALO_M, TILE_FX, fxStrip } from './art/tileFx.js';
+
+/** A tira de quadros andando de quadro em quadro (steps): cada passo é a largura da pedra. */
+const stripStyle = (strip) => ({ backgroundImage: strip.url, width: `${strip.frames * 100}%`, animation: strip.frames > 1 ? `tileFxRun ${strip.ms}ms steps(${strip.frames}) infinite` : 'none' });
 import { sameTileProps } from './tileMemo.js';
 
 /**
@@ -98,6 +102,15 @@ function DominoTile({
   const mat = enh ? enh.id : onyx ? 'onyx' : silver ? 'silver' : 'bone';
   const sprite = tileSprite({ mat, w: artW, h: artH, horizontal, depth, values });
   const enhClass = enh ? `tile-enh tile-enh-${enh.id} ${dimmed ? 'tile-enh-still' : ''} ${still ? 'tile-enh-rest' : ''}` : 'tile-px';
+  // versão 2.15.2: os brilhos em pixel (o de dentro e o halo de fora), na mesma grade da pedra.
+  // A de repouso (na mão sem seleção, no miolo da mesa) mostra o 1º quadro parado.
+  const fx = enh ? TILE_FX[enh.id] : null;
+  const kind = fx?.layer ?? (shimmer ? 'glint' : null);
+  const animate = !still && !dimmed;
+  const layer = kind && (animate || kind !== 'glint') ? fxStrip({ kind, mat: enh ? enh.id : null, w: artW, h: artH, horizontal, depth }) : null;
+  const ringKind = selected ? (power ? 'power' : 'selected') : playable ? 'playable' : openEnd ? 'open' : null;
+  const ring = ringKind ? fxStrip({ ring: ringKind, w: artW, h: artH, horizontal, depth }) : null;
+  const halo = fx?.halo && !dimmed ? fxStrip({ halo: true, mat: enh.id, w: artW, h: artH, horizontal, depth }) : null;
 
   return (
     <Tag
@@ -109,37 +122,26 @@ function DominoTile({
       className={`domino-face relative shrink-0 select-none ${dimmed ? 'tile-dimmed' : ''} ${crosswise ? 'tile-crosswise' : ''} ${onyx ? 'tile-onyx' : ''} ${silver ? 'tile-silver' : ''} ${className}`}
       style={shared}
     >
+      {halo && (
+        <span aria-hidden="true" className={`tile-halo ${still ? 'is-still' : ''}`} style={{ left: -HALO_M * s, top: -HALO_M * s, width: width + HALO_M * 2 * s, height: height + HALO_M * 2 * s }}>
+          <span className="tile-fx-strip" style={stripStyle(halo)} />
+        </span>
+      )}
       <span className={`tile-body ${enhClass} ${horizontal ? 'flex-row' : 'flex-col'}`} style={{ clipPath: clip, backgroundImage: sprite ?? undefined }}>
-        {enh && (
-          <>
-            <span aria-hidden="true" className="tile-enh-layer" />
-            <span aria-hidden="true" className="tile-enh-glow" />
-            {/* versão 2.13: os quatro cantos da pedra, para o shader (FxLayer.jsx) achar onde ela
-                está de verdade na tela: girada no leque, deitada em perspectiva na mesa */}
-            <span aria-hidden="true" className="fx-corner fx-c0" />
-            <span aria-hidden="true" className="fx-corner fx-c1" />
-            <span aria-hidden="true" className="fx-corner fx-c2" />
-            <span aria-hidden="true" className="fx-corner fx-c3" />
-            {/* Ouro: o feixe especular cruza a pedra (só na selecionada e nas pontas abertas) */}
-            {enh.id === 'ouro' && !still && <span aria-hidden="true" className="shimmer-active pointer-events-none" style={{ position: 'absolute', inset: 0 }} />}
-          </>
+        {/* versão 2.15.2: o brilho de dentro, quadro a quadro na grade da pedra (art/tileFx.js) */}
+        {layer && (
+          <span aria-hidden="true" className={`tile-fx ${animate ? '' : 'is-still'}`}>
+            <span className="tile-fx-strip" style={{ ...stripStyle(layer), animationDelay: shimmerDelay ? `${shimmerDelay}s` : undefined }} />
+          </span>
         )}
-        {shimmer && <span aria-hidden="true" className="tile-shimmer-effect pointer-events-none" style={{ position: 'absolute', inset: 0, '--shimmer-delay': `${shimmerDelay}s` }} />}
         {/* luz da lâmpada na pedra: brilho do lado virado para ela, escuro longe dela */}
         <span aria-hidden="true" className="tile-lamp-light" />
       </span>
-      {selected && (
-        <span
-          aria-hidden="true"
-          className={`${power ? 'tile-ring-power' : 'tile-ring-selected'} pointer-events-none absolute -inset-[3px]`}
-          style={{ borderRadius: radius + 2 }}
-        />
-      )}
-      {!selected && playable && (
-        <span aria-hidden="true" className="tile-ring-playable pointer-events-none absolute -inset-[2px]" style={{ borderRadius: radius + 1 }} />
-      )}
-      {openEnd && (
-        <span aria-hidden="true" className="animate-end-pulse pointer-events-none absolute -inset-[2px] border-2 border-brass-300" style={{ borderRadius: radius + 1 }} />
+      {/* versão 2.15.2: as molduras de seleção em pixel, seguindo a quina em degraus */}
+      {ring && (
+        <span aria-hidden="true" className={`tile-ring-px is-${ringKind}`} style={{ left: -HALO_M * s, top: -HALO_M * s, width: width + HALO_M * 2 * s, height: height + HALO_M * 2 * s }}>
+          <span className="tile-fx-strip" style={stripStyle(ring)} />
+        </span>
       )}
     </Tag>
   );

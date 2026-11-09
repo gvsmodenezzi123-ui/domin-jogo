@@ -24035,6 +24035,9 @@
 .tile-body .tile-lamp-light {
   z-index: 4;
   border-radius: 0;
+  /* versão 2.15.2: na pedra de pixel, a lâmpada só escurece por igual quem está longe dela (o
+     brilho já vem pintado; as elipses de luz em CSS não caíam na grade dos pixels) */
+  background: linear-gradient(rgba(12, 8, 3, calc(0.42 * (1 - var(--lit, 1)))), rgba(12, 8, 3, calc(0.42 * (1 - var(--lit, 1)))));
 }
 .domino-face.tile-dimmed::after {
   border-radius: 0;
@@ -24044,4 +24047,54 @@
 .tile-body.tile-enh {
   box-shadow: none !important;
   background-color: transparent;
+}
+
+/* versão 2.15.2: os brilhos das aprimoradas em pixel (art/tileFx.js): uma tira de quadros na
+   grade da pedra, andando um quadro por passo (steps), sem borrão e sem sair da quina */
+.tile-fx {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tile-halo {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tile-fx-strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+  will-change: transform;
+}
+.tile-fx.is-still .tile-fx-strip,
+.tile-halo.is-still .tile-fx-strip,
+.reduce-motion .tile-fx-strip {
+  animation: none !important;
+}
+@keyframes tileFxRun {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* versão 2.15.2: as molduras de seleção e o halo, em pixel, por fora da pedra */
+.tile-ring-px {
+  position: absolute;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tile-halo {
+  z-index: 0;
+}
+.reduce-motion .tile-ring-px .tile-fx-strip {
+  animation: none !important;
 }

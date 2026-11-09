@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.15.2: os brilhos das aprimoradas em pixel, alinhados na pedra
+
+- Os brilhos das pedras aprimoradas saíram do CSS borrado e da aura do shader (que não caíam na
+  grade da pedra e "pulavam" pixels) e viraram tiras de quadros pintadas pixel a pixel na mesma
+  grade da pedra (`components/art/tileFx.js`), passando quadro a quadro: o reflexo em faixa de
+  escada com a estrelinha (Ouro, Rubi, Âmbar e a pedra escolhida), o arco-íris em faixas (Cristal,
+  Obsidiana), os fiapos subindo (Fantasma) e o halo de fora em degraus seguindo a quina, que bate
+  como coração no Rubi e respira nos outros. A trinca do Chumbo e o mosquito e as bolhas do Âmbar
+  ficam gravados na pintura, sem passar por cima dos pips.
+- As molduras de seleção (a escolhida, a bucha escolhida, a que dá para jogar e a ponta aberta)
+  também em pixel, seguindo a quina em degraus. A luz da lâmpada na pedra só escurece por igual.
+
 ### 2.15.1: as pedras em pixel art de verdade e o leque da referência
 
 - Todas as pedras (as comuns, as Peças Pretas e Prateadas, todas as aprimoradas e o verso) são
