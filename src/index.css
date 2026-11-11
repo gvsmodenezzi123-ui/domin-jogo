@@ -24098,3 +24098,102 @@
 .reduce-motion .tile-ring-px .tile-fx-strip {
   animation: none !important;
 }
+
+/* versão 2.16: a vida e o dinheiro do rival numa bandeja de veludo (era uma caixa lisa) */
+.px-skins .seat-hud.seat-hud .seat-stats {
+  padding: 0 5px;
+  border: 5px solid transparent;
+  border-image: var(--px-velvet) 10 fill / 10px / 0 round;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.55));
+}
+
+/* versão 2.16: "ver a mesa": a tecla da lupa no canto e a mesa vista de cima em tela cheia */
+.board-view-btn {
+  position: absolute;
+  z-index: 41;
+  top: max(env(safe-area-inset-top), 8px);
+  right: max(env(safe-area-inset-right), 10px);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid #1a0c04;
+  background: linear-gradient(180deg, #5a3a1c, #2e1b0b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 222, 140, 0.35),
+    0 3px 0 #0b0705;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.px-skins .board-view-btn {
+  border: 4px solid transparent;
+  border-image: var(--px-niche) 4 fill / 6px / 0 stretch;
+  background: none;
+  box-shadow: none;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.6));
+}
+.board-view-btn:active {
+  translate: 0 2px;
+}
+/* a lupa em pixel: o aro de latão, o vidro e o cabo */
+.board-view-ico {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  background:
+    linear-gradient(#f0cc78, #f0cc78) 4px 0 / 6px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 4px 10px / 6px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 2px 2px / 2px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 10px 2px / 2px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 2px 8px / 2px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 10px 8px / 2px 2px,
+    linear-gradient(#f0cc78, #f0cc78) 0 4px / 2px 4px,
+    linear-gradient(#f0cc78, #f0cc78) 12px 4px / 2px 4px,
+    linear-gradient(#bfe6ff, #bfe6ff) 4px 2px / 6px 8px,
+    linear-gradient(#bfe6ff, #bfe6ff) 2px 4px / 10px 4px,
+    linear-gradient(#ffffff, #ffffff) 4px 4px / 2px 2px,
+    linear-gradient(#a6742a, #a6742a) 10px 10px / 2px 2px,
+    linear-gradient(#a6742a, #a6742a) 12px 12px / 2px 2px,
+    linear-gradient(#a6742a, #a6742a) 14px 14px / 2px 2px;
+  background-repeat: no-repeat;
+}
+.board-zoom {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background:
+    radial-gradient(ellipse 80% 80% at 50% 45%, rgba(58, 74, 42, 0.5), transparent 70%),
+    rgba(8, 6, 4, 0.94);
+  cursor: pointer;
+  animation: sweepWaitIn 0.18s ease-out both;
+}
+.board-zoom-world {
+  position: relative;
+  flex: none;
+}
+.board-zoom-title {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: #f0cc78;
+  text-shadow: 0 2px 0 #000;
+}
+.board-zoom-hint {
+  margin: 0;
+  font-size: 7px;
+  letter-spacing: 0.16em;
+  color: rgba(244, 236, 210, 0.6);
+}

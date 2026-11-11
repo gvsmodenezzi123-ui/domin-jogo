@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.16.0: ver a mesa de cima, os personagens repintados, a mesa e o HUD caprichados
+
+- **Ver a mesa**: a tecla da lupa no canto de cima à direita abre a mesa vista de cima, sem a
+  perspectiva, com as pedras no maior tamanho que cabe na tela (`components/BoardZoom.jsx`).
+  Toque em qualquer lugar para voltar. Vale na campanha, no duelo e na roda.
+- **Personagens** (os 33, no retrato e no busto): cinco tons por material (entrou o brilho), o
+  pontilhado só na virada de um tom para o outro (a roupa não fica mais riscada), a cabeça como
+  volume (testa e maçã acesas, têmpora e queixo na sombra), a linha do queixo separando o rosto
+  do pescoço, o ombro redondo com a sombra da cabeça no peito, o braço como cilindro, a faixa de
+  brilho no cabelo e a barba por fazer como sombra em xadrez (era um quadriculado duro).
+- **Mesa**: o filete de latão embutido no aro, cantoneiras de latão nos quatro cantos, o pesponto
+  do pano acompanhando a tabela e menos lascas e riscos no aro.
+- **HUD**: a vida e o dinheiro do rival numa bandeja de veludo, alinhada embaixo da plaquinha.
+
 ### 2.15.2: os brilhos das aprimoradas em pixel, alinhados na pedra
 
 - Os brilhos das pedras aprimoradas saíram do CSS borrado e da aura do shader (que não caíam na

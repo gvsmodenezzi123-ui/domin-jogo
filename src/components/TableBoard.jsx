@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { BASE_UNIT_PX, WORLD_COLS, computeBoardLayout, computeCamera, computeWorldSize } from '../engine/boardLayout.js';
 import { boardTilesInOrder } from '../engine/dominoLogic.js';
 import DominoTile from './DominoTile.jsx';
+import BoardZoom from './BoardZoom.jsx';
 import LampRig from './LampRig.jsx';
 import TableCandles from './TableCandles.jsx';
 import FxLayer from './FxLayer.jsx';
@@ -260,6 +261,8 @@ function TableBoard({
   dormeInHud = false,
 }) {
   const candles = lighting === 'candles';
+  const [zoomed, setZoomed] = useState(false);
+  const closeZoom = useCallback(() => setZoomed(false), []);
   const [areaRef, size] = useElementSize();
   // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
   const [roomRef, room] = useElementSize();
@@ -354,6 +357,13 @@ function TableBoard({
       style={land ? { ...feltVars, '--rail-px': `${land.yFar}px`, '--near-px': `${land.yNear}px`, '--table-w': `${land.width}px` } : feltVars}
       aria-label="Mesa"
     >
+      {/* versão 2.16: ver a mesa de cima, com as pedras grandes */}
+      {layout.tiles.length > 0 && (
+        <button type="button" className="board-view-btn" onClick={() => setZoomed(true)} aria-label="Ver a mesa de cima">
+          <span aria-hidden="true" className="board-view-ico" />
+        </button>
+      )}
+      {zoomed && <BoardZoom tiles={layout.tiles} enhancementOf={enhancementOf} onClose={closeZoom} />}
       {/* Versão 2.0: a sala em volta da mesa (aparece nos cantos do fundo, onde a mesa afina) */}
       <div ref={roomRef} aria-hidden="true" className="table-room pointer-events-none absolute inset-0">
         <BotecoBackdrop scene={landscape ? (roomScene ?? 'landroom') : 'tableroom'} className="absolute inset-0" />

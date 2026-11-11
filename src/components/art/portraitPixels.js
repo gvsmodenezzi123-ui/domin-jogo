@@ -31,7 +31,9 @@ const INK = hex('#140c08');
 function tones(base, { warm = true } = {}) {
   const c = hex(base);
   return {
-    hi: rgb(mix(c, warm ? hex('#fff1d8') : hex('#eef4ff'), 0.32)),
+    // versão 2.16: cinco tons (entrou o brilho), para o volume sair em degraus limpos
+    top: rgb(mix(c, warm ? hex('#fff6e2') : hex('#f4f8ff'), 0.52)),
+    hi: rgb(mix(c, warm ? hex('#fff1d8') : hex('#eef4ff'), 0.28)),
     mid: c,
     lo: rgb(mix(c, warm ? hex('#2a1208') : hex('#0a1020'), 0.32)),
     deep: rgb(mix(c, hex('#0a0604'), 0.58)),
@@ -40,8 +42,11 @@ function tones(base, { warm = true } = {}) {
 
 /** Escolhe o tom pela luz (-1 escuro .. 1 claro), com pontilhado nas transições. */
 function lit(t, light, x, y) {
-  const v = light + (dither(x, y) - 0.5) * 0.18;
-  if (v > 0.42) return t.hi;
+  // versão 2.16: o pontilhado só costura a virada de um tom para o outro (antes sujava a faixa
+  // toda e a roupa ficava riscada)
+  const v = light + (dither(x, y) - 0.5) * 0.07;
+  if (v > 0.78) return t.top;
+  if (v > 0.4) return t.hi;
   if (v > -0.12) return t.mid;
   if (v > -0.52) return t.lo;
   return t.deep;
@@ -163,13 +168,20 @@ function paintBody(b, spec) {
   const skin = tones(spec.skin ?? '#c88a5a');
   const shoulder = spec.broad ? 29 : 26;
   // pescoço
-  fill(b, CX - 6, 38, CX + 6, 50, (x, y) => lit(skin, (CX - x) / 10 - (y < 44 ? 0.45 : 0.2), x, y));
+  fill(b, CX - 6, 38, CX + 6, 50, (x, y) => lit(skin, (CX - x) / 9 - (y < 46 ? 0.62 : 0.24), x, y));
   // ombros: um trapézio com a quina redonda
   fill(b, 0, 46, G - 1, G - 1, (x, y) => {
     const t = (y - 46) / 18;
     const half = 12 + (shoulder - 12) * Math.min(1, Math.sqrt(Math.max(0, t)) * 1.25);
     if (Math.abs(x - CX) > half) return null;
-    const light = (CX - x) / 26 - t * 0.25 + 0.1;
+    // versão 2.16: o ombro é redondo: a luz pega em cima e à esquerda, a ponta direita cai na
+    // sombra, e a cabeça faz sombra no peito
+    const nx = (x - CX) / shoulder;
+    const rim = (half - Math.abs(x - CX)) / 4; // 0 na beirada do ombro
+    let light = -nx * 0.44 - t * 0.3 + 0.14;
+    if (rim < 1 && t < 0.9) light += nx < 0 ? 0.3 * (1 - rim) : -0.22 * (1 - rim);
+    const chin = ((x - CX - 2) / 11) ** 2 + ((y - 47) / 6) ** 2;
+    if (chin < 1) light -= 0.34 * (1 - chin);
     return lit(cloth, light, x, y);
   });
   // as cavas do braço e a sombra que a cabeça faz no peito
@@ -358,12 +370,28 @@ function paintHead(b, spec) {
     const nx = (x + 0.5 - CX) / Math.max(1, h);
     if (Math.abs(nx) > 1) return null;
     // luz: da esquerda e de cima; sombra embaixo do queixo e na lateral direita
-    let light = -nx * 0.55 + (0.35 - t) * 0.5 + 0.12;
-    if (t > 0.9) light -= 0.35;
-    // maçã do rosto
-    if (Math.abs(nx + 0.45) < 0.2 && t > 0.5 && t < 0.62) light += 0.25;
+    // versão 2.16: a cabeça como volume: a testa e a maçã esquerda acesas, a têmpora e a
+    // lateral direita na sombra, o queixo virando para baixo
+    let light = -nx * 0.6 + (0.4 - t) * 0.62 + 0.14;
+    if (nx > 0.72) light -= (nx - 0.72) * 1.6;
+    if (nx < -0.86) light -= 0.18;
+    if (t > 0.88) light -= (t - 0.88) * 3.2;
+    // a testa (o brilho) e a maçã do rosto
+    if (((nx + 0.3) / 0.42) ** 2 + ((t - 0.2) / 0.1) ** 2 < 1) light += 0.3;
+    if (((nx + 0.5) / 0.26) ** 2 + ((t - 0.58) / 0.07) ** 2 < 1) light += 0.26;
     return lit(skin, light, x, y);
   });
+  // a linha do queixo por cima do pescoço (separa o rosto do pescoço)
+  for (let x = CX - 15; x <= CX + 15; x += 1) {
+    for (let y = bottom; y > top + span * 0.72; y -= 1) {
+      const h = halfAt(jaw, (y - top) / span);
+      if (Math.abs((x + 0.5 - CX) / Math.max(1, h)) <= 1) {
+        if (Math.abs(x - CX) < 7) b.put(x, y + 1, skin.deep, 0.75);
+        b.put(x, y, x > CX + 3 ? skin.deep : skin.lo, x > CX + 3 ? 0.55 : 0.5);
+        break;
+      }
+    }
+  }
   if (spec.blush) {
     for (const side of [-1, 1]) b.ellipse(CX + side * 7, 34, 2.4, 1.3, hex(spec.blush), 0.35);
   }
@@ -530,7 +558,12 @@ function paintFacialHair(b, spec) {
       // deixa a boca de fora
       if (Math.abs(x - CX) < 4 && y >= 37 && y <= 39 && !fh.coverMouth) return null;
       if (y < 34 && Math.abs(nx) < 0.62) return null;
-      if (fh.stubble) return dither(x, y) > 0.55 ? t.lo : null;
+      if (fh.stubble) {
+        // versão 2.16: a barba por fazer é uma sombra em xadrez por cima da pele (antes era um
+        // quadriculado duro)
+        if ((x + y) % 2 === 0) b.put(x, y, t.lo, y > 38 ? 0.5 : 0.34);
+        return null;
+      }
       return lit(t, -nx * 0.5 + 0.1 - (y - 34) * 0.03, x, y);
     });
   }
@@ -606,6 +639,8 @@ function paintHair(b, spec, layer) {
     if (style === 'side' && dx > 2 && tt < 0.3) inHair = true;
     if (!inHair) return null;
     let light = -dx / 10 + (0.1 - tt) * 2;
+    // versão 2.16: a faixa de brilho no alto, do lado da lâmpada
+    if (style !== 'curly' && tt > -0.05 && tt < 0.07 && dx > -9 && dx < 1 && (x + y) % 3 !== 0) light += 0.5;
     if (style === 'slick' && Math.abs(dx + 4) < 1.5 && tt < 0.18) light = 1; // o brilho do gel
     if (style === 'curly' && dither(x * 2, y * 2) > 0.7) light -= 0.5;
     return lit(t, light, x, y);

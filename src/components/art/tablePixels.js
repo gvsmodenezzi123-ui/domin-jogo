@@ -480,8 +480,11 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       else {
         const g = Math.sin(along * 0.09 + across * 1.9 + Math.sin(along * 0.021 + across * 0.7) * 2.6 + woodNoise(x, y) * 4);
         c = g > 0.74 ? wood.grain : g > 0.3 ? lerp(wood.mid, wood.lo, 0.3) : g < -0.78 ? lerp(wood.mid, wood.hi, 0.4) : wood.mid;
-        c = shift(c, Math.round((r() - 0.5) * 7));
+        c = shift(c, Math.round((r() - 0.5) * 3));
       }
+      // versão 2.16: o filete de latão embutido no tampo do aro (um friso escuro e o fio claro)
+      if (across === WOOD_W - 5) c = lerp(c, wood.deep, 0.55);
+      if (across === WOOD_W - 4) c = lerp(c, hex('#d8a84a'), 0.62);
       // luz de cima: o lado de cima mais claro, o de baixo mais escuro
       if (side === 'top') c = lerp(c, wood.hi, 0.14);
       if (side === 'bottom') c = lerp(c, wood.lo, 0.12);
@@ -519,7 +522,7 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
     diamond(w - 8, Math.round(h * t));
   }
   // lascas na quina de fora: o dente escuro e a madeira crua por dentro
-  for (let i = 0; i < 18; i += 1) {
+  for (let i = 0; i < 8; i += 1) {
     const side = Math.floor(r() * 4);
     const t = 0.06 + r() * 0.88;
     const len = 2 + Math.floor(r() * 4);
@@ -537,9 +540,9 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
     }
   }
   // riscos de chave e de anel no tampo do aro
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 12; i += 1) {
     const side = Math.floor(r() * 4);
-    const a = 4 + Math.floor(r() * (WOOD_W - 6));
+    const a = 4 + Math.floor(r() * (WOOD_W - 9));
     const len = 3 + Math.floor(r() * 7);
     const tint = r() < 0.7 ? hex('#e0b07a') : wood.deep;
     if (side < 2) {
@@ -568,16 +571,55 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
   // queimado de cigarro esquecido na beirada
   b.ellipse(w * 0.14, h - 6, 4, 2.2, hex('#1a0c04'), 0.7);
   b.ellipse(w * 0.14, h - 6, 2, 1.2, hex('#050200'), 0.9);
-  // pregos de latão nos cantos
-  for (const [nx, ny] of [
-    [5, 5],
-    [w - 6, 5],
-    [5, h - 6],
-    [w - 6, h - 6],
-  ]) {
-    b.ellipse(nx, ny, 2, 2, hex('#6a4a10'));
-    b.put(nx - 1, ny - 1, hex('#ffe08a'));
-    b.put(nx, ny, hex('#c9962e'));
+  // versão 2.16: cantoneiras de latão nos quatro cantos (o L de chapa com dois parafusos)
+  {
+    const B = { hi: hex('#ffe9a0'), mid: hex('#d8a83a'), lo: hex('#9a6e1c'), deep: hex('#4a3208') };
+    const arm = 11;
+    const wide = 5;
+    for (const [sx, sy] of [
+      [1, 1],
+      [-1, 1],
+      [1, -1],
+      [-1, -1],
+    ]) {
+      const ox = sx > 0 ? 1 : w - 2;
+      const oy = sy > 0 ? 1 : h - 2;
+      for (let i = 0; i < arm; i += 1) {
+        for (let j = 0; j < arm; j += 1) {
+          if (i >= wide && j >= wide) continue;
+          if (i + j >= arm + wide - 3) continue; // as pontas chanfradas
+          const x = ox + sx * i;
+          const y = oy + sy * j;
+          const rim = i === 0 || j === 0 || (i === wide - 1 && j >= wide) || (j === wide - 1 && i >= wide) || i + j === arm + wide - 4;
+          const lit = (sy > 0 ? j : wide - j) <= 1 && sx * i >= 0;
+          b.put(x, y, rim ? (i === 0 || j === 0 ? B.deep : B.lo) : lit && j === 1 ? B.hi : B.mid);
+        }
+      }
+      for (const [i, j] of [
+        [2, arm - 4],
+        [arm - 4, 2],
+      ]) {
+        b.put(ox + sx * i, oy + sy * j, B.deep);
+        b.put(ox + sx * i - 1, oy + sy * j - 1, B.hi);
+      }
+    }
+  }
+  // o pesponto do pano: a costura clara pontilhada acompanhando a tabela por dentro
+  {
+    const st = lerp(L, hex('#fff2d0'), 0.45);
+    const m = RAIL + 4;
+    for (let x = m; x < w - m; x += 1) {
+      if (x % 4 < 2) {
+        b.put(x, m, st, 0.5);
+        b.put(x, h - 1 - m, st, 0.5);
+      }
+    }
+    for (let y = m; y < h - m; y += 1) {
+      if (y % 4 < 2) {
+        b.put(m, y, st, 0.5);
+        b.put(w - 1 - m, y, st, 0.5);
+      }
+    }
   }
   // a sombra da tabela no pano (mais forte em cima: a luz vem do alto)
   for (let k = 0; k < 5; k += 1) {

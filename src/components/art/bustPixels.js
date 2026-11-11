@@ -58,7 +58,8 @@ function sleeveOf(fig, side) {
   for (let i = 0; i < 26; i += 1) {
     const x = side < 0 ? 3 + i : G - 4 - i;
     if (alphaAt(fig, x, y) > 200) {
-      const c = colorAt(fig, side < 0 ? x + 2 : x - 2, y);
+      // (4 px para dentro: a beirada do ombro pega o brilho ou a sombra do volume)
+      const c = colorAt(fig, side < 0 ? x + 5 : x - 4, y);
       // pula o contorno (quase preto)
       if (c[0] + c[1] + c[2] > 60) return c;
     }
@@ -94,7 +95,9 @@ function paintArms(fig) {
       for (let x = Math.round(x0); x <= Math.round(x1); x += 1) {
         const u = (x - x0) / Math.max(1, x1 - x0); // 0 à esquerda .. 1 à direita
         // a lâmpada vem da esquerda: o braço esquerdo acende por fora, o direito fica na sombra
-        const c = side < 0 ? (u < 0.3 ? hi : u > 0.8 ? lo : base) : u < 0.25 ? base : u > 0.7 ? deep : lo;
+        // versão 2.16: o braço é um cilindro: a quina de fora da esquerda acende, o miolo é a
+        // cor da manga, a de dentro (colada no tronco) e a de fora da direita caem na sombra
+        const c = side < 0 ? (u < 0.22 && y < BUST_H - 14 ? hi : u > 0.72 ? lo : base) : u < 0.2 ? lo : u > 0.7 ? deep : mix(base, lo, 0.45);
         arms.put(x, y, y > BUST_H - 6 ? mix(c, hex('#0a0604'), 0.25) : c);
       }
     }
