@@ -172,6 +172,23 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.17.0: os personagens refeitos do zero, a mesa mais quadrada e o HUD discreto
+
+- **Os 33 personagens (30 rivais + Valtinho, Seu Tião e o Corvo) refeitos do zero**, no nível do
+  desenho de referência (a Dona Neide): figura de 88×84 com a cabeça grande, rampas de sete tons
+  por material (pele, cabelo, pano, metal), rosto modelado pela luz da lâmpada (testa clara, o
+  lado direito na sombra, a volta do queixo), olho com branco, íris e pupila, nariz com luz e
+  narinas, lábio, orelha desenhada, cabelo em mechas (uma apoiada na outra), chapéus, roupas
+  (gola, lapela, renda, nervura do tricô, costura da manga) e o objeto de cada um redesenhado.
+  O motor novo: `art/figKit.js`, `figHead.js`, `figHair.js`, `figBody.js` e `figurePixels.js`;
+  o busto da mesa é a figura inteira e o retrato 64×64 é o recorte dela.
+- **O chefe secreto (o Dono da Noite) com os olhos brilhando em vermelho de verdade**: uma luz
+  que pulsa e tremula por cima do desenho (só `transform` e `opacity`), no busto e no retrato.
+- **A mesa da partida mais quadrada**: mais funda, um pouco mais estreita e com menos fuga; as
+  pedras da mesa ficaram ~15% maiores (a corrente e as regras de encaixe não mudaram).
+- **HUD mais discreto**: os armarinhos (vida, talismãs, dorme, COMPRAR e PASSAR) em 3/4 do
+  tamanho, a placa do rival menor e os bustos menores, abrindo espaço dos lados da mesa.
+
 ### 2.16.0: ver a mesa de cima, os personagens repintados, a mesa e o HUD caprichados
 
 - **Ver a mesa**: a tecla da lupa no canto de cima à direita abre a mesa vista de cima, sem a

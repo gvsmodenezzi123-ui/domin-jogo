@@ -260,7 +260,7 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey })
   const solo = n === 1;
   // versão 2.14: um tiquinho menores que o rival do duelo (a roda tem até 3 na parede); a cabeça
   // um pouco mais baixa (a plaquinha mora em cima)
-  const bust = seatBust(size.h, 0.41, 0.02);
+  const bust = seatBust(size.h, 0.34, 0.02);
   const unit = seatUnit(size.h);
   // a régua de cada um cabe no espaço da cadeira (como a do rival da campanha)
   const room = Math.max(80, Math.min(bust.w * 1.3, 15 * (unit + 3), (size.w || 844) * (n === 3 ? 0.22 : 0.3)));

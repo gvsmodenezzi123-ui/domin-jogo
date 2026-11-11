@@ -9,9 +9,10 @@
  * width:      a largura da beirada de perto (fração da largura, limitada pela altura)
  * tilt/persp: o tombo do tampo (graus) e a perspectiva (px)
  */
-import { BUST_H, BUST_W } from './art/bustPixels.js';
+import { BUST_H, BUST_MOUTH, BUST_RAIL, BUST_W } from './art/bustPixels.js';
 
-export const LAND = Object.freeze({ far: 0.39, near: 0.85, width: 0.7, maxWidthH: 1.55, tilt: 30, persp: 640 });
+// versão 2.17: a mesa mais quadrada (mais funda e um pouco mais estreita, com menos fuga): as pedras ficam maiores
+export const LAND = Object.freeze({ far: 0.34, near: 0.86, width: 0.66, maxWidthH: 1.46, tilt: 28, persp: 1000 });
 
 /** A linha da beirada de lá (fração da altura): o busto é cortado ali. */
 export const SEAT_RAIL = LAND.far;
@@ -72,16 +73,16 @@ export const seatUnit = (h) => Math.max(8, Math.min(16, Math.round((h || 390) * 
  * O busto (`size`: a altura em fração da cena; `lift`: quanto a linha dos ombros fica acima da
  * beirada, em fração da cena; na roda a cabeça desce um pouco para a plaquinha caber em cima): altura
  * (px), largura, quanto passa para baixo da beirada (`drop`, escondido atrás do
- * tampo) e a altura da boca a partir do alto da cena (`mouth`). A linha dos ombros (linha 50 de
- * 76 do desenho) fica acima da beirada: aparecem a cabeça, os ombros e o alto do peito.
+ * tampo) e a altura da boca a partir do alto da cena (`mouth`). A linha dos ombros (BUST_RAIL
+ * do desenho) fica acima da beirada: aparecem a cabeça, os ombros e o alto do peito.
  */
-export function seatBust(h, size = 0.44, lift = 0.07) {
+export function seatBust(h, size = 0.36, lift = 0.035) {
   const H = h || 390;
   const rail = H * SEAT_RAIL;
   const bh = Math.round(H * size);
   const bw = Math.round((bh * BUST_W) / BUST_H);
-  const top = Math.round(rail - H * lift - (bh * 50) / BUST_H);
-  return { w: bw, h: bh, drop: top + bh - Math.round(rail), mouth: Math.round(top + (bh * 38) / BUST_H) };
+  const top = Math.round(rail - H * lift - (bh * BUST_RAIL) / BUST_H);
+  return { w: bw, h: bh, drop: top + bh - Math.round(rail), mouth: Math.round(top + (bh * BUST_MOUTH) / BUST_H) };
 }
 
 /**

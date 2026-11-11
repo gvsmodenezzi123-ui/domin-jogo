@@ -1,6 +1,6 @@
 import PixelCanvas from './PixelCanvas.jsx';
 import { PORTRAIT_PX, paintPortrait } from './art/portraitPixels.js';
-import { PORTRAIT_EMBER, PORTRAITS } from './art/portraitSpecs.js';
+import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
 
 /** Atraso de cada baforada (s): três defasadas fazem a fumaça subir sem parar. */
 const PUFF_DELAYS = [0, 0.7, 1.4];
@@ -30,6 +30,7 @@ export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hur
   const spec = PORTRAITS[rival.art] ?? PORTRAITS.tioZe;
   const ember = smoke ? emberSpot(rival, mood, px) : null;
   const open = Boolean(speaking) && mood !== 'hurt';
+  const glow = bare || mood === 'blink' ? null : PORTRAIT_GLOW[rival.art];
   return (
     <span
       key={hurtKey}
@@ -54,6 +55,15 @@ export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hur
             aria-hidden="true"
             className="smoke-puff pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-zinc-400 blur-[1px]"
             style={{ left: ember.x - 3, top: ember.y - 3, animationDelay: `${delay}s` }}
+          />
+        ))}
+      {glow &&
+        glow.eyes.map((eye) => (
+          <span
+            key={eye.x}
+            aria-hidden="true"
+            className="eye-glow pointer-events-none absolute"
+            style={{ left: (eye.x / glow.grid) * px, top: ((eye.y + (mood === 'hurt' ? 1 : 0)) / glow.grid) * px, width: (9 / glow.grid) * px, '--glow': glow.color }}
           />
         ))}
     </span>

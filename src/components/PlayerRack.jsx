@@ -652,7 +652,8 @@ const LandConsoles = memo(function LandConsoles({
   const R = right.boxes;
   // nas telas mais quadradas (16:9) a mesa chega mais perto da beirada: os armarinhos encolhem um
   // pouco para não cobrir o canto da mesa (a frente da mesa começa em 15% da largura)
-  const scale = sceneW ? Math.max(0.8, Math.min(1, Math.round(((sceneW * 0.15 - 10) / CAB_W) * 20) / 20)) : 1;
+  // versão 2.17: os armarinhos mais discretos (3/4 do tamanho): sobra mesa dos lados
+  const scale = sceneW ? Math.max(0.65, Math.min(0.8, Math.round(((sceneW * 0.112 - 10) / CAB_W) * 20) / 20)) : 0.75;
   return (
     <>
       <Cabinet plan={left} side="left" seed={7} scale={scale}>

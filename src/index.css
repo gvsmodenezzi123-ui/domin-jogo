@@ -24197,3 +24197,49 @@
   letter-spacing: 0.16em;
   color: rgba(244, 236, 210, 0.6);
 }
+
+/* Versão 2.17: os olhos do chefe secreto brilham de verdade (a luz vermelha pulsa e tremula) */
+.eye-glow {
+  aspect-ratio: 9 / 5;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #fff0d0 0%, var(--glow, #ff2a1a) 28%, color-mix(in srgb, var(--glow, #ff2a1a) 45%, transparent) 55%, transparent 72%);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: eyeGlow 2.6s ease-in-out infinite;
+}
+.eye-glow + .eye-glow {
+  animation-delay: -0.12s;
+}
+@keyframes eyeGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.9, 1.7);
+  }
+  48% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+  56% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(2.1, 1.8);
+  }
+}
+.reduce-motion .eye-glow {
+  animation: none;
+  opacity: 0.85;
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+/* Versão 2.17: o HUD da partida mais discreto (menor e um pouco apagado até você tocar nele):
+   sobra mesa dos lados para os outros jogadores da roda */
+.app-shell.is-landscape .seat-hud {
+  transform: scale(0.78);
+  transform-origin: top left;
+  opacity: 0.9;
+}

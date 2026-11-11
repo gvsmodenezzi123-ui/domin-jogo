@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import PixelCanvas from './PixelCanvas.jsx';
 import { BUST_H, BUST_W, paintBust } from './art/bustPixels.js';
-import { PORTRAIT_EMBER, PORTRAITS } from './art/portraitSpecs.js';
+import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
 
 /** Quem não tem retrato (o adversário do duelo on-line) senta como silhueta de um destes. */
 const STRANGERS = ['tioZe', 'paulinho', 'beto', 'zeca', 'marquinhos', 'carlinhos'];
@@ -17,6 +17,7 @@ function RivalBust({ rival, mood = 'idle', speaking = false }) {
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
   const ember = !stranger && PORTRAIT_EMBER[art]?.moods.includes(mood) ? PORTRAIT_EMBER[art] : null;
+  const glow = !stranger ? PORTRAIT_GLOW[art] : null;
   return (
     <>
       <PixelCanvas
@@ -35,6 +36,15 @@ function RivalBust({ rival, mood = 'idle', speaking = false }) {
             aria-hidden="true"
             className="smoke-puff seat-smoke pointer-events-none absolute rounded-full bg-zinc-400 blur-[1px]"
             style={{ left: `${((ember.x + (BUST_W - 64) / 2) / BUST_W) * 100}%`, top: `${(ember.y / BUST_H) * 100}%`, animationDelay: `${delay}s` }}
+          />
+        ))}
+      {glow &&
+        glow.eyes.map((eye) => (
+          <span
+            key={eye.x}
+            aria-hidden="true"
+            className="eye-glow pointer-events-none absolute"
+            style={{ left: `${((eye.x + (BUST_W - 64) / 2) / BUST_W) * 100}%`, top: `${((eye.y + (mood === 'hurt' ? 1 : 0)) / BUST_H) * 100}%`, width: `${(9 / BUST_W) * 100}%`, '--glow': glow.color }}
           />
         ))}
     </>
