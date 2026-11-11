@@ -543,8 +543,41 @@ function forfeit(state, { seat }) {
   return commit(next, events);
 }
 
-/** O reducer da mesa. Ações: START_ROUND · PLAY · DRAW · PASS · FORFEIT. */
+/**
+ * Versão 2.19, o sinal da dupla: você marca uma pedra da mão do seu parceiro ("joga essa").
+ * Marcar a mesma de novo (ou `tileId` nulo) tira o sinal. `signals[cadeira]` é a pedra marcada
+ * NA MÃO daquela cadeira; só a dupla enxerga (viewFor). Não gasta a vez nem mexe no relógio.
+ */
+function signalTile(state, { seat, tileId = null }) {
+  if (state.phase !== 'playing' || !state.rules?.teams) return state;
+  const mate = partnerOf(state, seat);
+  if (!mate || !seatOf(state, mate)?.alive) return state;
+  const current = state.signals?.[mate] ?? null;
+  const wanted = tileId && (state.hands[mate] ?? []).some((t) => t.id === tileId) ? tileId : null;
+  const next = wanted === current ? null : wanted;
+  if (next === current) return state;
+  const signals = { ...(state.signals ?? {}) };
+  if (next) signals[mate] = next;
+  else delete signals[mate];
+  return commit({ ...state, signals }, [{ type: 'signal', by: seat, to: mate, tileId: next }]);
+}
+
+/** Os sinais que ainda valem: a pedra continua na mão e a rodada está em jogo. */
+function pruneSignals(state) {
+  const signals = state.signals;
+  if (!signals || !Object.keys(signals).length) return state;
+  if (state.phase !== 'playing') return { ...state, signals: {} };
+  const keep = Object.fromEntries(Object.entries(signals).filter(([id, tileId]) => (state.hands[id] ?? []).some((t) => t.id === tileId)));
+  return Object.keys(keep).length === Object.keys(signals).length ? state : { ...state, signals: keep };
+}
+
+/** O reducer da mesa. Ações: START_ROUND · PLAY · DRAW · PASS · FORFEIT · SIGNAL. */
 export function tableReducer(state, action) {
+  const next = reduceTable(state, action);
+  return next === state ? state : pruneSignals(next);
+}
+
+function reduceTable(state, action) {
   switch (action?.type) {
     case 'START_ROUND':
       return startRound(state);
@@ -556,6 +589,8 @@ export function tableReducer(state, action) {
       return passTurn(state, action);
     case 'FORFEIT':
       return forfeit(state, action);
+    case 'SIGNAL':
+      return signalTile(state, action);
     default:
       return state;
   }
@@ -571,10 +606,15 @@ export function viewFor(state, seat) {
   const watch = watchableFor(state, seat);
   const hands = reveal ? state.hands : { [seat]: state.hands[seat] ?? [] };
   if (!reveal) for (const id of watch) hands[id] = state.hands[id] ?? [];
-  const { boneyard, seed, ...rest } = state;
+  // versão 2.19: nas duplas você vê a mão do seu parceiro (e os sinais são só da dupla)
+  const mate = state.rules?.teams ? partnerOf(state, seat) : null;
+  if (!reveal && mate && state.phase === 'playing') hands[mate] = state.hands[mate] ?? [];
+  const signals = Object.fromEntries(Object.entries(state.signals ?? {}).filter(([id]) => id === seat || id === mate));
+  const { boneyard, seed, signals: allSignals, ...rest } = state;
+  void allSignals;
   void boneyard;
   void seed;
-  return { ...rest, me: seat, hands, handCounts, boneyardCount: state.boneyard.length, watch };
+  return { ...rest, me: seat, hands, handCounts, boneyardCount: state.boneyard.length, watch, signals };
 }
 
 /**
@@ -609,7 +649,10 @@ export function botAction(state, seat = state.turn) {
       }
       return s;
     };
-    const best = moves.reduce((top, m) => (score(m) > score(top) ? m : top), moves[0]);
+    // o sinal do parceiro: se a pedra marcada encaixa, o bot joga ela
+    const asked = state.signals?.[seat];
+    const pool = asked && moves.some((m) => m.tile.id === asked) ? moves.filter((m) => m.tile.id === asked) : moves;
+    const best = pool.reduce((top, m) => (score(m) > score(top) ? m : top), pool[0]);
     return { type: 'PLAY', seat, tileId: best.tile.id, side: best.side };
   }
   // o bot não paga com coração nem com tento enquanto puder passar

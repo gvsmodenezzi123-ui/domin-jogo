@@ -106,7 +106,7 @@ const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
 const isPlace = (x) => x == null || (Number.isInteger(x) && x >= 0 && x < 4);
 const isAnswer = (x) => x == null || (isObj(x) && isStr(x.from, 4) && typeof x.yes === 'boolean');
 const isAction = (a) =>
-  isObj(a) && (a.type === 'PLAY' ? isStr(a.tileId, 8) && (a.side === 'left' || a.side === 'right' || a.side === 'root') : a.type === 'DRAW' || a.type === 'PASS');
+  isObj(a) && (a.type === 'PLAY' ? isStr(a.tileId, 8) && (a.side === 'left' || a.side === 'right' || a.side === 'root') : a.type === 'SIGNAL' ? a.tileId == null || isStr(a.tileId, 8) : a.type === 'DRAW' || a.type === 'PASS');
 
 /** O que chega dos convidados é conferido com rigor (o anfitrião é quem manda na mesa). */
 const CHECKS = {

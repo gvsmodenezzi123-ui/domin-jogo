@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.19.0: a mão do parceiro e o sinal da dupla; o shader da luz refeito
+
+- **Duplas: você vê as pedras do seu parceiro** (abertas, de pé na beirada dele) e pode **marcar
+  uma pedra** tocando nela: é o sinal "joga essa". Ele vê a marca (!) em cima da pedra na mão
+  dele; tocar de novo desmarca, e o sinal some quando a pedra sai da mão. Só a dupla enxerga; não
+  gasta a vez nem mexe no relógio. O bot parceiro joga a pedra pedida quando ela encaixa.
+  (Motor: ação `SIGNAL` em `table/tableEngine.js`; a rede manda como intenção.)
+- **O shader da luz refeito por dentro** (`fx/fxShader.js`, a mesma interface): a luz cai como
+  luz de verdade (miolo quente, cauda fria), halo em anel e estrela de quatro pontas nas fontes,
+  facho volumétrico com raios, duas camadas de poeira e o brilho ondulando no feltro, fumaça
+  enrolada que pega a cor de cada luz, reflexo das pedras aprimoradas no feltro com o risco de
+  luz correndo na borda, onda com as cores separadas e faíscas quando a pedra cai, e a saída em
+  16 degraus pontilhados com as sombras puxando para o frio.
+
 ### 2.18.0: a roda com um jogador em cada lado, os perfis e a mesa quadrada
 
 - **Roda de 4 com um jogador em cada lado da mesa**: o próximo senta à sua direita, o seguinte

@@ -24263,3 +24263,68 @@
   left: var(--sx);
   top: calc(var(--sy) - var(--bust-h) - 22px);
 }
+
+/* Versão 2.19: a mão do parceiro aberta (duplas) e o sinal "joga essa" */
+.mate-rack {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: auto;
+}
+.mate-tile {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 140ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.mate-tile::after {
+  content: '';
+  position: absolute;
+  inset: -5px -1px;
+}
+.mate-tile:active {
+  transform: translateY(1px);
+}
+.mate-tile.is-marked {
+  transform: translateY(-5px);
+  filter: drop-shadow(0 0 3px #ffd24a) drop-shadow(0 0 1px #fff2b0);
+}
+.mate-mark,
+.tile-signal-mark {
+  position: absolute;
+  left: 50%;
+  top: -13px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  display: grid;
+  place-items: center;
+  font-size: 7px;
+  line-height: 1;
+  color: #2a1600;
+  background: #ffd24a;
+  box-shadow: 0 0 0 1px #5a3a08, 0 2px 0 #1a0c04;
+  pointer-events: none;
+  will-change: transform;
+  animation: signalBob 900ms steps(2, end) infinite;
+}
+.tile-signal-mark {
+  top: -18px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  font-size: 9px;
+  z-index: 3;
+}
+@keyframes signalBob {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.reduce-motion .mate-mark,
+.reduce-motion .tile-signal-mark {
+  animation: none;
+}

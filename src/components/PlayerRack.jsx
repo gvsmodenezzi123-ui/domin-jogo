@@ -236,6 +236,7 @@ const HandSlot = memo(function HandSlot({
   playable,
   discardMode,
   known,
+  signal = false,
   onSelectTile,
   press,
   rivalName,
@@ -306,6 +307,11 @@ const HandSlot = memo(function HandSlot({
               className={!active || !playable ? 'pointer-events-none' : ''}
               onClick={handleClick}
             />
+            {signal && (
+              <span className="tile-signal-mark font-pixel" role="img" aria-label="O seu parceiro pediu esta pedra" title="O seu parceiro pediu esta pedra">
+                !
+              </span>
+            )}
             {known && (
               <span className="tile-known-mark" aria-label={`${rivalName} está vendo esta pedra`} title={`${rivalName} está vendo esta pedra`}>
                 <EyeGlyph size={13} />
@@ -421,7 +427,7 @@ function useHandArrange({ hand, dealKey, areaRef }) {
 }
 
 /** O leque da sua mão. Não depende de moedas, dica nem botões: muda só com a mão e a seleção. */
-const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '', fan = null }) {
+const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, discardMode, knownIds, onSelectTile, press, rivalName, leaving = null, dealKey = '', fan = null, signalId = null }) {
   const [areaRef, width] = useWidth();
   const [hover, setHover] = useState(null);
   // o leque é desenhado na ordem em que você arrumou a mão (arrastando)
@@ -485,6 +491,7 @@ const HandFan = memo(function HandFan({ hand, selectedId, playableIds, isTurn, d
             playable={!going && active && playableIds.has(tile.id)}
             discardMode={discardMode}
             known={Boolean(knownIds?.has(tile.id))}
+            signal={tile.id === signalId}
             onSelectTile={onSelectTile}
             press={press}
             rivalName={rivalName}
@@ -805,6 +812,7 @@ function PlayerRack({
   drawsUsed = 0,
   // na roda o dinheiro não aparece (lá ele não compra nada que importe)
   showCoins = true,
+  signalId = null,
 }) {
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
@@ -888,6 +896,7 @@ function PlayerRack({
             {hint}
           </p>
           <HandFan
+            signalId={signalId}
             hand={hand}
             selectedId={selectedId}
             playableIds={playableIds}
@@ -954,6 +963,7 @@ function PlayerRack({
       </p>
 
       <HandFan
+        signalId={signalId}
         hand={hand}
         selectedId={selectedId}
         playableIds={playableIds}

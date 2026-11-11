@@ -597,7 +597,7 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       canStart: () => false,
       startMatch() {},
       intent(action) {
-        const clean = action.type === 'PLAY' ? { type: 'PLAY', tileId: action.tileId, side: action.side } : { type: action.type };
+        const clean = action.type === 'PLAY' ? { type: 'PLAY', tileId: action.tileId, side: action.side } : action.type === 'SIGNAL' ? { type: 'SIGNAL', tileId: action.tileId ?? null } : { type: action.type };
         if (!send(hostConn, TMSG.INTENT, { action: clean })) notice('Sem conexão com a mesa agora.');
       },
       nextRound() {

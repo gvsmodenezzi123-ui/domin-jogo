@@ -308,6 +308,11 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
     pendingPlay.current = r ? { tileId: selectedTile.id, from: { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, angle: 0 } } : null;
     send({ type: 'PLAY', seat: me, tileId: selectedTile.id, side });
   });
+  const handleSignal = useStableHandler((tileId) => {
+    if (!partner || spectating) return;
+    sound.playBoneTick(true);
+    onIntent({ type: 'SIGNAL', seat: me, tileId });
+  });
   const handleDraw = useStableHandler(() => canDraw && send({ type: 'DRAW', seat: me }));
   const handlePass = useStableHandler(() => canPass && send({ type: 'PASS', seat: me }));
   const noop = useStableHandler(() => {});
@@ -336,6 +341,9 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       // o seu parceiro por uma pedra é boa notícia: o perigo é só de quem joga contra
       danger: playing && s.alive && s.id !== partner && (view.handCounts[s.id] ?? 0) === 1,
       partner: s.id === partner,
+      // versão 2.19: a mão do parceiro aberta para você e a pedra que você marcou nela
+      hand: s.id === partner && playing && !spectating ? (view.hands[s.id] ?? null) : null,
+      marked: s.id === partner ? (view.signals?.[s.id] ?? null) : null,
       ping: link && !link.lost ? link.ping : null,
       lostLeft: link?.lost && link.graceEndsAt ? Math.max(0, Math.ceil((link.graceEndsAt - now) / 1000)) : null,
     };
@@ -401,7 +409,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       className={`app-shell table-v24 flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': sala.felt.light, '--felt-mid': sala.felt.mid, '--felt-dark': sala.felt.dark, '--me': colorOf(view, me) }}
     >
-      <SeatBench landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} roundKey={`mesa:${view.round}`} />
+      <SeatBench onSignal={handleSignal} landscape={landscape} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} roundKey={`mesa:${view.round}`} />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
         {/* o relógio grande só na sua vez; a dos outros está no anel e nos segundos da cadeira */}
@@ -465,6 +473,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
           landscape={landscape}
           onZoneHeight={setHandZone}
           hand={hand}
+          signalId={spectating ? null : (view.signals?.[me] ?? null)}
           selectedId={selectedTile?.id ?? null}
           playableIds={playableIds}
           isTurn={myTurn}

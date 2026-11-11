@@ -11,6 +11,16 @@
  *   - a aura de cada pedra aprimorada (ouro com as faíscas, rubi batendo, cristal com o arco-íris
  *     na borda, chumbo pesado, fantasma soltando fiapos, âmbar morno, obsidiana roxa);
  *   - o clarão quando uma pedra cai na mesa (a bucha mais forte, na cor da pedra).
+ *
+ * Versão 2.19, o shader refeito por dentro (a mesma interface):
+ *   - a luz cai como luz de verdade (o miolo quente e forte, a cauda longa e fria), cada fonte
+ *     com o halo em anel e a estrela de quatro pontas no miolo;
+ *   - o facho da luminária é volumétrico: a borda macia, os raios que escorrem do bocal, duas
+ *     camadas de poeira (perto e longe) e o brilho que ondula no feltro embaixo dele;
+ *   - a fumaça se enrola (ruído dobrado sobre si mesmo) e pega a cor de cada luz que atravessa;
+ *   - as pedras aprimoradas refletem no feltro e ganham o risco de luz que corre pela borda;
+ *   - a pedra que cai abre uma onda com as cores separadas na crista e solta faíscas;
+ *   - a saída continua em degraus pontilhados (agora 16), com as sombras puxando para o frio.
  */
 
 export const MAX_LIGHTS = 10;
@@ -59,6 +69,11 @@ float fbm(vec2 p) {
   float a = 0.5;
   for (int i = 0; i < 3; i++) { v += a * noise(p); p = p * 2.03 + vec2(17.0, 9.0); a *= 0.5; }
   return v;
+}
+/* a fumaça enrolada: o ruído dobrado sobre si mesmo (duas dobras) */
+float curl(vec2 p, float t) {
+  vec2 w = vec2(fbm(p + vec2(0.0, t * 0.6)), fbm(p + vec2(5.2, 1.3 - t * 0.4)));
+  return fbm(p + 1.7 * w + vec2(t * 0.25, 0.0));
 }
 float bayer2(vec2 a) { a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
@@ -116,23 +131,42 @@ void main() {
     float dist = length(d);
     float fi = float(i);
     float fl = mix(1.0, flick(C.a, fi, t), u_motion);
-    float f = max(0.0, 1.0 - dist / L.z);
-    f *= f;
-    if (C.a > 3.5 && C.a < 4.5) {
-      // o facho para baixo: a luz só dentro do cone, a poeira dançando nele
-      float ang = abs(atan(d.x, max(d.y, 0.001)));
-      float cone = smoothstep(0.62, 0.38, ang) * step(0.0, d.y);
-      f *= cone;
-      vec2 cell = floor(p / (5.0 * u));
-      vec2 rnd = vec2(hash(cell), hash(cell + 3.7));
-      vec2 mote = (cell + 0.5 + 0.38 * vec2(sin(t * 0.6 + rnd.x * 6.3), sin(t * 0.45 + rnd.y * 6.3))) * 5.0 * u;
-      float m = step(length(p - mote), 0.75 * u) * step(0.82, rnd.x) * (0.5 + 0.5 * sin(t * 2.0 + rnd.y * 9.0));
-      dust += m * f * 3.0;
+    // a queda da luz: o miolo forte (quase inverso do quadrado) e a cauda longa até o raio
+    float nd = dist / L.z;
+    float win = max(0.0, 1.0 - nd);
+    float f = win * win * (0.55 + 0.45 / (1.0 + 14.0 * nd * nd));
+    bool beam = C.a > 3.5 && C.a < 4.5;
+    float shaft = 0.0;
+    if (beam) {
+      // o facho para baixo, volumétrico: a borda macia, os raios escorrendo do bocal e duas
+      // camadas de poeira (a de perto maior e mais lenta)
+      float ang = atan(d.x, max(d.y, 0.001));
+      float cone = smoothstep(0.66, 0.30, abs(ang)) * step(0.0, d.y);
+      float streak = 0.72 + 0.28 * noise(vec2(ang * 22.0, t * 0.35 * u_motion + fi));
+      float depth = exp(-nd * 1.6);
+      f *= cone * streak;
+      shaft = cone * streak * depth * 0.22;
+      for (int j = 0; j < 2; j++) {
+        float sz = j == 0 ? 5.0 : 8.0;
+        float sp = j == 0 ? 1.0 : 0.55;
+        vec2 cell = floor(p / (sz * u));
+        vec2 rnd = vec2(hash(cell + float(j) * 11.0), hash(cell + 3.7 + float(j) * 5.0));
+        vec2 mote = (cell + 0.5 + 0.38 * vec2(sin(t * 0.6 * sp + rnd.x * 6.3), sin(t * 0.45 * sp + rnd.y * 6.3))) * sz * u;
+        float m = step(length(p - mote), (j == 0 ? 0.75 : 1.1) * u) * step(0.8, rnd.x) * (0.5 + 0.5 * sin(t * 2.0 * sp + rnd.y * 9.0));
+        dust += m * cone * win * (j == 0 ? 3.0 : 1.6);
+      }
+      // o brilho que ondula no feltro embaixo do facho
+      float sheen = noise(p / (7.0 * u) + vec2(t * 0.12, -t * 0.08) * u_motion) * noise(p / (3.0 * u) - vec2(t * 0.1, 0.0) * u_motion);
+      f *= 0.86 + 0.5 * sheen;
     }
-    vec3 c = C.rgb * L.w * fl;
-    // o clarão em volta da fonte (o "bloom")
+    // a temperatura: quente perto da fonte, um pouco mais fria na cauda
+    vec3 c = C.rgb * L.w * fl * mix(vec3(1.06, 1.0, 0.9), vec3(0.9, 0.96, 1.08), smoothstep(0.0, 0.9, nd));
+    // o clarão em volta da fonte (o "bloom"), o anel do halo e a estrela de quatro pontas
     float core = exp(-dist * dist / max(1.0, L.z * L.z * 0.012));
-    col += c * core * (C.a > 3.5 && C.a < 4.5 ? 0.15 : 0.5);
+    float halo = exp(-abs(dist - L.z * 0.2) / max(1.0, L.z * 0.035)) * 0.1;
+    vec2 ad = abs(d);
+    float star = (exp(-ad.y / (0.6 * u)) * exp(-ad.x / (L.z * 0.11)) + exp(-ad.x / (0.6 * u)) * exp(-ad.y / (L.z * 0.07))) * 0.3;
+    col += c * (core * (beam ? 0.18 : 0.5) + (beam ? 0.0 : halo + star * fl) + shaft);
     lit += c * f;
   }
 
@@ -140,12 +174,14 @@ void main() {
   float hz = 0.0;
   if (u_haze.a > 0.0) {
     vec2 q = p / (34.0 * u) * vec2(1.0, 1.8) + vec2(t * 0.05 * u_motion, -t * 0.022 * u_motion);
-    float n = fbm(q);
+    float n = curl(q, t * 0.12 * u_motion);
     float band = u_hazeBand.y > u_hazeBand.x ? smoothstep(u_hazeBand.x, u_hazeBand.x + 10.0 * u, p.y) * (1.0 - smoothstep(u_hazeBand.y - 6.0 * u, u_hazeBand.y, p.y)) : 1.0;
-    hz = smoothstep(0.42, 0.82, n) * u_haze.a * band;
-    col += lit * u_haze.rgb * 0.9 * hz;
+    // os fiapos finos por cima da massa grossa
+    float wisp = smoothstep(0.5, 0.9, fbm(q * 2.6 + vec2(-t * 0.07, t * 0.05) * u_motion)) * 0.35;
+    hz = (smoothstep(0.36, 0.8, n) + wisp) * u_haze.a * band;
+    col += lit * u_haze.rgb * 0.95 * hz;
   }
-  col += lit * 0.04 + vec3(1.0, 0.92, 0.75) * dust * lit;
+  col += lit * 0.05 + vec3(1.0, 0.92, 0.75) * dust * (lit + 0.04);
 
   // --- o luar entrando pela janela em fachos
   if (u_moon.a > 0.0) {
@@ -183,6 +219,11 @@ void main() {
     // a aura começa rente à pedra e cai rápido (só por fora; a cara da pedra fica limpa)
     float aura = exp(-max(sd, 0.0) / (3.2 * u)) * step(0.35 * u, sd);
     float edge = exp(-max(sd, 0.0) / (1.2 * u)) * step(0.35 * u, sd);
+    // o reflexo da pedra no feltro (uma mancha macia que escorre para baixo dela)
+    vec2 below = vec2((p.x - c.x) / max(1.0, tw2 * 0.75), (p.y - c.y - th2 * 0.55) / max(1.0, th2 * 0.7));
+    float pool = exp(-dot(below, below) * 1.6) * step(0.35 * u, sd) * 0.22;
+    // o risco de luz que corre pela borda da pedra
+    float sweep = pow(max(0.0, sin(atan(p.y - c.y, p.x - c.x) - t * 1.3 * u_motion + fi * 2.1)), 14.0) * edge;
     vec3 tint;
     float amt;
     if (k < 1.5) {
@@ -232,7 +273,7 @@ void main() {
       amt = 0.35 + 0.2 * pow(max(0.0, sin(t * 0.9 + fi)), 6.0);
       col += tint * edge * 0.35;
     }
-    col += tint * aura * amt;
+    col += tint * (aura * amt + pool * (0.6 + 0.4 * amt)) + mix(tint, vec3(1.0), 0.5) * sweep * 0.5;
   }
 
   // --- o clarão da pedra que caiu: o anel abrindo e o lampejo no meio
@@ -242,15 +283,25 @@ void main() {
     float age = B.z;
     float r = length(p - B.xy);
     float rad = (8.0 + age * 90.0) * u * B.w;
-    float ring = exp(-abs(r - rad) / (2.2 * u)) * (1.0 - smoothstep(0.0, 0.55, age));
+    float life = 1.0 - smoothstep(0.0, 0.55, age);
+    // a onda: as três cores se separam um pouco na crista
+    vec3 ring = vec3(exp(-abs(r - rad * 0.96) / (2.2 * u)), exp(-abs(r - rad) / (2.2 * u)), exp(-abs(r - rad * 1.04) / (2.2 * u))) * life;
     float flash = exp(-r / (14.0 * u * B.w)) * exp(-age * 7.0);
-    col += u_bcol[i] * (ring * 0.9 + flash * 1.3) * B.w;
+    // as faíscas: riscos finos saindo do meio, que somem logo
+    float a2 = atan(p.y - B.y, p.x - B.x);
+    float spark = pow(max(0.0, sin(a2 * 7.0 + hash(B.xy) * 6.3)), 24.0) * exp(-abs(r - rad * 0.7) / (7.0 * u)) * exp(-age * 5.0);
+    col += u_bcol[i] * (ring * 0.9 + flash * 1.3) * B.w + mix(u_bcol[i], vec3(1.0), 0.6) * spark * 0.8 * B.w;
   }
 
   // a saída em degraus pontilhados, como a pintura
   // (o que é muito fraco some: senão o pontilhado vira chuvisco no escuro)
-  float steps = 12.0;
-  col = max(col - 0.035, 0.0) * 1.04;
+  float steps = 16.0;
+  col = max(col - 0.03, 0.0) * 1.04;
+  // o tom: a luz forte satura um pouco e a fraca puxa para o frio (a noite do boteco)
+  float lum = dot(col, vec3(0.3, 0.55, 0.15));
+  col = mix(vec3(lum), col, 1.12);
+  col *= mix(vec3(0.92, 0.97, 1.1), vec3(1.0), smoothstep(0.0, 0.25, lum));
+  col = max(col, 0.0);
   col = floor(col * steps + bayer4(gl_FragCoord.xy)) / steps;
   gl_FragColor = vec4(min(col, vec3(1.0)), 1.0);
 }

@@ -2,6 +2,7 @@ import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
 import RivalBust from '../components/RivalBust.jsx';
 import RivalHand from '../components/RivalHand.jsx';
+import DominoTile from '../components/DominoTile.jsx';
 import { RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideSeat } from '../components/seatGeometry.js';
 import CoinCount from '../components/CoinCount.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
@@ -51,6 +52,30 @@ function ChairRack({ id, count, unit, room, roundKey }) {
   return (
     <span className="chair-fan" data-seat-fan={id} aria-label={`${count} pedras na mão`}>
       <RivalHand tiles={tiles} revealedIds={NO_REVEAL} roundKey={roundKey} room={room} unit={unit} seat className="seat-rack-tiles relative" />
+    </span>
+  );
+}
+
+/**
+ * Versão 2.19: a mão do seu parceiro de dupla, aberta para você, de pé na beirada. Tocar numa
+ * pedra marca ela (o sinal "joga essa": ele vê a marca na mão dele); tocar de novo desmarca.
+ */
+function MateRack({ id, hand, marked, unit, onSignal }) {
+  return (
+    <span className="chair-fan mate-rack" data-seat-fan={id} aria-label={`A mão do seu parceiro: ${hand.length} pedras`}>
+      {hand.map((tile) => (
+        <button
+          key={tile.id}
+          type="button"
+          className={`mate-tile ${marked === tile.id ? 'is-marked' : ''}`}
+          onClick={() => onSignal?.(tile.id)}
+          aria-pressed={marked === tile.id}
+          aria-label={`${tile.a} e ${tile.b}${marked === tile.id ? ', marcada' : ''}: tocar para ${marked === tile.id ? 'desmarcar' : 'pedir esta pedra'}`}
+        >
+          <DominoTile values={[tile.a, tile.b]} orientation="vertical" unit={unit} depth={2} enhancement={tile.enhancement} still />
+          {marked === tile.id && <span className="mate-mark font-pixel" aria-hidden="true">!</span>}
+        </button>
+      ))}
     </span>
   );
 }
@@ -165,7 +190,7 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
  * fala da jogada ("JOGOU 4|3", "PASSOU") sai logo embaixo da vida. Os mesmos marcadores da
  * cadeira em pé (data-seat, data-seat-photo, data-seat-fan) para os voos e os efeitos.
  */
-function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null }) {
+function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, onSignal }) {
   const out = !seat.alive;
   const mood = out ? 'idle' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
@@ -186,7 +211,7 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
       </div>
       {!out && (
         <div className="chair-rack" {...(anchor ? { 'data-danger-anchor': '' } : {})}>
-          <ChairRack id={seat.id} count={seat.count} unit={unit} room={room} roundKey={roundKey} />
+          {seat.hand ? <MateRack id={seat.id} hand={seat.hand} marked={seat.marked} unit={Math.max(unit, 13)} onSignal={onSignal} /> : <ChairRack id={seat.id} count={seat.count} unit={unit} room={room} roundKey={roundKey} />}
         </div>
       )}
       {/* em cima da cabeça, só a plaquinha do nome e a vida; a fala da jogada logo embaixo */}
@@ -241,7 +266,7 @@ function chairClip(w, h) {
  * (o próximo à sua direita, o da frente no meio, o último à sua esquerda), do mesmo tamanho do
  * rival do duelo. Quem senta na ponta passa da beirada: o corpo desce até a bancada.
  */
-function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey }) {
+function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, onSignal }) {
   const ref = useRef(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -294,14 +319,15 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey })
           bubble={bubble?.seat === seat.id ? bubble : null}
           hit={hits?.[seat.id] ?? null}
           anchor={seat.id === danger}
+          onSignal={onSignal}
         />
       ))}
     </header>
   );
 }
 
-function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '' }) {
-  if (landscape) return <SeatRow seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} />;
+function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '', onSignal }) {
+  if (landscape) return <SeatRow onSignal={onSignal} seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} />;
   const variant = seats.length >= 3 ? 'third' : seats.length === 2 ? 'half' : 'wide';
   return (
     <header className={`seat-bench seat-bench-${variant} rival-bench relative z-30 shrink-0`} style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>
