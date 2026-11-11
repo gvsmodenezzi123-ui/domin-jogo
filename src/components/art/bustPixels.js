@@ -10,7 +10,8 @@
  * não tem retrato).
  */
 import { paintKit } from './botecoScene.js';
-import { PORTRAIT_PX, paintPortrait } from './portraitPixels.js';
+import { PORTRAIT_PX } from './portraitPixels.js';
+import { paintFigure } from './figurePixels.js';
 
 const { hex, buffer } = paintKit;
 
@@ -20,8 +21,6 @@ export const BUST_W = PORTRAIT_PX + OX * 2;
 /** O tronco desce 12 px abaixo do retrato (a beirada da mesa cobre o pé). */
 export const BUST_H = PORTRAIT_PX + 12;
 const G = PORTRAIT_PX;
-const CX = OX + G / 2;
-const INK = hex('#140c08');
 
 const mix = (a, b, t) => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)];
 const alphaAt = (b, x, y) => (x < 0 || y < 0 || x >= b.w || y >= b.h ? 0 : b.data[(y * b.w + x) * 4 + 3]);
@@ -29,93 +28,6 @@ const colorAt = (b, x, y) => {
   const i = (y * b.w + x) * 4;
   return [b.data[i], b.data[i + 1], b.data[i + 2]];
 };
-
-/** Cola `top` em `base` deslocado de (dx, dy). */
-function paste(base, top, dx, dy) {
-  for (let y = 0; y < top.h; y += 1) {
-    for (let x = 0; x < top.w; x += 1) {
-      const a = alphaAt(top, x, y);
-      if (a) base.put(x + dx, y + dy, colorAt(top, x, y), a / 255);
-    }
-  }
-}
-
-/** Contorno de 1 px em volta do que está pintado na camada. */
-function outline(b) {
-  const marks = [];
-  for (let y = 0; y < b.h; y += 1) {
-    for (let x = 0; x < b.w; x += 1) {
-      if (alphaAt(b, x, y)) continue;
-      if (alphaAt(b, x - 1, y) > 200 || alphaAt(b, x + 1, y) > 200 || alphaAt(b, x, y - 1) > 200 || alphaAt(b, x, y + 1) > 200) marks.push([x, y]);
-    }
-  }
-  for (const [x, y] of marks) b.put(x, y, INK);
-}
-
-/** A cor de base da manga: o tom do ombro do retrato, perto da ponta. */
-function sleeveOf(fig, side) {
-  const y = 60;
-  for (let i = 0; i < 26; i += 1) {
-    const x = side < 0 ? 3 + i : G - 4 - i;
-    if (alphaAt(fig, x, y) > 200) {
-      // (4 px para dentro: a beirada do ombro pega o brilho ou a sombra do volume)
-      const c = colorAt(fig, side < 0 ? x + 5 : x - 4, y);
-      // pula o contorno (quase preto)
-      if (c[0] + c[1] + c[2] > 60) return c;
-    }
-  }
-  return hex('#3a4a6a');
-}
-
-/** A meia largura do ombro do retrato na linha de baixo (até onde o tronco vai). */
-function shoulderHalf(fig) {
-  let left = G / 2;
-  while (left > 0 && alphaAt(fig, left - 1, G - 1) > 200) left -= 1;
-  return G / 2 - left;
-}
-
-/** Braços: do ombro até a beirada, abrindo para fora (camada de trás, com contorno próprio). */
-function paintArms(fig) {
-  const arms = buffer(BUST_W, BUST_H);
-  const half = shoulderHalf(fig);
-  for (const side of [-1, 1]) {
-    const base = sleeveOf(fig, side);
-    const hi = mix(base, hex('#fff1d8'), 0.28);
-    const lo = mix(base, hex('#1a0c06'), 0.3);
-    const deep = mix(base, hex('#0a0604'), 0.55);
-    for (let y = 55; y < BUST_H; y += 1) {
-      const t = (y - 55) / (BUST_H - 55);
-      // o braço sai de trás do ombro e o cotovelo abre um pouco para fora
-      const inner = CX + side * (half - 4);
-      const outer = CX + side * (half + 3 + t * 3);
-      // a ponta de cima é redonda (o deltoide encaixa na curva do ombro)
-      const cap = y < 59 ? Math.round((59 - y) * 1.3) : 0;
-      const x0 = Math.min(inner, outer) + (side > 0 ? 0 : cap);
-      const x1 = Math.max(inner, outer) - (side > 0 ? cap : 0);
-      for (let x = Math.round(x0); x <= Math.round(x1); x += 1) {
-        const u = (x - x0) / Math.max(1, x1 - x0); // 0 à esquerda .. 1 à direita
-        // a lâmpada vem da esquerda: o braço esquerdo acende por fora, o direito fica na sombra
-        // versão 2.16: o braço é um cilindro: a quina de fora da esquerda acende, o miolo é a
-        // cor da manga, a de dentro (colada no tronco) e a de fora da direita caem na sombra
-        const c = side < 0 ? (u < 0.22 && y < BUST_H - 14 ? hi : u > 0.72 ? lo : base) : u < 0.2 ? lo : u > 0.7 ? deep : mix(base, lo, 0.45);
-        arms.put(x, y, y > BUST_H - 6 ? mix(c, hex('#0a0604'), 0.25) : c);
-      }
-    }
-  }
-  outline(arms);
-  return arms;
-}
-
-/** O tronco: a última linha do retrato descendo até o pé (a roupa continua), escurecendo. */
-function paintTorso(fig) {
-  const torso = buffer(BUST_W, BUST_H);
-  for (let x = 0; x < G; x += 1) {
-    if (alphaAt(fig, x, G - 1) < 200) continue;
-    const c = colorAt(fig, x, G - 1);
-    for (let y = G; y < BUST_H; y += 1) torso.put(x + OX, y, mix(c, hex('#0a0604'), (y - G) * 0.035));
-  }
-  return torso;
-}
 
 /** Só a silhueta: tudo escuro, com o recorte quente da lâmpada na borda esquerda e no alto. */
 function silhouetteOf(b) {
@@ -139,14 +51,11 @@ function silhouetteOf(b) {
  * com a boca aberta enquanto fala (`speaking`). BUST_W×BUST_H, fundo transparente.
  */
 export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false } = {}) {
-  const fig = paintPortrait(spec, mood, speaking, true);
-  const out = buffer(BUST_W, BUST_H);
-  paste(out, paintArms(fig), 0, 0);
-  paste(out, paintTorso(fig), 0, 0);
-  paste(out, fig, OX, 0);
+  // versão 2.17: o busto é a figura nova inteira (art/figurePixels.js), já com os braços
+  const out = paintFigure(spec, mood, speaking);
   // a beirada da mesa faz sombra no peito: o pé do busto escurece
-  for (let y = G - 10; y < BUST_H; y += 1) {
-    const k = ((y - (G - 10)) / (BUST_H - (G - 10))) * 0.42;
+  for (let y = G - 8; y < BUST_H; y += 1) {
+    const k = ((y - (G - 8)) / (BUST_H - (G - 8))) * 0.42;
     for (let x = 0; x < BUST_W; x += 1) if (alphaAt(out, x, y)) out.put(x, y, [8, 5, 3], k);
   }
   return silhouette ? silhouetteOf(out) : out;
