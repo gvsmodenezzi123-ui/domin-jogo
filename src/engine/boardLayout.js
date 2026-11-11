@@ -56,7 +56,8 @@ export const MAX_VERTICAL_CHAIN = 3;
  * (sem nunca passar da beirada: o mundo é o tampo). Cada ponta tem a sua metade do tampo (a de
  * lá ou a de perto); a corrente inteira cabe sem sair da mesa.
  */
-export const LANDSCAPE = Object.freeze({ maxRun: Infinity, maxRise: 2, rows: 7, minCols: 24, maxCols: 34 });
+// versão 2.18: o tampo quadrado (16 colunas por 12 linhas): a corrente dá mais voltas e cabe inteira
+export const LANDSCAPE = Object.freeze({ maxRun: Infinity, maxRise: 2, rows: 12, minCols: 15, maxCols: 18 });
 /** Para onde cada ponta dobra na mesa deitada. */
 const LAND_TURN = Object.freeze({ left: 'N', right: 'S' });
 const EPS = 1e-6;
@@ -144,7 +145,7 @@ export function rectGap(a, b) {
 export function computeWorldSize(width, height, cols = WORLD_COLS, { landscape = false } = {}) {
   if (landscape) {
     const rows = LANDSCAPE.rows;
-    if (!width || !height) return { cols: 24, rows };
+    if (!width || !height) return { cols: 16, rows };
     return { cols: Math.max(LANDSCAPE.minCols, Math.min(LANDSCAPE.maxCols, Math.round((rows * width) / height))), rows };
   }
   if (!width || !height) return { cols, rows: 12 };

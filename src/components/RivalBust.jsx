@@ -2,6 +2,7 @@ import { memo } from 'react';
 import PixelCanvas from './PixelCanvas.jsx';
 import { BUST_H, BUST_W, paintBust } from './art/bustPixels.js';
 import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
+import { PROFILE_SPOTS } from './art/figProfile.js';
 
 /** Quem não tem retrato (o adversário do duelo on-line) senta como silhueta de um destes. */
 const STRANGERS = ['tioZe', 'paulinho', 'beto', 'zeca', 'marquinhos', 'carlinhos'];
@@ -12,17 +13,20 @@ const PUFF_DELAYS = [0, 0.7, 1.4];
  * O busto pintado (art/bustPixels.js): o humor do retrato, a boca mexendo enquanto fala e,
  * sem retrato, a silhueta. Respira (CSS), treme no golpe e se inclina quando bate.
  */
-function RivalBust({ rival, mood = 'idle', speaking = false }) {
+function RivalBust({ rival, mood = 'idle', speaking = false, profile = null }) {
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
-  const ember = !stranger && PORTRAIT_EMBER[art]?.moods.includes(mood) ? PORTRAIT_EMBER[art] : null;
+  const smokes = !stranger && PORTRAIT_EMBER[art]?.moods.includes(mood) ? PORTRAIT_EMBER[art] : null;
+  // de lado, a brasa e o olho ficam no lugar do perfil (espelhado para quem olha para a esquerda)
+  const flip = (x) => (profile === 'left' ? BUST_W - 1 - x : x);
+  const ember = smokes && profile ? { x: flip(PROFILE_SPOTS.ember.x) - (BUST_W - 64) / 2, y: PROFILE_SPOTS.ember.y } : smokes;
   const glow = !stranger ? PORTRAIT_GLOW[art] : null;
   return (
     <>
       <PixelCanvas
-        cacheKey={`busto-${art}-${mood}-${open ? 1 : 0}${stranger ? '-sombra' : ''}`}
-        paint={() => paintBust(PORTRAITS[art], mood, open, { silhouette: stranger })}
+        cacheKey={`busto-${art}-${mood}-${open ? 1 : 0}${stranger ? '-sombra' : ''}${profile ? `-${profile}` : ''}`}
+        paint={() => paintBust(PORTRAITS[art], mood, open, { silhouette: stranger, profile })}
         w={BUST_W}
         h={BUST_H}
         scale={1}
@@ -39,7 +43,7 @@ function RivalBust({ rival, mood = 'idle', speaking = false }) {
           />
         ))}
       {glow &&
-        glow.eyes.map((eye) => (
+        (profile ? [{ x: flip(PROFILE_SPOTS.eye.x) - (BUST_W - 64) / 2, y: PROFILE_SPOTS.eye.y }] : glow.eyes).map((eye) => (
           <span
             key={eye.x}
             aria-hidden="true"

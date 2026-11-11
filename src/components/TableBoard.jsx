@@ -84,7 +84,8 @@ function landGeometry(room, handZone) {
   // a sua mão cobre o meio da beirada de perto: as pedras da mesa param acima do alto das pedras
   // do leque (a dica a giz, por cima dele, pode ficar no feltro)
   const overlap = Math.max(0, t.yNear - (room.height - handZone + 26));
-  const reserve = Math.min(Math.round(planeHeight * 0.35), landSpanFor(overlap));
+  // versão 2.18: a corrente começa no meio do tampo: só uma faixa fina fica reservada para a mão
+  const reserve = Math.min(Math.round(planeHeight * 0.1), landSpanFor(overlap));
   return {
     ...t,
     planeWidth: t.width,

@@ -11,8 +11,8 @@
  */
 import { BUST_H, BUST_MOUTH, BUST_RAIL, BUST_W } from './art/bustPixels.js';
 
-// versão 2.17: a mesa mais quadrada (mais funda e um pouco mais estreita, com menos fuga): as pedras ficam maiores
-export const LAND = Object.freeze({ far: 0.34, near: 0.86, width: 0.66, maxWidthH: 1.46, tilt: 28, persp: 1000 });
+// versão 2.18: a mesa QUADRADA (bem mais estreita e funda): sobra sala dos dois lados para quem senta nas laterais
+export const LAND = Object.freeze({ far: 0.37, near: 0.87, width: 0.44, maxWidthH: 0.98, tilt: 28, persp: 1000 });
 
 /** A linha da beirada de lá (fração da altura): o busto é cortado ali. */
 export const SEAT_RAIL = LAND.far;
@@ -91,3 +91,27 @@ export function seatBust(h, size = 0.36, lift = 0.035) {
  * direita, depois o da frente, depois o da esquerda.
  */
 export const RODA_SPOTS = Object.freeze({ 1: [0.5], 2: [0.69, 0.31], 3: [0.78, 0.5, 0.22] });
+
+/**
+ * Versão 2.18: a roda com um jogador em cada lado da mesa. Com 3 rivais, o próximo senta à sua
+ * direita (de perfil, olhando para a mesa), o seguinte na sua frente e o último à sua esquerda;
+ * com 2, um de cada lado; com 1, na frente.
+ */
+export const RODA_SIDES = Object.freeze({ 1: ['far'], 2: ['right', 'left'], 3: ['right', 'far', 'left'] });
+
+/**
+ * A cadeira da lateral (`side`: -1 a esquerda, 1 a direita): o meio do busto (px), a linha do pé
+ * dele e o recorte que esconde atrás da beirada de lado do tampo o que passa dela.
+ */
+export function sideSeat(w, h, side, bust) {
+  const c = landCorners(w, h);
+  const y = Math.round(c.yFar + (c.yNear - c.yFar) * 0.46);
+  const edge = c.xAt(c.yFar + (c.yNear - c.yFar) * 0.2, side);
+  const x = Math.round(edge + side * bust.w * 0.4);
+  const r = Math.round;
+  const clip =
+    side < 0
+      ? `polygon(0 0, ${r(c.farL)}px 0, ${r(c.farL)}px ${c.yFar}px, ${r(c.nearL)}px ${c.yNear}px, 0 ${c.yNear}px)`
+      : `polygon(${w}px 0, ${r(c.farR)}px 0, ${r(c.farR)}px ${c.yFar}px, ${r(c.nearR)}px ${c.yNear}px, ${w}px ${c.yNear}px)`;
+  return { x, y, clip };
+}

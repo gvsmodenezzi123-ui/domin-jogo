@@ -293,6 +293,7 @@ const raised = (fn, dy) => (k, c) => {
 
 export const PORTRAITS = {
   tioZe: {
+    smokes: 'cigarette',
     nose: 'big', eyes: 'tired',
     seed: 1,
     bg: ['#4a3420', '#1e140c'],
@@ -351,6 +352,7 @@ export const PORTRAITS = {
     },
   },
   neide: {
+    fem: true,
     browShape: 'soft', eyes: 'lashes', earrings: 'pearl',
     seed: 5,
     bg: ['#5a1e2a', '#200a10'],
@@ -405,6 +407,7 @@ export const PORTRAITS = {
     front: earPen('#2a6ad0'),
   },
   cida: {
+    fem: true,
     eyes: 'lashes',
     seed: 9,
     bg: ['#4a1a3a', '#1a0a16'],
@@ -489,6 +492,7 @@ export const PORTRAITS = {
     outfit: { type: 'shirt', color: '#c8981a', collar: '#e6c34a', plaid: '#5a3a08', chain: true },
   },
   sofia: {
+    fem: true,
     eyes: 'lashes', browShape: 'arched',
     seed: 15,
     bg: ['#2a1a4a', '#0a0618'],
@@ -533,6 +537,7 @@ export const PORTRAITS = {
     front: wrench,
   },
   comendador: {
+    smokes: 'cigar',
     nose: 'hook', eyes: 'sleepy',
     seed: 18,
     bg: ['#5a1010', '#1e0404'],
@@ -547,6 +552,7 @@ export const PORTRAITS = {
     front: cigar,
   },
   donoDaNoite: {
+    redEyes: true,
     rim: '#ff3a1a',
     seed: 19,
     bg: ['#2a0808', '#060202'],
@@ -640,6 +646,7 @@ export const PORTRAITS = {
     front: raised(scorePad, 12),
   },
   soro: {
+    fem: true,
     eyes: 'lashes', browShape: 'arched',
     seed: 26,
     bg: ['#4a1a3a', '#1a0814'],
@@ -682,7 +689,8 @@ export const PORTRAITS = {
     behind: shovel,
   },
   odete: {
-    eyes: 'narrow', browShape: 'arched', nose: 'hook',
+    fem: true,
+    browShape: 'arched', eyes: 'lashes',
     seed: 29,
     bg: ['#2a1a3a', '#0e0814'],
     bgPattern: 'curtain',
@@ -738,6 +746,7 @@ const coinHand = (k, c) => {
 /** Versão 2.2: os atendentes (Loja do Valtinho, Seu Tião no porão, o Corvo no beco), só a figura. */
 export const NPC_PORTRAITS = {
   valtinho: {
+    smokes: 'cigarette',
     seed: 41,
     skin: '#c8875a',
     jaw: 'square',
@@ -768,6 +777,7 @@ export const NPC_PORTRAITS = {
     front: raised(coinHand, 12),
   },
   corvo: {
+    redEyes: true,
     seed: 43,
     skin: '#3a2a2a',
     jaw: 'long',

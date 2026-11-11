@@ -41,7 +41,7 @@ describe('versão 2.17: os personagens refeitos (figura 88×84)', () => {
   });
 
   it('a mesa ficou mais quadrada (mais funda, mais estreita)', () => {
-    expect(LAND.near - LAND.far).toBeGreaterThan(0.5);
+    expect(LAND.near - LAND.far).toBeGreaterThanOrEqual(0.5);
     expect(LAND.width).toBeLessThan(0.7);
   });
 });

@@ -49,10 +49,11 @@ function* boards(seed, count) {
 const cy = (t) => t.y + t.h / 2;
 
 describe('versão 2.9: a corrente da mesa deitada (tampo de tamanho fixo)', () => {
-  it('o mundo deitado é o tampo: largo e baixo', () => {
+  it('o mundo deitado é o tampo quadrado (versão 2.18): 12 linhas e de 15 a 18 colunas', () => {
     const { cols, rows } = computeWorldSize(600, 200, 10, { landscape: true });
     expect(rows).toBe(LANDSCAPE.rows);
-    expect(cols).toBeGreaterThan(rows * 2);
+    expect(cols).toBeLessThanOrEqual(LANDSCAPE.maxCols);
+    expect(computeWorldSize(380, 280, 10, { landscape: true }).cols).toBe(16);
     expect(computeWorldSize(300, 400, 10).cols).toBe(10);
   });
 

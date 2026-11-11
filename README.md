@@ -172,6 +172,19 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.18.0: a roda com um jogador em cada lado, os perfis e a mesa quadrada
+
+- **Roda de 4 com um jogador em cada lado da mesa**: o próximo senta à sua direita, o seguinte
+  na frente e o último à sua esquerda (com 3 na roda, um de cada lado). Quem senta nas laterais
+  aparece **de perfil**, olhando para o tampo, com a plaquinha, a vida e as pedras dele.
+- **Os 33 personagens de lado** (`art/figProfile.js`): a mesma ficha e os mesmos materiais da
+  figura de frente, com o tronco em três quartos, a orelha e o olho do desenho de referência,
+  cabelos, chapéus, barbas, óculos e roupas de perfil, nos cinco humores e falando.
+- **Rosto feminino** (Neide, Cida, Sofia, Sorô e Odete): queixo fino, nariz delicado, cílios,
+  pálpebra pintada, sobrancelha arqueada, lábios cheios e ombros mais estreitos.
+- **A mesa quadrada**: bem mais estreita e funda (a largura que você marcou); o tampo passou a
+  ter 16×12 casas e a corrente começa no meio dele. As regras de encaixe não mudaram.
+
 ### 2.17.0: os personagens refeitos do zero, a mesa mais quadrada e o HUD discreto
 
 - **Os 33 personagens (30 rivais + Valtinho, Seu Tião e o Corvo) refeitos do zero**, no nível do

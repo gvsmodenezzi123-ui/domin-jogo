@@ -24243,3 +24243,23 @@
   transform-origin: top left;
   opacity: 0.9;
 }
+
+/* Versão 2.18: a roda com um jogador em cada lado da mesa: os das laterais sentam de perfil,
+   olhando para o tampo; a beirada de lado esconde o que passa dela */
+.chair.is-side .chair-clip {
+  height: 100%;
+  clip-path: var(--side-clip, none);
+}
+.chair.is-side .chair-bust {
+  left: var(--sx);
+  top: calc(var(--sy) - var(--bust-h));
+}
+.chair.is-side .chair-rack {
+  left: var(--sx);
+  top: var(--sy);
+  translate: -50% calc(-100% + 4px);
+}
+.chair.is-side .chair-plate {
+  left: var(--sx);
+  top: calc(var(--sy) - var(--bust-h) - 22px);
+}

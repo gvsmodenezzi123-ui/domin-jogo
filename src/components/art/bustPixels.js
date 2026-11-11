@@ -8,6 +8,7 @@
  */
 import { paintKit } from './botecoScene.js';
 import { FIG_H, FIG_MOUTH, FIG_SHOULDER, FIG_W, paintFigure } from './figurePixels.js';
+import { paintProfile } from './figProfile.js';
 
 const { hex, buffer } = paintKit;
 
@@ -45,8 +46,9 @@ function silhouetteOf(b) {
  * O busto de `spec` no humor `mood` (os mesmos do retrato: idle, thinking, smug, hurt, blink) e
  * com a boca aberta enquanto fala (`speaking`). BUST_W×BUST_H, fundo transparente.
  */
-export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false } = {}) {
-  const out = paintFigure(spec, mood, speaking);
+export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false, profile = null } = {}) {
+  // versão 2.18: `profile` ('right' | 'left'): de lado, olhando para esse lado (quem senta nas laterais)
+  const out = profile ? paintProfile(spec, mood, speaking, profile) : paintFigure(spec, mood, speaking);
   // a beirada da mesa faz sombra no peito: o pé do busto escurece
   for (let y = BUST_RAIL - 8; y < BUST_H; y += 1) {
     const k = ((y - (BUST_RAIL - 8)) / (BUST_H - (BUST_RAIL - 8))) * 0.42;

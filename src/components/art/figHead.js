@@ -20,7 +20,9 @@ const JAWS = {
 
 /** A geometria do rosto de `spec`: a meia-largura em cada linha, o teste de dentro e as medidas. */
 export function geoOf(spec) {
-  const j = JAWS[spec.jaw] ?? JAWS.round;
+  const j0 = JAWS[spec.jaw] ?? JAWS.round;
+  // versão 2.18: o rosto feminino é mais estreito, com o queixo fino e delicado
+  const j = spec.fem ? { ...j0, cw: 13, ty: Math.min(j0.ty, 38), ch: Math.min(j0.ch, 4.2), p: 1.3 } : j0;
   const cw = j.cw;
   const half = (y) => {
     if (y < 13 || y > j.by) return 0;
@@ -43,7 +45,7 @@ export function geoOf(spec) {
   for (let y = 1; y < H; y += 1) for (let x = 1; x < W; x += 1) far[y * W + x] = Math.min(far[y * W + x], far[y * W + x - 1] + 1, far[(y - 1) * W + x] + 1);
   for (let y = H - 2; y >= 0; y -= 1) for (let x = W - 2; x >= 0; x -= 1) far[y * W + x] = Math.min(far[y * W + x], far[y * W + x + 1] + 1, far[(y + 1) * W + x] + 1);
   const depth = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : far[y * W + x]);
-  return { ...j, cw, half, inFace, depth, my: bigStache ? 47 : 46, neck: spec.broad ? 9.5 : j.cw >= 14 ? 7 : 6 };
+  return { ...j, cw, half, inFace, depth, my: bigStache ? 47 : 46, neck: spec.broad ? 9.5 : spec.fem ? 5 : j.cw >= 14 ? 7 : 6 };
 }
 
 /** O pescoço: na sombra do queixo, mais claro à esquerda. */
@@ -97,14 +99,14 @@ export function paintSkull(k, S, geo, spec) {
       const d = (x + 0.5 - 44) / h;
       const e = geo.depth(x, y);
       let t = 5.25 - dark;
-      if (d > 0.42) t -= ((d - 0.42) / 0.58) * 3.6;
+      if (d > 0.42) t -= ((d - 0.42) / 0.58) * (spec.fem ? 2.3 : 3.6);
       else if (d < -0.55) t -= ((-d - 0.55) / 0.45) * 0.8;
       if (y >= 36 && y <= 45 && d < -0.45) t -= 0.75;
       if (y >= 43) {
-        if (d > 0.1) t -= 0.7 + (d - 0.1) * 2.1;
+        if (d > 0.1) t -= spec.fem ? 0.25 + (d - 0.1) * 1.2 : 0.7 + (d - 0.1) * 2.1;
         t -= (y - 43) * 0.05;
       }
-      if (y >= 40 && e < 4) t -= (4 - e) * 0.62;
+      if (y >= 40 && e < 4) t -= (4 - e) * (spec.fem ? 0.4 : 0.62);
       else if (e < 3) t -= (3 - e) * 0.3;
       // a testa pega a luz; a órbita dos olhos e a maçã do rosto
       if (y >= 16 && y <= 26 && d > -0.6 && d < 0.1) t += 0.25;
@@ -129,10 +131,11 @@ const BROWS = {
   angry: { 33: 26, 34: 26, 35: 27, 36: 27, 37: 28, 38: 28, 39: 29, 40: 29 },
   sad: { 33: 29, 34: 28, 35: 28, 36: 27, 37: 27, 38: 26, 39: 26 },
   pain: { 33: 29, 34: 29, 35: 28, 36: 27, 37: 26, 38: 26, 39: 25 },
+  fem: { 32: 27, 33: 26, 34: 25, 35: 25, 36: 25, 37: 25, 38: 26, 39: 26 },
 };
 
 function paintBrows(k, spec, mood, color, S) {
-  const shape = mood === 'hurt' ? BROWS.pain : (BROWS[spec.browShape] ?? BROWS.flat);
+  const shape = mood === 'hurt' ? BROWS.pain : spec.fem ? BROWS.fem : (BROWS[spec.browShape] ?? BROWS.flat);
   for (const side of [-1, 1]) {
     const lift = mood === 'thinking' && side > 0 ? -2 : mood === 'smug' && side < 0 ? -1 : 0;
     for (const [xs, y0] of Object.entries(shape)) {
@@ -140,7 +143,7 @@ function paintBrows(k, spec, mood, color, S) {
       const y = y0 + lift;
       k.put(x, y, color);
       if (spec.thickBrows && Number(xs) >= 34) k.put(x, y + 1, color);
-      else if (Number(xs) >= 35 && Number(xs) <= 38) k.put(x, y + 1, S[4], 0.55);
+      else if (!spec.fem && Number(xs) >= 35 && Number(xs) <= 38) k.put(x, y + 1, S[4], 0.55);
     }
   }
   if (mood === 'hurt') {
@@ -254,10 +257,17 @@ function paintEye(k, side, spec, mood, S, ir) {
   }
   P(4, 0, K);
   P(-3, 0, corner);
-  if (type === 'lashes') {
+  if (type === 'lashes' || spec.fem) {
     P(3, top - 1, K);
     P(4, top, K);
     P(5, top - 1, K);
+    P(4, top - 2, K);
+  }
+  if (spec.fem && !narrow && top === -1) {
+    // a pálpebra pintada e o brilho no olho
+    const shade = spec.lip ? mix(S[3], hex(spec.lip), 0.45) : S[3];
+    for (let u = -1; u <= 3; u += 1) P(u, top - 2, shade, 0.75);
+    k.put(icx - 1, icy - 1, WHITE);
   }
   if (narrow) {
     for (let u = -1; u <= 2; u += 1) P(u, 1, S[2]);
@@ -292,6 +302,22 @@ function paintNose(k, spec, S) {
     return;
   }
   const put = (x, y, t) => k.put(x, y, S[t]);
+  if (spec.fem && kind !== 'hook') {
+    // o nariz feminino: pequeno, só a luz da ponta, a sombra leve do lado e as narinas
+    put(45, 38, 4);
+    put(45, 39, 4);
+    put(46, 40, 3);
+    put(43, 39, 6);
+    put(43, 40, 6);
+    put(44, 40, 5);
+    put(42, 41, 2);
+    put(43, 41, 4);
+    put(44, 41, 3);
+    put(45, 41, 2);
+    put(43, 42, 3);
+    put(44, 42, 3);
+    return;
+  }
   const o = kind === 'hook' ? 1 : 0; // o adunco desce um pixel a mais
   // a sombra do dorso, à direita, que desce até a asa
   for (let y = kind === 'hook' ? 32 : 34; y <= 37 + o; y += 1) put(45, y, y < 36 ? 4 : 3);
@@ -426,6 +452,17 @@ function paintMouth(k, spec, mood, speaking, S, geo) {
     k.put(x1 + 1, my, S[2]);
   }
   lower(x0 + 1, x1 - 1, my + 1);
+  if (spec.fem && L) {
+    // o lábio de cima (o arco) e o de baixo cheio, em duas linhas
+    for (const x of [40, 41, 42, 45, 46, 47]) k.put(x, my - 1, L[x === 42 || x === 45 ? 4 : 3]);
+    k.put(43, my - 1, L[2]);
+    k.put(44, my - 1, L[2]);
+    for (let x = 41; x <= 46; x += 1) k.put(x, my + 2, L[x < 43 ? 4 : x < 45 ? 3 : 2]);
+    k.put(42, my + 1, L[6]);
+    k.put(43, my + 1, mix(L[6], WHITE, 0.5));
+    for (let x = 42; x <= 45; x += 1) k.put(x, my + 3, S[2]);
+    return;
+  }
   for (let x = 42; x <= 46; x += 1) k.put(x, my + 2, S[L ? 1 : 2]);
   k.put(41, my + 2, S[3]);
   k.put(47, my + 2, S[2]);

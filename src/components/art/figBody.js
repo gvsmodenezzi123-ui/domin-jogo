@@ -10,7 +10,7 @@ const BOTTOM = 83;
 
 export function bodyOf(spec, geo) {
   const up = spec.broad ? 2 : 0;
-  const add = spec.broad ? 2 : spec.jaw === 'thin' ? -2.5 : 0;
+  const add = spec.broad ? 2 : spec.fem ? -4 : spec.jaw === 'thin' ? -2.5 : 0;
   const half = (y) => {
     const i = y - 57 + up;
     if (i < -3) return 0;
