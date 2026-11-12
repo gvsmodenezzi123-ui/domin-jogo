@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.22.0: a mesa de 2 a 4 sem múltiplo de 5
+
+- **Mesa online/local (2 a 4, roda e duplas)**: fechar múltiplo de 5 não paga mais nada, os bots
+  não correm atrás dele e o marcador de PONTAS ao lado do dorme saiu do HUD. Na campanha solo
+  tudo continua igual.
+
 ### 2.21.0: o HUD novo mais discreto e o leque mais baixo
 
 - **HUD da mesa** (visual novo): nogueira escura com filete de latão, peças menores; o ouro fica

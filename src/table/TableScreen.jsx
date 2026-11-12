@@ -364,7 +364,6 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
   const turnMs = useStableValue(clock?.deadline ? Math.max(0, clock.deadline - now) : totalMs, turnKey);
   const clockMine = actor === me && !(flying && flying.by !== me);
   const urgent = secondsLeft != null && secondsLeft <= 10;
-  const ends = getOpenEnds(view.board);
   const hint = spectating ? '' : hintFor({ view, me, opts, selected: selectedTile, names, partner });
   // versão 2.6: a hora da batida: a mesa segura acesa com a última pedra brilhando antes do placar
   const finaleKey = !playing && !flying && view.phase !== 'lobby' ? `${view.round}:${view.phase}` : null;
@@ -448,7 +447,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
           boneyardCount={view.boneyardCount}
           tableMod={null}
           handZone={handZone}
-          endsSum={ends ? ends.left + ends.right : null}
+          endsSum={null}
           canDraw={canDraw}
           drawUrge={canDraw && playableIds.size === 0}
           onDraw={handleDraw}
@@ -492,7 +491,8 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
           tentos={tentosMode ? { current: mine.tentos ?? 0, max: view.target } : null}
           coins={mine.coins}
           showCoins={false}
-          endsSum={ends ? ends.left + ends.right : null}
+          endsSum={null}
+          noEnds
           boneyardCount={view.boneyardCount ?? null}
           drawUrge={canDraw && playableIds.size === 0}
           drawsUsed={myTurn ? view.drawsThisTurn : 0}

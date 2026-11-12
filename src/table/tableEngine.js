@@ -25,7 +25,6 @@
 import {
   DAMAGE,
   FULL_SET,
-  MULTIPLE_OF_FIVE_BONUS,
   SIDES,
   classifyBatida,
   createEmptyBoard,
@@ -36,7 +35,6 @@ import {
   getValidSides,
   hasAnyPlay,
   isDouble,
-  isMultipleOfFive,
   isTrancaFechada,
   isTurnExhausted,
   pipSum,
@@ -287,12 +285,7 @@ function playTile(state, { seat, tileId, side }) {
   const rest = hand.filter((t) => t.id !== tileId);
   let next = { ...state, board, hands: { ...state.hands, [seat]: rest }, passStreak: 0, openingTileId: null };
   const events = [{ type: 'play', by: seat, tileId, side: where }];
-  // múltiplo de 5: +$3 para quem fechou, em qualquer tamanho de mesa
-  if (!opening && isMultipleOfFive(board)) {
-    const me = seatOf(next, seat);
-    next = patchSeat(next, seat, { coins: me.coins + MULTIPLE_OF_FIVE_BONUS });
-    events.push({ type: 'five', by: seat, amount: MULTIPLE_OF_FIVE_BONUS });
-  }
+  // versão 2.22: na mesa de 2 a 4 o múltiplo de 5 não vale nada (só na campanha solo)
   next = { ...next, lastAction: { ...next.lastAction, [seat]: { kind: 'play', tileId } } };
   if (rest.length === 0) {
     const kind = classifyBatida(tile, endsBefore);
@@ -634,7 +627,7 @@ export function watchableFor(state, seat) {
 
 /**
  * A jogada do bot (as cadeiras vazias da prévia e o relógio de quem caiu): joga a pedra
- * mais pesada, preferindo fechar múltiplo de 5 e soltar bucha; sem jogada, compra; sem
+ * mais pesada, preferindo soltar bucha; sem jogada, compra; sem
  * compra, passa. Determinístico: a mesma mesa dá a mesma jogada.
  */
 export function botAction(state, seat = state.turn) {
@@ -642,12 +635,8 @@ export function botAction(state, seat = state.turn) {
   const { moves, draw, pass } = turnOptions(state, seat);
   if (moves.length) {
     const score = ({ tile, side }) => {
-      let s = pipSum(tile) * 2 + (isDouble(tile) ? 6 : 0);
-      if (state.board.root) {
-        const after = placeTile(state.board, tile, side);
-        if (isMultipleOfFive(after)) s += 15;
-      }
-      return s;
+      void side;
+      return pipSum(tile) * 2 + (isDouble(tile) ? 6 : 0);
     };
     // o sinal do parceiro: se a pedra marcada encaixa, o bot joga ela
     const asked = state.signals?.[seat];

@@ -633,6 +633,7 @@ const LandConsoles = memo(function LandConsoles({
   drawUrge = false,
   drawsUsed = 0,
   endsSum = null,
+  noEnds = false,
   discardMode,
   pickLabels = DISCARD_LABELS,
   hasSelection,
@@ -722,7 +723,7 @@ const LandConsoles = memo(function LandConsoles({
               drawsUsed={drawsUsed}
               cab
             />
-            <EndsSum sum={endsSum} cab />
+            {!noEnds && <EndsSum sum={endsSum} cab />}
           </CabSlot>
         )}
         <CabKey
@@ -785,6 +786,7 @@ const NovoConsoles = memo(function NovoConsoles({
   drawUrge = false,
   drawsUsed = 0,
   endsSum = null,
+  noEnds = false,
   discardMode,
   pickLabels = DISCARD_LABELS,
   hasSelection,
@@ -861,9 +863,11 @@ const NovoConsoles = memo(function NovoConsoles({
               <div className="nv-pile">
                 <BoneyardPile count={boneyardCount} hidden={boneyardHide} canDraw={canDraw && !discardMode} urge={drawUrge && !discardMode} onDraw={onDraw} drawsUsed={drawsUsed} cab />
               </div>
-              <div className="nv-slate">
-                <EndsSum sum={endsSum} cab />
-              </div>
+              {!noEnds && (
+                <div className="nv-slate">
+                  <EndsSum sum={endsSum} cab />
+                </div>
+              )}
             </>
           )}
           <div className="nv-acts">
@@ -949,6 +953,7 @@ function PlayerRack({
   landscape = false,
   // versão 2.14: na mesa deitada, a lousa do armarinho da direita mostra o dorme e as pontas
   endsSum = null,
+  noEnds = false,
   boneyardCount = null,
   boneyardHide = null,
   drawUrge = false,
@@ -1073,6 +1078,7 @@ function PlayerRack({
           drawUrge={drawUrge}
           drawsUsed={drawsUsed}
           endsSum={endsSum}
+          noEnds={noEnds}
           discardMode={discardMode}
           pickLabels={pickLabels}
           hasSelection={Boolean(selectedId)}

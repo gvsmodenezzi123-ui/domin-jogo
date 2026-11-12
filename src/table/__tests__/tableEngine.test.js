@@ -128,12 +128,12 @@ describe('mesa de N cadeiras: compra e passe', () => {
     expect(s.result.kind).toBe('tranca');
   });
 
-  it('múltiplo de 5 dá +$3 a quem fechou', () => {
+  it('múltiplo de 5 não paga nada na mesa (versão 2.22)', () => {
     // a raiz [5|6] deixa a ponta 5 na esquerda; o [4|5] ali deixa 4 e 6 = 10
     const s = midRound({ hands: { ...hands, s0: [t(5, 4), t(4, 4)] }, board: [[t(6, 5)]] });
     const played = tableReducer(s, { type: 'PLAY', seat: 's0', tileId: '4-5', side: 'left' });
-    expect(played.seats[0].coins).toBe(103);
-    expect(played.events.some((e) => e.type === 'five')).toBe(true);
+    expect(played.seats[0].coins).toBe(100);
+    expect(played.events.some((e) => e.type === 'five')).toBe(false);
   });
 });
 
