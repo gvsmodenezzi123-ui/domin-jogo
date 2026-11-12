@@ -17,4 +17,14 @@ export function applyReducedMotion(on) {
 export function applyVisual(visual) {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.ui = visual === 'classico' ? 'classico' : 'novo';
+  visualSubs.forEach((fn) => fn());
+}
+
+const visualSubs = new Set();
+/** O visual atual ('novo' ou 'classico'), como está no <html>. */
+export const currentVisual = () => (typeof document !== 'undefined' && document.documentElement.dataset.ui === 'classico' ? 'classico' : 'novo');
+/** Avisa quem desenha diferente em cada visual (useVisual). */
+export function subscribeVisual(fn) {
+  visualSubs.add(fn);
+  return () => visualSubs.delete(fn);
 }

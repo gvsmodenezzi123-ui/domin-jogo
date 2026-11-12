@@ -172,6 +172,17 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.20.0: o visual novo (madeira e ouro), com o clássico nas opções
+
+- **OPÇÕES → VISUAL: NOVO / CLÁSSICO**: o novo é o padrão; o clássico deixa tudo como era.
+- **Tela inicial** (novo): letreiro dourado e o menu em tábuas pregadas: CONTINUAR em ouro, NOVO
+  JOGO, MESA ONLINE, DESAFIOS, COLEÇÃO e CONFIGURAÇÕES. O Caderno de Fiado virou a aba CARREIRA
+  da COLEÇÃO.
+- **HUD da mesa** (novo): o rival numa placa de madeira pendurada, com a polaroide, a vida e o
+  dinheiro, e os talismãs embaixo; as suas coisas e as da mesa em duas caixas de charuto com
+  cantos de latão (vida no feltro vermelho, talismãs nos nichos, dinheiro na bolsa de ouro e o
+  MENU; o dorme no feltro verde, as pontas na lousa, COMPRAR e PASSAR). Mesmas funções e regras.
+
 ### 2.19.0: a mão do parceiro e o sinal da dupla; o shader da luz refeito
 
 - **Duplas: você vê as pedras do seu parceiro** (abertas, de pé na beirada dele) e pode **marcar

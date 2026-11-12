@@ -10,6 +10,7 @@ import { prefersReducedMotion } from './motion.js';
 import { BoneyardPile, EndsSum } from './BoneyardPile.jsx';
 import { CabKey, CabSlot, Cabinet } from './LandCabinets.jsx';
 import { CAB_W, cabBox, leftCabinet, rightCabinet } from './landCabinets.js';
+import { useNovo } from './useVisual.js';
 
 /** Altura da área do leque (px). */
 const FAN_HEIGHT = 162;
@@ -747,6 +748,146 @@ const LandConsoles = memo(function LandConsoles({
   );
 });
 
+/** Versão 2.20: os cantos de latão das caixas do visual novo (um L em cada quina, por fora). */
+function BrassCorners() {
+  return ['tl', 'tr', 'bl', 'br'].map((c) => <span key={c} className={`nv-kc is-${c}`} aria-hidden="true" />);
+}
+
+/** A tecla do visual novo: ouro (COMPRAR) ou escura (PASSAR), com o preço embaixo. */
+function NovoKey({ on, tone = 'gold', title, cost, label, tut, onClick }) {
+  return (
+    <button type="button" data-tut={tut} className={`nv-key is-${tone} ${on ? 'is-on' : ''}`} disabled={!on} onClick={onClick} aria-label={label}>
+      <span className="nv-key-title">{title}</span>
+      {cost && <span className="nv-key-cost">{cost}</span>}
+    </button>
+  );
+}
+
+/**
+ * Versão 2.20: o HUD da mesa no visual novo, duas caixas de charuto com cantos de latão:
+ *   a da esquerda (VOCÊ): a vida no feltro vermelho, os talismãs nos nichos, o dinheiro na bolsa
+ *     de ouro e o MENU
+ *   a da direita: o dorme no feltro verde (com o contador), as pontas na lousa e COMPRAR/PASSAR
+ * As mesmas funções e as mesmas regras de quando cada tecla acende dos armarinhos.
+ */
+const NovoConsoles = memo(function NovoConsoles({
+  sceneW = 0,
+  relicRow,
+  life,
+  coins,
+  onOpenMenu,
+  devUnlocked = false,
+  onOpenDev,
+  boneyardCount = null,
+  boneyardHide = null,
+  drawUrge = false,
+  drawsUsed = 0,
+  endsSum = null,
+  discardMode,
+  pickLabels = DISCARD_LABELS,
+  hasSelection,
+  onSkipDiscard,
+  onDiscard,
+  showDraw,
+  canDraw,
+  onDraw,
+  draw,
+  myTurn,
+  showPass,
+  canPass,
+  passRule,
+  onPass,
+  canUndo = false,
+  onUndo,
+  canCanivete = false,
+  onCanivete,
+  canGrampo = false,
+  onGrampo,
+}) {
+  const drawOn = discardMode || (showDraw && canDraw);
+  const passOn = discardMode ? hasSelection : showPass && canPass;
+  const scale = sceneW ? Math.max(0.72, Math.min(1, Math.round((sceneW / 896) * 40) / 40)) : 0.9;
+  const tf = scale < 1 ? `scale(${scale})` : undefined;
+  return (
+    <>
+      <div className="nv-box nv-box-l" style={{ transform: tf }}>
+        <BrassCorners />
+        <div className="nv-felt nv-life">{life}</div>
+        <div className="nv-row">
+          {relicRow && <div className="nv-relics">{relicRow}</div>}
+          {coins !== null && (
+            <span className="nv-pouch">
+              <CoinCount value={coins} target="player" className="nv-pouch-count" size={12} />
+            </span>
+          )}
+          {onOpenMenu && (
+            <button type="button" className="nv-menu-key" onClick={onOpenMenu} aria-label="Menu">
+              <MenuGlyph size={16} />
+            </button>
+          )}
+        </div>
+        {devUnlocked && (
+          <button type="button" className="dev-chip nv-dev" onClick={onOpenDev} aria-label="Abrir painel de testes">
+            DEV
+          </button>
+        )}
+      </div>
+      <div className="nv-box nv-box-r" style={{ transform: tf }}>
+        <BrassCorners />
+        {(canUndo || canCanivete || canGrampo) && !discardMode && (
+          <div className="tac-abilities cab-abilities">
+            {canUndo && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onUndo}>
+                DESFAZER
+              </button>
+            )}
+            {canCanivete && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onCanivete} aria-label="Canivete: virar uma pedra da mão em bucha">
+                CANIVETE
+              </button>
+            )}
+            {canGrampo && (
+              <button type="button" data-tone="brass" className="btn-pixel btn-chip btn-chip-mini chip-in relic-ability" onClick={onGrampo} aria-label="Grampo: esconder uma bucha no fundo do dorme">
+                GRAMPO
+              </button>
+            )}
+          </div>
+        )}
+        <div className="nv-row">
+          {boneyardCount !== null && (
+            <>
+              <div className="nv-pile">
+                <BoneyardPile count={boneyardCount} hidden={boneyardHide} canDraw={canDraw && !discardMode} urge={drawUrge && !discardMode} onDraw={onDraw} drawsUsed={drawsUsed} cab />
+              </div>
+              <div className="nv-slate">
+                <EndsSum sum={endsSum} cab />
+              </div>
+            </>
+          )}
+          <div className="nv-acts">
+            <NovoKey
+              on={drawOn}
+              tut={discardMode ? undefined : 'draw'}
+              onClick={discardMode ? onSkipDiscard : onDraw}
+              title={discardMode ? pickLabels.skip : 'COMPRAR'}
+              cost={!discardMode && myTurn ? <DrawCost draw={draw} /> : null}
+            />
+            <NovoKey
+              on={passOn}
+              tone="dark"
+              tut={discardMode ? undefined : 'pass'}
+              onClick={discardMode ? onDiscard : onPass}
+              label={discardMode ? pickLabels.confirm : passButtonText(passRule)}
+              title={discardMode ? pickLabels.confirm : 'PASSAR'}
+              cost={!discardMode && myTurn && passRule && (passRule.fiado || passRule.cost > 0) ? (passRule.fiado ? 'FIADO' : `$${passRule.cost}`) : null}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+});
+
 /**
  * Mão do jogador em leque flutuante sobre o feltro, HUD (corações, moedas) e as
  * ações: comprar (escada grátis → $3 → 1 coração), jogar e passar a vez.
@@ -814,6 +955,9 @@ function PlayerRack({
   showCoins = true,
   signalId = null,
 }) {
+  // versão 2.20: no visual novo o HUD de baixo são as caixas de charuto (NovoConsoles)
+  const novo = useNovo();
+  const Consoles = novo ? NovoConsoles : LandConsoles;
   // Versão 2.0: a faixa da mão fica deitada na mesa (por cima do feltro); a mesa precisa saber
   // a altura dela para as pedras do jogo não entrarem embaixo do leque
   // (2.9: deitada, a zona cobre a cena inteira; quem conta é só a faixa do leque)
@@ -912,7 +1056,7 @@ function PlayerRack({
           />
         </div>
         {/* versão 2.14: os dois armarinhos, um em cada canto de baixo, no lugar das peças soltas */}
-        <LandConsoles
+        <Consoles
           sceneW={sceneW}
           relicRow={relicSlots > 0 || relics.length > 0 ? relicRow : null}
           slots={Math.max(relicSlots ?? 0, relics.length)}

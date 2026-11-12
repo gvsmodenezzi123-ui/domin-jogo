@@ -3,7 +3,9 @@ import CoinCount from './CoinCount.jsx';
 import Hotbar from './Hotbar.jsx';
 import { HeartsBar } from './PixelHeart.jsx';
 import LampRig from './LampRig.jsx';
+import RivalAvatar from './RivalAvatar.jsx';
 import RivalBust from './RivalBust.jsx';
+import { useNovo } from './useVisual.js';
 import RivalHand from './RivalHand.jsx';
 import RivalSpeech from './RivalSpeech.jsx';
 import { SEAT_RAIL, seatBust, seatUnit } from './seatGeometry.js';
@@ -61,6 +63,8 @@ function RivalSeat({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+  // versão 2.20: no visual novo o canto de cima é a placa pendurada (com a polaroide)
+  const novo = useNovo();
   const unit = seatUnit(size.h);
   const bust = seatBust(size.h);
   const room = Math.max(80, Math.min(bust.w * 1.3, 15 * (unit + 3)));
@@ -107,6 +111,43 @@ function RivalSeat({
       </div>
 
       {/* o canto de cima à esquerda: quem é, a vida, o dinheiro e os talismãs dele */}
+      {novo ? (
+        <div className="seat-hud nv-sign-wrap">
+          <div className="nv-sign">
+            <span className="nv-chain is-l" aria-hidden="true" />
+            <span className="nv-chain is-r" aria-hidden="true" />
+            <span className="nv-polaroid" aria-hidden="true">
+              <span className="nv-polaroid-pic">
+                <RivalAvatar rival={rival} mood={mood} size={44} smoke={false} bare />
+              </span>
+            </span>
+            <div className="nv-sign-text">
+              <h2 className="rival-name nv-sign-name font-pixel" aria-label={rival.name}>
+                {shortRivalName(rival.name)}
+              </h2>
+              <div className="nv-sign-stats">
+                <HeartsBar current={hearts} max={maxHearts} size={13} label={`${rival.name}: ${hearts} de ${maxHearts} corações`} />
+              </div>
+              <CoinCount value={coins} target="tioZe" className="nv-sign-coins" size={11} />
+            </div>
+          </div>
+          <Hotbar relics={relics} size={26} cols={Math.max(4, relics.length)} flashes={flashes} press={press} owner="tioZe" niche label={`Talismãs de ${rival.name}`} className="nv-charms" />
+          <span className={`rival-status seat-status nv-sign-status font-pixel ${thinking ? 'rival-status-on' : ''}`} role="status" aria-live="polite">
+            {thinking ? <span className="thinking-dots">PENSANDO</span> : status}
+          </span>
+          {numberCounts && (
+            <div className="rival-counts seat-counts flex flex-wrap gap-[3px] font-pixel" role="status" aria-label={`Lupa: ${numberCounts.map((n, i) => `${n} com ${i}`).join(', ')}`}>
+              {numberCounts.map((n, i) => (
+                <span key={i} className={`rival-count ${n === 0 ? 'is-zero' : ''}`} aria-hidden="true">
+                  <span className="rival-count-face">{i}</span>
+                  <span className="rival-count-sep">×</span>
+                  <span className="rival-count-n">{n}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="seat-hud">
         <div className="seat-name-row">
           {avatar && <span className="seat-avatar">{avatar}</span>}
@@ -136,6 +177,8 @@ function RivalSeat({
           </div>
         )}
       </div>
+
+      )}
 
       {/* a fala sai da boca, à direita do busto */}
       {talkNow && (
