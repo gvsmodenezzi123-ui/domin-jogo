@@ -265,6 +265,22 @@ function TableBoard({
   const candles = lighting === 'candles';
   const [zoomed, setZoomed] = useState(false);
   const closeZoom = useCallback(() => setZoomed(false), []);
+  // versão 2.27: deitado, ver a mesa é a câmera subindo: a própria mesa (a do cenário) gira até
+  // ficar de cima e cresce para caber na tela. 'up' subindo/em cima, 'down' voltando.
+  const [rise, setRise] = useState(null);
+  const sectionRef = useRef(null);
+  useEffect(() => {
+    if (!rise) return undefined;
+    document.documentElement.dataset.topview = rise;
+    const onKey = (e) => e.key === 'Escape' && setRise('down');
+    window.addEventListener('keydown', onKey);
+    const t = rise === 'down' ? setTimeout(() => setRise(null), 300) : null;
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      if (t) clearTimeout(t);
+      delete document.documentElement.dataset.topview;
+    };
+  }, [rise]);
   const [areaRef, size] = useElementSize();
   // Versão 2.0: o tamanho da área da mesa decide a altura do plano inclinado
   const [roomRef, room] = useElementSize();
@@ -350,9 +366,27 @@ function TableBoard({
   const planeH = planeHeight > 0 ? planePixels(planeHeight) : 0;
   const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${mahogany ? 'mogno' : 'pinho'}${candles ? '-velas' : ''}`;
 
+  // o alvo da câmera de cima: a mesa inteira de frente, no meio da tela, no maior tamanho que cabe
+  let riseTransform = null;
+  if (rise === 'up' && land) {
+    const rect = sectionRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const W = land.width;
+    const H = land.planeHeight;
+    const k = Math.min((vw - 20) / W, (vh - 20) / H);
+    const dx = vw / 2 - rect.left - (land.style.left + W / 2);
+    const dy = vh / 2 - rect.top - land.yNear + (k * H) / 2;
+    riseTransform = `perspective(${LAND.persp}px) translate3d(${Math.round(dx)}px, ${Math.round(dy)}px, 0) rotateX(0deg) scale(${k.toFixed(3)})`;
+  }
+  const setSection = (el) => {
+    setFelt(el);
+    sectionRef.current = el;
+  };
+
   return (
     <section
-      ref={setFelt}
+      ref={setSection}
       className={`felt-table felt-25d tableboard-viewport felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${mahogany ? 'felt-mahogany' : ''} ${
         landscape ? 'is-landscape' : ''
       } ${candles ? 'is-candles' : ''}`}
@@ -361,11 +395,15 @@ function TableBoard({
     >
       {/* versão 2.16: ver a mesa de cima, com as pedras grandes */}
       {layout.tiles.length > 0 && (
-        <button type="button" className="board-view-btn" onClick={() => setZoomed(true)} aria-label="Ver a mesa de cima">
+        <button type="button" className="board-view-btn" onClick={() => (land ? setRise('up') : setZoomed(true))} aria-label="Ver a mesa de cima">
           <LupaGlyph size={18} />
         </button>
       )}
       {zoomed && <BoardZoom tiles={layout.tiles} enhancementOf={enhancementOf} onClose={closeZoom} />}
+      {rise && (
+        <button type="button" className={`table-rise-veil is-${rise}`} onClick={() => setRise('down')} aria-label="Voltar para a mesa">
+        </button>
+      )}
       {/* Versão 2.0: a sala em volta da mesa (aparece nos cantos do fundo, onde a mesa afina) */}
       <div ref={roomRef} aria-hidden="true" className="table-room pointer-events-none absolute inset-0">
         <BotecoBackdrop scene={landscape ? (roomScene ?? 'landroom') : 'tableroom'} className="absolute inset-0" />
@@ -373,10 +411,12 @@ function TableBoard({
 
       {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}
       <div
-        className="table-plane absolute"
+        className={`table-plane absolute ${rise ? `is-rise-${rise}` : ''}`}
         style={
           land
-            ? land.style
+            ? riseTransform
+              ? { ...land.style, transform: riseTransform }
+              : { ...land.style, transform: `perspective(${LAND.persp}px) translate3d(0px, 0px, 0) rotateX(${LAND.tilt}deg) scale(1)` }
             : planeHeight
             ? {
                 left: Math.round((room.width - planeWidth) / 2),

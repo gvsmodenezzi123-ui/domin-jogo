@@ -172,6 +172,15 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.27.0: ver a mesa é a câmera subindo
+
+- **Ver a mesa** (deitado): a própria mesa da partida gira até ficar vista de cima e cresce para
+  caber na tela (≈0,4 s para subir, ≈0,3 s para voltar). Sem personagens nem HUD enquanto está em
+  cima; toque em qualquer lugar (ou Esc) para voltar. Como é a mesa de verdade, vale para todas:
+  o pano e a madeira do cenário, a de mogno, a das velas do Dono da Noite e a mesa da roda online.
+  Em pé continua a vista ampliada de antes.
+- A madeira da beirada de perto sem os blocos claros do verniz gasto.
+
 ### 2.26.1: a lupa no traço do menu
 
 - O botão de ver a mesa ganhou uma lupa desenhada no mesmo traço do ícone de menu (osso com

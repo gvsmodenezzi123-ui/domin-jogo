@@ -481,7 +481,7 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       if (side === 'bottom') c = lerp(c, wood.lo, 0.12);
       // verniz gasto no meio do lado de baixo (onde se apoia o cotovelo) e nas quinas
       const elbow = side === 'bottom' && Math.abs(x - w / 2) < w * 0.22 && across > 3 && across < WOOD_W - 2;
-      if (elbow && woodNoise(x * 2, y) > 0.45) c = lerp(c, wood.worn, 0.55);
+      if (elbow) c = lerp(c, wood.worn, 0.12 * Math.max(0, woodNoise(x, y) - 0.3));
       // emenda em meia-esquadria nos quatro cantos
       if (Math.abs(Math.min(dTop, dBottom) - Math.min(dLeft, dRight)) === 0 && across > 0 && across < WOOD_W - 1) c = wood.deep;
       b.put(x, y, clampRgb(c));
