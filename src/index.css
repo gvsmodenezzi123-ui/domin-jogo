@@ -26595,38 +26595,205 @@ html[data-ui='novo'] .px-skins .board-view-btn {
 }
 
 /* ==========================================================================================
-   Versão 2.27: ver a mesa (deitado) é a câmera subindo: o plano gira até ficar de cima e
-   cresce; a sala escurece e o resto do HUD some. Rápido, para não enjoar.
+   Versão 2.28: ver a mesa (deitado) é o jogador se levantando para olhar a mesa.
+   SUBINDO (~0,6 s): o corpo sobe e recua (a cena desce um pouco), depois a cabeça inclina: a
+   parede, o rival e a lâmpada saem por cima da tela, a beirada de perto some por baixo e o tampo
+   gira até ficar de frente e cresce. VOLTANDO (~0,5 s): o caminho de volta, com a sentada no fim
+   (um assentar de leve), e o HUD volta junto, sem aparecer de repente depois.
+   Tudo em transform/translate/opacity (GPU). Os números do alvo vêm do TableBoard (--rise-*).
    ========================================================================================== */
 .table-plane.is-rise-up {
   z-index: 60;
-  transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: rise-plane-up 620ms cubic-bezier(0.5, 0, 0.2, 1) both;
 }
 
 .table-plane.is-rise-down {
   z-index: 60;
-  transition: transform 280ms cubic-bezier(0.4, 0, 0.6, 1);
+  animation: rise-plane-down 500ms cubic-bezier(0.4, 0, 0.3, 1) both;
 }
 
+@keyframes rise-plane-up {
+  0% {
+    transform: perspective(var(--rise-persp)) translate3d(0, 0, 0) rotateX(var(--rise-tilt)) rotateZ(0deg) scale(1);
+  }
+  26% {
+    transform: perspective(var(--rise-persp)) translate3d(0, 18px, 0) rotateX(calc(var(--rise-tilt) - 3deg)) rotateZ(-0.9deg) scale(0.96);
+  }
+  62% {
+    transform: perspective(var(--rise-persp)) translate3d(calc(var(--rise-dx) * 0.7), calc(var(--rise-dy) * 0.62), 0) rotateX(calc(var(--rise-tilt) * 0.3)) rotateZ(0.5deg) scale(calc(1 + (var(--rise-k) - 1) * 0.72));
+  }
+  100% {
+    transform: perspective(var(--rise-persp)) translate3d(var(--rise-dx), var(--rise-dy), 0) rotateX(0deg) rotateZ(0deg) scale(var(--rise-k));
+  }
+}
+
+@keyframes rise-plane-down {
+  0% {
+    transform: perspective(var(--rise-persp)) translate3d(var(--rise-dx), var(--rise-dy), 0) rotateX(0deg) rotateZ(0deg) scale(var(--rise-k));
+  }
+  50% {
+    transform: perspective(var(--rise-persp)) translate3d(calc(var(--rise-dx) * 0.25), calc(var(--rise-dy) * 0.2), 0) rotateX(calc(var(--rise-tilt) * 0.8)) rotateZ(0.7deg) scale(calc(1 + (var(--rise-k) - 1) * 0.2));
+  }
+  78% {
+    transform: perspective(var(--rise-persp)) translate3d(0, -6px, 0) rotateX(calc(var(--rise-tilt) + 1deg)) rotateZ(-0.3deg) scale(1.01);
+  }
+  100% {
+    transform: perspective(var(--rise-persp)) translate3d(0, 0, 0) rotateX(var(--rise-tilt)) rotateZ(0deg) scale(1);
+  }
+}
+
+/* o chão em volta, na penumbra (aparece quando a parede sai de cena) */
 .table-rise-veil {
   position: fixed;
   inset: 0;
   z-index: 59;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: max(env(safe-area-inset-top), 4px) max(env(safe-area-inset-right), 8px) 0 0;
   border: 0;
-  background: rgba(6, 3, 1, 0.82);
+  padding: 0;
+  background: radial-gradient(ellipse at 50% 55%, rgba(42, 24, 12, 0.86), rgba(6, 3, 1, 0.97) 75%);
   cursor: pointer;
-  animation: table-rise-veil-in 300ms ease-out both;
+  animation: rise-veil-in 620ms ease-in both;
 }
 
 .table-rise-veil.is-down {
-  animation: table-rise-veil-out 280ms ease-in both;
+  animation: rise-veil-out 500ms ease-out both;
 }
 
-@keyframes table-rise-veil-in {
+@keyframes rise-veil-in {
+  0%,
+  20% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes rise-veil-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* a cena de cima (parede, rival, a roda, a lâmpada, as velas): sai por cima ao olhar para baixo */
+html[data-topview='up'] .table-room,
+html[data-topview='up'] .rival-seat,
+html[data-topview='up'] .roda-seats,
+html[data-topview='up'] .lamp-rig,
+html[data-topview='up'] .table-candles {
+  animation: rise-scene-up 620ms cubic-bezier(0.5, 0, 0.2, 1) both;
+  pointer-events: none;
+}
+
+html[data-topview='down'] .table-room,
+html[data-topview='down'] .rival-seat,
+html[data-topview='down'] .roda-seats,
+html[data-topview='down'] .lamp-rig,
+html[data-topview='down'] .table-candles {
+  animation: rise-scene-down 500ms cubic-bezier(0.4, 0, 0.3, 1) both;
+  pointer-events: none;
+}
+
+@keyframes rise-scene-up {
+  0% {
+    translate: 0 0;
+    scale: 1;
+    opacity: 1;
+  }
+  26% {
+    translate: 0 18px;
+    scale: 0.98;
+    rotate: -0.9deg;
+    opacity: 1;
+  }
+  62% {
+    rotate: 0.5deg;
+    opacity: 0.55;
+  }
+  100% {
+    rotate: 0deg;
+    translate: 0 -78vh;
+    scale: 1.1;
+    opacity: 0;
+  }
+}
+
+@keyframes rise-scene-down {
+  0% {
+    translate: 0 -78vh;
+    scale: 1.1;
+    opacity: 0;
+  }
+  50% {
+    rotate: 0.7deg;
+  }
+  78% {
+    translate: 0 -5px;
+    scale: 1.005;
+    rotate: -0.3deg;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 0;
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+/* a beirada de perto (a saia e os pés): some por baixo */
+html[data-topview='up'] .land-table-front {
+  animation: rise-front-up 620ms cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+html[data-topview='down'] .land-table-front {
+  animation: rise-front-down 500ms cubic-bezier(0.4, 0, 0.3, 1) both;
+}
+
+@keyframes rise-front-up {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 70px;
+    opacity: 0;
+  }
+}
+
+@keyframes rise-front-down {
+  0% {
+    translate: 0 70px;
+    opacity: 0;
+  }
+  100% {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+
+/* o HUD: some logo no começo da subida e volta no fim da sentada */
+html[data-topview='up'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, [data-tut='hand'], .hand-slot, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
+  animation: rise-hud-out 160ms ease-out both;
+  pointer-events: none;
+}
+
+html[data-topview='down'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, [data-tut='hand'], .hand-slot, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
+  animation: rise-hud-in 240ms ease-out 260ms both;
+  pointer-events: none;
+}
+
+@keyframes rise-hud-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-hud-in {
   from {
     opacity: 0;
   }
@@ -26635,53 +26802,13 @@ html[data-ui='novo'] .px-skins .board-view-btn {
   }
 }
 
-@keyframes table-rise-veil-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+/* animações reduzidas: só um corte rápido, sem o movimento */
+.reduce-motion .table-plane.is-rise-up,
+.reduce-motion .table-plane.is-rise-down,
+.reduce-motion .table-rise-veil {
+  animation-duration: 120ms;
 }
 
-.table-rise-hint {
-  position: relative;
-  z-index: 61;
-  writing-mode: vertical-rl;
-  font-size: 7px;
-  color: rgba(243, 217, 154, 0.75);
-  text-shadow: 0 1px 0 #000;
-}
-
-/* o resto da tela sai do caminho enquanto a câmera está em cima */
-html[data-topview] .land-table-front,
-html[data-topview] .board-view-btn,
-html[data-topview] .nv-box,
-html[data-topview] .nv-menu-top,
-html[data-topview] .land-cabinet,
-html[data-topview] .cab,
-html[data-topview] [data-tut='hand'],
-html[data-topview] .hand-slot,
-html[data-topview] .seat-hud,
-html[data-topview] .rival-seat,
-html[data-topview] .seat.chair,
-html[data-topview] .seat-lamp,
-html[data-topview] .pvp-clock,
-html[data-topview] .player-hint,
-html[data-topview] .table-candles,
-html[data-topview] .lamp-rig,
-html[data-topview] .speech-balloon,
-html[data-topview] .dev-chip,
-html[data-topview] .nv-dev,
-html[data-topview] .mate-rack {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 180ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .table-plane.is-rise-up,
-  .table-plane.is-rise-down {
-    transition-duration: 1ms;
-  }
+html.reduce-motion[data-topview] :is(.table-room, .rival-seat, .roda-seats, .lamp-rig, .table-candles, .land-table-front) {
+  animation-duration: 120ms;
 }

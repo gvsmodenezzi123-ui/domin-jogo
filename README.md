@@ -172,6 +172,15 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.28.0: ver a mesa é o jogador se levantando
+
+- **Ver a mesa** (deitado) virou uma animação de verdade: o jogador se levanta (a cena dá uma
+  descida curta, com um balanço leve da cabeça), olha para baixo (a parede, o rival, a lâmpada e
+  as velas saem por cima, a beirada de perto some por baixo) e a mesa do cenário fica de frente
+  e grande (~0,6 s). Ao sair, o caminho de volta, com o assentar no fim (~0,5 s), e o rival e o
+  HUD voltam junto com a sentada (não aparecem de repente depois). Vale para todas as mesas
+  (a do cenário, a de mogno, a das velas e a da roda online).
+
 ### 2.27.1: correção do build da 2.27.0
 
 - A posição da mesa para a câmera de cima é medida no toque da lupa (não durante o desenho): o

@@ -281,7 +281,8 @@ function TableBoard({
     document.documentElement.dataset.topview = rise;
     const onKey = (e) => e.key === 'Escape' && setRise('down');
     window.addEventListener('keydown', onKey);
-    const t = rise === 'down' ? setTimeout(() => setRise(null), 300) : null;
+    // a volta termina no fim da animação da mesa (onAnimationEnd); o relógio é só a garantia
+    const t = rise === 'down' ? setTimeout(() => setRise(null), 2500) : null;
     return () => {
       window.removeEventListener('keydown', onKey);
       if (t) clearTimeout(t);
@@ -374,8 +375,9 @@ function TableBoard({
   const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${mahogany ? 'mogno' : 'pinho'}${candles ? '-velas' : ''}`;
 
   // o alvo da câmera de cima: a mesa inteira de frente, no meio da tela, no maior tamanho que cabe
-  let riseTransform = null;
-  if (rise === 'up' && land) {
+  // (vai para o CSS como variáveis: as animações de subir e de voltar usam o mesmo alvo)
+  let riseVars = null;
+  if (rise && land) {
     const rect = riseAt;
     const { vw, vh } = riseAt;
     const W = land.width;
@@ -383,7 +385,7 @@ function TableBoard({
     const k = Math.min((vw - 20) / W, (vh - 20) / H);
     const dx = vw / 2 - rect.left - (land.style.left + W / 2);
     const dy = vh / 2 - rect.top - land.yNear + (k * H) / 2;
-    riseTransform = `perspective(${LAND.persp}px) translate3d(${Math.round(dx)}px, ${Math.round(dy)}px, 0) rotateX(0deg) scale(${k.toFixed(3)})`;
+    riseVars = { '--rise-persp': `${LAND.persp}px`, '--rise-tilt': `${LAND.tilt}deg`, '--rise-dx': `${Math.round(dx)}px`, '--rise-dy': `${Math.round(dy)}px`, '--rise-k': k.toFixed(3) };
   }
   const setSection = (el) => {
     setFelt(el);
@@ -418,11 +420,10 @@ function TableBoard({
       {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}
       <div
         className={`table-plane absolute ${rise ? `is-rise-${rise}` : ''}`}
+        onAnimationEnd={(e) => e.target === e.currentTarget && e.animationName === 'rise-plane-down' && setRise(null)}
         style={
           land
-            ? riseTransform
-              ? { ...land.style, transform: riseTransform }
-              : { ...land.style, transform: `perspective(${LAND.persp}px) translate3d(0px, 0px, 0) rotateX(${LAND.tilt}deg) scale(1)` }
+            ? { ...land.style, ...riseVars, transform: `perspective(${LAND.persp}px) translate3d(0px, 0px, 0) rotateX(${LAND.tilt}deg) rotateZ(0deg) scale(1)` }
             : planeHeight
             ? {
                 left: Math.round((room.width - planeWidth) / 2),
