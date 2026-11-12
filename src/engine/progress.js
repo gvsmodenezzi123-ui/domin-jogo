@@ -84,7 +84,11 @@ export function discover(collection, seen) {
 // ---------------------------------------------------------------------------
 
 /** Volumes padrão do motor de som (engine/audioSynth.js). */
-export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.7, music: 0.4, haptics: true, reducedMotion: false, visual: 'novo' });
+export const DEFAULT_SETTINGS = Object.freeze({ sfx: 0.7, music: 0.4, haptics: true, reducedMotion: false, visual: 'novo', onlineTiles: 'bone' });
+
+/** Versão 2.23: as pedras do modo online (só enfeite, cada um vê as suas): marfim, pretas ou pratas. */
+export const ONLINE_TILES = Object.freeze(['bone', 'onyx', 'silver']);
+export const ONLINE_TILE_NAMES = Object.freeze({ bone: 'MARFIM', onyx: 'PRETAS', silver: 'PRATAS' });
 
 /** Versão 2.20: o visual do jogo (OPÇÕES → VISUAL). `novo` é o de madeira; `classico`, o de antes. */
 export const VISUALS = Object.freeze(['novo', 'classico']);
@@ -99,6 +103,7 @@ export function loadSettings() {
     haptics: typeof data?.haptics === 'boolean' ? data.haptics : DEFAULT_SETTINGS.haptics,
     reducedMotion: typeof data?.reducedMotion === 'boolean' ? data.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     visual: VISUALS.includes(data?.visual) ? data.visual : DEFAULT_SETTINGS.visual,
+    onlineTiles: ONLINE_TILES.includes(data?.onlineTiles) ? data.onlineTiles : DEFAULT_SETTINGS.onlineTiles,
   };
 }
 

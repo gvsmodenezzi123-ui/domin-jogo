@@ -1,3 +1,4 @@
+import { ONLINE_TILES } from '../engine/progress.js';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { sound } from '../engine/audioSynth.js';
 import NetBadge from '../pvp/NetBadge.jsx';
@@ -113,7 +114,7 @@ function TableMenu({ playing, host, muted, onToggleMute, onResume, onQuit }) {
  * estrela (tableSession.js) pelo mesmo PeerJS do duelo e mostra o saguão, a mesa, o resultado
  * e o pódio. `role` 'host' abre a roda com `code`; 'guest' entra nela.
  */
-export default function TableOnline({ role, code, me, config = null, onExit, muted, onToggleMute, onTrack = null }) {
+export default function TableOnline({ role, code, me, config = null, onExit, muted, onToggleMute, onTrack = null, tiles = 'bone', onTiles = null }) {
   const [face, setFace] = useState(loadFace);
   // a sessão vale para esta roda (o PvpApp troca a key a cada roda nova)
   const [session] = useState(() =>
@@ -203,6 +204,8 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
           slots={seats}
           you={snap.you}
           onFace={cycleFace}
+          tiles={tiles}
+          onTiles={onTiles ? (dir) => (tap(), onTiles(ONLINE_TILES[(ONLINE_TILES.indexOf(tiles) + dir + ONLINE_TILES.length) % ONLINE_TILES.length])) : null}
           onAddBot={host ? (place) => (tap(), session.addBot(place)) : null}
           onRemoveBot={host ? (id) => (tap(), session.removeBot(id)) : null}
           teams={Boolean(cfg.teams)}

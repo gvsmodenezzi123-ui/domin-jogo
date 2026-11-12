@@ -814,6 +814,12 @@ const NovoConsoles = memo(function NovoConsoles({
   const tf = scale < 1 ? `scale(${scale})` : undefined;
   return (
     <>
+      {/* versão 2.23: o MENU saiu da caixa e mora no canto de cima à direita da tela */}
+      {onOpenMenu && (
+        <button type="button" className="nv-menu-key nv-menu-top" onClick={onOpenMenu} aria-label="Menu">
+          <MenuGlyph size={16} />
+        </button>
+      )}
       <div className="nv-box nv-box-l" style={{ transform: tf }}>
         <BrassCorners />
         <div className="nv-felt nv-life">{life}</div>
@@ -823,11 +829,6 @@ const NovoConsoles = memo(function NovoConsoles({
             <span className="nv-pouch">
               <CoinCount value={coins} target="player" className="nv-pouch-count" size={12} />
             </span>
-          )}
-          {onOpenMenu && (
-            <button type="button" className="nv-menu-key" onClick={onOpenMenu} aria-label="Menu">
-              <MenuGlyph size={16} />
-            </button>
           )}
         </div>
         {devUnlocked && (

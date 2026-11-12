@@ -295,7 +295,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
         {roda.practice ? (
           <TablePreview key={roda.key} onExit={back} muted={muted} onToggleMute={onToggleMute} onTrack={setRodaTrack} />
         ) : (
-          <TableOnline key={roda.key} role={roda.role} code={roda.code} me={{ id: me.id, name: cleanName(me.name) || 'Jogador' }} onExit={back} muted={muted} onToggleMute={onToggleMute} onTrack={setRodaTrack} />
+          <TableOnline key={roda.key} role={roda.role} code={roda.code} me={{ id: me.id, name: cleanName(me.name) || 'Jogador' }} onExit={back} muted={muted} onToggleMute={onToggleMute} onTrack={setRodaTrack} tiles={settings?.onlineTiles ?? 'bone'} onTiles={(next) => onSettings?.({ ...settings, onlineTiles: next })} />
         )}
         {veil}
       </div>

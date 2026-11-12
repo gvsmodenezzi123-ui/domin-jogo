@@ -1405,6 +1405,7 @@ export default function App() {
   if (online) {
     return (
       <>
+        <TileSkinContext.Provider value={settings.onlineTiles ?? 'bone'}>
         <PvpApp
           settings={settings}
           onSettings={changeSettings}
@@ -1417,6 +1418,7 @@ export default function App() {
             if (sound.ctx) sound.playTrack(REGIONS[0].music);
           }}
         />
+        </TileSkinContext.Provider>
         {veil}
       </>
     );

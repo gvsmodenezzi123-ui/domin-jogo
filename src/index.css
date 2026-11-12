@@ -25269,3 +25269,260 @@
 .nv-charms {
   margin: 5px 0 0 6px;
 }
+
+/* Versão 2.23: o MENU no canto de cima à direita; a caixa da esquerda fica mais curta */
+.nv-menu-key.nv-menu-top {
+  position: fixed;
+  top: max(env(safe-area-inset-top), 8px);
+  right: max(env(safe-area-inset-right), 10px);
+  z-index: 30;
+  width: 30px;
+  height: 30px;
+  pointer-events: auto;
+}
+
+.nv-pouch {
+  flex: 1;
+}
+
+/* Versão 2.23: a escolha das pedras no saguão da mesa online (marfim, pretas ou pratas) */
+.lobby-tiles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  margin-left: 4px;
+  padding: 0 5px;
+  font-size: inherit;
+  color: #f4ecd2;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(244, 236, 210, 0.25);
+}
+
+.lobby-tiles-chip {
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #f8ecc4, #d9bd7c);
+  box-shadow:
+    0 0 0 1px #1a1108,
+    inset 0 -7px 0 -6px #1a1108;
+}
+
+.lobby-tiles.is-onyx .lobby-tiles-chip {
+  background: linear-gradient(180deg, #5a524b, #1d1a17);
+  box-shadow: 0 0 0 1px #000;
+}
+
+.lobby-tiles.is-silver .lobby-tiles-chip {
+  background: linear-gradient(180deg, #fbfcfd, #b1b8bf);
+  box-shadow: 0 0 0 1px #1c2024;
+}
+
+/* ==========================================================================================
+   Versão 2.23: a LOJA, o BECO e o MAPA no visual novo: luz mais quente, placas de madeira,
+   ouro nos preços e nas teclas principais. As funções e as posições são as mesmas.
+   ========================================================================================== */
+html[data-ui='novo'] .shop-land .land-stage > canvas:first-child,
+html[data-ui='novo'] .map-land .land-stage > canvas:first-child {
+  filter: brightness(1.14) saturate(1.3) sepia(0.1);
+}
+
+/* as teclas grandes (VOLTAR AO MAPA, SENTAR À MESA, sair do beco) viram tábuas */
+html[data-ui='novo'] .shop-land .tl-key,
+html[data-ui='novo'] .map-land .tl-key,
+html[data-ui='novo'] .bm-land .tl-key {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 18px 0 46px;
+  background: linear-gradient(180deg, #fff3d0, #f3d99a);
+  box-shadow:
+    0 0 0 2px #6a4410,
+    0 0 0 4px #e9b848,
+    0 0 0 6px #3a1c04,
+    inset 0 2px 0 #fffbe8,
+    inset 0 -3px 0 #d9b468,
+    0 8px 0 #140802,
+    0 0 18px rgba(255, 190, 80, 0.35);
+}
+
+html[data-ui='novo'] .shop-land .tl-key::before,
+html[data-ui='novo'] .map-land .tl-key::before,
+html[data-ui='novo'] .bm-land .tl-key::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  margin-top: -10px;
+  border-left: 15px solid #c97a10;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  filter: drop-shadow(0 2px 0 #3a1c04);
+}
+
+html[data-ui='novo'] .shop-land .tl-key .tl-key-art,
+html[data-ui='novo'] .map-land .tl-key .tl-key-art,
+html[data-ui='novo'] .bm-land .tl-key .tl-key-art {
+  display: none;
+}
+
+html[data-ui='novo'] .shop-land .tl-key .tl-key-text,
+html[data-ui='novo'] .map-land .tl-key .tl-key-text,
+html[data-ui='novo'] .bm-land .tl-key .tl-key-text {
+  position: static;
+  left: auto !important;
+}
+
+html[data-ui='novo'] .shop-land .tl-key .tl-key-label,
+html[data-ui='novo'] .map-land .tl-key .tl-key-label {
+  color: #3a2208;
+  text-shadow: none;
+}
+
+html[data-ui='novo'] .shop-land .tl-key .tl-key-note,
+html[data-ui='novo'] .map-land .tl-key .tl-key-note {
+  color: #6a4a1a;
+}
+
+/* a do beco, em sangue */
+html[data-ui='novo'] .bm-land .tl-key {
+  background: linear-gradient(180deg, #c82832, #7e0e16);
+  box-shadow:
+    0 0 0 2px #2a0406,
+    0 0 0 4px #6a1418,
+    0 0 0 6px #120204,
+    inset 0 2px 0 #f06a6a,
+    inset 0 -3px 0 #4a060c,
+    0 8px 0 #0a0102;
+}
+
+html[data-ui='novo'] .bm-land .tl-key::before {
+  border-left-color: #ffd0c8;
+}
+
+html[data-ui='novo'] .bm-land .tl-key .tl-key-label {
+  color: #fff3d0;
+}
+
+html[data-ui='novo'] .bm-land .tl-key .tl-key-note {
+  color: #f0b8b0;
+}
+
+/* --- a loja ------------------------------------------------------------------------------ */
+html[data-ui='novo'] .sl-sign {
+  top: 44px;
+  height: 28px;
+  color: #ffd35a;
+  text-shadow: 0 2px 0 #1a0a02;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 23px, rgba(255, 200, 140, 0.05) 23px 24px, transparent 24px 61px),
+    linear-gradient(180deg, #7a4520 0%, #5e3216 48%, #4a260f 100%);
+  box-shadow:
+    0 0 0 2px #1c0d05,
+    inset 0 2px 0 #b5743a,
+    inset 0 -3px 0 #2e1608,
+    0 4px 0 #0e0602;
+}
+
+html[data-ui='novo'] .sl-sign span {
+  color: #f3d99a;
+}
+
+html[data-ui='novo'] .sl-cash,
+html[data-ui='novo'] .bm-land .sl-cash {
+  padding: 6px 14px;
+  border: 0;
+  background: linear-gradient(180deg, #ffe07a, #ffc23a 45%, #e8921a);
+  box-shadow:
+    0 0 0 2px #3a1c04,
+    inset 0 2px 0 #fff3b8,
+    inset 0 -3px 0 #b8640a,
+    0 4px 0 #1a0a02;
+}
+
+html[data-ui='novo'] .sl-cash .coin-count,
+html[data-ui='novo'] .sl-cash > span:first-child {
+  color: #3a1c04;
+  text-shadow: 0 1px 0 rgba(255, 243, 184, 0.6);
+}
+
+/* as etiquetas de preço: plaquinhas de ouro (era uma pílula) */
+html[data-ui='novo'] .shop-land .shop-price,
+html[data-ui='novo'] .bm-land .shop-price {
+  padding: 3px 7px 2px;
+  border: 0;
+  border-radius: 2px;
+  color: #3a1c04;
+  background: linear-gradient(180deg, #ffe07a, #ffc23a 45%, #e8921a);
+  box-shadow:
+    0 0 0 1px #3a1c04,
+    inset 0 1px 0 #fff3b8,
+    inset 0 -2px 0 #b8640a,
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+html[data-ui='novo'] .sl-tag {
+  background: linear-gradient(180deg, #fff3d0, #f0d8a0);
+  box-shadow:
+    0 0 0 1px #6a4410,
+    0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+html[data-ui='novo'] .sl-grife {
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+html[data-ui='novo'] .sl-pouch-label,
+html[data-ui='novo'] .sl-dice-label,
+html[data-ui='novo'] .sl-pack-name {
+  color: #ffe9b8;
+}
+
+html[data-ui='novo'] .sl-speech {
+  background: linear-gradient(180deg, #fff3d0, #f3d99a);
+  box-shadow:
+    0 0 0 2px #3a1c04,
+    0 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* --- o mapa ------------------------------------------------------------------------------ */
+html[data-ui='novo'] .ml-region {
+  color: #ffd35a;
+  text-shadow:
+    0 2px 0 #7a3208,
+    0 4px 0 #1a0a02;
+}
+
+html[data-ui='novo'] .ml-menu {
+  border-radius: 3px;
+  color: #3a1c04;
+  background: radial-gradient(circle at 35% 28%, #fff3b8, #f0b030 45%, #a8640c);
+  box-shadow:
+    0 0 0 2px #1c0d05,
+    inset 0 -3px 0 rgba(90, 50, 5, 0.6),
+    0 4px 0 #0e0602;
+}
+
+html[data-ui='novo'] .ml-stats .coin-count {
+  padding: 4px 9px;
+  color: #3a1c04;
+  background: linear-gradient(180deg, #ffe07a, #ffc23a 45%, #e8921a);
+  box-shadow:
+    0 0 0 2px #3a1c04,
+    inset 0 2px 0 #fff3b8,
+    inset 0 -3px 0 #b8640a;
+}
+
+html[data-ui='novo'] .shop-land .tl-key.sl-leave,
+html[data-ui='novo'] .bm-land .tl-key.sl-leave {
+  left: 698px;
+  top: 362px;
+  width: 280px !important;
+  height: 56px !important;
+}
+
+html[data-ui='novo'] .map-land .tl-key.ml-go {
+  width: calc(100% - 12px) !important;
+  margin: 4px 6px 8px;
+}

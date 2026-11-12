@@ -1,3 +1,4 @@
+import { ONLINE_TILE_NAMES } from '../engine/progress.js';
 import { useState } from 'react';
 import RivalAvatar from '../components/RivalAvatar.jsx';
 import { TABLE_MAPS, mapOf, mapUnlocked } from '../data/tableMaps.js';
@@ -47,6 +48,8 @@ export default function TableLobby({
   slots,
   you,
   onFace = null,
+  tiles = 'bone',
+  onTiles = null,
   onAddBot = null,
   onRemoveBot = null,
   options = null,
@@ -172,6 +175,13 @@ export default function TableLobby({
                   <button type="button" className="lobby-arrow" aria-label="Próximo rosto" onClick={() => onFace(1)}>
                     ▶
                   </button>
+                  {/* versão 2.23: as suas pedras (só enfeite, cada um vê as suas) */}
+                  {onTiles && (
+                    <button type="button" className={`lobby-tiles is-${tiles}`} aria-label={`Pedras: ${ONLINE_TILE_NAMES[tiles]}. Tocar para trocar`} onClick={() => onTiles(1)}>
+                      <span className="lobby-tiles-chip" aria-hidden="true" />
+                      <span className="font-pixel">{ONLINE_TILE_NAMES[tiles]}</span>
+                    </button>
+                  )}
                 </span>
               ) : seat.bot && onRemoveBot ? (
                 <button type="button" className="lobby-mini font-pixel" onClick={() => onRemoveBot(seat.id)}>

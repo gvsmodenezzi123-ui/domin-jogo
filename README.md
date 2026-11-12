@@ -172,6 +172,15 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.23.0: loja, beco e mapa no visual novo; pedras pretas e pratas no online; MENU no canto
+
+- **Loja, beco e mapa** (visual novo): luz mais quente, placa de madeira, o dinheiro e os preços
+  em ouro, as teclas principais em tábua dourada (a do beco, em sangue). Mesmas funções.
+- **HUD da mesa** (visual novo): o MENU foi para o canto de cima à direita; a caixa da esquerda
+  ficou mais curta.
+- **Modo online**: PEDRAS ONLINE nas opções e no saguão da roda: marfim, pretas ou pratas. É só
+  enfeite: cada jogador vê as suas.
+
 ### 2.22.0: a mesa de 2 a 4 sem múltiplo de 5
 
 - **Mesa online/local (2 a 4, roda e duplas)**: fechar múltiplo de 5 não paga mais nada, os bots

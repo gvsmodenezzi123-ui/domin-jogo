@@ -1,3 +1,4 @@
+import { ONLINE_TILES, ONLINE_TILE_NAMES } from '../engine/progress.js';
 import { useState } from 'react';
 import { PRIVACY, PRIVACY_EMAIL, PRIVACY_URL } from '../data/privacy.js';
 import PagedBlocks from './PagedBlocks.jsx';
@@ -131,6 +132,14 @@ export default function OptionsPanel({ settings, onChange, onResetProgress, onTu
         onClick={() => set({ visual: settings.visual === 'classico' ? 'novo' : 'classico' })}
       >
         VISUAL: {settings.visual === 'classico' ? 'CLÁSSICO' : 'NOVO'}
+      </button>
+      {/* Versão 2.23: as pedras do modo online (só enfeite) */}
+      <button
+        type="button"
+        className="btn-pixel w-full"
+        onClick={() => set({ onlineTiles: ONLINE_TILES[(ONLINE_TILES.indexOf(settings.onlineTiles ?? 'bone') + 1) % ONLINE_TILES.length] })}
+      >
+        PEDRAS ONLINE: {ONLINE_TILE_NAMES[settings.onlineTiles ?? 'bone']}
       </button>
       {/* Patch 0.9.5: rever a partida de treino (só na tela inicial) */}
       {onTutorial && (
