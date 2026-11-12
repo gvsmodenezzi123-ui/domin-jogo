@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.21.0: o HUD novo mais discreto e o leque mais baixo
+
+- **HUD da mesa** (visual novo): nogueira escura com filete de latão, peças menores; o ouro fica
+  só no dinheiro e na tecla que vale agora (COMPRAR acesa em ouro, PASSAR em vermelho).
+- **O leque da mão** afunda no pé da tela (nos dois visuais): sobra mesa para jogar.
+
 ### 2.20.0: o visual novo (madeira e ouro), com o clássico nas opções
 
 - **OPÇÕES → VISUAL: NOVO / CLÁSSICO**: o novo é o padrão; o clássico deixa tudo como era.

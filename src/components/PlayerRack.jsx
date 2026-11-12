@@ -27,7 +27,9 @@ const SELECT_LIFT = 16;
 const landFan = (h) => {
   const unit = Math.max(28, Math.min(46, Math.round((h || 390) * 0.088)));
   // versão 2.15: o arco da referência desce nas pontas: a base sobe para a pedra caber inteira
-  const base = fanDrop(unit) + 6;
+  // versão 2.21: o leque afunda no pé da tela (as pedras passam um pouco da borda de baixo),
+  // para não cobrir a mesa na hora de jogar
+  const base = fanDrop(unit) + 6 - Math.round(unit * 0.5);
   return { unit, height: unit * 2 + base + 22, base };
 };
 
