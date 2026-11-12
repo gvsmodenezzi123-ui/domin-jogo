@@ -172,6 +172,17 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.24.0: a loja, o mercado negro e o mapa das propostas, no visual novo
+
+- **Loja** (visual novo): a tela da proposta: o Valtinho no balcão, a prateleira sob o toldo com
+  talismãs, pedras de grife e pacotes numa fileira, o painel do item escolhido com COMPRAR e a
+  sua bolsa (toque para vender), REEMBARALHAR e o dorme. Comprar agora é em dois toques
+  (escolher e COMPRAR); preços, sorteio e regras são os mesmos.
+- **Mercado Negro** (visual novo): o Corvo, os necróticos pendurados no veludo, o painel com
+  COMPRAR em sangue e a bolsa.
+- **Mapa** (visual novo): o caderno da proposta com os pontos em molduras, bem mais espaçados
+  (a folha rola de lado), sem a legenda; a placa do lado mostra o ponto escolhido e o JOGAR.
+
 ### 2.23.0: loja, beco e mapa no visual novo; pedras pretas e pratas no online; MENU no canto
 
 - **Loja, beco e mapa** (visual novo): luz mais quente, placa de madeira, o dinheiro e os preços

@@ -15,6 +15,8 @@ import PaintedBox from './PaintedBox.jsx';
 import { NpcPortrait, ShopSprite } from './ShopArt.jsx';
 import { useFitScale } from './useFitScale.js';
 import DominoKey from './DominoKey.jsx';
+import { useNovo } from './useVisual.js';
+import { NovoHearts, NovoLogo, NovoStage, PaintBack } from './novo/NovoKit.jsx';
 import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
 import { ALLEY_PAD, paintAlleyBack } from './art/landAlley.js';
@@ -60,6 +62,9 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTi
   const [complaint, setComplaint] = useState(null);
   const [alert, setAlert] = useState(0);
   const [talking, setTalking] = useState(false);
+  // versão 2.24, visual novo: o talismã escolhido no forro (o painel de baixo mostra e compra)
+  const novo = useNovo();
+  const [pick, setPick] = useState(0);
   const { market } = state;
   const coins = state.coins.player;
   const region = regionOfState(state);
@@ -87,6 +92,126 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTi
   };
 
   const landscape = useLandscape();
+  if (landscape && novo) {
+    const slots = relicSlotsFor(state);
+    const offers = market.offers;
+    const at = offers[pick] ? pick : 0;
+    const selOffer = offers[at];
+    const selRelic = selOffer ? getRelic(selOffer.id) : null;
+    const step = offers.length > 1 ? Math.min(162, Math.floor(420 / offers.length)) : 0;
+    return (
+      <NovoStage kind="black" bleed="#07060a" label="Mercado Negro" className={`map-atmo-${region.atmosphere}`}>
+        <PaintBack paint={() => paintAlleyBack(7, region.atmosphere, 'market')} cacheKey={`land-beco-${region.atmosphere}`} pad={ALLEY_PAD} size={896} y={-30} filter="brightness(1.25) saturate(1.3)" />
+        <div className="q-glowlayer" style={{ background: 'radial-gradient(circle at 130px 120px, rgba(255, 40, 30, 0.38), transparent 210px), radial-gradient(circle at 650px 60px, rgba(150, 60, 255, 0.22), transparent 260px)' }} />
+        <div className="q-rain" />
+        <div className="q-floor" />
+        <div className="q-keeper" aria-hidden="true">
+          <NpcPortrait who="corvo" size={184} speaking={talking} />
+        </div>
+        <div className="q-counter" />
+        <RivalSpeech key={line.key} text={line.text} voice="corvo" tail="left" linger={false} onMouth={setTalking} className="q-bubble" />
+
+        <div className="q-topbar">
+          <NovoLogo />
+          <div className="q-wood q-title">
+            <span className="q-nail" style={{ left: 4, top: 4 }} />
+            <span className="q-nail" style={{ right: 4, top: 4 }} />
+            <NovoHearts current={state.hearts.player} max={state.maxHearts.player} />
+            <div className="q-money" style={{ fontFamily: 'var(--font-pixel)', fontSize: 11, color: '#ffe9a8', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="q-coin" />${coins}
+            </div>
+            <h2 id="bm-title">MERCADO NEGRO</h2>
+          </div>
+          <button type="button" className="q-wood q-btn q-back" onClick={onLeave}>
+            ◀ {leaveTitle.replace(/\s*→$/, '')}
+          </button>
+        </div>
+
+        <div className="q-velvet">
+          {offers.map((offer, index) => {
+            const relic = getRelic(offer.id);
+            const block = marketBuyBlock(state, offer);
+            return (
+              <button
+                key={offer.id}
+                type="button"
+                className={`q-hang ${index === at ? 'q-sel' : ''} ${offer.sold ? 'q-sold' : ''} ${block === 'coins' && !offer.sold ? 'q-short' : ''}`}
+                style={{ left: 10 + index * step }}
+                onClick={() => setPick(index)}
+                aria-pressed={index === at}
+                aria-label={`${relic.name}: ${offer.sold ? 'vendido' : `${offer.price} moedas`}`}
+                {...press({ kind: 'relic', id: offer.id, owner: 'market' })}
+              >
+                <div className="q-niche">{!offer.sold && <RelicIcon relic={relic} size={56} />}</div>
+                <h4>
+                  <span className="q-kind">{getRarity(relic.rarity).label}</span>
+                  {relic.short}
+                </h4>
+                {offer.sold ? (
+                  <span className="bm-tag-sold">VENDIDO</span>
+                ) : (
+                  <span className="q-price">
+                    <span className="q-coin" />${offer.price}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {alert > 0 && (
+          <p key={`alert-${alert}`} className="q-alert animate-shop-alert" role="alert">
+            BOLSA CHEIA! VENDA UM TALISMÃ NA LOJA DO VALTINHO
+          </p>
+        )}
+
+        {selRelic && (
+          <div className="q-wood q-detail">
+            {['tl', 'tr', 'bl', 'br'].map((c) => (
+              <span key={c} className={`q-brass q-${c}`} style={{ borderColor: '#c8141c' }} />
+            ))}
+            <div className="q-big">{!selOffer.sold && <RelicIcon relic={selRelic} size={88} />}</div>
+            <div className="q-text">
+              <h3 className="q-inset">{selRelic.name.toUpperCase()}</h3>
+              <span className="q-chip">TALISMÃ</span>
+              <span className="q-chip" style={{ background: '#ff5a4a', color: '#2a0406' }}>
+                {getRarity(selRelic.rarity).label}
+              </span>
+              <p>{selRelic.description}</p>
+            </div>
+            <div className="q-inset q-buy">
+              <small>VAI PARA A BOLSA</small>
+              <p className="q-slots">
+                {state.relics.player.length} de {slots} espaços usados
+              </p>
+              <div className="q-inset q-total">
+                <span className="q-coin" />${selOffer.price}
+              </div>
+              <button type="button" className="q-blood" disabled={selOffer.sold} onClick={() => buy(at)}>
+                {selOffer.sold ? 'VENDIDO' : 'COMPRAR'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div key={`pouch-${alert}`} className={`q-wood q-bag ${alert ? 'animate-hotbar-full' : ''}`} aria-label="Seus talismãs">
+          <h3>
+            SUA BOLSA · {state.relics.player.length}/{slots}
+          </h3>
+          <div className="q-inset q-grid" style={{ gridTemplateColumns: `repeat(${Math.max(slots, 4)}, minmax(0, 1fr))` }}>
+            {Array.from({ length: Math.max(slots, 4) }, (_, i) => {
+              const relic = getRelic(state.relics.player[i]);
+              return (
+                <div key={relic?.id ?? `empty-${i}`} className="q-inset q-cell" {...(relic ? press({ kind: 'relic', id: relic.id, owner: 'player' }) : {})}>
+                  {relic && <RelicIcon relic={relic} size={30} />}
+                </div>
+              );
+            })}
+          </div>
+          <p>O Corvo não compra nada.</p>
+        </div>
+      </NovoStage>
+    );
+  }
   if (landscape) {
     const slots = relicSlotsFor(state);
     return (

@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { HEAL_AFTER_NODE, REGIONS } from '../data/campaign.js';
 import { modeBadge, modeOf } from '../data/difficulty.js';
 import { getRival, rivalFor } from '../data/rivals.js';
@@ -30,6 +30,11 @@ import PixelCanvas from './PixelCanvas.jsx';
 import DominoKey from './DominoKey.jsx';
 import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
+import { useNovo } from './useVisual.js';
+import { NovoHearts, NovoLamp, NovoLogo, NovoStage } from './novo/NovoKit.jsx';
+import { ROSE_SVG, TOWN_SVG } from './novo/mapArt.js';
+import RelicIcon from './RelicIcon.jsx';
+import { getRelic } from '../data/relics.js';
 import { MAP_PAD, PAGE_H, PAGE_W, paintMapBack, paintMapPage } from './art/landMap.js';
 import {
   ALLEY_SIZE,
@@ -551,10 +556,260 @@ function MapLand({ state, campaign, status, open, onEnter, onMenu, press }) {
  */
 export default function CampaignMap(props) {
   const landscape = useLandscape();
+  const novo = useNovo();
   const campaign = campaignOf(props.state);
   const { status, open } = useMemo(() => statusesOf(props.state, campaign), [props.state, campaign]);
+  if (landscape && novo) return <MapNovo {...props} campaign={campaign} status={status} open={open} />;
   if (landscape) return <MapLand {...props} campaign={campaign} status={status} open={open} />;
   return <MapStand {...props} campaign={campaign} status={status} open={open} />;
+}
+
+/**
+ * Versão 2.24, visual novo: o caderno do mapa com os pontos bem espaçados (a folha rola de lado).
+ * Os andares andam da esquerda para a direita, 150 px um do outro; as três trilhas, 78 px.
+ */
+const NV_MAP = Object.freeze({ lead: 90, step: 150, lanes: [96, 174, 252], tail: 130 });
+
+function layoutNovo(campaign) {
+  const points = new Map();
+  for (const region of campaign.regions) {
+    for (const node of region.nodes) {
+      const h = mixSeed(campaign.seed, node.id);
+      const middle = node.floor > 1 && node.floor < FLOORS;
+      const jy = middle ? ((h >>> 8) % 13) - 6 : 0;
+      points.set(node.id, { node, x: NV_MAP.lead + NV_MAP.step * ((region.id - 1) * FLOORS + node.floor - 1), y: NV_MAP.lanes[node.lane] + jy });
+    }
+  }
+  const edges = [];
+  const n = campaign.regions.length;
+  for (const region of campaign.regions) {
+    for (const node of region.nodes) for (const to of node.next) edges.push([node.id, to]);
+    if (region.id < n) edges.push([region.boss, campaign.regions[region.id].entry]);
+  }
+  return { width: NV_MAP.lead + NV_MAP.step * (n * FLOORS - 1) + NV_MAP.tail, points, edges };
+}
+
+/** Um ponto do mapa novo: a moldura de madeira com quem (ou o que) está lá e a etiqueta. */
+const NovoNode = memo(function NovoNode({ point, status, known, selected, here, onSelect }) {
+  const { node } = point;
+  const fight = node.type === 'combat' || node.type === 'boss';
+  const rival = fight ? getRival(node.rivalId) : null;
+  const label = fight ? (known ? shortRivalName(rival.name) : node.boss ? 'CHEFE' : 'MESA ???') : STOP_CAPTION[node.type];
+  const cls = `q-node q-t-${node.boss ? 'boss' : node.type} ${node.boss ? 'q-boss' : ''} ${status === 'done' ? 'q-done' : ''} ${status === 'open' ? 'q-now' : ''} ${fight && !known && !node.boss ? 'q-lock' : ''} ${status === 'gone' ? 'q-gone' : ''} ${selected ? 'q-pick' : ''}`;
+  return (
+    <button type="button" className={cls} style={{ left: point.x, top: point.y - (node.boss ? 58 : 34) }} onClick={() => onSelect(node.id)} aria-pressed={selected} aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}>
+      {node.boss && <span className="q-crown" aria-hidden="true" />}
+      {!node.boss && <span className="q-ntape" aria-hidden="true" />}
+      <span className="q-pic">
+        <span className="q-scene" aria-hidden="true" />
+        {fight ? (
+          known || node.boss ? (
+            <span className={known ? '' : 'map-silhouette'}>
+              <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={node.boss ? 80 : 50} smoke={false} bare />
+            </span>
+          ) : (
+            '?'
+          )
+        ) : (
+          <span className="q-obj">{STOP_OBJ[node.type]?.(1)}</span>
+        )}
+      </span>
+      {node.boss && <span className="q-banner">CHEFE</span>}
+      <span className="q-tag">{node.boss ? `ANDAR ${node.floor}` : label.toUpperCase()}</span>
+      {here && <span className="q-pin" aria-hidden="true" />}
+    </button>
+  );
+});
+
+function MapNovo({ state, campaign, status, open, onEnter, onMenu, press }) {
+  const { width, points, edges } = useMemo(() => layoutNovo(campaign), [campaign]);
+  const [picked, setPicked] = useState(null);
+  const scrollRef = useRef(null);
+  const regionId = mapRegionId(state);
+  const region = REGIONS[regionId - 1];
+  const selectedId = picked && points.has(picked) ? picked : (open[0] ?? state.run.node ?? campaign.regions[0].entry);
+  const selected = points.get(selectedId).node;
+  const focusX = open.length ? Math.round(open.reduce((sum, id) => sum + points.get(id).x, 0) / open.length) : 0;
+  const floorNow = open.length ? points.get(open[0]).node.floor : FLOORS;
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = Math.max(0, focusX - el.clientWidth * 0.5);
+  }, [focusX]);
+
+  const path = state.run.path;
+  const stepOf = new Map(path.map((id, i) => [id, i]));
+  const edgeClass = ([a, b]) => {
+    if (stepOf.has(a) && stepOf.get(b) === stepOf.get(a) + 1) return 'q-edge q-edge-done';
+    if (a === state.run.node && status.get(b) === 'open') return 'q-edge q-edge-open';
+    if (status.get(a) === 'gone' || status.get(b) === 'gone') return 'q-edge q-edge-gone';
+    return 'q-edge';
+  };
+  const selStatus = status.get(selected.id);
+  const known = revealed(selStatus);
+  const closed = state.challenge === 'soNoOsso' && (selected.type === 'shop' || selected.type === 'black');
+  const info = nodeInfo({ node: selected, status: selStatus, known, farRegion: selected.region > regionId, mode: state.mode, closed, artSize: 56 });
+  const perTable = modeOf(state.mode).healPerTable;
+  const slots = relicSlotsFor(state);
+  const badge = modeBadge(state.mode);
+  return (
+    <NovoStage kind="map" bleed="#1c0d05" label="Mapa da campanha" className={`map-atmo-${region.atmosphere}`}>
+      <span className="q-deskcoins" aria-hidden="true">
+        {STOP_OBJ.coins(1)}
+      </span>
+      <span className="q-cap" style={{ left: 598, top: 382 }} aria-hidden="true" />
+      <span className="q-cap q-cap-g" style={{ left: 626, top: 372 }} aria-hidden="true" />
+      <span className="q-pencil" aria-hidden="true" />
+      <span className="q-dom" style={{ left: 372, top: 372, transform: 'rotate(72deg)' }} />
+      <span className="q-dom" style={{ left: 430, top: 376, transform: 'rotate(-14deg)' }} />
+      <NovoLamp left={300} top={0} />
+      <div className="q-cone" style={{ left: 110, top: 20, width: 430, height: 400 }} />
+      <div className="q-topbar">
+        <NovoLogo />
+        <div className="q-wood q-dark q-status q-info">
+          <span className="q-nail" style={{ left: 4, top: 4 }} />
+          <span className="q-nail" style={{ right: 4, top: 4 }} />
+          <div className="q-where">
+            {state.maleta && state.maleta !== 'classica' ? `${maletaOf(state.maleta).short} · ` : ''}
+            {badge}
+            {state.challenge ? `${challengeOf(state.challenge).name.toUpperCase()} · ` : ''}
+            {(badge || state.challenge || (state.maleta && state.maleta !== 'classica')) && <br />}
+            REGIÃO {regionId}/{REGIONS.length} · ANDAR {floorNow}/{FLOORS}
+          </div>
+          <NovoHearts current={state.hearts.player} max={state.maxHearts.player} />
+          <div className="q-money">
+            <span className="q-coin" />${state.coins.player}
+          </div>
+          <div style={{ display: 'flex', gap: 4 }} role="group" aria-label="Seus talismãs">
+            {Array.from({ length: Math.max(slots, 4) }, (_, i) => {
+              const relic = getRelic(state.relics.player[i]);
+              return (
+                <span key={relic?.id ?? `e${i}`} className="q-inset q-slot" {...(relic ? press({ kind: 'relic', id: relic.id, owner: 'player' }) : {})}>
+                  {relic && <RelicIcon relic={relic} size={18} />}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <button type="button" className="q-wood q-gear" onClick={onMenu} aria-label="Menu">
+          <MenuGlyph size={18} />
+        </button>
+      </div>
+
+      <div className="q-book">
+        <div className="q-spiral" />
+        <div className="q-paper">
+          <svg className="q-town" viewBox="0 0 600 300" shapeRendering="crispEdges" aria-hidden="true" dangerouslySetInnerHTML={{ __html: TOWN_SVG }} />
+        </div>
+        <span className="q-tape" style={{ left: 250, top: -6, transform: 'rotate(3deg)' }} />
+        <span className="q-clip" />
+        <div ref={scrollRef} className="q-scroll">
+          <div className="q-strip" style={{ width }}>
+            <svg className="q-path" viewBox={`0 0 ${width} 300`} width={width} height={300} aria-hidden="true">
+              {edges.map((edge) => {
+                const p = points.get(edge[0]);
+                const q = points.get(edge[1]);
+                return <line key={`${edge[0]}>${edge[1]}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} className={edgeClass(edge)} />;
+              })}
+            </svg>
+            {campaign.regions.map((r) => {
+              const x0 = NV_MAP.lead + NV_MAP.step * (r.id - 1) * FLOORS;
+              const info = REGIONS[r.id - 1];
+              const boss = points.get(r.boss);
+              return (
+                <Fragment key={r.id}>
+                  {r.id > 1 && <span className="q-cut" style={{ left: x0 - NV_MAP.step / 2 }} aria-hidden="true" />}
+                  {r.id > 1 && (
+                    <span className="q-rhead" style={{ left: x0 - 40 }}>
+                      {info.name.toUpperCase()}
+                      <small>{info.subtitle}</small>
+                    </span>
+                  )}
+                  <span className="q-stamp" style={{ left: x0 + NV_MAP.step * 2.6, right: 'auto', top: 14, bottom: 'auto' }}>
+                    REGIÃO {r.id}
+                  </span>
+                  {Array.from({ length: FLOORS }, (_, f) => (
+                    <span key={f} className="q-floor-mark" style={{ left: x0 + NV_MAP.step * f }}>
+                      {f + 1 === FLOORS ? 'chefe' : `${f + 1}º andar`}
+                    </span>
+                  ))}
+                  {boss && (
+                    <span className="q-note" style={{ left: boss.x - 150, top: boss.y + 52 }}>
+                      cuidado com o chefe!
+                    </span>
+                  )}
+                </Fragment>
+              );
+            })}
+            <span className="q-note q-start" style={{ left: NV_MAP.lead - 70, top: 26 }}>
+              começou aqui ↓
+            </span>
+            {points.get(state.run.node) && (
+              <span className="q-here" style={{ left: points.get(state.run.node).x - 52, top: points.get(state.run.node).y - 66 }}>
+                VOCÊ ESTÁ AQUI ↓
+              </span>
+            )}
+            <span className="q-ring" style={{ left: NV_MAP.lead + NV_MAP.step * 2.4, top: 200 }} aria-hidden="true" />
+            <span className="q-ring" style={{ left: NV_MAP.lead + NV_MAP.step * 8.6, top: 30 }} aria-hidden="true" />
+            <span className="q-ring" style={{ left: NV_MAP.lead + NV_MAP.step * 14.3, top: 190 }} aria-hidden="true" />
+            {[...points.values()].map((p) => (
+              <NovoNode key={p.node.id} point={p} status={status.get(p.node.id)} known={revealed(status.get(p.node.id))} selected={p.node.id === selectedId} here={p.node.id === state.run.node} onSelect={setPicked} />
+            ))}
+          </div>
+        </div>
+        <svg className="q-rose q-rose-nv" viewBox="0 0 60 60" aria-hidden="true" dangerouslySetInnerHTML={{ __html: ROSE_SVG }} />
+        <div className="q-ribbon">
+          <h2>{region.name.toUpperCase()}</h2>
+          <p>{region.subtitle}</p>
+        </div>
+      </div>
+
+      <div className="q-wood q-side" key={selected.id} aria-live="polite">
+        <span className="q-chain" style={{ left: 46 }} />
+        <span className="q-chain" style={{ right: 46 }} />
+        <h3 className="q-wood q-dark">ANDAR {selected.floor}</h3>
+        <div className="q-inset q-card">
+          <span className={`q-chefe ${selected.boss ? '' : 'q-plain'}`}>
+            {selected.boss ? '☠ ' : ''}
+            {info.fight ? info.kind : 'DESVIO'}
+          </span>
+          <p className="q-name">{info.title}</p>
+          <div className="q-row">
+            <div className="q-photo">{info.art}</div>
+            <p>{info.line}</p>
+          </div>
+          {info.mod ? (
+            <p className="q-rule">
+              <b>REGRA DA MESA: {info.mod.name.toUpperCase()}</b>
+              {info.mod.rule}
+            </p>
+          ) : (
+            info.notes[0] && <p className="q-rule q-plainrule">{info.notes[0]}</p>
+          )}
+          {info.fight && (
+            <>
+              <p className="q-rew">· · · AO VENCER · · ·</p>
+              <div className="q-chips">
+                <span className="q-inset">
+                  +{perTable || HEAL_AFTER_NODE} <span className="q-heart" style={{ width: 12, height: 11 }} />
+                </span>
+                {selected.boss && !perTable && <span className="q-inset">CURA TUDO</span>}
+              </div>
+            </>
+          )}
+        </div>
+        {selStatus === 'open' ? (
+          <button type="button" className={`q-gold q-go ${info.fight ? '' : 'q-go-long'}`} onClick={() => onEnter(selected.id)}>
+            ▶ {info.fight ? 'JOGAR' : info.short}
+          </button>
+        ) : (
+          <p className="q-hint">TOQUE NUM PONTO ACESO PARA SEGUIR</p>
+        )}
+      </div>
+      <button type="button" className="q-wood q-btn q-back" onClick={onMenu}>
+        ◀ MENU
+      </button>
+    </NovoStage>
+  );
 }
 
 /** O mapa em pé (a teia subindo numa folha só, com o rodapé). */

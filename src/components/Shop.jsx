@@ -23,6 +23,8 @@ import { useFitScale } from './useFitScale.js';
 import DominoKey from './DominoKey.jsx';
 import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
+import { useNovo } from './useVisual.js';
+import { NovoLamp, NovoLogo, NovoStage, NovoStatus, SaloonBack } from './novo/NovoKit.jsx';
 import { SHOP_PAD, paintShopBack } from './art/landShop.js';
 
 /** Falas do Valtinho ao abrir a loja (uma por visita) e reagindo ao que você faz. */
@@ -121,6 +123,9 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
   const [complaint, setComplaint] = useState(null);
   const [shaking, setShaking] = useState(0);
   const [talking, setTalking] = useState(false);
+  // versão 2.24, visual novo: o item escolhido na prateleira (o painel de baixo mostra e compra)
+  const novo = useNovo();
+  const [pick, setPick] = useState(null);
   const { shop } = state;
   const coins = state.coins.player;
   const region = regionOfState(state);
@@ -226,6 +231,181 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
       </div>
     </div>
   );
+
+  if (landscape && novo) {
+    const slots = relicSlotsFor(state);
+    // a prateleira: talismãs, pedras de grife e pacotes, na ordem, numa fileira só
+    const items = [
+      ...shop.relics.map((offer, index) => {
+        const relic = getRelic(offer.id);
+        const tier = getRarity(relic.rarity);
+        return { key: `r-${offer.id}-${shop.rerolls}`, kind: 'relic', index, offer, block: relicBuyBlock(state, offer), rib: tier.label, ribColor: tier.color, name: relic.name.toUpperCase(), short: relic.short, chip: 'TALISMÃ', text: relic.description, dest: 'VAI PARA A BOLSA', note: `${state.relics.player.length} de ${slots} espaços usados`, art: (size) => <RelicIcon relic={relic} size={size} />, buy: () => buyRelic(index), hold: { kind: 'relic', id: offer.id, owner: 'shop' } };
+      }),
+      ...shop.tiles.map((offer, index) => {
+        const enhancement = ENHANCEMENTS[offer.enhancement];
+        const [a, b] = offer.tileId.split('-').map(Number);
+        const label = tileLabel(offer.tileId);
+        return { key: `t-${offer.tileId}-${shop.rerolls}`, kind: 'tile', index, offer, block: tileBuyBlock(state, offer), rib: 'PEDRA', ribColor: enhancement.color ?? '#ffd76a', name: `${enhancement.name.toUpperCase()} ${label}`, short: `${enhancement.name.toUpperCase()} ${label}`, chip: 'PEDRA DE GRIFE', text: enhancement.description, dest: 'VAI PARA O DORME', note: `substitui o seu ${label} comum`, art: (size) => <DominoTile values={[a, b]} unit={Math.round(size / 2.2)} depth={3} enhancement={offer.enhancement} still />, buy: () => buyTile(index), hold: { kind: 'offerTile', tileId: offer.tileId, enhancement: offer.enhancement } };
+      }),
+      ...(shop.packs ?? []).map((offer, index) => {
+        const pack = PACKS[offer.id];
+        return { key: `p-${offer.id}`, kind: 'pack', index, offer, block: packBuyBlock(state, offer), rib: 'PACOTE', ribColor: '#ffb0a0', name: pack.name.toUpperCase(), short: pack.short, chip: 'PACOTE', text: pack.blurb, dest: 'ABRE NA HORA', note: 'escolha 1 de 3', art: (size) => <PackArt id={offer.id} size={size} />, buy: () => buyPack(index), hold: { kind: 'pack', id: offer.id } };
+      }),
+    ];
+    const sel = items.find((it) => it.kind === pick?.kind && it.index === pick?.index) ?? items.find((it) => !it.offer.sold) ?? items[0];
+    const free = shop.rerollCost === 0 && (state.run?.freeRerolls ?? 0) > 0;
+    return (
+      <>
+        <NovoStage kind="shop" label="Loja do Valtinho" className={`map-atmo-${region.atmosphere}`}>
+          <SaloonBack />
+          <div className="q-glowlayer" style={{ background: 'radial-gradient(circle at 150px 40px, rgba(255, 190, 90, 0.5), transparent 220px)' }} />
+          <NovoLamp left={104} top={24} />
+          <div className="q-cone" style={{ left: 20, top: 44, width: 214, height: 190 }} />
+          <div className="q-plant" style={{ left: 4, top: 182, zIndex: 4, transform: 'scale(1.3)' }}>
+            <i />
+          </div>
+          <div className="q-neon" style={{ left: 258, top: 58, fontSize: 9, transform: 'rotate(-4deg)' }}>
+            ABERTO
+          </div>
+          <div className="q-board">
+            NÃO ACEITAMOS
+            <br />
+            DEVOLUÇÃO
+          </div>
+          <div className="q-floor" />
+          <div className="q-keeper" aria-hidden="true">
+            <NpcPortrait who="valtinho" size={184} speaking={talking} />
+          </div>
+          <div className="q-counter" />
+          <span className="q-onc" style={{ left: 224, top: 196 }} aria-hidden="true">
+            <ShopSprite name="copo" scale={1} />
+          </span>
+          <RivalSpeech key={line.key} text={line.text} voice="valtinho" tail="left" linger={false} onMouth={setTalking} className="q-bubble" />
+
+          <div className="q-topbar">
+            <NovoLogo />
+            <NovoStatus hearts={state.hearts.player} maxHearts={state.maxHearts.player} coins={coins}>
+              {coinFx && (
+                <span key={coinFx.seq} className={`coin-float sl-cash-fx ${coinFx.amount > 0 ? 'is-gain' : 'is-loss'}`}>
+                  {coinFx.amount > 0 ? `+$${coinFx.amount}` : `−$${-coinFx.amount}`}
+                </span>
+              )}
+            </NovoStatus>
+            <h1 id="shop-title" className="q-screen-title">
+              LOJA CLANDESTINA
+            </h1>
+            <button type="button" className="q-wood q-btn q-back" onClick={onLeave}>
+              ◀ {leaveTitle.replace(/\s*→$/, '')}
+            </button>
+          </div>
+
+          <div className="q-awning" />
+          <NovoLamp left={470} top={62} scale={0.6} z={3} />
+          <NovoLamp left={640} top={62} scale={0.6} z={3} />
+          <NovoLamp left={800} top={62} scale={0.6} z={3} />
+          <div className="q-shelf" style={{ gridTemplateColumns: `repeat(${Math.max(items.length, 6)}, minmax(0, 1fr))` }}>
+            {items.map((it) => (
+              <button
+                key={it.key}
+                type="button"
+                className={`q-wood q-it ${it === sel ? 'q-sel' : ''} ${it.offer.sold ? 'q-sold' : ''} ${it.block === 'coins' && !it.offer.sold ? 'q-short' : ''}`}
+                onClick={() => setPick({ kind: it.kind, index: it.index })}
+                aria-pressed={it === sel}
+                aria-label={`${it.name}: ${it.offer.sold ? 'vendido' : `${it.offer.price} moedas`}`}
+                {...press(it.hold)}
+              >
+                <span className="q-rib" style={{ background: it.ribColor }}>
+                  {it.rib}
+                </span>
+                <span className="q-art">{!it.offer.sold && <span>{it.art(40)}</span>}</span>
+                <h4>
+                  <span>{it.short}</span>
+                </h4>
+                {it.offer.sold ? (
+                  <span className="shop-tag-sold">{it.kind === 'pack' ? 'ABERTO' : 'VENDIDO'}</span>
+                ) : (
+                  <span className="q-price">
+                    <span className="q-coin" />${it.offer.price}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          {alert > 0 && (
+            <p key={`alert-${alert}`} className="q-alert animate-shop-alert" role="alert">
+              BOLSA CHEIA! VENDA UM TALISMÃ ANTES
+            </p>
+          )}
+
+          {sel && (
+            <div className="q-wood q-detail">
+              <span className="q-brass q-tl" />
+              <span className="q-brass q-tr" />
+              <span className="q-brass q-bl" />
+              <span className="q-brass q-br" />
+              <div className="q-big">{!sel.offer.sold && sel.art(88)}</div>
+              <div className="q-text">
+                <h3 className="q-inset">{sel.name}</h3>
+                <span className="q-chip">{sel.chip}</span>
+                <span className="q-chip" style={{ background: sel.ribColor, color: '#1a0a02' }}>
+                  {sel.rib}
+                </span>
+                <p>{sel.text}</p>
+              </div>
+              <div className="q-inset q-buy">
+                <small>{sel.dest}</small>
+                <p className="q-slots">{sel.note}</p>
+                <div className="q-inset q-total">
+                  <span className="q-coin" />${sel.offer.price}
+                </div>
+                <button type="button" className="q-gold q-go" disabled={sel.offer.sold} onClick={sel.buy}>
+                  {sel.offer.sold ? 'VENDIDO' : 'COMPRAR'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div key={`pouch-${alert}`} className={`q-wood q-bag ${alert ? 'animate-hotbar-full' : ''}`}>
+            <h3>
+              SUA BOLSA · {state.relics.player.length}/{slots}
+            </h3>
+            <div className="q-inset q-grid" role="group" aria-label="Seus talismãs (toque para vender)" style={{ gridTemplateColumns: `repeat(${Math.max(slots, 4)}, minmax(0, 1fr))` }}>
+              {Array.from({ length: Math.max(slots, 4) }, (_, i) => {
+                const relic = getRelic(state.relics.player[i]);
+                if (!relic) return <div key={`empty-${i}`} className="q-inset q-cell" />;
+                return (
+                  <button key={relic.id} type="button" className="q-inset q-cell" onClick={() => setSellId(relic.id)} aria-label={`${relic.name}: vender por ${sellPriceFor(state, relic.id)} moedas`} {...press({ kind: 'relic', id: relic.id, owner: 'player' })}>
+                    <RelicIcon relic={relic} size={30} />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="q-rowb">
+              <button type="button" className={`q-wood q-dark q-btn ${canReroll ? '' : 'q-short'}`} onClick={reroll} aria-label={`Reembaralhar a vitrine por ${shop.rerollCost} moedas`}>
+                <span key={shaking} className={shaking ? 'shop-dice-shake' : ''}>
+                  <ShopSprite name="copo" scale={0.7} />
+                </span>
+                <span>
+                  REEMBARALHAR
+                  <br />
+                  {free ? `GRÁTIS ×${state.run.freeRerolls}` : `$${shop.rerollCost}`}
+                </span>
+              </button>
+              <div className="q-wood q-dark q-btn" aria-label={`Seu dorme tem ${upgraded.length} pedras de grife`}>
+                <span>
+                  DORME
+                  <br />
+                  {upgraded.length} de grife
+                </span>
+              </div>
+            </div>
+          </div>
+        </NovoStage>
+        {shop.opening && <PackOpening opening={shop.opening} onPick={onPackPick} press={press} />}
+        {sellModal}
+      </>
+    );
+  }
 
   if (landscape) {
     const slots = relicSlotsFor(state);
