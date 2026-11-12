@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { favoriteTileOf, loadAccountStats, subscribeAccountStats, tileNameOf, winRateOf } from '../engine/accountStats.js';
+import { NovoLamp, NovoLogo, NovoStage, SaloonBack } from './novo/NovoKit.jsx';
+import { TileSkinContext } from './tileSkin.js';
 import { ENHANCEMENTS, ENHANCEMENT_IDS } from '../data/enhancedTiles.js';
 import { getRarity } from '../data/rarities.js';
 import { RELICS, RELIC_IDS } from '../data/relics.js';
@@ -434,5 +437,224 @@ function AlbumLand({ collection, onClose, onStats }) {
 
       <section className="lb-right">{shown && <Ficha entry={entry(shown)} kind={tab} label={`${current.one} Nº ${numberOf(shown)}`} />}</section>
     </LandStage>
+  );
+}
+
+
+const SIZES_NOVO = { relic: [34, 70], tile: [10, 20], rival: [42, 84] };
+const money = (n) => `$${n.toLocaleString('pt-BR')}`;
+
+/** A aba CARREIRA da Coleção nova: o Caderno de Fiado em duas páginas. */
+function CareerPages() {
+  const stats = useSyncExternalStore(subscribeAccountStats, loadAccountStats, loadAccountStats);
+  const rate = Math.round(winRateOf(stats) * 100);
+  const favorite = favoriteTileOf(stats);
+  const beaten = RIVAL_IDS.map((id) => [id, stats.rivalsDefeated?.[id] ?? 0])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+  return (
+    <>
+      <div className="q-page q-l">
+        <h3>RESUMO DA CARREIRA</h3>
+        <div className="q-stat">
+          <span>Runs zeradas / aproveitamento</span>
+          <b>
+            {stats.runsWon} · {rate}%
+          </b>
+        </div>
+        <div className="q-stat">
+          <span>Runs perdidas pelo caminho</span>
+          <b>{stats.runsLost}</b>
+        </div>
+        <div className="q-stat">
+          <span>Dinheiro gasto na vida</span>
+          <b>{money(stats.totalGoldSpent)}</b>
+        </div>
+        <div className="q-stat">
+          <span>Tampinhas de boteco</span>
+          <b>{stats.totalCapsEarned}</b>
+        </div>
+        <h3 style={{ marginTop: 12 }}>PEÇA MAIS JOGADA</h3>
+        <div className="q-mark">
+          {favorite ? (
+            <>
+              <TileSkinContext.Provider value="bone">
+                <DominoTile values={[favorite.b, favorite.a]} unit={22} depth={3} />
+              </TileSkinContext.Provider>
+              <p>
+                A sua marca registrada: {tileNameOf(favorite.a, favorite.b)}
+                <br />
+                <b>
+                  [{favorite.b}|{favorite.a}] · {favorite.count.toLocaleString('pt-BR')} {favorite.count === 1 ? 'vez' : 'vezes'}
+                </b>
+              </p>
+            </>
+          ) : (
+            <p>Nenhuma pedra jogada ainda. A primeira fica anotada aqui.</p>
+          )}
+        </div>
+      </div>
+      <div className="q-page q-r">
+        <h3>ANÁLISE DE DOMINÓ</h3>
+        <div className="q-stat">
+          <span>Especialista em múltiplos de 5</span>
+          <b>{stats.totalMugginsClosed}</b>
+        </div>
+        <div className="q-stat">
+          <span>Trancas vencidas na raça</span>
+          <b>{stats.totalTrancasWon}</b>
+        </div>
+        <div className="q-stat">
+          <span>Total de buchas batidas</span>
+          <b>{stats.totalBuchasPlayed}</b>
+        </div>
+        <h3 style={{ marginTop: 12 }}>
+          DOSSIÊ DE RIVAIS <small>vitórias</small>
+        </h3>
+        <div className="q-riv">
+          {beaten.map(([id, count]) => (
+            <div key={id} className="q-ph" title={RIVALS[id].name}>
+              <RivalAvatar rival={RIVALS[id]} mood="idle" size={44} smoke={false} bare />
+              <span>{count}×</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Versão 2.25, visual novo: a COLEÇÃO (o Livro de Boteco e o Caderno de Fiado juntos) no livro
+ * vermelho: as abas em cima, a folha das figurinhas à esquerda, a ficha da escolhida à direita,
+ * e a aba CARREIRA com as contas da vida.
+ */
+export function CollectionNovo({ collection, onClose }) {
+  const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, picked, setPicked } = useAlbum(collection, SIZES_NOVO);
+  const [career, setCareer] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const shown = picked && ids.includes(picked) ? picked : ids[0];
+  const sel = shown ? entry(shown) : null;
+  const tier = sel?.rarity ? getRarity(sel.rarity) : null;
+  return (
+    <NovoStage kind="collection" bleed="#0d0805" label="Coleção" className="nvs-over">
+      <SaloonBack size={896} x={0} y={-46} filter="brightness(1.32) saturate(1.45) contrast(1.06) sepia(0.16)" />
+      <div className="q-dim" />
+      <NovoLamp left={425} top={0} />
+      <div className="q-topbar">
+        <NovoLogo />
+      </div>
+      <div className="q-tabs" style={{ left: 250, top: 28 }} role="tablist" aria-label="Seções da coleção">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={!career && tab === t.id}
+            className={`q-tab ${!career && tab === t.id ? 'q-on' : ''}`}
+            onClick={() => {
+              setCareer(false);
+              if (tab !== t.id) openTab(t.id);
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+        <button type="button" role="tab" aria-selected={career} className={`q-tab ${career ? 'q-on' : ''}`} onClick={() => setCareer(true)}>
+          CARREIRA
+        </button>
+      </div>
+      <div className="q-bookc" id={career ? 'career' : undefined}>
+        {career ? (
+          <CareerPages />
+        ) : (
+          <>
+            <div className="q-page q-l">
+              <h3>
+                {current.label}{' '}
+                <small>
+                  {found}/{current.ids.length}
+                </small>
+              </h3>
+              <div className="q-bar">
+                <i style={{ width: `${Math.round((found / current.ids.length) * 100)}%` }} />
+              </div>
+              <div key={`${tab}-${shownPage}`} className="q-grid" role="list">
+                {ids.map((id) => {
+                  const e = entry(id);
+                  const t = e.rarity ? getRarity(e.rarity) : null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="listitem"
+                      className={`q-slot ${e.known ? '' : 'q-unk'} ${shown === id ? 'q-sel' : ''}`}
+                      style={{ '--rc': t?.color ?? '#8a6a3a' }}
+                      aria-pressed={shown === id}
+                      aria-label={e.known ? e.name : e.locked ? `Bloqueado: ${e.goal}` : 'Ainda não descoberto'}
+                      onClick={() => {
+                        if (id === shown) return;
+                        sound.playTileSlam(false);
+                        setPicked(id);
+                      }}
+                    >
+                      <span className={e.known ? '' : 'map-silhouette'}>{e.icon}</span>
+                      {!e.known && <b>?</b>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="q-pager">
+                <button type="button" onClick={() => turn(-1)} disabled={shownPage === 0} aria-label="Folha anterior">
+                  ◀
+                </button>
+                <span>
+                  FOLHA {shownPage + 1} DE {pages}
+                </span>
+                <button type="button" onClick={() => turn(1)} disabled={shownPage === pages - 1} aria-label="Próxima folha">
+                  ▶
+                </button>
+              </div>
+            </div>
+            <div className="q-page q-r" aria-live="polite">
+              {sel && (
+                <>
+                  <h3>{sel.name.toUpperCase()}</h3>
+                  <div className="q-det">
+                    <div className="q-big">
+                      <span className={sel.known ? '' : 'map-silhouette'}>{sel.big}</span>
+                    </div>
+                    <div>
+                      {tier && (
+                        <span className="q-tagr" style={{ background: tier.color }}>
+                          {tier.label}
+                        </span>
+                      )}
+                      {sel.locked ? <p>{sel.goal}</p> : <p>{tab === 'rivals' && sel.known ? (sel.blurb ?? sel.text) : sel.text}</p>}
+                      {sel.quote && <p className="q-q">“{sel.quote}”</p>}
+                    </div>
+                  </div>
+                  {(sel.locked || sel.badge || (tab === 'rivals' && sel.known)) && (
+                    <div className="q-how">
+                      <b>{sel.locked ? 'COMO DESBLOQUEAR' : sel.badge ? 'CONQUISTA' : 'QUEM É'}</b>
+                      {sel.locked ? (sel.extra ?? sel.goal) : sel.badge ? sel.badge : sel.text}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="q-ribbonm" />
+      <button type="button" className="q-wood q-btn q-backbtn" onClick={onClose}>
+        ◀ VOLTAR
+      </button>
+      <p className="q-ver">COLEÇÃO · o Livro de Boteco e o Caderno de Fiado juntos</p>
+    </NovoStage>
   );
 }

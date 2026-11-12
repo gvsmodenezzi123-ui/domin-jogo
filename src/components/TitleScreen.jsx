@@ -9,9 +9,9 @@ import BotecoBackdrop from './BotecoBackdrop.jsx';
 import BuxariaLogo from './BuxariaLogo.jsx';
 import CaseCounter from './CaseCounter.jsx';
 import ChallengesModal from './ChallengesModal.jsx';
-import CollectionBook from './CollectionBook.jsx';
+import CollectionBook, { CollectionNovo } from './CollectionBook.jsx';
 import MenuModal from './MenuModal.jsx';
-import OptionsPanel from './OptionsPanel.jsx';
+import OptionsPanel, { SettingsNovo } from './OptionsPanel.jsx';
 import LampRig from './LampRig.jsx';
 import PagedBlocks from './PagedBlocks.jsx';
 import AccountStatsModal from './AccountStatsModal.jsx';
@@ -63,7 +63,7 @@ function waitingRival(save) {
 }
 
 /** A versão do jogo, no rodapé e nos créditos. */
-const GAME_VERSION = '2.24.0';
+const GAME_VERSION = '2.25.0';
 
 /** Chave das maletas e desafios liberados (muda quando a meta muda). */
 function metaSnapshot() {
@@ -271,15 +271,19 @@ export default function TitleScreen({
     setPicking(false);
   };
 
+  // versão 2.25: no visual novo, deitado, as CONFIGURAÇÕES e a COLEÇÃO são telas inteiras
+  const novoLand = landscape && settings?.visual !== 'classico';
   const modals = (
     <>
-      {modal === 'options' && (
+      {modal === 'options' && novoLand && <SettingsNovo settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} onClose={close} version={GAME_VERSION} />}
+      {modal === 'options' && !novoLand && (
         <MenuModal id="options-title" title="OPÇÕES" onClose={close}>
           <OptionsPanel settings={settings} onChange={onSettings} onResetProgress={onResetProgress} onTutorial={replayTutorial} />
         </MenuModal>
       )}
       {/* deitado, o livro abre inteiro na mesa (com o FECHAR dele) */}
-      {modal === 'book' && landscape && <CollectionBook collection={collection} onClose={close} onStats={settings?.visual !== 'classico' ? () => open('stats') : undefined} />}
+      {modal === 'book' && novoLand && <CollectionNovo collection={collection} onClose={close} />}
+      {modal === 'book' && landscape && !novoLand && <CollectionBook collection={collection} onClose={close} />}
       {modal === 'book' && !landscape && (
         <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
           <CollectionBook collection={collection} />

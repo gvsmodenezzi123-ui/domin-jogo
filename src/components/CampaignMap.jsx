@@ -597,7 +597,7 @@ const NovoNode = memo(function NovoNode({ point, status, known, selected, here, 
   const label = fight ? (known ? shortRivalName(rival.name) : node.boss ? 'CHEFE' : 'MESA ???') : STOP_CAPTION[node.type];
   const cls = `q-node q-t-${node.boss ? 'boss' : node.type} ${node.boss ? 'q-boss' : ''} ${status === 'done' ? 'q-done' : ''} ${status === 'open' ? 'q-now' : ''} ${fight && !known && !node.boss ? 'q-lock' : ''} ${status === 'gone' ? 'q-gone' : ''} ${selected ? 'q-pick' : ''}`;
   return (
-    <button type="button" className={cls} style={{ left: point.x, top: point.y - (node.boss ? 58 : 34) }} onClick={() => onSelect(node.id)} aria-pressed={selected} aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}>
+    <button type="button" className={cls} style={{ left: point.x, top: point.y - (node.boss ? 60 : 38) }} onClick={() => onSelect(node.id)} aria-pressed={selected} aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}>
       {node.boss && <span className="q-crown" aria-hidden="true" />}
       {!node.boss && <span className="q-ntape" aria-hidden="true" />}
       <span className="q-pic">
@@ -605,7 +605,7 @@ const NovoNode = memo(function NovoNode({ point, status, known, selected, here, 
         {fight ? (
           known || node.boss ? (
             <span className={known ? '' : 'map-silhouette'}>
-              <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={node.boss ? 80 : 50} smoke={false} bare />
+              <RivalAvatar rival={rival} mood={status === 'done' ? 'hurt' : 'idle'} size={node.boss ? 84 : 54} smoke={false} bare />
             </span>
           ) : (
             '?'

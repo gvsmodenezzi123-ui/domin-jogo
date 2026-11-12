@@ -26345,3 +26345,226 @@ html[data-ui='novo'] .map-land .tl-key.ml-go {
 .nvs .nvs-map .q-side .q-go.q-go-long {
   font-size: 11px;
 }
+
+/* Versão 2.25: o painel de compra encaixado (nada passa da margem) */
+.nvs .nvs-shop .q-detail .q-buy,
+.nvs .nvs-black .q-detail .q-buy {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 12px 14px;
+}
+
+.nvs .nvs-shop .q-detail .q-buy > *,
+.nvs .nvs-black .q-detail .q-buy > * {
+  margin: 0 !important;
+  flex: none;
+}
+
+.nvs .nvs-shop .q-detail .q-buy .q-slots,
+.nvs .nvs-black .q-detail .q-buy .q-slots {
+  line-height: 1;
+}
+
+.nvs .nvs-shop .q-detail .q-buy .q-total,
+.nvs .nvs-black .q-detail .q-buy .q-total {
+  height: 26px;
+}
+
+.nvs .nvs-shop .q-detail .q-buy .q-go,
+.nvs .nvs-black .q-detail .q-buy .q-blood {
+  height: 28px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Versão 2.25: as fotos enchem a moldura inteira (no mapa e na placa do lado) */
+.nvs .nvs-map .q-node .q-pic {
+  width: 54px;
+  height: 54px;
+}
+
+.nvs .nvs-map .q-node.q-boss .q-pic {
+  width: 84px;
+  height: 84px;
+  place-items: center;
+}
+
+.nvs .nvs-map .q-node .q-pic > span:not(.q-scene):not(.q-obj) {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.nvs .nvs-map .q-node .q-pic > span:not(.q-scene):not(.q-obj) > *,
+.nvs .nvs-map .q-node .q-pic > span:not(.q-scene):not(.q-obj) canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0;
+}
+
+.nvs .nvs-map .q-node .q-obj canvas {
+  max-height: 46px;
+}
+
+.nvs .nvs-map .q-side .q-photo {
+  position: relative;
+  display: block;
+}
+
+.nvs .nvs-map .q-side .q-photo .avatar-frame {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.nvs .nvs-map .q-side .q-photo canvas,
+.nvs .nvs-map .q-side .q-photo svg,
+.nvs .nvs-map .q-side .q-photo .avatar-frame > * {
+  display: block;
+  width: 68px !important;
+  height: 68px !important;
+}
+
+/* --- Versão 2.25: CONFIGURAÇÕES e COLEÇÃO no visual novo ---------------------------------- */
+.nvs-wrap.nvs-over {
+  z-index: 76;
+}
+
+.nvs .nvs-settings .q-panel {
+  top: 70px;
+  bottom: 62px;
+  padding: 24px 20px 12px;
+}
+
+.nvs .nvs-settings .q-group {
+  padding: 8px 12px 2px;
+}
+
+.nvs .nvs-settings .q-group h4 {
+  margin: 0 0 7px;
+}
+
+.nvs .nvs-settings .q-sl,
+.nvs .nvs-settings .q-tg {
+  margin-bottom: 8px;
+}
+
+.nvs .nvs-settings button.q-tg {
+  width: 100%;
+  padding: 0;
+  background: none;
+}
+
+.nvs .nvs-settings .q-track input {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.nvs .nvs-settings button.q-rowbtn {
+  width: 100%;
+  height: 36px;
+  text-align: left;
+}
+
+.nvs .nvs-settings .q-rowico {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: #3a1c04;
+  background: linear-gradient(180deg, #ffe07a, #f09a1c);
+  box-shadow: 0 0 0 2px #3a1c04;
+}
+
+.nvs .nvs-settings .q-danger button.q-blood {
+  width: 100%;
+}
+
+.nvs .nvs-settings .q-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: end;
+}
+
+.nvs .nvs-settings .q-mini {
+  height: 26px;
+  margin-top: 8px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: #fff3d0;
+}
+
+.nvs .nvs-collection button.q-tab {
+  cursor: pointer;
+}
+
+.nvs .nvs-collection button.q-slot {
+  padding: 0;
+  overflow: hidden;
+}
+
+.nvs .nvs-collection .q-slot > span,
+.nvs .nvs-collection .q-det .q-big > span {
+  display: grid;
+  place-items: center;
+}
+
+.nvs .nvs-collection .q-pager button {
+  padding: 2px 8px;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.nvs .nvs-collection .q-pager button:disabled {
+  opacity: 0.3;
+}
+
+.nvs #career .q-mark p {
+  font-size: 16px;
+  line-height: 0.98;
+}
+
+.nvs #career .q-mark p b {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  font-weight: normal;
+  color: #7a2a1a;
+}
+
+.nvs #career .q-riv .q-ph > :first-child {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.nvs #career .q-riv .q-ph canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.nvs .nvs-settings .q-sw.q-off {
+  justify-content: flex-end;
+}
+
+.nvs .nvs-settings .q-sw {
+  box-sizing: border-box;
+  padding-right: 28px;
+}
+
+.nvs .nvs-settings .q-sw.q-off {
+  padding: 0 6px 0 28px;
+}

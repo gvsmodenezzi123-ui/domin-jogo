@@ -172,6 +172,16 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.25.0: Configurações e Coleção das propostas; encaixes da loja e do mapa
+
+- **Configurações** (visual novo): a placa de madeira com SOM (efeitos e música), JOGO (vibração,
+  animações, visual, pedras online), REVER O TREINO, POLÍTICA DE PRIVACIDADE e RESETAR PROGRESSO.
+- **Coleção** (visual novo): o livro vermelho com as abas TALISMÃS, PEDRAS, RIVAIS e CARREIRA (o
+  Caderno de Fiado agora mora dentro dela).
+- **Loja e Mercado Negro**: o painel de compra encaixado (o COMPRAR não passa mais da margem).
+- **Mapa**: as fotos enchem a moldura inteira, nos pontos e na placa do lado.
+- **Mesa de 2 a 4**: a caixa da vida sem a fileira vazia embaixo.
+
 ### 2.24.0: a loja, o mercado negro e o mapa das propostas, no visual novo
 
 - **Loja** (visual novo): a tela da proposta: o Valtinho no balcão, a prateleira sob o toldo com

@@ -823,14 +823,17 @@ const NovoConsoles = memo(function NovoConsoles({
       <div className="nv-box nv-box-l" style={{ transform: tf }}>
         <BrassCorners />
         <div className="nv-felt nv-life">{life}</div>
-        <div className="nv-row">
-          {relicRow && <div className="nv-relics">{relicRow}</div>}
-          {coins !== null && (
-            <span className="nv-pouch">
-              <CoinCount value={coins} target="player" className="nv-pouch-count" size={12} />
-            </span>
-          )}
-        </div>
+        {/* versão 2.25: sem talismãs nem dinheiro (a mesa de 2 a 4), a caixa fica só com a vida */}
+        {(relicRow || coins !== null) && (
+          <div className="nv-row">
+            {relicRow && <div className="nv-relics">{relicRow}</div>}
+            {coins !== null && (
+              <span className="nv-pouch">
+                <CoinCount value={coins} target="player" className="nv-pouch-count" size={12} />
+              </span>
+            )}
+          </div>
+        )}
         {devUnlocked && (
           <button type="button" className="dev-chip nv-dev" onClick={onOpenDev} aria-label="Abrir painel de testes">
             DEV

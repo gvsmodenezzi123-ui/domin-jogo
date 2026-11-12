@@ -2,6 +2,8 @@ import { ONLINE_TILES, ONLINE_TILE_NAMES } from '../engine/progress.js';
 import { useState } from 'react';
 import { PRIVACY, PRIVACY_EMAIL, PRIVACY_URL } from '../data/privacy.js';
 import PagedBlocks from './PagedBlocks.jsx';
+import MenuModal from './MenuModal.jsx';
+import { NovoLogo, NovoStage, SaloonBack } from './novo/NovoKit.jsx';
 
 function Slider({ id, label, value, onChange }) {
   const pct = Math.round(value * 100);
@@ -185,5 +187,130 @@ export default function OptionsPanel({ settings, onChange, onResetProgress, onTu
         POLÍTICA DE PRIVACIDADE
       </button>
     </PagedBlocks>
+  );
+}
+
+
+function NovoSlider({ label, value, onChange }) {
+  const pct = Math.round(value * 100);
+  return (
+    <label className="q-sl">
+      <span>{label}</span>
+      <div className="q-track">
+        <i style={{ width: `${pct}%` }} />
+        <b style={{ left: `${pct}%` }} />
+        <input type="range" min="0" max="100" step="5" value={pct} onChange={(e) => onChange(Number(e.target.value) / 100)} aria-label={label} />
+      </div>
+      <em>{pct}%</em>
+    </label>
+  );
+}
+
+function NovoSwitch({ label, text, on = true, onClick }) {
+  return (
+    <button type="button" className="q-tg" aria-pressed={on} onClick={onClick}>
+      <span>{label}</span>
+      <span className={`q-sw ${on ? '' : 'q-off'}`}>
+        <span>{text}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Versão 2.25, visual novo: as CONFIGURAÇÕES na placa de madeira (som, jogo, treino, política
+ * de privacidade e resetar). As mesmas opções do painel antigo, mais VISUAL e PEDRAS ONLINE.
+ */
+export function SettingsNovo({ settings, onChange, onResetProgress, onTutorial, onClose, version }) {
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
+  const set = (patch) => onChange({ ...settings, ...patch });
+  const tiles = settings.onlineTiles ?? 'bone';
+  return (
+    <>
+      <NovoStage kind="settings" bleed="#0d0805" label="Configurações" className="nvs-over">
+        <SaloonBack size={896} x={0} y={-46} filter="brightness(1.32) saturate(1.45) contrast(1.06) sepia(0.16)" />
+        <div className="q-dim" />
+        <div className="q-topbar">
+          <NovoLogo />
+        </div>
+        <div className="q-wood q-panel">
+          <span className="q-brass q-tl" />
+          <span className="q-brass q-tr" />
+          <span className="q-brass q-bl" />
+          <span className="q-brass q-br" />
+          <div className="q-wood q-dark q-plate">CONFIGURAÇÕES</div>
+          <div>
+            <div className="q-inset q-group">
+              <h4>SOM</h4>
+              <NovoSlider label="EFEITOS" value={settings.sfx} onChange={(sfx) => set({ sfx })} />
+              <NovoSlider label="MÚSICA" value={settings.music} onChange={(music) => set({ music })} />
+            </div>
+            <div className="q-inset q-group" style={{ marginTop: 8 }}>
+              <h4>JOGO</h4>
+              <NovoSwitch label="VIBRAÇÃO" text={settings.haptics ? 'LIGADA' : 'DESLIGADA'} on={settings.haptics} onClick={() => set({ haptics: !settings.haptics })} />
+              <NovoSwitch label="ANIMAÇÕES" text={settings.reducedMotion ? 'REDUZIDAS' : 'COMPLETAS'} on={!settings.reducedMotion} onClick={() => set({ reducedMotion: !settings.reducedMotion })} />
+              <NovoSwitch label="VISUAL" text={settings.visual === 'classico' ? 'CLÁSSICO' : 'NOVO'} on={settings.visual !== 'classico'} onClick={() => set({ visual: settings.visual === 'classico' ? 'novo' : 'classico' })} />
+              <NovoSwitch label="PEDRAS ONLINE" text={ONLINE_TILE_NAMES[tiles]} on={tiles !== 'bone'} onClick={() => set({ onlineTiles: ONLINE_TILES[(ONLINE_TILES.indexOf(tiles) + 1) % ONLINE_TILES.length] })} />
+            </div>
+          </div>
+          <div>
+            {onTutorial && (
+              <button type="button" className="q-wood q-dark q-rowbtn" onClick={onTutorial}>
+                <span className="q-rowico" aria-hidden="true">
+                  ?
+                </span>
+                REVER O TREINO (VÔ JUCA)
+              </button>
+            )}
+            <button type="button" className="q-wood q-dark q-rowbtn" onClick={() => setPrivacy(true)}>
+              <span className="q-rowico" aria-hidden="true">
+                ≡
+              </span>
+              POLÍTICA DE PRIVACIDADE
+            </button>
+            {onResetProgress && (
+              <div className="q-danger">
+                <h5>RESETAR PROGRESSO</h5>
+                <p>{done ? 'Progresso apagado.' : confirming ? 'Tem certeza? Não dá para desfazer.' : 'Apaga a run salva e a Coleção. As opções ficam.'}</p>
+                {!done &&
+                  (confirming ? (
+                    <div className="q-two">
+                      <button type="button" className="q-wood q-dark q-mini" onClick={() => setConfirming(false)}>
+                        CANCELAR
+                      </button>
+                      <button
+                        type="button"
+                        className="q-blood"
+                        onClick={() => {
+                          onResetProgress();
+                          setConfirming(false);
+                          setDone(true);
+                        }}
+                      >
+                        APAGAR TUDO
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" className="q-blood" onClick={() => setConfirming(true)}>
+                      APAGAR TUDO
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <button type="button" className="q-wood q-btn q-backbtn" onClick={onClose}>
+          ◀ VOLTAR
+        </button>
+        <p className="q-ver">v{version} · Criador: Gabriel Modenezzi</p>
+      </NovoStage>
+      {privacy && (
+        <MenuModal id="privacy-title" title="PRIVACIDADE" onClose={() => setPrivacy(false)}>
+          <PrivacyPolicy onBack={() => setPrivacy(false)} />
+        </MenuModal>
+      )}
+    </>
   );
 }
