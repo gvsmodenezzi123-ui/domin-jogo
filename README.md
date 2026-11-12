@@ -172,6 +172,17 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.26.0: a mesa mais bonita, o leque mais baixo e a lupa ao lado do MENU
+
+- **A mesa** redesenhada: a luz da lâmpada mais quente no pano, a estampa de losangos do pano de
+  carteado, a madeira do aro polida com o veio comprido e o filete de latão, a tabela de veludo
+  com o degrau claro e a frente com friso de latão e moldura. Saíram as manchas brancas, riscos,
+  nós e queimados que pareciam defeito.
+- **O leque da mão** mais baixo e as pedras um pouco menores: com três fileiras de pedras na mesa,
+  o pano fica todo livre.
+- **A lupa (ver a mesa)** no visual novo fica do lado esquerdo do MENU, no mesmo estilo.
+- Painel DEV: ENCHER A MESA (uma corrente comprida, para testar).
+
 ### 2.25.0: Configurações e Coleção das propostas; encaixes da loja e do mapa
 
 - **Configurações** (visual novo): a placa de madeira com SOM (efeitos e música), JOGO (vibração,

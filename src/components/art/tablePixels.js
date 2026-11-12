@@ -332,9 +332,10 @@ function paintFeltBase(data, w, h, L, M, D, seed) {
   const ih = 1 / (h * 0.72);
   const wx = 1 / (w * 0.36);
   const vx = 1 / (w * 0.55);
-  const WR = 168;
-  const WG = 184;
-  const WB = 148;
+  // versão 2.26: a luz da lâmpada no pano, mais quente
+  const WR = 255;
+  const WG = 214;
+  const WB = 160;
   let hash = (seed * 2654435761) >>> 0;
   for (let y = WOOD_W; y < h - WOOD_W; y += 1) {
     const dy = (y - cy) * ih;
@@ -358,7 +359,7 @@ function paintFeltBase(data, w, h, L, M, D, seed) {
       const ex = (x - cx) * wx;
       const we = 1 - Math.sqrt(ex * ex + ey * ey);
       if (we > 0) {
-        const a = we * Math.sqrt(we) * 0.144;
+        const a = we * Math.sqrt(we) * 0.2;
         cr += (WR - cr) * a;
         cg += (WG - cg) * a;
         cb += (WB - cb) * a;
@@ -400,8 +401,17 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
   // --- feltro (até debaixo da tabela) ---------------------------------------
   paintFeltBase(b.data, w, h, L, M, D, seed);
   // bebida derramada: manchas irregulares com a borda que secou
-  for (let i = 0; i < 4; i += 1) {
-    blot(b, RAIL + 12 + r() * (w - RAIL * 2 - 24), RAIL + 12 + r() * (h - RAIL * 2 - 24), 5 + r() * 9, shift(D, -10), 0.28, r);
+  for (let i = 0; i < 2; i += 1) {
+    blot(b, RAIL + 12 + r() * (w - RAIL * 2 - 24), RAIL + 12 + r() * (h - RAIL * 2 - 24), 6 + r() * 9, shift(D, -8), 0.14, r);
+  }
+  // versão 2.26: a estampa do pano de carteado, losangos bem apagados
+  for (let y = RAIL; y < h - RAIL; y += 1) {
+    for (let x = RAIL; x < w - RAIL; x += 1) {
+      const u = (x + y) % 14;
+      const v = (x - y + 1400) % 14;
+      if (u === 0 || v === 0) b.put(x, y, shift(D, -16), 0.24);
+      else if ((u === 7 && v === 7) || (u === 7 && v === 0)) b.put(x, y, lerp(L, hex('#ffe2b0'), 0.4), 0.18);
+    }
   }
   // marca de copo: arco falhado, não um círculo perfeito
   for (let i = 0; i < 2; i += 1) {
@@ -410,30 +420,11 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
     const start = r() * Math.PI * 2;
     for (let a = start; a < start + Math.PI * 1.6; a += 0.03) {
       const fade = 0.25 + 0.25 * Math.sin((a - start) * 2);
-      b.put(sx + Math.cos(a) * 8, sy + Math.sin(a) * 6.5, shift(D, -16), fade);
-    }
-  }
-  // queimado de cigarro: miolo carbonizado, auréola marrom e o pano derretido em volta
-  for (let i = 0; i < 3; i += 1) {
-    const sx = RAIL + 14 + r() * (w - RAIL * 2 - 28);
-    const sy = RAIL + 14 + r() * (h - RAIL * 2 - 28);
-    b.ellipse(sx, sy, 4, 3, hex('#4a3214'), 0.45);
-    b.ellipse(sx, sy, 2.6, 1.8, hex('#2a1606'), 0.85);
-    b.ellipse(sx, sy, 1.4, 1, hex('#0a0402'));
-    b.put(sx + 2, sy - 2, hex('#a88a5a'), 0.5);
-  }
-  // pó de giz azul perto de uma caçapa de canto
-  {
-    const sx = w * (r() < 0.5 ? 0.16 : 0.84);
-    const sy = h * (0.22 + r() * 0.1);
-    for (let i = 0; i < 70; i += 1) {
-      const a = r() * Math.PI * 2;
-      const rr = r() * r() * 14;
-      b.put(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr * 0.7, hex('#86a6ea'), 0.25 + r() * 0.35);
+      b.put(sx + Math.cos(a) * 8, sy + Math.sin(a) * 6.5, shift(D, -16), fade * 0.45);
     }
   }
   // fiapos soltos e poeira
-  for (let i = 0; i < (w * h) / 180; i += 1) {
+  for (let i = 0; i < (w * h) / 420; i += 1) {
     const fx = RAIL + Math.floor(r() * (w - RAIL * 2));
     const fy = RAIL + Math.floor(r() * (h - RAIL * 2));
     if (r() < 0.6) b.put(fx, fy, hex('#d2cebc'), 0.18 + r() * 0.3);
@@ -448,8 +439,8 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       if (dmin >= RAIL) continue;
       const k = dmin - WOOD_W; // 0 encostado na madeira ... 5 a quina que encosta no pano
       const top = dmin === y;
-      let c = k === 0 ? shift(D, -18) : k <= 2 ? lerp(M, L, 0.5 + (top ? 0.25 : 0)) : k === 3 ? M : shift(D, -6);
-      c = shift(c, Math.round((r() - 0.5) * 6));
+      let c = k === 0 ? shift(D, -26) : k === 1 ? lerp(L, hex('#ffe2b0'), top ? 0.3 : 0.12) : k === 2 ? lerp(M, L, 0.6) : k === 3 ? M : shift(D, -10);
+      c = shift(c, Math.round((r() - 0.5) * 3));
       b.put(x, y, clampRgb(c));
     }
   }
@@ -472,19 +463,19 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       // quina boleada: escuro na borda, brilho forte no alto da curva, depois o tampo
       let c;
       if (across === 0) c = wood.deep;
-      else if (across === 1) c = wood.lo;
-      else if (across === 2) c = lerp(wood.hi, hex('#ffe2b0'), side === 'top' ? 0.45 : 0.15);
-      else if (across === 3) c = wood.hi;
-      else if (across === 4) c = lerp(wood.hi, wood.mid, 0.55);
+      else if (across === 1) c = lerp(wood.lo, wood.deep, 0.3);
+      else if (across === 2) c = wood.lo;
+      else if (across === 3) c = lerp(wood.mid, wood.hi, 0.5);
+      else if (across === 4) c = lerp(wood.hi, hex('#ffe8c0'), side === 'top' ? 0.55 : 0.25);
+      else if (across === 5) c = lerp(wood.hi, wood.mid, 0.35);
       else if (across >= WOOD_W - 3) c = across === WOOD_W - 1 ? wood.deep : across === WOOD_W - 2 ? wood.lo : lerp(wood.mid, wood.lo, 0.6);
       else {
-        const g = Math.sin(along * 0.09 + across * 1.9 + Math.sin(along * 0.021 + across * 0.7) * 2.6 + woodNoise(x, y) * 4);
-        c = g > 0.74 ? wood.grain : g > 0.3 ? lerp(wood.mid, wood.lo, 0.3) : g < -0.78 ? lerp(wood.mid, wood.hi, 0.4) : wood.mid;
-        c = shift(c, Math.round((r() - 0.5) * 3));
+        const g = Math.sin(along * 0.035 + across * 1.3 + Math.sin(along * 0.012 + across * 0.5) * 2.2 + woodNoise(x, y) * 2.5);
+        c = g > 0.86 ? lerp(wood.grain, wood.mid, 0.3) : g > 0.45 ? lerp(wood.mid, wood.lo, 0.22) : g < -0.85 ? lerp(wood.mid, wood.hi, 0.3) : wood.mid;
       }
       // versão 2.16: o filete de latão embutido no tampo do aro (um friso escuro e o fio claro)
       if (across === WOOD_W - 5) c = lerp(c, wood.deep, 0.55);
-      if (across === WOOD_W - 4) c = lerp(c, hex('#d8a84a'), 0.62);
+      if (across === WOOD_W - 4) c = lerp(c, hex(side === 'bottom' ? '#c8902e' : '#f0c460'), 0.8);
       // luz de cima: o lado de cima mais claro, o de baixo mais escuro
       if (side === 'top') c = lerp(c, wood.hi, 0.14);
       if (side === 'bottom') c = lerp(c, wood.lo, 0.12);
@@ -496,22 +487,13 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       b.put(x, y, clampRgb(c));
     }
   }
-  // nós da madeira
-  for (let i = 0; i < 7; i += 1) {
-    const t = r();
-    const horizontal = r() < 0.6;
-    const kx = horizontal ? WOOD_W + t * (w - WOOD_W * 2) : r() < 0.5 ? 6 : w - 7;
-    const ky = horizontal ? (r() < 0.5 ? 6 : h - 7) : WOOD_W + t * (h - WOOD_W * 2);
-    b.ellipse(kx, ky, horizontal ? 3 : 1.6, horizontal ? 1.6 : 3, wood.lo);
-    b.ellipse(kx, ky, horizontal ? 1.6 : 0.8, horizontal ? 0.8 : 1.6, wood.deep);
-  }
   // losangos de madrepérola no tampo do aro (as marcas da mesa de sinuca)
   const diamond = (dx, dy) => {
-    b.put(dx, dy - 1, hex('#e8f0ec'));
-    b.put(dx - 1, dy, hex('#c8d8d0'));
-    b.put(dx + 1, dy, hex('#c8d8d0'));
-    b.put(dx, dy, hex('#ffffff'));
-    b.put(dx, dy + 1, hex('#9ab0a8'));
+    b.put(dx, dy - 1, hex('#f0dcb0'), 0.85);
+    b.put(dx - 1, dy, hex('#c8a870'), 0.85);
+    b.put(dx + 1, dy, hex('#c8a870'), 0.85);
+    b.put(dx, dy, hex('#fff4d8'));
+    b.put(dx, dy + 1, hex('#8a6a3a'), 0.85);
   };
   for (const t of [0.25, 0.5, 0.75]) {
     diamond(Math.round(w * t), 7);
@@ -522,7 +504,7 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
     diamond(w - 8, Math.round(h * t));
   }
   // lascas na quina de fora: o dente escuro e a madeira crua por dentro
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 3; i += 1) {
     const side = Math.floor(r() * 4);
     const t = 0.06 + r() * 0.88;
     const len = 2 + Math.floor(r() * 4);
@@ -539,38 +521,6 @@ export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark
       b.rect(side === 2 ? px + 2 : px - 1, py, 1, len, raw, 0.85);
     }
   }
-  // riscos de chave e de anel no tampo do aro
-  for (let i = 0; i < 12; i += 1) {
-    const side = Math.floor(r() * 4);
-    const a = 4 + Math.floor(r() * (WOOD_W - 9));
-    const len = 3 + Math.floor(r() * 7);
-    const tint = r() < 0.7 ? hex('#e0b07a') : wood.deep;
-    if (side < 2) {
-      const py = side === 0 ? a : h - 1 - a;
-      const px = Math.round(r() * (w - len));
-      b.line(px, py, px + len, py + (r() < 0.3 ? 1 : 0), tint, 0.32);
-    } else {
-      const px = side === 2 ? a : w - 1 - a;
-      const py = Math.round(r() * (h - len));
-      b.line(px, py, px + (r() < 0.3 ? 1 : 0), py + len, tint, 0.32);
-    }
-  }
-  // marcas de copo desbotadas na madeira: um arco claro e a umidade escura por dentro
-  for (const [rx, ry, rw] of [
-    [w * 0.76, 5.5, 8],
-    [5.5, h * 0.56, 7],
-    [w * 0.3, h - 6.5, 8],
-    [w - 6, h * 0.22, 6],
-  ]) {
-    const start = r() * Math.PI;
-    for (let a = start; a < start + Math.PI * 1.7; a += 0.035) {
-      b.put(rx + Math.cos(a) * rw, ry + Math.sin(a) * (rw * 0.55), hex('#f0d0a0'), 0.3);
-    }
-    b.ellipse(rx, ry, rw * 0.8, rw * 0.4, hex('#2a1608'), 0.14);
-  }
-  // queimado de cigarro esquecido na beirada
-  b.ellipse(w * 0.14, h - 6, 4, 2.2, hex('#1a0c04'), 0.7);
-  b.ellipse(w * 0.14, h - 6, 2, 1.2, hex('#050200'), 0.9);
   // versão 2.16: cantoneiras de latão nos quatro cantos (o L de chapa com dois parafusos)
   {
     const B = { hi: hex('#ffe9a0'), mid: hex('#d8a83a'), lo: hex('#9a6e1c'), deep: hex('#4a3208') };
@@ -741,6 +691,11 @@ export function paintApron(w, { mahogany = false, seed = 5, candles = false } = 
       b.put(x, y, clampRgb(c));
     }
   }
+  // versão 2.26: o friso de latão logo abaixo do lábio e a moldura entalhada no meio da saia
+  b.rect(0, 3, w, 1, hex('#f0c460'), 0.85);
+  b.rect(0, 4, w, 1, hex('#7a4a12'), 0.7);
+  b.rect(0, 7, w, 1, wood.deep, 0.5);
+  b.rect(0, 8, w, 1, lerp(wood.mid, wood.hi, 0.4), 0.45);
   // a base da saia, mais escura, e a sombra dela no chão (some para baixo)
   b.rect(0, h - 4, w, 1, wood.deep);
   for (let k = 0; k < 3; k += 1) b.rect(0, h - 3 + k, w, 1, [0, 0, 0], 0.6 - k * 0.18);

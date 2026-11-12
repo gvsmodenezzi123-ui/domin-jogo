@@ -26568,3 +26568,22 @@ html[data-ui='novo'] .map-land .tl-key.ml-go {
 .nvs .nvs-settings .q-sw.q-off {
   padding: 0 6px 0 28px;
 }
+
+/* Versão 2.26: no visual novo, a lupa (ver a mesa) fica do lado esquerdo do MENU, na mesma altura */
+html[data-ui='novo'] .board-view-btn {
+  top: max(env(safe-area-inset-top), 8px);
+  right: calc(max(env(safe-area-inset-right), 10px) + 38px);
+  width: 30px;
+  height: 30px;
+}
+
+html[data-ui='novo'] .board-view-btn,
+html[data-ui='novo'] .px-skins .board-view-btn {
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4a2a14, #2a160a);
+  box-shadow:
+    0 0 0 1px #0c0502,
+    inset 0 1px 0 rgba(255, 214, 150, 0.3),
+    0 2px 0 #0c0502;
+}

@@ -42,6 +42,7 @@ import {
   MULTIPLE_OF_FIVE_BONUS,
   STARTING_COINS,
   FULL_SET,
+  SIDES,
   boardTilesInOrder,
   classifyBatida,
   createEmptyBoard,
@@ -1765,7 +1766,7 @@ function tutorialNext(state) {
 // Painel DEV (src/components/DevPanel.jsx)
 // ---------------------------------------------------------------------------
 
-const DEV_PLAYING_ONLY = new Set(['addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch', 'setTableMod']);
+const DEV_PLAYING_ONLY = new Set(['fillBoard', 'addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch', 'setTableMod']);
 
 /** Põe [a|b] na sua mão: puxa do dorme ou do rival; se a pedra estiver na mesa, cria uma cópia. */
 function devAddTile(state, { a, b, enhancement }) {
@@ -1866,6 +1867,44 @@ function devAction(state, action) {
         fx: { ...state.fx, undo: null },
       };
       return emit(next, { type: 'dev', op });
+    }
+    // versão 2.26: enche a mesa com uma corrente comprida (para testar o leque contra a mesa)
+    case 'fillBoard': {
+      const want = Math.max(2, Math.min(27, action.count ?? 22));
+      const keep = state.hands.tioZe.slice(0, 2);
+      const mine = state.hands.player.slice(0, 4);
+      const pool = [...plainTiles(boardTilesInOrder(state.board)), ...state.boneyard, ...state.hands.tioZe.slice(2), ...plainTiles(state.hands.player.slice(4))];
+      // a corrente mais comprida que der (busca em profundidade, limitada), indo para os dois lados
+      let best = [];
+      let budget = 20000;
+      const walk = (chain, left, right, used) => {
+        if (chain.length > best.length) best = chain.slice();
+        if (best.length >= want || budget-- <= 0) return;
+        for (const t of pool) {
+          if (used.has(t.id)) continue;
+          for (const side of [SIDES.RIGHT, SIDES.LEFT]) {
+            const end = side === SIDES.RIGHT ? right : left;
+            if (t.a !== end && t.b !== end) continue;
+            const outer = t.a === end ? t.b : t.a;
+            used.add(t.id);
+            chain.push([t, side]);
+            walk(chain, side === SIDES.LEFT ? outer : left, side === SIDES.RIGHT ? outer : right, used);
+            chain.pop();
+            used.delete(t.id);
+            if (best.length >= want) return;
+          }
+        }
+      };
+      for (const start of pool) {
+        if (best.length >= want || budget <= 0) break;
+        walk([[start, SIDES.ROOT]], start.a, start.b, new Set([start.id]));
+      }
+      if (!best.length) return state;
+      let board = createEmptyBoard();
+      for (const [t, side] of best) board = placeTile(board, t, side);
+      const placed = new Set(best.map(([t]) => t.id));
+      const next = { ...state, board, boneyard: pool.filter((t) => !placed.has(t.id)), hands: { ...state.hands, tioZe: keep, player: mine }, openingTileId: null, consecutivePasses: 0 };
+      return emit(patchFx(next, { frozen: bySeat([], []), wild: null, undo: null }), { type: 'dev', op, count: best.length });
     }
     case 'clearBoard': {
       const back = plainTiles(boardTilesInOrder(state.board));
