@@ -122,6 +122,16 @@ export default function OptionsPanel({ settings, onChange, onResetProgress, onTu
       >
         ANIMAÇÕES: {settings.reducedMotion ? 'REDUZIDAS' : 'COMPLETAS'}
       </button>
+      {/* Versão 2.20: o visual novo (madeira) ou o clássico, para quem preferir o de antes */}
+      <button
+        type="button"
+        className="btn-pixel w-full"
+        data-tone={settings.visual === 'classico' ? undefined : 'brass'}
+        aria-pressed={settings.visual !== 'classico'}
+        onClick={() => set({ visual: settings.visual === 'classico' ? 'novo' : 'classico' })}
+      >
+        VISUAL: {settings.visual === 'classico' ? 'CLÁSSICO' : 'NOVO'}
+      </button>
       {/* Patch 0.9.5: rever a partida de treino (só na tela inicial) */}
       {onTutorial && (
         <button type="button" className="btn-pixel w-full" onClick={onTutorial}>

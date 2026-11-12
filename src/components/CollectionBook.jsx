@@ -201,9 +201,9 @@ function useAlbum(collection, sizes) {
  * arrastar para o lado, viram a página. Sem scroll.
  * Versão 2.11: deitado, o livro abre inteiro na mesa (AlbumLand, com o próprio FECHAR).
  */
-export default function CollectionBook({ collection, onClose }) {
+export default function CollectionBook({ collection, onClose, onStats }) {
   const landscape = useLandscape();
-  if (landscape && onClose) return <AlbumLand collection={collection} onClose={onClose} />;
+  if (landscape && onClose) return <AlbumLand collection={collection} onClose={onClose} onStats={onStats} />;
   return <AlbumStand collection={collection} />;
 }
 
@@ -353,7 +353,7 @@ function Ficha({ entry, kind, label }) {
  * cima; na página da esquerda as 12 figurinhas da folha (4 × 3), com as setas (ou arrastar) para
  * virar; na da direita, sempre aberta, a ficha da figurinha tocada (a primeira da folha, de saída).
  */
-function AlbumLand({ collection, onClose }) {
+function AlbumLand({ collection, onClose, onStats }) {
   const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, picked, setPicked, swipe, setSwipe, achievements } = useAlbum(collection, SIZES.land);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -375,6 +375,12 @@ function AlbumLand({ collection, onClose }) {
             {t.label}
           </button>
         ))}
+        {/* versão 2.20: no visual novo o Caderno de Fiado mora aqui, na COLEÇÃO */}
+        {onStats && (
+          <button type="button" className="lb-tab" data-tab="career" onClick={onStats}>
+            CARREIRA
+          </button>
+        )}
       </div>
       <DominoKey label="FECHAR" pips={0} w={156} h={40} className="lb-close" onClick={onClose} />
 

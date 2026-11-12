@@ -6,7 +6,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import WideRoom from './components/WideRoom.jsx';
-import { applyReducedMotion } from './components/motion.js';
+import { applyReducedMotion, applyVisual } from './components/motion.js';
 import { loadSettings } from './engine/progress.js';
 import { installTouchGuards, installViewportFit, registerServiceWorker } from './pwa.js';
 import { installBoneGrain } from './components/art/boneTexture.js';
@@ -20,6 +20,7 @@ installPixelSkins();
 registerServiceWorker();
 // as animações reduzidas valem desde o 1º quadro (a abertura lê isso ao montar, antes dos efeitos do App)
 applyReducedMotion(loadSettings().reducedMotion);
+applyVisual(loadSettings().visual);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

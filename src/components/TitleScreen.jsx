@@ -279,7 +279,7 @@ export default function TitleScreen({
         </MenuModal>
       )}
       {/* deitado, o livro abre inteiro na mesa (com o FECHAR dele) */}
-      {modal === 'book' && landscape && <CollectionBook collection={collection} onClose={close} />}
+      {modal === 'book' && landscape && <CollectionBook collection={collection} onClose={close} onStats={settings?.visual !== 'classico' ? () => open('stats') : undefined} />}
       {modal === 'book' && !landscape && (
         <MenuModal id="book-title" title="LIVRO DE BOTECO" onClose={close} wide variant="leather">
           <CollectionBook collection={collection} />
@@ -329,6 +329,7 @@ export default function TitleScreen({
           devUnlocked={devUnlocked}
           showInstallHint={showInstallHint}
           version={GAME_VERSION}
+          visual={settings?.visual}
         />
         {modals}
       </>

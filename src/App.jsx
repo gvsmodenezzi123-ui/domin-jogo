@@ -36,7 +36,7 @@ import PvpApp from './pvp/PvpApp.jsx';
 import { parseRoomInput } from './pvp/protocol.js';
 import { parseTableInput } from './table/tableProtocol.js';
 import { loadSavedTable } from './pvp/controller.js';
-import { applyReducedMotion, prefersReducedMotion } from './components/motion.js';
+import { applyReducedMotion, applyVisual, prefersReducedMotion } from './components/motion.js';
 import { centerOf, useFloats } from './components/useFloats.js';
 import { coinRain, goldPop, hitstop, lateralShake, sparkBurst } from './components/juice.js';
 import { useLongPress } from './components/useLongPress.js';
@@ -638,6 +638,7 @@ export default function App() {
 
   useEffect(() => sound.setVolumes(settings), [settings]);
   useEffect(() => applyReducedMotion(settings.reducedMotion), [settings.reducedMotion]);
+  useEffect(() => applyVisual(settings.visual), [settings.visual]);
 
   // Trilha: Boteco (jazz), Clube da Sinuca (funk) e Submundo/chefes (tensão). Só depois do 1º toque.
   const musicTrack = musicFor(state);

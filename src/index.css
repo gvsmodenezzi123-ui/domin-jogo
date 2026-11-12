@@ -24328,3 +24328,215 @@
 .reduce-motion .tile-signal-mark {
   animation: none;
 }
+
+/* ==========================================================================================
+   Versão 2.20: o VISUAL NOVO (madeira quente, tábuas pregadas, ouro). Tudo aqui só vale com
+   `data-ui='novo'` no <html> (OPÇÕES → VISUAL); o clássico fica exatamente como era.
+   ========================================================================================== */
+.lb-tab[data-tab='career'] {
+  --ribbon: #8a6a1c;
+}
+
+/* --- a tela inicial ---------------------------------------------------------------------- */
+.title-land.is-novo .land-stage canvas:first-child,
+.title-land.is-novo .tl-front,
+.title-land.is-novo .tl-rival {
+  filter: brightness(1.22) saturate(1.35) sepia(0.12);
+}
+
+.title-land.is-novo .tl-logo {
+  left: 40px;
+  top: 12px;
+  width: 340px;
+}
+
+.title-land.is-novo .tl-logo .title-logo-svg {
+  width: 340px;
+  filter: drop-shadow(0 6px 0 rgba(20, 8, 2, 0.85)) drop-shadow(0 0 18px rgba(255, 170, 50, 0.35));
+}
+
+.title-land.is-novo .tl-tagline {
+  left: 40px;
+  top: 100px;
+  width: 340px;
+  font-size: 17px;
+  color: #f3d99a;
+}
+
+.title-land.is-novo .tl-tagline::before,
+.title-land.is-novo .tl-tagline::after {
+  content: '◆';
+  margin: 0 8px;
+  color: #ffb52e;
+}
+
+.nv-nav.tl-nav {
+  left: 40px;
+  top: 124px;
+  width: 340px;
+}
+
+.nv-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.nv-plank {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: #f6e2b8;
+  text-shadow: 0 2px 0 #1a0a02;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 23px, rgba(255, 200, 140, 0.05) 23px 24px, transparent 24px 61px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #7a4520 0%, #5e3216 48%, #4a260f 100%);
+  box-shadow:
+    0 0 0 2px #1c0d05,
+    inset 0 2px 0 #b5743a,
+    inset 2px 0 0 #8e5628,
+    inset -2px 0 0 #3a1c0a,
+    inset 0 -3px 0 #2e1608,
+    0 4px 0 #0e0602,
+    0 6px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 90ms ease-out;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* os pregos de latão nos quatro cantos */
+.nv-plank::before,
+.nv-plank::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  background: #d8a04a;
+  box-shadow:
+    0 1px 0 #3a1c08,
+    0 20px 0 #d8a04a,
+    0 21px 0 #3a1c08;
+}
+
+.nv-plank::before {
+  left: 6px;
+}
+
+.nv-plank::after {
+  right: 6px;
+}
+
+.nv-plank:active {
+  transform: translate3d(0, 3px, 0);
+}
+
+.nv-plank:focus-visible {
+  outline: 2px solid #ffd35a;
+  outline-offset: 3px;
+}
+
+.nv-plank.is-dim {
+  opacity: 0.6;
+}
+
+.nv-ico {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 2px 0 #2a1004);
+}
+
+.nv-plank-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nv-plank-note {
+  margin-top: 4px;
+  font-family: var(--font-term);
+  font-size: 16px;
+  line-height: 1;
+  color: #6a4a1a;
+  text-shadow: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* a principal, em ouro, com moldura dupla */
+.nv-plank.is-main {
+  height: 58px;
+  margin: 4px 4px 6px;
+  width: calc(100% - 8px);
+  font-size: 17px;
+  color: #3a2208;
+  text-shadow: none;
+  background: linear-gradient(180deg, #fff3d0, #f3d99a);
+  box-shadow:
+    0 0 0 2px #6a4410,
+    0 0 0 4px #e9b848,
+    0 0 0 6px #3a1c04,
+    inset 0 2px 0 #fffbe8,
+    inset 0 -3px 0 #d9b468,
+    0 8px 0 #140802,
+    0 0 18px rgba(255, 190, 80, 0.4);
+}
+
+.nv-plank.is-main::before,
+.nv-plank.is-main::after {
+  content: none;
+}
+
+.nv-play {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 16px solid #c97a10;
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  filter: drop-shadow(0 2px 0 #3a1c04);
+}
+
+.nv-plank.is-blood {
+  background: linear-gradient(180deg, #d82a34, #9a1018);
+  color: #fff3d0;
+  box-shadow:
+    0 0 0 2px #2a0406,
+    inset 0 2px 0 #ff7a7a,
+    inset 0 -3px 0 #5a060c,
+    0 4px 0 #0e0602;
+}
+
+.nv-menu-head {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: #ffd35a;
+  text-shadow: 0 2px 0 #1a0a02;
+}
+
+.nv-menu-note {
+  margin-bottom: 6px;
+  font-family: var(--font-term);
+  font-size: 18px;
+  line-height: 1;
+  color: #f3d99a;
+  text-shadow: 0 2px 0 #1a0a02;
+}
+
+.title-land.is-novo .tl-foot {
+  left: 40px;
+  width: 340px;
+  justify-content: center;
+  color: rgba(243, 217, 154, 0.7);
+}

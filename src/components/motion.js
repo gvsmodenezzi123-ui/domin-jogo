@@ -12,3 +12,9 @@ export function applyReducedMotion(on) {
   if (typeof document === 'undefined') return;
   document.documentElement.classList.toggle('reduce-motion', Boolean(on));
 }
+
+/** Versão 2.20: o visual escolhido nas opções vira `data-ui` no <html> (o CSS do novo só vale com `novo`). */
+export function applyVisual(visual) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.ui = visual === 'classico' ? 'classico' : 'novo';
+}

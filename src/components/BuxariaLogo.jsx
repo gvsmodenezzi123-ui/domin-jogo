@@ -39,6 +39,8 @@ const CHIPS = [
 
 /** Versão 1.5: a pele de madeira da tela inicial (face em tábua com veio, extrusão em madeira escura). */
 const SKINS = {
+  // versão 2.20: o letreiro dourado do visual novo
+  gold: { face: ['#fff0a8', '#ffc23e', '#f0851a', '#b04a0a'], edge: ['#fffbe0', '#e89a2a'], ext: ['#7a3208', '#2a1004'], back: '#1a0a02', metal: ['#fff3b8', '#d8861c', '#6a3008'] },
   bone: { face: ['#fff7e0', '#f1dfac', '#dcc07e', '#a77d3b'], edge: ['#fffdf2', '#c9a764'], ext: ['#9a3220', '#3a0d07'], back: '#2a0805', metal: ['#f3efe2', '#9d968a', '#3f372c'] },
   wood: { face: ['#f2b46a', '#c9803e', '#a8622a', '#6e3a14'], edge: ['#ffe0a8', '#b8743a'], ext: ['#5a3214', '#1e0e05'], back: '#140903', metal: ['#ffd9a0', '#8a5a2a', '#3a1e0a'] },
 };
