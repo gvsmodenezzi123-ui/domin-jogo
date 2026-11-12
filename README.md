@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.27.1: correção do build da 2.27.0
+
+- A posição da mesa para a câmera de cima é medida no toque da lupa (não durante o desenho): o
+  lint do React barrava a publicação do PWA.
+
 ### 2.27.0: ver a mesa é a câmera subindo
 
 - **Ver a mesa** (deitado): a própria mesa da partida gira até ficar vista de cima e cresce para

@@ -268,7 +268,14 @@ function TableBoard({
   // versão 2.27: deitado, ver a mesa é a câmera subindo: a própria mesa (a do cenário) gira até
   // ficar de cima e cresce para caber na tela. 'up' subindo/em cima, 'down' voltando.
   const [rise, setRise] = useState(null);
+  // onde a mesa está na tela, medido no toque (não durante o desenho)
+  const [riseAt, setRiseAt] = useState({ left: 0, top: 0, vw: 0, vh: 0 });
   const sectionRef = useRef(null);
+  const startRise = () => {
+    const r = sectionRef.current?.getBoundingClientRect();
+    setRiseAt({ left: r?.left ?? 0, top: r?.top ?? 0, vw: window.innerWidth, vh: window.innerHeight });
+    setRise('up');
+  };
   useEffect(() => {
     if (!rise) return undefined;
     document.documentElement.dataset.topview = rise;
@@ -369,9 +376,8 @@ function TableBoard({
   // o alvo da câmera de cima: a mesa inteira de frente, no meio da tela, no maior tamanho que cabe
   let riseTransform = null;
   if (rise === 'up' && land) {
-    const rect = sectionRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const rect = riseAt;
+    const { vw, vh } = riseAt;
     const W = land.width;
     const H = land.planeHeight;
     const k = Math.min((vw - 20) / W, (vh - 20) / H);
@@ -395,7 +401,7 @@ function TableBoard({
     >
       {/* versão 2.16: ver a mesa de cima, com as pedras grandes */}
       {layout.tiles.length > 0 && (
-        <button type="button" className="board-view-btn" onClick={() => (land ? setRise('up') : setZoomed(true))} aria-label="Ver a mesa de cima">
+        <button type="button" className="board-view-btn" onClick={() => (land ? startRise() : setZoomed(true))} aria-label="Ver a mesa de cima">
           <LupaGlyph size={18} />
         </button>
       )}
