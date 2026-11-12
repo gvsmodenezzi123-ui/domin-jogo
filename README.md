@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.26.1: a lupa no traço do menu
+
+- O botão de ver a mesa ganhou uma lupa desenhada no mesmo traço do ícone de menu (osso com
+  contorno escuro, luz em cima e sombra embaixo).
+
 ### 2.26.0: a mesa mais bonita, o leque mais baixo e a lupa ao lado do MENU
 
 - **A mesa** redesenhada: a luz da lâmpada mais quente no pano, a estampa de losangos do pano de

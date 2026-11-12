@@ -1,4 +1,5 @@
 import { CoinIcon, EyeIcon, HeartIcon, LampIcon, MenuIcon, SpeakerIcon } from './ArtSprites.jsx';
+import { LupaIcon } from './art/UiIcons.jsx';
 
 /**
  * Ícones de interface num tamanho em px, desenhados em 40x40 (ArtSprites.jsx).
@@ -40,6 +41,14 @@ export function MenuGlyph({ size = 18, className = '' }) {
   return (
     <Box size={size} className={className}>
       <MenuIcon className="h-full w-full" />
+    </Box>
+  );
+}
+
+export function LupaGlyph({ size = 18, className = '' }) {
+  return (
+    <Box size={size} className={className}>
+      <LupaIcon className="h-full w-full" />
     </Box>
   );
 }

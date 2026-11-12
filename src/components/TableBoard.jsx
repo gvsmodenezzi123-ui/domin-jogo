@@ -13,6 +13,7 @@ import { startTileLighting } from './tileLighting.js';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
 import { BoneyardPile, EndsSum } from './BoneyardPile.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
+import { LupaGlyph } from './UiGlyphs.jsx';
 import { LAND, landSpanFor, landTable } from './seatGeometry.js';
 import {
   APRON_H,
@@ -361,7 +362,7 @@ function TableBoard({
       {/* versão 2.16: ver a mesa de cima, com as pedras grandes */}
       {layout.tiles.length > 0 && (
         <button type="button" className="board-view-btn" onClick={() => setZoomed(true)} aria-label="Ver a mesa de cima">
-          <span aria-hidden="true" className="board-view-ico" />
+          <LupaGlyph size={18} />
         </button>
       )}
       {zoomed && <BoardZoom tiles={layout.tiles} enhancementOf={enhancementOf} onClose={closeZoom} />}

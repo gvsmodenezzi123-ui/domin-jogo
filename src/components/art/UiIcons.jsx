@@ -422,6 +422,56 @@ const MENU_MAP = [
 
 const MENU_RECTS = mapToRects(MENU_MAP, BONE_PAL, 'm');
 
+const LUPA_MAP = [
+  '........................................',
+  '........................................',
+  '........................................',
+  '............kkkkkkkkk...................',
+  '.........kkkkWWWWWWWkkkk................',
+  '........kkWWWWbbbbbbWWWkk...............',
+  '.......kkWWbbbbbbbbbbbbWkk..............',
+  '......kkWWHbsssssbbbbbbbWkk.............',
+  '.....kkWWHsssSSSSSSbbbbbbWkk............',
+  '....kkWWHssSSSkkkkkSSbbbbbWkk...........',
+  '....kWWbssSSkkk...kkkSbbbbsWk...........',
+  '....kWbbsSSkk.......kkSbbbbSk...........',
+  '...kkWbssSkk.........kkbbbbskk..........',
+  '...kWWbsSSk...........kWbbbsWk..........',
+  '...kWbbsSkk...........kkbbbsSk..........',
+  '...kWbbsSk.............kWbbsSk..........',
+  '...kWbbsSk.............kWbbsSk..........',
+  '...kWbbbSk.............kWbbsSk..........',
+  '...kWbbbskk...........kkWbssSk..........',
+  '...kWbbbbWk...........kWWbsSSk..........',
+  '...kkbbbbbkk.........kkWbbsSkk..........',
+  '....kWbbbbWkk.......kkWWbbsSk...........',
+  '....kWbbbbbWkkk...kkkWWbbbbSk...........',
+  '....kkSbbbbbWWkkkkkWWWbbbbbbkk..........',
+  '.....kkSbbbbbbWWWWWWbbbbbbbbWkk.........',
+  '......kkSbbbbbbbbbbbbbbbbbbbbWkk........',
+  '.......kkSsbbbbbbbssssbbbbbbbbWkk.......',
+  '........kkSSSssssssSSSSSbbbbbbbWkk......',
+  '.........kkkkSSSSSSSkkkkSbbbbbbbWkk.....',
+  '............kkkkkkkkk..kkSbbbbbbbWkk....',
+  '........................kkSbbbbbbbWkk...',
+  '.........................kkSbbbbbbbWkk..',
+  '..........................kkSbbbbbbsWk..',
+  '...........................kkSbbbbssSk..',
+  '............................kkSbbssSSk..',
+  '.............................kkSssSSkk..',
+  '..............................kkSSSkk...',
+  '...............................kkkkk....',
+  '........................................',
+  '........................................',
+];
+
+const LUPA_RECTS = mapToRects(LUPA_MAP, BONE_PAL, 'l');
+
+/** Versão 2.26: a lupa de ver a mesa, no mesmo traço do ícone de menu (osso com contorno). */
+export function LupaIcon({ className = 'w-6 h-6' }) {
+  return <PixelSvg className={className}>{LUPA_RECTS}</PixelSvg>;
+}
+
 /** Ícone de menu (hambúrguer). */
 export function MenuIcon({ className = 'w-6 h-6' }) {
   return <PixelSvg className={className}>{MENU_RECTS}</PixelSvg>;

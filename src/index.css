@@ -26587,3 +26587,9 @@ html[data-ui='novo'] .px-skins .board-view-btn {
     inset 0 1px 0 rgba(255, 214, 150, 0.3),
     0 2px 0 #0c0502;
 }
+
+/* a lupa no traço do ícone de menu: o mesmo tamanho e a mesma sombra */
+.board-view-btn .board-view-glyph,
+.board-view-btn > span {
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+}
