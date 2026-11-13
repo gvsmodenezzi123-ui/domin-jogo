@@ -172,6 +172,23 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.30.0: três cenários de dia, com mesa, trilha e som próprios
+
+- **Cenários de dia** (deitado), com o sol pintado e no shader (o brilho, os raios girando
+  devagar e os reflexos da lente), sem a lâmpada pendurada:
+  - **Calçada do Bar**: a mesa de plástico branca na pedra portuguesa, na frente do Bar do Canto;
+    trilha *Pagode de calçada*. Joga aqui o Tonho do Gás.
+  - **Quiosque da Praia**: a mesa de tábua pintada de azul no deque, o mar com as faíscas do sol
+    piscando na água; trilha *Bossa do quiosque*. Joga aqui o Zeca Charreteiro.
+  - **Praça do Coreto**: a mesa de concreto pintada de verde, a igreja e o coreto, a luz passando
+    pela copa das árvores no chão; trilha *Forró da praça*. Joga aqui a Dona Neide.
+- **Mesas online**: os três entram como salas do duelo e da roda de 2 a 4, cada um com a trilha
+  dele. Com sete salas, a escolha virou ◀ SALA ▶ (pula a sala secreta que ainda não abriu).
+- **O som da pedra muda com o tampo**: na mesa de plástico um "toc" mais leve e oco, com o
+  estalinho dos pés; na tábua a batida seca na madeira. As outras mesas continuam como antes.
+- Na mesa branca o aviso da vez sai em tinta escura. Só muda o que se vê e se ouve: regras,
+  sorteio, seed e save continuam iguais.
+
 ### 2.29.2: a roda online volta sem a lâmpada
 
 - Desfaz a 2.29.1: na mesa de 2 a 4 a lâmpada pendurada cobria o nome de quem senta no fundo, então

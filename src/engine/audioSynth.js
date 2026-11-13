@@ -205,6 +205,85 @@ export const TRACKS = {
     kick: [0, 4, 8, 12],
     rim: [4, 12],
   },
+  // Versão 2.30: as faixas dos cenários de dia.
+  // A Calçada do Bar: pagode de mesa de domingo, 108 BPM em Dó maior. O cavaco do órgão em
+  // stabs curtos, o baixo de 7 cordas andando, tantã (surdo), pandeiro (o ganzá), agogô e a
+  // cuíca respondendo no fim do compasso.
+  calcadaPagode: {
+    bpm: 108,
+    swing: 0.1,
+    level: 1,
+    style: 'samba',
+    cutoff: 4600,
+    chords: [
+      { root: 48, ep: [60, 64, 67] }, // C
+      { root: 45, ep: [60, 64, 67] }, // Am7
+      { root: 50, ep: [60, 65, 69] }, // Dm7
+      { root: 43, ep: [59, 62, 65] }, // G7
+      { root: 52, ep: [59, 62, 68] }, // E7
+      { root: 45, ep: [60, 64, 67] }, // Am7
+      { root: 50, ep: [60, 65, 69] }, // Dm7
+      { root: 43, ep: [59, 62, 65] }, // G7
+    ],
+    bass: { 0: 0, 3: 7, 6: 12, 8: 0, 10: 7, 12: 5, 14: 4 },
+    comp: { 2: 0.1, 5: 0.1, 7: 0.08, 10: 0.1, 13: 0.12 },
+    lead: { 13: 31, 15: 28 },
+    kick: [0, 8, 14],
+    snare: [4, 12],
+    bells: { 0: 'h', 3: 'l', 6: 'h', 8: 'l', 10: 'h', 14: 'l' },
+    hats: 'shaker',
+    rim: [],
+  },
+  // O Quiosque da Praia: bossa nova de fim de tarde, 118 BPM em Fá. Piano elétrico em
+  // acordes de sétima sincopados, o baixo da bossa (fundamental e quinta adiantada), o aro da
+  // caixa na clave e o ganzá de leve.
+  praiaBossa: {
+    bpm: 118,
+    swing: 0.06,
+    level: 0.98,
+    chords: [
+      { root: 41, ep: [60, 64, 69] }, // Fmaj7
+      { root: 41, ep: [60, 64, 69] }, // Fmaj7
+      { root: 43, ep: [59, 65, 70] }, // G7(9)
+      { root: 43, ep: [59, 65, 70] }, // G7(9)
+      { root: 43, ep: [58, 62, 65] }, // Gm7
+      { root: 42, ep: [57, 60, 64] }, // F#°
+      { root: 41, ep: [60, 64, 69] }, // Fmaj7
+      { root: 48, ep: [58, 64, 67] }, // C7
+    ],
+    bass: { 0: 0, 6: 7, 8: 7, 14: 0 },
+    comp: { 0: 0.3, 3: 0.2, 6: 0.26, 10: 0.3, 13: 0.2 },
+    kick: [0, 6, 8, 14],
+    rim: [0, 3, 6, 10, 12],
+    hats: 'shaker',
+  },
+  // A Praça do Coreto: forró pé-de-serra de domingo na praça, 128 BPM em Sol. A sanfona do
+  // órgão, a melodia no ponteado, o baião do baixo, a zabumba (bumbo e caixa) e o triângulo.
+  pracaForro: {
+    bpm: 128,
+    swing: 0.04,
+    level: 1.02,
+    style: 'rifa',
+    cutoff: 4600,
+    chords: [
+      { root: 43, ep: [59, 62, 67] }, // G
+      { root: 43, ep: [59, 62, 67] }, // G
+      { root: 48, ep: [60, 64, 67] }, // C
+      { root: 50, ep: [60, 62, 66] }, // D7
+      { root: 43, ep: [59, 62, 67] }, // G
+      { root: 40, ep: [59, 64, 67] }, // Em
+      { root: 45, ep: [60, 64, 67] }, // Am7
+      { root: 50, ep: [60, 62, 66] }, // D7
+    ],
+    bass: { 0: 0, 3: 7, 4: 7, 8: 0, 11: 7, 12: 7 },
+    comp: { 2: 0.1, 6: 0.1, 10: 0.1, 14: 0.1 },
+    lead: { 0: 24, 2: 28, 4: 31, 6: 28, 8: 26, 10: 24, 12: 19, 14: 21 },
+    kick: [0, 3, 8, 11],
+    snare: [6, 14],
+    bells: { 2: 'h', 6: 'h', 10: 'h', 14: 'h' },
+    hats: '8',
+    rim: [],
+  },
   // Seu Arlindo, o Rei da Bucha (chefe da Região 1, Patch 0.9.0): "Samba da Navalha". Samba-rock
   // malandro a 136 BPM em Ré menor: baixo de serra limpo e sincopado, órgão em stabs, cuíca
   // nos contratempos, agogô alto/baixo, surdo, palma no 2 e no 4 e ganzá correndo.
@@ -594,6 +673,13 @@ export class SoundEngine {
     this.seq = null;
     this.seqTimer = null;
     this.musicHoldUntil = 0;
+    // versão 2.30: o tampo da mesa em jogo ('plastico', 'tabua'...): muda o corpo da batida
+    this.surface = null;
+  }
+
+  /** Versão 2.30: o tampo da mesa em jogo (null: o tampo de madeira de sempre). */
+  setSurface(kind = null) {
+    this.surface = kind;
   }
 
   init() {
@@ -800,7 +886,9 @@ export class SoundEngine {
       const [a, b] = this.span(v);
       const start = Math.max(a, now);
       if (b <= start + 1e-6) continue; // já acabou, ou foi cortada antes de começar
-      events.push([start, v.cost], [b, -v.cost]);
+      // versão 2.30: em microssegundos, com a mesma folga do spawn (uma voz que acaba em
+      // 0.12100000000000001 não soma com a que entra em 0.121)
+      events.push([Math.round(start * 1e6), v.cost], [Math.round(b * 1e6), -v.cost]);
     }
     events.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
     let current = 0;
@@ -1082,12 +1170,16 @@ export class SoundEngine {
     // osso/marfim: tom curtíssimo + estalo filtrado no mesmo ponto
     this.tone({ type: 'triangle', freq: 800 * j, peak: 0.34 * weight, dur: 0.015, attack: 0.001 });
     this.noise({ freq: 800 * j * 2.2, q: 2.2, peak: 0.42 * weight, dur: 0.015 });
-    // madeira oca: 120 Hz descendo, com o corpo do tampo
-    this.tone({ type: 'triangle', freq: 120 * j * (isDouble ? 0.85 : 1), freqEnd: 72 * j, peak: 0.95 * weight, dur: 0.08, attack: 0.002 });
-    // Versão 1.5: o tapa seco na fórmica (bucha: 95 Hz caindo até 30, mais pesado); curto para
-    // caber no orçamento de vozes (a batida inteira solta os nós em ~120 ms)
-    if (isDouble) this.tone({ type: 'triangle', freq: 95 * j, freqEnd: 30, peak: 0.9, dur: 0.08, attack: 0.001 });
-    else this.tone({ freq: 160 * j, freqEnd: 30, peak: 0.45, dur: 0.08, attack: 0.001 });
+    if (this.surface === 'plastico') this.plasticBody(isDouble, j, weight);
+    else if (this.surface === 'tabua') this.plankBody(isDouble, j, weight);
+    else {
+      // madeira oca: 120 Hz descendo, com o corpo do tampo
+      this.tone({ type: 'triangle', freq: 120 * j * (isDouble ? 0.85 : 1), freqEnd: 72 * j, peak: 0.95 * weight, dur: 0.08, attack: 0.002 });
+      // Versão 1.5: o tapa seco na fórmica (bucha: 95 Hz caindo até 30, mais pesado); curto para
+      // caber no orçamento de vozes (a batida inteira solta os nós em ~120 ms)
+      if (isDouble) this.tone({ type: 'triangle', freq: 95 * j, freqEnd: 30, peak: 0.9, dur: 0.08, attack: 0.001 });
+      else this.tone({ freq: 160 * j, freqEnd: 30, peak: 0.45, dur: 0.08, attack: 0.001 });
+    }
 
     const enh = ENHANCEMENT_ALIASES[enhancement] ?? enhancement;
     if (enh === 'gold') this.playGoldTinkle();
@@ -1098,6 +1190,26 @@ export class SoundEngine {
     // versão 1.4: o Âmbar estala como resina endurecendo; a Obsidiana chia como lava esfriando
     if (enh === 'amber') this.playCrystalBell();
     if (enh === 'obsidian') this.noise({ freq: 1800, filter: 'highpass', q: 0.6, peak: 0.16, dur: 0.3, attack: 0.02, delay: 0.05 });
+  }
+
+  /**
+   * Versão 2.30: a mesa de plástico branco do bar: o tampo fino e oco dá um "toc" mais leve e
+   * mais alto que a madeira, e os pés de plástico dão um estalinho logo depois.
+   */
+  plasticBody(isDouble, j, weight) {
+    this.tone({ type: 'triangle', freq: 150 * j * (isDouble ? 0.85 : 1), freqEnd: 95 * j, peak: 0.85 * weight, dur: 0.06, attack: 0.002 });
+    this.tone({ type: 'triangle', freq: 470 * j, freqEnd: 410 * j, peak: 0.26 * weight, dur: 0.05, attack: 0.001 });
+    this.noise({ freq: 2600 * j, q: 3, peak: 0.09 * weight, dur: 0.03, delay: 0.026 });
+  }
+
+  /**
+   * Versão 2.30: a mesa de tábuas do quiosque: a batida seca na madeira, com a tábua
+   * ressoando grave e um "toc" curto de nó de madeira.
+   */
+  plankBody(isDouble, j, weight) {
+    this.tone({ type: 'triangle', freq: 135 * j * (isDouble ? 0.85 : 1), freqEnd: 80 * j, peak: 1 * weight, dur: 0.08, attack: 0.002 });
+    this.tone({ type: 'triangle', freq: 250 * j, freqEnd: 215 * j, peak: 0.26 * weight, dur: 0.07, attack: 0.001 });
+    this.noise({ freq: 950 * j, q: 2.5, peak: 0.13 * weight, dur: 0.04 });
   }
 
   /** Pedra assentando na mesa (sua ou do rival). */

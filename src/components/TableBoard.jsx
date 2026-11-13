@@ -14,6 +14,7 @@ import BotecoBackdrop from './BotecoBackdrop.jsx';
 import { BoneyardPile, EndsSum } from './BoneyardPile.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
 import { LupaGlyph } from './UiGlyphs.jsx';
+import { sound } from '../engine/audioSynth.js';
 import { LAND, landSpanFor, landTable } from './seatGeometry.js';
 import {
   APRON_H,
@@ -259,10 +260,14 @@ function TableBoard({
   lighting = 'lamp',
   // versão 2.13: a sala em volta da mesa (o cenário da região)
   room: roomScene = null,
+  // versão 2.30: o material da mesa ('plastico', 'concreto', 'tabua'); sem ele, madeira e feltro
+  material = null,
   // versão 2.14: o dorme e as pontas vão para a lousa do armarinho da direita (PlayerRack)
   dormeInHud = false,
 }) {
   const candles = lighting === 'candles';
+  // versão 2.30: os cenários de dia, à luz do sol (sem a lâmpada pendurada)
+  const day = lighting === 'day';
   const [zoomed, setZoomed] = useState(false);
   const closeZoom = useCallback(() => setZoomed(false), []);
   // versão 2.27: deitado, ver a mesa é a câmera subindo: a própria mesa (a do cenário) gira até
@@ -372,7 +377,18 @@ function TableBoard({
   const mahogany = decor.includes('mahogany');
   const planeW = room.width > 0 ? planePixels(planeWidth) : 0;
   const planeH = planeHeight > 0 ? planePixels(planeHeight) : 0;
-  const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${mahogany ? 'mogno' : 'pinho'}${candles ? '-velas' : ''}`;
+  const kind = material ?? (mahogany ? 'mogno' : 'pinho');
+  // versão 2.30: o tampo muda o som da pedra (plástico, tábua) e a mesa branca pede o aviso
+  // da vez em tinta escura (html[data-mesa])
+  useEffect(() => {
+    sound.setSurface(material);
+    document.documentElement.dataset.mesa = kind;
+    return () => {
+      sound.setSurface(null);
+      delete document.documentElement.dataset.mesa;
+    };
+  }, [material, kind]);
+  const planeKey = `mesa-${planeW}x${planeH}-${felt ? `${felt.light}${felt.mid}${felt.dark}` : 'padrao'}-${kind}${candles ? '-velas' : ''}`;
 
   // o alvo da câmera de cima: a mesa inteira de frente, no meio da tela, no maior tamanho que cabe
   // (vai para o CSS como variáveis: as animações de subir e de voltar usam o mesmo alvo)
@@ -397,7 +413,7 @@ function TableBoard({
       ref={setSection}
       className={`felt-table felt-25d tableboard-viewport felt-atmo-${atmosphere} relative min-h-0 w-full flex-1 overflow-hidden ${mahogany ? 'felt-mahogany' : ''} ${
         landscape ? 'is-landscape' : ''
-      } ${candles ? 'is-candles' : ''}`}
+      } ${candles ? 'is-candles' : ''} ${day ? 'is-day' : ''}`}
       style={land ? { ...feltVars, '--rail-px': `${land.yFar}px`, '--near-px': `${land.yNear}px`, '--table-w': `${land.width}px` } : feltVars}
       aria-label="Mesa"
     >
@@ -438,7 +454,7 @@ function TableBoard({
         {planeW > 0 && (
           <PixelCanvas
             cacheKey={planeKey}
-            paint={() => paintTablePlane({ w: planeW, h: planeH, ...(felt ?? {}), mahogany, candles })}
+            paint={() => paintTablePlane({ w: planeW, h: planeH, ...(felt ?? {}), mahogany, candles, material })}
             w={planeW}
             h={planeH}
             className="table-surface-px absolute inset-0"
@@ -561,8 +577,8 @@ function TableBoard({
       {/* a frente da mesa: a saia de madeira, com as cantoneiras de latão */}
       {planeW > 0 && !toBottom && (
         <PixelCanvas
-          cacheKey={`saia-${planeW}-${mahogany ? 'mogno' : 'pinho'}${candles ? '-velas' : ''}`}
-          paint={() => paintApron(planeW, { mahogany, candles })}
+          cacheKey={`saia-${planeW}-${kind}${candles ? '-velas' : ''}`}
+          paint={() => paintApron(planeW, { mahogany, candles, material })}
           w={planeW}
           h={APRON_H}
           className="table-apron pointer-events-none absolute inset-x-0 bottom-0"
@@ -572,10 +588,10 @@ function TableBoard({
       {/* Versão 2.1: sem copo, cinzeiro e tampinhas em cima da mesa: ela fica só com o jogo */}
       {/* versão 2.9: deitada, a frente da mesa aparece: a saia de madeira e os dois pés */}
       {land && planeW > 0 && (
-        <div aria-hidden="true" className="land-table-front pointer-events-none absolute" style={{ left: land.style.left, width: land.width, top: land.yNear }}>
+        <div aria-hidden="true" className={`land-table-front pointer-events-none absolute table-${kind}`} style={{ left: land.style.left, width: land.width, top: land.yNear }}>
           <PixelCanvas
-            cacheKey={`saia-${planeW}-${mahogany ? 'mogno' : 'pinho'}${candles ? '-velas' : ''}`}
-            paint={() => paintApron(planeW, { mahogany, candles })}
+            cacheKey={`saia-${planeW}-${kind}${candles ? '-velas' : ''}`}
+            paint={() => paintApron(planeW, { mahogany, candles, material })}
             w={planeW}
             h={APRON_H}
             className="land-apron"
@@ -588,11 +604,11 @@ function TableBoard({
 
       {/* lâmpada pendurada: balança como pêndulo e o facho varre a mesa, clareando
           as pedras por onde passa; quando ela falha, o facho tremula de leve */}
-      {!candles && <LampRig part="light" lamp={landscape ? 40 : 64} cord={2} beamWidth={landscape ? 300 : 300} />}
+      {!candles && !day && <LampRig part="light" lamp={landscape ? 40 : 64} cord={2} beamWidth={landscape ? 300 : 300} />}
       {/* versão 2.6.1: sem a película preta das falhas (.room-flicker): a mesa piscava preta */}
 
       {/* deitada, o corpo da lâmpada fica na camada do rival (RivalSeat): ela pende NA FRENTE dele */}
-      {!landscape && !candles && <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />}
+      {!landscape && !candles && !day && <LampRig part="body" lamp={64} cord={2} beamWidth={300} className="z-[6]" />}
       {/* versão 2.13: o Dono da Noite joga à luz de quatro velas, uma em cada canto do tampo */}
       {candles && <TableCandles room={room} landscape={landscape} />}
       {/* versão 2.13: a luz viva da sala, das pedras aprimoradas e dos clarões, num shader */}

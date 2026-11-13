@@ -439,6 +439,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
           decor={sala.decor}
           atmosphere={sala.atmosphere}
           lighting={sala.lighting}
+          material={sala.material}
           room={sala.room}
           incoming={flying}
           finaleId={finaleHold && playEv ? playEv.tileId : null}

@@ -1723,10 +1723,660 @@ function finishNoite(raw, g) {
 }
 
 // ---------------------------------------------------------------------------
+// Versão 2.30: os cenários de dia (a calçada do bar, o quiosque da praia, a praça do coreto).
+// O sol no lugar da lâmpada: a luz ambiente alta, o céu azul com nuvens, as sombras curtas.
+// ---------------------------------------------------------------------------
+
+/** As salas de dia: sem a lâmpada pendurada (nem o facho dela) e sem fumaça. */
+export const DAY_ROOMS = Object.freeze(['landcalcada', 'landpraia', 'landpraca']);
+
+const SKY_DAY = pal('#2a6ac8', '#3a82da', '#5a9ee6', '#7ab8ee', '#a2d0f4', '#c8e4f8');
+
+/** O céu de dia em degraus pontilhados, de `y0` (em cima, azul forte) a `y1` (claro no horizonte). */
+function daySky(b, x0, y0, x1, y1, stops = SKY_DAY) {
+  for (let y = y0; y < y1; y += 1) {
+    const t = (y - y0) / Math.max(1, y1 - y0 - 1);
+    for (let x = x0; x < x1; x += 1) b.put(x, y, ramp(stops, t, x, y));
+  }
+}
+
+/** Nuvem de algodão: bolotas brancas com a barriga cinza-azulada e a luz em cima. */
+function cloud(b, r, cx, cy, wd, ht) {
+  const lobes = [];
+  for (let i = 0; i < 7; i += 1) {
+    const t = i / 6;
+    const rr = ht * (0.45 + Math.sin(t * Math.PI) * 0.55) * (0.8 + r() * 0.3);
+    lobes.push([cx - wd / 2 + t * wd, cy - Math.sin(t * Math.PI) * ht * 0.35, rr]);
+  }
+  for (const [x, y, rr] of lobes) b.ellipse(x, y + 1, rr, rr * 0.75, hex('#b8cce4'));
+  for (const [x, y, rr] of lobes) b.ellipse(x - rr * 0.1, y - rr * 0.12, rr * 0.86, rr * 0.62, hex('#eef6fc'));
+  for (const [x, y, rr] of lobes) b.ellipse(x - rr * 0.25, y - rr * 0.3, rr * 0.45, rr * 0.3, hex('#ffffff'));
+  b.rect(cx - wd / 2 - ht * 0.3, cy + ht * 0.3, wd + ht * 0.6, 1, hex('#a8bcd8'), 0.7);
+}
+
+/** O sol, com o miolo branco e a coroa amarela (vai para a camada que brilha). */
+function sun(G, x, y, rr) {
+  G.ellipse(x, y, rr + 2, rr + 2, hex('#ffe9a0'));
+  G.ellipse(x, y, rr, rr, hex('#fff8dc'));
+}
+
+/** Fio de poste caindo em catenária de (x0, y0) a (x1, y1). */
+function wire(b, x0, y0, x1, y1, sag, c = '#1a1a22') {
+  const n = Math.max(1, Math.abs(x1 - x0));
+  for (let i = 0; i <= n; i += 1) {
+    const t = i / n;
+    b.put(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t + Math.sin(t * Math.PI) * sag), hex(c));
+  }
+}
+
+/** Pedra portuguesa (as ondas pretas e brancas do calçadão), em perspectiva até o pé da tela. */
+function calcadao(b, x0, y0, x1, y1, g, light = '#e6dece', dark = '#6e675c') {
+  const L = hex(light);
+  const D = hex(dark);
+  for (let y = y0; y < y1; y += 1) {
+    const t = (y - y0) / Math.max(1, y1 - y0);
+    const z = 1 + t * 2.4;
+    for (let x = x0; x < x1; x += 1) {
+      const u = ((x - g.cx) / (g.w * 0.5)) * z * 11;
+      const v = t * 16;
+      const wave = Math.sin(u * 1.1 + Math.sin(v * 0.9) * 1.8) * 0.8 + Math.sin(v * 1.9 + u * 0.15) * 0.5;
+      const stone = ((Math.floor(u * 5) + Math.floor(v * 6)) & 1) === 1;
+      const edge = Math.abs(wave) < 0.06;
+      b.put(x, y, edge ? shift(D, -10) : wave > 0 ? shift(L, stone ? -14 : 0) : shift(D, stone ? 10 : 0));
+    }
+  }
+}
+
+/** Uma pilha de cadeiras de plástico brancas empilhadas (os encostos se repetindo). */
+function chairStack(b, x, base, n) {
+  for (let k = n - 1; k >= 0; k -= 1) {
+    const y = base - 34 - k * 3;
+    const c = hex(k === 0 ? '#f6f6f0' : '#dcdcd4');
+    b.rect(x, y, 18, 13, c);
+    b.rect(x, y, 18, 1, hex('#ffffff'));
+    b.rect(x + 17, y + 1, 1, 12, hex('#b8b8b0'));
+    for (let s = 0; s < 3; s += 1) b.rect(x + 4 + s * 4, y + 3, 2, 6, hex('#a8a8a0'));
+    b.rect(x - 1, y + 13, 20, 2, shift(c, -22));
+  }
+  for (const lx of [x, x + 16]) {
+    b.line(lx + 1, base - 19, lx + (lx === x ? -1 : 3), base, hex('#d8d8d0'));
+    b.line(lx + 2, base - 19, lx + (lx === x ? 0 : 4), base, hex('#a8a8a0'));
+  }
+  contact(b, x + 9, base, 13, 2, 0.45);
+}
+
+/** O poste de concreto com a luminária de braço (apagada de dia). */
+function streetPole(b, x, top, base, dir = -1) {
+  b.rect(x, top, 4, base - top, hex('#a8a49a'));
+  b.rect(x, top, 1, base - top, hex('#d8d4ca'));
+  b.rect(x + 3, top, 1, base - top, hex('#6a665e'));
+  const ax = x + dir * 16;
+  b.line(x + 1, top + 2, ax, top - 2, hex('#4a4c50'));
+  b.line(x + 1, top + 3, ax, top - 1, hex('#3a3c40'));
+  b.rect(ax - 4, top - 3, 9, 3, hex('#3a3c40'));
+  b.rect(ax - 3, top, 7, 2, hex('#c8c8b8'));
+  // a caixa do transformador
+  b.rect(x - 4, top + 14, 12, 10, hex('#5a5e62'));
+  b.rect(x - 4, top + 14, 12, 1, hex('#8a8e92'));
+}
+
+/** O toldo listrado, visto de frente: as faixas, a franja em ondas e a sombra embaixo. */
+function awning(b, x, y, w, h, colors = ['#c8261c', '#f4ece0']) {
+  for (let yy = 0; yy < h; yy += 1) {
+    for (let xx = 0; xx < w; xx += 1) {
+      const band = Math.floor(xx / 8) % 2;
+      const c = hex(colors[band]);
+      b.put(x + xx, y + yy, shift(c, Math.round(-yy * 2.5 + (yy === 0 ? 14 : 0))));
+    }
+  }
+  // a franja recortada
+  for (let xx = 0; xx < w; xx += 1) {
+    const k = xx % 8;
+    const depth = k < 4 ? 3 - Math.abs(k - 1.5) * 0.6 : 0;
+    for (let d = 0; d < depth; d += 1) b.put(x + xx, y + h + d, shift(hex(colors[Math.floor(xx / 8) % 2]), -30));
+  }
+  b.rect(x, y - 1, w, 1, hex('#3a2a20'));
+}
+
+/** A porta de enrolar levantada, com o bar na sombra lá dentro (o balcão e as garrafas). */
+function rollDoor(b, G, r, x, y, w, bottom, open) {
+  const inY = y + open;
+  for (let yy = inY; yy < bottom; yy += 1) for (let xx = x; xx < x + w; xx += 1) b.put(xx, yy, ramp(pal('#3a2a1a', '#5a4026', '#7a5a36', '#9a7a4e'), 0.7 - (yy - inY) / (bottom - inY) * 0.4, xx, yy));
+  shelf(b, r, x + 2, inY + 8, w - 4, [2, 'mug', 0, 3, 1, 'mug', 4, 2, 5, 0, 3, 'mug', 1]);
+  shelf(b, r, x + 2, inY + 24, w - 4, [0, 4, 1, 3, 'mug', 2, 5, 0, 'mug', 1]);
+  // a geladeira com a porta de vidro (a luz fria dela)
+  G.rect(x + w - 26, inY + 34, 20, bottom - inY - 46, hex('#cfe8f0'));
+  for (let k = 0; k < 3; k += 1) b.rect(x + w - 24, inY + 40 + k * 8, 16, 1, hex('#6a8a94'));
+  b.rect(x, bottom - 12, w, 12, hex('#8a5a2a'));
+  b.rect(x, bottom - 12, w, 2, hex('#d8a060'));
+  b.rect(x, bottom - 3, w, 3, hex('#3a2410'));
+  for (let yy = y; yy < inY; yy += 1) {
+    const k = (yy - y) % 4;
+    const c = k === 0 ? hex('#6a6e72') : k === 1 ? hex('#c8ccd0') : k === 2 ? hex('#a8acb0') : hex('#8a8e92');
+    b.rect(x, yy, w, 1, c);
+  }
+  b.rect(x, inY - 3, w, 3, hex('#5a5e62'));
+  b.rect(x + w / 2 - 3, inY - 2, 6, 1, hex('#e8ecf0'));
+  b.rect(x - 3, y - 2, 3, bottom - y + 2, hex('#4a4a4e'));
+  b.rect(x + w, y - 2, 3, bottom - y + 2, hex('#4a4a4e'));
+}
+
+/** Letreiro pintado à mão numa chapa: o fundo, a borda e o nome. */
+function paintedSign(b, x, y, w, h, text, { bg = '#f4ead0', fg = '#b8261c', edge = '#3a2410', sub = null, subFg = '#2a4a8a' } = {}) {
+  b.rect(x + 2, y + 2, w, h, BLACK, 0.3);
+  for (let yy = 0; yy < h; yy += 1) for (let xx = 0; xx < w; xx += 1) b.put(x + xx, y + yy, shift(hex(bg), Math.round(Math.sin(xx * 0.7 + yy) * 3 - (yy / h) * 12)));
+  b.rect(x, y, w, 1, hex(edge));
+  b.rect(x, y + h - 1, w, 1, hex(edge));
+  b.rect(x, y, 1, h, hex(edge));
+  b.rect(x + w - 1, y, 1, h, hex(edge));
+  const tw = textWidth(text) * 2;
+  pixelText(b, text, x + Math.round((w - tw) / 2), y + (sub ? 2 : Math.round((h - 10) / 2)), hex(fg), { s: 2 });
+  if (sub) pixelText(b, sub, x + Math.round((w - textWidth(sub)) / 2), y + h - 7, hex(subFg));
+  for (const px of [x + 2, x + w - 3]) {
+    b.put(px, y + 2, hex('#5a3a20'));
+    for (let k = 0; k < 4; k += 1) b.put(px, y + 3 + k, hex('#8a4a20'), 0.4 - k * 0.08);
+  }
+}
+
+/** Uma moto estacionada (a de entrega), de lado: as rodas, o tanque e o baú. */
+function motorbike(b, x, base) {
+  for (const wx of [x + 6, x + 34]) {
+    b.ellipse(wx, base - 6, 6, 6, hex('#1a1a1e'));
+    b.ellipse(wx, base - 6, 3, 3, hex('#8a8e92'));
+    b.put(wx, base - 6, hex('#2a2a2e'));
+  }
+  b.rect(x + 8, base - 14, 24, 5, hex('#c8261c'));
+  b.rect(x + 8, base - 14, 24, 1, hex('#f06a5a'));
+  b.rect(x + 14, base - 18, 10, 4, hex('#c8261c'));
+  b.rect(x + 26, base - 17, 9, 3, hex('#1a1a1e'));
+  b.line(x + 34, base - 17, x + 36, base - 24, hex('#4a4a4e'));
+  b.rect(x + 33, base - 25, 6, 1, hex('#1a1a1e'));
+  b.rect(x + 2, base - 26, 14, 12, hex('#e8e4d8'));
+  b.rect(x + 2, base - 26, 14, 1, hex('#ffffff'));
+  b.rect(x + 2, base - 20, 14, 2, hex('#c8261c'));
+  contact(b, x + 20, base, 22, 2, 0.5);
+}
+
+function sceneCalcada(b, G, r, g) {
+  const { w, h, M, L, R, Y, S, floor } = g;
+  // o céu azul, o sol à esquerda, as nuvens e os fios
+  daySky(b, 0, 0, w, Y(44));
+  sun(G, L(128), Y(7), S(5));
+  cloud(b, r, M(176), Y(5), S(44), S(7));
+  cloud(b, r, R(370), Y(4), S(36), S(6));
+  // a casa vizinha à esquerda: a parede azul-piscina com a janela de grade e o vaso
+  for (let y = Y(16); y < floor; y += 1) for (let x = 0; x < M(96); x += 1) b.put(x, y, ramp(pal('#3a7aa8', '#4a8ebc', '#5aa2cc', '#72b6d8'), 0.55 + Math.sin(x * 0.11 + y * 0.07) * 0.08, x, y));
+  b.rect(0, Y(14), M(98), S(3), hex('#8a3a24'));
+  b.rect(0, Y(14), M(98), 1, hex('#c86a4a'));
+  b.rect(L(18), Y(30), S(28), S(24), hex('#2a3a44'));
+  b.rect(L(20), Y(32), S(24), S(20), hex('#6a9ab8'));
+  b.rect(L(20), Y(32), S(10), S(20), hex('#8ab8d4'));
+  for (let k = 0; k < 5; k += 1) b.rect(L(20) + k * S(5), Y(32), 1, S(20), hex('#1a1a1e'));
+  b.rect(L(20), Y(42), S(24), 1, hex('#1a1a1e'));
+  b.rect(L(16), Y(54), S(32), S(2), hex('#e8e4d8'));
+  b.ellipse(L(32), Y(52), S(6), S(4), hex('#2a7a3a'));
+  b.ellipse(L(29), Y(50), S(3), S(2), hex('#4aa85a'));
+  b.ellipse(L(36), Y(49), S(2), S(2), hex('#e84a6a'));
+  // o bar: a fachada amarela-mostarda com o reboco gasto e a barra vermelha embaixo
+  const fx0 = M(96);
+  const fx1 = R(410);
+  // o vizinho do lado: a parede caiada que aparece na beira da tela
+  for (let y = Y(14); y < floor; y += 1) for (let x = fx1; x < w; x += 1) b.put(x, y, ramp(pal('#8e9a8a', '#a8b4a2', '#bcc6b4', '#d0d8c6'), 0.5 + Math.sin(y * 0.4 + x * 0.1) * 0.05, x, y));
+  for (let y = Y(10); y < floor; y += 1) {
+    for (let x = fx0; x < fx1; x += 1) {
+      const n = Math.sin(x * 0.08 + Math.sin(y * 0.1) * 2) + Math.sin(y * 0.15 + x * 0.03) * 0.6;
+      b.put(x, y, ramp(pal('#c8862a', '#e0a03a', '#f0b84a', '#f8cc6a'), 0.5 + n * 0.08, x, y));
+    }
+  }
+  b.rect(fx0, Y(8), fx1 - fx0, S(3), hex('#8a4a1a'));
+  b.rect(fx0, Y(8), fx1 - fx0, 1, hex('#e8a060'));
+  b.rect(fx0, floor - Y(12), fx1 - fx0, Y(12), hex('#a82a1e'));
+  b.rect(fx0, floor - Y(12), fx1 - fx0, 1, hex('#e85a4a'));
+  for (let i = 0; i < Math.round((fx1 - fx0) / 9); i += 1) {
+    const x = fx0 + Math.floor(r() * (fx1 - fx0));
+    const len = 4 + Math.floor(r() * Y(16));
+    for (let k = 0; k < len; k += 1) b.put(x, Y(12) + k, hex('#8a5a20'), 0.18 * (1 - k / len));
+  }
+  // a porta de enrolar no meio, atrás do rival, e o toldo listrado por cima
+  rollDoor(b, G, r, M(150), Y(20), S(122), floor, S(10));
+  awning(b, M(144), Y(13), S(134), S(7));
+  // a sombra do toldo na fachada
+  b.rect(M(144), Y(13) + S(10), S(134), S(3), BLACK, 0.18);
+  // o letreiro pintado do bar, à direita, e o quadro de preços
+  paintedSign(b, M(286), Y(18), S(102), S(19), 'BAR DO CANTO', { sub: 'DESDE 1978' });
+  b.rect(M(300), Y(46), S(34), S(30), hex('#1e3a26'));
+  b.rect(M(300), Y(46), S(34), 1, hex('#8a6a3a'));
+  pixelText(b, 'HOJE', M(306), Y(49), hex('#f4e6b0'));
+  pixelText(b, 'TORRESMO', M(302), Y(56), hex('#ffffff'));
+  pixelText(b, 'PASTEL', M(302), Y(62), hex('#ffffff'));
+  pixelText(b, 'CALDO', M(302), Y(68), hex('#f8d050'));
+  fiadoSign(b, M(103), Y(38));
+  // o poste à direita, os fios e as bandeirinhas
+  streetPole(b, R(404), Y(6), floor, -1);
+  wire(b, 0, Y(6), R(405), Y(8), S(10));
+  wire(b, 0, Y(11), R(405), Y(12), S(8));
+  for (let k = 0; k < 18; k += 1) {
+    const t = (k + 0.5) / 18;
+    const x = Math.round(M(100) + (R(400) - M(100)) * t);
+    const y = Math.round(Y(4) + Math.sin(t * Math.PI) * S(3));
+    const c = ['#e8261c', '#f8c830', '#2a9a4a', '#2a6ad8', '#f86a2a'][k % 5];
+    for (let yy = 0; yy < 4; yy += 1) for (let xx = -2 + Math.floor(yy / 2); xx <= 2 - Math.floor(yy / 2); xx += 1) b.put(x + xx, y + yy, hex(c));
+  }
+  wire(b, M(100), Y(4), R(400), Y(4), S(3), '#4a4a4a');
+  // o chão: a calçada de pedra portuguesa e o meio-fio
+  calcadao(b, 0, floor, w, h, g);
+  b.rect(0, floor, w, S(2), hex('#8a867c'));
+  b.rect(0, floor, w, 1, hex('#d8d4c8'));
+  // a sombra do toldo no chão, rente à porta
+  b.light(M(140), floor, S(142), S(8), BLACK, (x, y) => 0.32 - (y - floor) * 0.03);
+  chairStack(b, L(30), Y(128), 5);
+  beerCrates(b, L(58), Y(126), 2);
+  plasticChair(b, R(362), Y(100));
+  motorbike(b, R(372), Y(130));
+}
+
+function lightsCalcada(g) {
+  const { L, M, Y, u } = g;
+  return {
+    ambient: [0.92, 0.9, 0.86],
+    lights: [
+      { x: L(128), y: Y(-20), r: 360 * u, c: [1, 0.96, 0.82], k: 0.3, sy: 0.6 },
+      { x: M(211), y: Y(60), r: 50 * u, c: [1, 0.86, 0.6], k: 0.2 },
+    ],
+  };
+}
+
+function finishCalcada(raw, g) {
+  const { L, Y, u } = g;
+  halo(raw, L(128), Y(7), 26 * u, hex('#fff4c8'), 0.45, 1);
+}
+
+// --- o quiosque da praia ------------------------------------------------------
+
+/** O coqueiro: o tronco curvo com os anéis e a copa das folhas caídas, verde de dia. */
+function palm(b, x, base, top, lean, scale = 1) {
+  const H = base - top;
+  for (let k = 0; k < H; k += 1) {
+    const t = k / H;
+    const px = Math.round(x + Math.sin(t * 1.4) * lean * t);
+    const py = base - k;
+    const wd = Math.max(2, Math.round((5 - t * 2) * scale));
+    b.rect(px - Math.floor(wd / 2), py, wd, 1, k % 4 === 0 ? hex('#6a4a2a') : hex('#9a7448'));
+    b.put(px - Math.floor(wd / 2), py, hex('#c8a070'));
+    b.put(px + Math.ceil(wd / 2) - 1, py, hex('#5a3a1e'));
+  }
+  const cx = Math.round(x + Math.sin(1.4) * lean);
+  for (let f = 0; f < 9; f += 1) {
+    const a = -Math.PI * 1.05 + (f / 8) * Math.PI * 1.1;
+    const len = (22 + (f % 3) * 5) * scale;
+    for (let s = 0; s < len; s += 1) {
+      const t = s / len;
+      const fx = cx + Math.cos(a) * s;
+      const fy = top + Math.sin(a) * s * 0.55 + t * t * len * 0.55;
+      b.put(fx, fy, hex('#2a5a1e'));
+      for (let l = 1; l < 5 * (1 - t) + 1; l += 1) {
+        b.put(fx - Math.sin(a) * l * 0.5, fy + l, hex(l < 2 ? '#6ab84a' : '#3a8a2e'));
+        b.put(fx + Math.sin(a) * l * 0.5, fy + l, hex('#2a6a22'));
+      }
+    }
+  }
+  b.ellipse(cx - 1, top + 2, 2.5, 2, hex('#6a8a2a'));
+  b.ellipse(cx + 2, top + 3, 2.5, 2, hex('#4a6a1a'));
+}
+
+/** O sapê: as palhas penduradas na beirada do teto do quiosque. */
+function thatch(b, r, x0, x1, y, depth) {
+  for (let x = x0; x < x1; x += 1) {
+    const len = depth + Math.floor(r() * 5) + (x % 3 === 0 ? 2 : 0);
+    for (let k = 0; k < len; k += 1) b.put(x, y + k, ramp(pal('#7a5a24', '#a8843a', '#c8a454', '#e8c87a'), 0.85 - (k / len) * 0.7 + (x % 2 ? -0.1 : 0), x, k));
+  }
+  for (let x = x0; x < x1; x += 1) b.put(x, y + 1, hex('#5a3a14'), 0.5);
+}
+
+/** As lampadinhas coloridas no fio (apagadas de dia, só o vidro colorido). */
+function bulbString(b, x0, x1, y, sag, step) {
+  wire(b, x0, y, x1, y, sag, '#2a2018');
+  const cols = ['#e84a3a', '#f0c030', '#3ab85a', '#3a8ae8', '#e87ab8'];
+  let k = 0;
+  for (let x = x0 + 4; x < x1 - 2; x += step) {
+    const t = (x - x0) / (x1 - x0);
+    const yy = Math.round(y + Math.sin(t * Math.PI) * sag);
+    b.put(x, yy + 1, hex('#2a2018'));
+    b.rect(x - 1, yy + 2, 3, 3, hex(cols[k % cols.length]));
+    b.put(x - 1, yy + 2, hex('#ffffff'));
+    k += 1;
+  }
+}
+
+/** O isopor azul e branco com a tampa e a alça de corda. */
+function cooler(b, x, base, w2) {
+  const hh = 16;
+  b.rect(x, base - hh, w2, hh, hex('#f4f8fc'));
+  b.rect(x, base - hh, w2, 4, hex('#2a6ab8'));
+  b.rect(x, base - hh, w2, 1, hex('#6aa8e8'));
+  b.rect(x + w2 - 1, base - hh, 1, hh, hex('#b8c4d0'));
+  pixelText(b, 'GELO', x + Math.round((w2 - textWidth('GELO')) / 2), base - hh + 7, hex('#2a6ab8'));
+  b.line(x + 4, base - hh - 3, x + w2 - 5, base - hh - 3, hex('#c8a46a'));
+  b.rect(x + 4, base - hh - 2, 1, 2, hex('#c8a46a'));
+  b.rect(x + w2 - 5, base - hh - 2, 1, 2, hex('#c8a46a'));
+  contact(b, x + w2 / 2, base, w2 * 0.7, 2, 0.45);
+}
+
+/** A prancha encostada no poste, com a faixa no meio. */
+function surfboard(b, x, base, top) {
+  for (let y = top; y < base; y += 1) {
+    const t = (y - top) / (base - top);
+    const half = Math.max(1, Math.round(Math.sin(Math.min(1, t * 1.2) * Math.PI * 0.5) * 5 * (1 - t * 0.25)));
+    for (let xx = -half; xx <= half; xx += 1) b.put(x + xx + Math.round(t * 3), y, Math.abs(xx) === half ? hex('#3a5a6a') : xx === 0 ? hex('#f05a2a') : hex('#fcf4dc'));
+  }
+  contact(b, x + 3, base, 8, 2, 0.4);
+}
+
+/** O guarda-sol de praia aberto, listrado, com a sombra na areia. */
+function parasol(b, x, base, top, rr) {
+  b.rect(x, top, 1, base - top, hex('#e8e4d8'));
+  for (let yy = 0; yy < rr * 0.55; yy += 1) {
+    const half = Math.round(rr * Math.sqrt(1 - (yy / (rr * 0.55)) ** 2) * (0.4 + (yy / (rr * 0.55)) * 0.6));
+    for (let xx = -half; xx <= half; xx += 1) {
+      const seg = Math.floor(((Math.atan2(yy + 1, xx) / Math.PI) * 8 + 8)) % 2;
+      b.put(x + xx, top + yy, hex(seg ? '#f4ece0' : '#e8462a'));
+    }
+  }
+  contact(b, x + 4, base, rr * 0.9, 3, 0.35);
+}
+
+/** Gaivota de longe: o V das asas. */
+function gull(b, x, y) {
+  b.put(x - 2, y - 1, hex('#3a3a44'));
+  b.put(x - 1, y, hex('#3a3a44'));
+  b.put(x, y, hex('#3a3a44'));
+  b.put(x + 1, y, hex('#3a3a44'));
+  b.put(x + 2, y - 1, hex('#3a3a44'));
+}
+
+function scenePraia(b, G, r, g) {
+  const { w, h, M, L, R, Y, S, floor } = g;
+  const horizon = Y(60);
+  daySky(b, 0, 0, w, horizon, pal('#2a6ac8', '#3a86dc', '#5aa4e8', '#82c0f0', '#b0dcf6', '#d8eefa'));
+  sun(G, M(268), Y(16), S(7));
+  cloud(b, r, M(150), Y(26), S(46), S(9));
+  cloud(b, r, L(70), Y(36), S(30), S(6));
+  cloud(b, r, M(300), Y(40), S(28), S(5));
+  for (const [gx, gy] of [
+    [M(250), Y(24)],
+    [M(262), Y(20)],
+    [M(118), Y(46)],
+  ])
+    gull(b, gx, gy);
+  // o mar: o azul-turquesa com as cristas brancas e o brilho do sol
+  for (let y = horizon; y < Y(80); y += 1) {
+    const t = (y - horizon) / (Y(80) - horizon);
+    for (let x = 0; x < w; x += 1) {
+      const crest = Math.sin(x * 0.12 + y * 1.7) > 0.9 - t * 0.1;
+      b.put(x, y, crest ? hex('#e8f8fc') : ramp(pal('#1a5a9a', '#1e72a8', '#2a8ab8', '#3aa8c8', '#5ac4d0'), t, x, y));
+    }
+  }
+  for (let y = horizon + 1; y < Y(78); y += 2) {
+    const half = S(4) + (y - horizon) * 0.4;
+    for (let x = Math.round(M(268) - half); x < M(268) + half; x += 2) if (Math.sin(x * 0.9 + y) > 0.3) G.put(x, y, hex('#fffbe8'), 0.8);
+  }
+  b.rect(0, horizon, w, 1, hex('#1a4a80'));
+  // a espuma na beira e a areia clara até o deque
+  for (let y = Math.floor(Y(80)); y < floor; y += 1) for (let x = 0; x < w; x += 1) b.put(x, y, ramp(pal('#c8a874', '#dcbe8a', '#ecd2a2', '#f6e2ba'), 0.55 + Math.sin(x * 0.05 + y * 0.3) * 0.08 - (Math.max(0, y - Y(81)) / (floor - Y(81))) * 0.2, x, y));
+  for (let x = 0; x < w; x += 1) b.put(x, Y(80) + Math.round(Math.sin(x * 0.2) * 1.2), hex('#ffffff'));
+  parasol(b, M(110), Y(88), Y(66), S(14));
+  // os coqueiros, um de cada lado
+  palm(b, L(92), Y(86), Y(20), -14, 1.35);
+  palm(b, R(332), Y(86), Y(26), 16, 1.2);
+  // o quiosque: os postes de eucalipto e o teto de sapê
+  for (const px of [L(22), M(102), M(320), R(402)]) {
+    b.rect(px, Y(10), S(5), floor - Y(10), hex('#8a5e34'));
+    b.rect(px, Y(10), 1, floor - Y(10), hex('#c8945a'));
+    b.rect(px + S(5) - 1, Y(10), 1, floor - Y(10), hex('#4a2e14'));
+    for (let y = Y(20); y < floor; y += S(16)) b.rect(px, y, S(5), 1, hex('#5a3a1a'));
+  }
+  b.rect(0, Y(8), w, S(4), hex('#6a4220'));
+  b.rect(0, Y(8), w, 1, hex('#b07a40'));
+  thatch(b, r, 0, w, 0, S(9));
+  bulbString(b, L(24), M(104), Y(13), S(5), S(8));
+  bulbString(b, M(322), R(404), Y(13), S(5), S(8));
+  paintedSign(b, M(326), Y(26), S(70), S(18), 'QUIOSQUE', { bg: '#2a6ab8', fg: '#fff8e0', edge: '#0e2a4a', sub: 'AGUA DE COCO', subFg: '#ffe08a' });
+  b.line(M(332), Y(14), M(332), Y(26), hex('#c8a46a'));
+  b.line(M(390), Y(14), M(390), Y(26), hex('#c8a46a'));
+  // o deque de madeira clara: as tábuas de frente, com as emendas desencontradas
+  {
+    let y = floor;
+    let row = 0;
+    while (y < h) {
+      const t = (y - floor) / (h - floor);
+      const bh = Math.max(3, Math.round((4 + t * 9) * g.u));
+      const off = (row * 37) % 53;
+      for (let yy = y; yy < Math.min(h, y + bh); yy += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const joint = (x + off) % Math.round(70 * g.u) === 0;
+          const k = yy - y;
+          const c = k === 0 ? hex('#5a3a1e') : k === 1 ? hex('#e8c494') : joint ? hex('#6a4626') : ramp(pal('#8a6238', '#a87c4c', '#c49a64', '#dcb47e'), 0.62 - t * 0.15 + Math.sin(x * 0.07 + row * 2.3) * 0.08, x, yy);
+          b.put(x, yy, c);
+        }
+      }
+      y += bh;
+      row += 1;
+    }
+  }
+  b.rect(0, floor, w, S(2), hex('#5a3a1e'));
+  cooler(b, L(28), Y(124), S(26));
+  surfboard(b, L(62), Y(126), Y(70));
+  for (let k = 0; k < 5; k += 1) {
+    const cx = R(370) + (k % 3) * S(6);
+    const cy = Y(124) - Math.floor(k / 3) * S(5);
+    b.ellipse(cx, cy, S(3), S(3), hex(k % 2 ? '#5aa83a' : '#4a9a2e'));
+    b.put(cx - 1, cy - 1, hex('#9ad86a'));
+  }
+  plasticChair(b, R(388), Y(96));
+}
+
+function lightsPraia(g) {
+  const { M, Y, u } = g;
+  return {
+    ambient: [0.94, 0.93, 0.9],
+    lights: [{ x: M(268), y: Y(16), r: 320 * u, c: [1, 0.95, 0.8], k: 0.3, sy: 0.6 }],
+  };
+}
+
+function finishPraia(raw, g) {
+  const { M, Y, u } = g;
+  halo(raw, M(268), Y(16), 34 * u, hex('#fff4c8'), 0.5, 1);
+}
+
+// --- a praça do coreto --------------------------------------------------------
+
+/** A copa da árvore: bolotas de folha em três tons, a de cima pegando o sol. */
+function canopy(b, r, cx, cy, rx, ry, n) {
+  for (let i = 0; i < n; i += 1) {
+    const a = r() * Math.PI * 2;
+    const d = Math.sqrt(r());
+    const x = cx + Math.cos(a) * rx * d;
+    const y = cy + Math.sin(a) * ry * d;
+    const rr = 4 + r() * 6;
+    b.ellipse(x, y, rr, rr * 0.8, hex('#1e5a26'));
+    b.ellipse(x - 1, y - 1, rr * 0.8, rr * 0.6, hex('#2e7a32'));
+    b.ellipse(x - 2, y - 2, rr * 0.45, rr * 0.35, hex('#5aa84a'));
+    if (r() < 0.3) b.ellipse(x - 2, y - 3, rr * 0.2, rr * 0.15, hex('#9ad86a'));
+  }
+}
+
+/** A igreja colonial: a fachada branca com as molduras amarelas, a porta azul e o relógio. */
+function church(b, x, base, wd) {
+  const top = base - 46;
+  const W = hex('#f4f0e4');
+  const Ysh = hex('#e8b830');
+  const Bl = hex('#2a5aa8');
+  b.rect(x - wd / 2, top, wd, base - top, W);
+  b.rect(x - wd / 2, top, 2, base - top, Ysh);
+  b.rect(x + wd / 2 - 2, top, 2, base - top, Ysh);
+  b.rect(x - wd / 2, top, wd, 2, Ysh);
+  // o frontão curvo
+  for (let k = 0; k < 10; k += 1) {
+    const half = Math.round((wd / 2 - 4) * Math.sqrt(1 - (k / 10) ** 2));
+    b.rect(x - half, top - 1 - k, half * 2, 1, W);
+    b.put(x - half, top - 1 - k, Ysh);
+    b.put(x + half - 1, top - 1 - k, Ysh);
+  }
+  b.rect(x - 1, top - 16, 2, 6, hex('#3a3a3a'));
+  b.rect(x - 3, top - 14, 6, 1, hex('#3a3a3a'));
+  // o relógio no frontão e a porta azul em arco
+  b.ellipse(x, top - 2, 4, 4, hex('#ffffff'));
+  b.ellipse(x, top - 2, 4.6, 4.6, Ysh, 0.5);
+  b.line(x, top - 2, x, top - 5, hex('#2a2a2a'));
+  b.line(x, top - 2, x + 2, top - 2, hex('#2a2a2a'));
+  b.rect(x - 6, base - 18, 12, 18, Bl);
+  b.ellipse(x, base - 18, 6, 4, Bl);
+  b.rect(x, base - 20, 1, 20, hex('#1a3a78'));
+  for (const wx of [x - wd / 2 + 8, x + wd / 2 - 14]) {
+    b.rect(wx, base - 30, 6, 10, Bl);
+    b.ellipse(wx + 3, base - 30, 3, 2, Bl);
+    b.rect(wx - 1, base - 20, 8, 1, Ysh);
+  }
+  b.rect(x - wd / 2 - 2, base - 2, wd + 4, 2, hex('#c8c0b0'));
+}
+
+/** O coreto: o telhado em pagode, as colunas brancas, o guarda-corpo. */
+function coreto(b, x, base, wd) {
+  const top = base - 40;
+  for (let k = 0; k < 12; k += 1) {
+    const half = Math.round(wd / 2 - k * (wd / 26));
+    b.rect(x - half, top + k, half * 2, 1, k < 2 ? hex('#a84a2a') : hex(k % 3 === 0 ? '#7a2e1a' : '#c85a34'));
+  }
+  b.rect(x - 1, top - 6, 2, 6, hex('#4a4a4a'));
+  b.rect(x - wd / 2 - 2, top + 12, wd + 4, 2, hex('#ffffff'));
+  for (let xx = -wd / 2; xx < wd / 2; xx += 4) b.ellipse(x + xx + 2, top + 15, 2, 2, hex('#f4f0e4'));
+  for (let k = 0; k <= 4; k += 1) {
+    const cx = Math.round(x - wd / 2 + 2 + k * ((wd - 4) / 4));
+    b.rect(cx, top + 14, 2, base - top - 14, hex('#f4f0e4'));
+    b.put(cx + 1, top + 14, hex('#b8b0a0'));
+  }
+  b.rect(x - wd / 2, base - 10, wd, 2, hex('#f4f0e4'));
+  for (let xx = -wd / 2 + 2; xx < wd / 2; xx += 3) b.rect(x + xx, base - 8, 1, 6, hex('#d8d0c0'));
+  b.rect(x - wd / 2 - 3, base - 2, wd + 6, 3, hex('#b8b0a0'));
+}
+
+/** O poste colonial (apagado de dia): a coluna verde-escura e a lanterna de vidro. */
+function colonialLamp(b, x, top, base) {
+  b.rect(x - 1, top + 10, 3, base - top - 10, hex('#1e3a26'));
+  b.rect(x - 3, base - 6, 7, 6, hex('#1e3a26'));
+  b.rect(x - 4, top, 9, 2, hex('#1e3a26'));
+  b.rect(x - 3, top + 2, 7, 7, hex('#c8d8d8'));
+  b.rect(x - 2, top + 3, 2, 5, hex('#f4fcfc'));
+  b.rect(x - 4, top + 9, 9, 2, hex('#1e3a26'));
+  b.rect(x, top - 3, 1, 3, hex('#1e3a26'));
+}
+
+/** O banco de praça: as ripas de madeira verde e os pés de ferro fundido. */
+function parkBench(b, x, base, wd) {
+  for (let k = 0; k < 3; k += 1) b.rect(x, base - 20 + k * 3, wd, 2, hex(k === 0 ? '#4aa85a' : '#2e8a42'));
+  for (let k = 0; k < 2; k += 1) b.rect(x, base - 10 + k * 3, wd, 2, hex('#2e8a42'));
+  b.rect(x, base - 20, wd, 1, hex('#8ad88a'));
+  for (const lx of [x + 2, x + wd - 5]) {
+    b.rect(lx, base - 21, 3, 21, hex('#1a1a1e'));
+    b.put(lx + 1, base - 15, hex('#4a4a54'));
+  }
+  contact(b, x + wd / 2, base, wd * 0.6, 2, 0.45);
+}
+
+/** O carrinho de pipoca: a vitrine, o toldo listrado e as rodas. */
+function popcornCart(b, x, base) {
+  const wd = 30;
+  b.rect(x - 2, base - 52, wd + 4, 6, hex('#e8261c'));
+  for (let k = 0; k < wd + 4; k += 6) b.rect(x - 2 + k, base - 52, 3, 6, hex('#fcf8ec'));
+  b.rect(x, base - 46, 1, 8, hex('#c8c8c8'));
+  b.rect(x + wd - 1, base - 46, 1, 8, hex('#c8c8c8'));
+  b.rect(x, base - 38, wd, 16, hex('#fff4c8'));
+  for (let k = 0; k < 40; k += 1) b.put(x + 2 + ((k * 7) % (wd - 4)), base - 30 + ((k * 3) % 7), hex('#ffffff'));
+  b.rect(x, base - 38, 3, 16, hex('#ffffff'), 0.6);
+  b.rect(x, base - 22, wd, 14, hex('#e8261c'));
+  pixelText(b, 'PIPOCA', x + Math.round((wd - textWidth('PIPOCA')) / 2), base - 18, hex('#fffbe8'));
+  b.ellipse(x + 6, base - 4, 4, 4, hex('#1a1a1e'));
+  b.ellipse(x + wd - 6, base - 4, 4, 4, hex('#1a1a1e'));
+  b.ellipse(x + 6, base - 4, 1.5, 1.5, hex('#a8a8a8'));
+  b.ellipse(x + wd - 6, base - 4, 1.5, 1.5, hex('#a8a8a8'));
+  contact(b, x + wd / 2, base, wd * 0.7, 2, 0.45);
+}
+
+/** O pombo ciscando no chão. */
+function pigeon(b, x, y, dir = 1) {
+  b.ellipse(x, y, 3, 2, hex('#8a8e9a'));
+  b.ellipse(x + dir * 3, y - 2, 1.6, 1.6, hex('#9a9eaa'));
+  b.put(x + dir * 3, y - 1, hex('#5aa88a'));
+  b.put(x + dir * 4, y - 2, hex('#e8a040'));
+  b.put(x + dir * 3, y - 3, hex('#1a1a1e'));
+  b.put(x - dir * 3, y - 1, hex('#5a5e6a'));
+  b.put(x, y + 2, hex('#d87a5a'));
+}
+
+function scenePraca(b, G, r, g) {
+  const { w, h, M, L, R, Y, S, floor } = g;
+  daySky(b, 0, 0, w, Y(84));
+  sun(G, M(290), Y(10), S(6));
+  cloud(b, r, M(150), Y(14), S(40), S(7));
+  cloud(b, r, M(260), Y(30), S(30), S(5));
+  // a igreja lá no fundo, atrás do rival (o frontão com o relógio por cima da cabeça dele)
+  church(b, M(211), Y(86), S(86));
+  // o coreto à esquerda e as árvores emoldurando
+  coreto(b, M(116), Y(88), S(56));
+  for (const tx of [L(40), R(380)]) {
+    b.rect(tx, Y(30), S(7), floor - Y(30), hex('#6a4a2e'));
+    b.rect(tx, Y(30), 1, floor - Y(30), hex('#9a7448'));
+    b.rect(tx + S(7) - 1, Y(30), 1, floor - Y(30), hex('#3a2614'));
+  }
+  canopy(b, r, L(30), Y(12), S(64), S(28), 54);
+  canopy(b, r, R(392), Y(16), S(64), S(30), 54);
+  colonialLamp(b, M(70), Y(40), floor);
+  colonialLamp(b, M(352), Y(40), floor);
+  // o gramado, a sombra das árvores nele e o chão de pedra portuguesa da praça
+  for (let y = Y(84); y < floor; y += 1) for (let x = 0; x < w; x += 1) b.put(x, y, ramp(pal('#3a8a3a', '#4aa04a', '#62b85a', '#7acc6a'), 0.5 + Math.sin(x * 0.7 + y * 1.3) * 0.15, x, y));
+  calcadao(b, 0, floor, w, h, g);
+  b.rect(0, floor, w, S(2), hex('#a8a296'));
+  b.rect(0, floor, w, 1, hex('#e8e4d8'));
+  // a sombra rendada das copas no chão, nos cantos
+  for (const [cx, cy] of [
+    [L(40), floor + S(16)],
+    [R(380), floor + S(18)],
+  ]) {
+    b.light(cx - S(70), cy - S(14), S(140), S(30), BLACK, (x, y) => {
+      const d = Math.hypot((x - cx) / (70 * g.u), (y - cy) / (14 * g.u));
+      const leaf = Math.sin(x * 0.6) * Math.sin(y * 0.9 + x * 0.2) > -0.2;
+      return d < 1 && leaf ? 0.26 * (1 - d * 0.5) : 0;
+    });
+  }
+  parkBench(b, L(20), Y(124), S(48));
+  popcornCart(b, R(354), Y(128));
+  pigeon(b, L(84), Y(132), 1);
+  pigeon(b, L(96), Y(136), -1);
+  pigeon(b, R(338), Y(134), 1);
+}
+
+function lightsPraca(g) {
+  const { M, Y, u } = g;
+  return {
+    ambient: [0.93, 0.92, 0.88],
+    lights: [{ x: M(290), y: Y(10), r: 320 * u, c: [1, 0.95, 0.8], k: 0.3, sy: 0.6 }],
+  };
+}
+
+function finishPraca(raw, g) {
+  const { M, Y, u } = g;
+  halo(raw, M(290), Y(10), 30 * u, hex('#fff4c8'), 0.45, 1);
+}
+
+// ---------------------------------------------------------------------------
 // As salas
 // ---------------------------------------------------------------------------
 
 const ROOMS = {
+  // versão 2.30: os cenários de dia
+  landcalcada: { paint: sceneCalcada, lights: lightsCalcada, finish: finishCalcada, bands: 8, haze: null },
+  landpraia: { paint: scenePraia, lights: lightsPraia, finish: finishPraia, bands: 8, haze: null },
+  landpraca: { paint: scenePraca, lights: lightsPraca, finish: finishPraca, bands: 8, haze: null },
   landroom: { paint: sceneBoteco, lights: lightsBoteco, finish: finishBoteco, bands: 8, haze: ['#b8b098', 0.1] },
   landsinuca: { paint: sceneSinuca, lights: lightsSinuca, finish: finishSinuca, bands: 8, haze: ['#9a7ab8', 0.22] },
   landbicho: { paint: sceneBicho, lights: lightsBicho, finish: finishBicho, bands: 8, haze: ['#a88878', 0.12] },
@@ -1769,10 +2419,27 @@ export function roomFx(name, w, h, { candles = false } = {}) {
   const g = geometry(w, h);
   const { M, L, R, Y, S, u, cx } = g;
   const lights = [];
-  if (!candles) lights.push({ x: cx, y: Y(16), r: 150 * u, c: [1, 0.82, 0.56], k: 0.5, kind: 4 });
+  // versão 2.30: de dia não tem a lâmpada (nem o facho com poeira dela)
+  const day = DAY_ROOMS.includes(name);
+  if (day) {
+    // sem lâmpada e sem velas
+  } else if (!candles) lights.push({ x: cx, y: Y(16), r: 150 * u, c: [1, 0.82, 0.56], k: 0.5, kind: 4 });
   else
     for (const c of landCandleSpots(w * 2, h * 2)) lights.push({ x: c.x / 2, y: (c.y - CANDLE_FLAME * c.s) / 2, r: 90 * u, c: [1, 0.6, 0.26], k: 0.75, kind: 2 });
   const fx = { lights, haze: null, hazeBand: null, moon: null, stripe: null };
+  // versão 2.30: os cenários de dia (o sol, o brilho na água, a luz pela copa das árvores)
+  if (name === 'landcalcada') fx.sun = { x: L(128), y: Y(7), r: S(5), a: 0.8 };
+  if (name === 'landpraia') {
+    fx.sun = { x: M(268), y: Y(16), r: S(7), a: 0.9 };
+    fx.glint = { y0: Y(60), y1: Y(80), x: M(268), a: 0.9 };
+    // as faíscas ficam na água: nem no tampo da mesa nem em cima do rival sentado
+    const c = landCorners(w * 2, h * 2);
+    fx.glintMask = { x0: c.farL / 2 - S(2), x1: c.farR / 2 + S(2), y: c.yFar / 2 - S(2), half: w * 0.1 };
+  }
+  if (name === 'landpraca') {
+    fx.sun = { x: M(290), y: Y(10), r: S(6), a: 0.8 };
+    fx.dapple = { y0: Y(84), y1: Y(110), a: 0.16 };
+  }
   if (name === 'landsinuca') {
     const ns = g.k * 3;
     const nw = textWidth('SINUCA') * ns;
@@ -1799,7 +2466,7 @@ export function roomFx(name, w, h, { candles = false } = {}) {
     fx.moon = { x: cx, y: Y(30), r: S(17), a: 0.32 };
     fx.haze = { c: [0.45, 0.38, 0.75], a: 0.9 };
     fx.hazeBand = [g.floor - 14 * u, h];
-  } else {
+  } else if (!day) {
     lights.push({ x: M(336), y: Y(22), r: 60 * u, c: [1, 0.82, 0.5], k: 0.7, kind: 3 }, { x: M(283), y: Y(12), r: 46 * u, c: [1, 0.86, 0.45], k: 0.45, kind: 0 });
     fx.haze = { c: [0.7, 0.66, 0.58], a: 0.45 };
   }

@@ -1,7 +1,7 @@
 import { ONLINE_TILE_NAMES } from '../engine/progress.js';
 import { useState } from 'react';
 import RivalAvatar from '../components/RivalAvatar.jsx';
-import { TABLE_MAPS, mapOf, mapUnlocked } from '../data/tableMaps.js';
+import { mapOf, stepMap } from '../data/tableMaps.js';
 import { loadCollection } from '../engine/progress.js';
 import { TentoCap } from '../components/TentoCap.jsx';
 import { useFitScale } from '../components/useFitScale.js';
@@ -331,15 +331,17 @@ export function TableRules({ config, onChange = null, minSeats = 2, turn = true 
           SALA
           <span className="lobby-song">♪ {sala.song}</span>
         </span>
-        <span className="lobby-chips">
-          {TABLE_MAPS.map((m) => {
-            const locked = !ro && !mapUnlocked(m, collection);
-            return (
-              <LobbyChip key={m.id} on={sala.id === m.id} disabled={ro || locked} onClick={() => set('map', m.id)} label={locked ? 'Sala secreta' : `${m.name}: ${m.song}`}>
-                {locked ? '???' : m.label}
-              </LobbyChip>
-            );
-          })}
+        {/* versão 2.30: são sete salas com os cenários de dia: ◀ SALA ▶ (pula a que não abriu) */}
+        <span className="lobby-chips lobby-step">
+          <LobbyChip on={false} disabled={ro} onClick={() => set('map', stepMap(sala.id, -1, collection))} label="Sala anterior">
+            ◀
+          </LobbyChip>
+          <LobbyChip on disabled={ro} onClick={() => set('map', stepMap(sala.id, 1, collection))} label={`${sala.name}: ${sala.song}`}>
+            {sala.label}
+          </LobbyChip>
+          <LobbyChip on={false} disabled={ro} onClick={() => set('map', stepMap(sala.id, 1, collection))} label="Próxima sala">
+            ▶
+          </LobbyChip>
         </span>
       </div>
       {turn && (

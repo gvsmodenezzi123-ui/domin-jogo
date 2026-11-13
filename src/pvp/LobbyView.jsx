@@ -2,7 +2,7 @@ import { useState } from 'react';
 import LampRig from '../components/LampRig.jsx';
 import { PRIVACY_URL } from '../data/privacy.js';
 import { DEFAULT_ROOM, RARITY_LABEL, ROOM_MAPS, ROOM_OPTIONS, describeRoom, sanitizeRoom } from '../data/pvpRoom.js';
-import { mapOf, mapUnlocked } from '../data/tableMaps.js';
+import { mapOf, mapUnlocked, stepMap } from '../data/tableMaps.js';
 import { loadCollection } from '../engine/progress.js';
 import NetBadge from './NetBadge.jsx';
 import { webrtcAvailable } from './peerLoader.js';
@@ -58,6 +58,19 @@ const SETUP_ROWS = [
 const lockedMap = (key, v, collection) => key === 'map' && !mapUnlocked(mapOf(v), collection);
 
 /**
+ * Os botões de uma linha da configuração. Versão 2.30: a sala vira ◀ SALA ▶ (com os cenários de
+ * dia são sete e não cabem lado a lado); as setas pulam a sala que ainda não abriu.
+ */
+function choicesOf(row, value, collection) {
+  if (row.key !== 'map') return row.options.map((v) => ({ key: v, v, text: lockedMap(row.key, v, collection) ? '???' : row.show(v), radio: true, locked: lockedMap(row.key, v, collection) }));
+  return [
+    { key: 'prev', v: stepMap(value, -1, collection), text: '◀', aria: 'Sala anterior' },
+    { key: 'cur', v: value, text: row.show(value), radio: true, wide: true },
+    { key: 'next', v: stepMap(value, 1, collection), text: '▶', aria: 'Próxima sala' },
+  ];
+}
+
+/**
  * Versão 1.3: a configuração da mesa, antes de abrir (só quem cria escolhe; vale para os dois).
  */
 function RoomSetup({ room, onChange, onOpen, onBack, nameOk }) {
@@ -72,17 +85,18 @@ function RoomSetup({ room, onChange, onOpen, onBack, nameOk }) {
             {row.song && <span className="ol-song"> ♪ {row.song(room[row.key])}</span>}
           </span>
           <div className="pvp-seg" role="radiogroup" aria-label={row.label}>
-            {row.options.map((v) => (
+            {choicesOf(row, room[row.key], collection).map((c) => (
               <button
-                key={v}
+                key={c.key}
                 type="button"
-                role="radio"
-                aria-checked={room[row.key] === v}
-                disabled={lockedMap(row.key, v, collection)}
-                className={`pvp-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
-                onClick={() => onChange({ ...room, [row.key]: v })}
+                role={c.radio ? 'radio' : undefined}
+                aria-checked={c.radio ? room[row.key] === c.v : undefined}
+                aria-label={c.aria}
+                disabled={c.locked}
+                className={`pvp-seg-btn ${c.radio && room[row.key] === c.v ? 'is-on' : ''} ${c.wide ? 'is-wide' : ''}`}
+                onClick={() => onChange({ ...room, [row.key]: c.v })}
               >
-                {lockedMap(row.key, v, collection) ? '???' : row.show(v)}
+                {c.text}
               </button>
             ))}
           </div>
@@ -309,20 +323,21 @@ export default function LobbyView({
                       {row.song && <span className="ol-song"> ♪ {row.song(room[row.key])}</span>}
                     </span>
                     <div className="ol-seg" role="radiogroup" aria-label={row.label}>
-                      {row.options.map((v) => (
+                      {choicesOf(row, room[row.key], collection).map((c) => (
                         <button
-                          key={v}
+                          key={c.key}
                           type="button"
-                          role="radio"
-                          aria-checked={room[row.key] === v}
-                          disabled={lockedMap(row.key, v, collection)}
-                          className={`ol-seg-btn ${room[row.key] === v ? 'is-on' : ''}`}
+                          role={c.radio ? 'radio' : undefined}
+                          aria-checked={c.radio ? room[row.key] === c.v : undefined}
+                          aria-label={c.aria}
+                          disabled={c.locked}
+                          className={`ol-seg-btn ${c.radio && room[row.key] === c.v ? 'is-on' : ''} ${c.wide ? 'is-wide' : ''}`}
                           onClick={() => {
                             onTap?.();
-                            setRoom({ ...room, [row.key]: v });
+                            setRoom({ ...room, [row.key]: c.v });
                           }}
                         >
-                          {lockedMap(row.key, v, collection) ? '???' : row.show(v)}
+                          {c.text}
                         </button>
                       ))}
                     </div>

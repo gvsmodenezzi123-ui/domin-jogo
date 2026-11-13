@@ -103,6 +103,10 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
         hazeBand: room.hazeBand,
         moon: room.moon,
         stripe: room.stripe,
+        sun: room.sun,
+        glint: room.glint,
+        glintMask: room.glintMask,
+        dapple: room.dapple,
       });
     };
 

@@ -56,6 +56,10 @@ uniform vec4 u_haze;
 uniform vec2 u_hazeBand;
 uniform vec4 u_moon;
 uniform vec4 u_stripe;
+uniform vec4 u_sun;
+uniform vec4 u_glint;
+uniform vec4 u_gmask;
+uniform vec4 u_dapple;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -194,6 +198,51 @@ void main() {
     col += vec3(0.7, 0.75, 1.0) * exp(-max(0.0, r - u_moon.z) / (10.0 * u)) * u_moon.a * 0.35;
   }
 
+  // --- versão 2.30, os cenários de dia: o sol (o clarão, os raios girando devagar e os
+  // reflexos da lente em fila até o outro lado da tela)
+  if (u_sun.a > 0.0) {
+    vec2 d = p - u_sun.xy;
+    float r = length(d);
+    float ang = atan(d.x, d.y);
+    float rays = pow(max(0.0, sin(ang * 7.0 + t * 0.1 * u_motion) * 0.5 + 0.5), 5.0) * (0.55 + 0.45 * noise(vec2(ang * 5.0, t * 0.25 * u_motion)));
+    float fall = smoothstep(u_sun.z * 0.9, u_sun.z * 2.2, r) * exp(-r / (120.0 * u));
+    col += vec3(1.0, 0.93, 0.72) * rays * fall * u_sun.a * 0.42;
+    col += vec3(1.0, 0.96, 0.82) * exp(-max(0.0, r - u_sun.z) / (12.0 * u)) * u_sun.a * 0.55;
+    vec2 axis = u_res * vec2(0.5, 0.62) - u_sun.xy;
+    for (int k = 0; k < 4; k++) {
+      float fk = float(k);
+      vec2 gp = u_sun.xy + axis * (0.55 + fk * 0.42);
+      float gr = (3.0 + fk * 2.6) * u;
+      float ring = exp(-abs(length(p - gp) - gr) / (0.9 * u)) * 0.6 + exp(-length(p - gp) / gr) * 0.4;
+      vec3 gc = k == 0 ? vec3(1.0, 0.8, 0.45) : k == 1 ? vec3(0.45, 1.0, 0.85) : k == 2 ? vec3(0.75, 0.6, 1.0) : vec3(1.0, 0.7, 0.5);
+      col += gc * ring * u_sun.a * 0.07;
+    }
+  }
+
+  // --- o brilho do sol na água: as faíscas piscando, mais juntas na coluna embaixo do sol,
+  // e a faixa que ondula
+  if (u_glint.a > 0.0 && p.y > u_glint.x && p.y < u_glint.y) {
+    // fora do tampo da mesa (x0, x1, y) e da faixa do rival no meio (w)
+    float hide = max(step(u_gmask.x, p.x) * step(p.x, u_gmask.y) * step(u_gmask.z, p.y), step(abs(p.x - u_res.x * 0.5), u_gmask.w));
+    float band = (p.y - u_glint.x) / max(1.0, u_glint.y - u_glint.x);
+    vec2 cell = floor(vec2(p.x / (3.0 * u), p.y / (1.4 * u)));
+    float h = hash(cell);
+    float column = exp(-abs(p.x - u_glint.z) / ((24.0 + band * 60.0) * u));
+    float tw = pow(max(0.0, sin(t * 3.2 * u_motion + h * 40.0)), 10.0) * step(0.72 - column * 0.3, h);
+    float wave = 0.5 + 0.5 * sin(p.x * 0.18 / u + t * 1.3 * u_motion + p.y * 0.8 / u);
+    col += vec3(1.0, 0.98, 0.88) * tw * (0.3 + column * 1.3) * u_glint.a * (1.0 - hide);
+    col += vec3(1.0, 0.95, 0.8) * column * wave * 0.14 * u_glint.a * (1.0 - hide);
+  }
+
+  // --- a luz que passa pela copa das árvores, balançando devagar no chão e na mesa
+  if (u_dapple.a > 0.0) {
+    vec2 q = p / (13.0 * u) + vec2(sin(t * 0.35), cos(t * 0.28)) * 0.35 * u_motion;
+    float n = noise(q) * 0.6 + noise(q * 2.2 + 3.1) * 0.4;
+    float spot = smoothstep(0.6, 0.7, n);
+    float zone = smoothstep(u_dapple.x, u_dapple.y, p.y) * (0.6 + 0.4 * smoothstep(u_res.x * 0.5, 0.0, abs(p.x - u_res.x * 0.5) - u_res.x * 0.1));
+    col += vec3(1.0, 0.95, 0.76) * spot * zone * u_dapple.a;
+  }
+
   // --- a luz vermelha da rua pela persiana (o letreiro lá fora pisca)
   if (u_stripe.a > 0.0 && p.x > u_stripe.x && p.x < u_stripe.z) {
     float yy = p.y - (p.x - u_stripe.x) * 0.42;
@@ -327,7 +376,8 @@ function compile(gl, type, src) {
 
 /**
  * Liga o shader no `canvas`. Devolve { draw(frame), dispose() } ou null (sem WebGL).
- * frame: { w, h, time, unit, motion, lights, tiles: [{ q: [8 números: os 4 cantos], kind }], bursts, haze, hazeBand, moon, stripe }
+ * frame: { w, h, time, unit, motion, lights, tiles: [{ q: [8 números: os 4 cantos], kind }], bursts, haze, hazeBand, moon, stripe,
+ *   sun, glint, dapple } (os três últimos: os cenários de dia, versão 2.30)
  */
 export function createFx(canvas) {
   const gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'low-power' });
@@ -369,6 +419,10 @@ export function createFx(canvas) {
     hazeBand: loc('u_hazeBand'),
     moon: loc('u_moon'),
     stripe: loc('u_stripe'),
+    sun: loc('u_sun'),
+    glint: loc('u_glint'),
+    gmask: loc('u_gmask'),
+    dapple: loc('u_dapple'),
   };
   const lightBuf = new Float32Array(MAX_LIGHTS * 4);
   const lcolBuf = new Float32Array(MAX_LIGHTS * 4);
@@ -427,6 +481,14 @@ export function createFx(canvas) {
       gl.uniform4f(U.moon, m.x, m.y, m.r, m.a);
       const s = f.stripe ?? { x0: 0, y0: 0, x1: 0, a: 0 };
       gl.uniform4f(U.stripe, s.x0, s.y0, s.x1, s.a);
+      const sn = f.sun ?? { x: 0, y: 0, r: 0, a: 0 };
+      gl.uniform4f(U.sun, sn.x, sn.y, sn.r, sn.a);
+      const gl2 = f.glint ?? { y0: 0, y1: 0, x: 0, a: 0 };
+      gl.uniform4f(U.glint, gl2.y0, gl2.y1, gl2.x, gl2.a);
+      const gm = f.glintMask ?? { x0: 0, x1: -1, y: 0, half: 0 };
+      gl.uniform4f(U.gmask, gm.x0, gm.x1, gm.y, gm.half);
+      const dp = f.dapple ?? { y0: 0, y1: 0, a: 0 };
+      gl.uniform4f(U.dapple, dp.y0, dp.y1, 0, dp.a);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     lost: () => gl.isContextLost(),

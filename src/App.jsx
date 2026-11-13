@@ -49,6 +49,7 @@ import { getEnhancement } from './data/enhancedTiles.js';
 import { getRelic } from './data/relics.js';
 import { SECRET_BOSS, TUTOR, getRival, rivalFor, rivalOf } from './data/rivals.js';
 import { LAND_ROOMS } from './components/art/landRooms.js';
+import { sceneOfRival } from './data/scenes.js';
 import { TUTORIAL_STEPS } from './data/tutorial.js';
 import { modeOf } from './data/difficulty.js';
 import {
@@ -427,7 +428,9 @@ function musicFor(state) {
   if (state.phase === 'coinEvent') return REGIONS[regionIdOf(state) - 1].music;
   if (state.phase === 'encounter') return MARKET_MUSIC;
   const rival = getRival(state.rivalId);
-  return rival.boss ? bossMusicOf(rival.id) : (REGIONS[rival.region - 1]?.music ?? REGIONS[0].music);
+  if (rival.boss) return bossMusicOf(rival.id);
+  // versão 2.30: quem joga de dia toca a trilha do cenário dele
+  return sceneOfRival(rival.id)?.music ?? REGIONS[rival.region - 1]?.music ?? REGIONS[0].music;
 }
 
 /** Último disparo de cada talismã na partida atual, por dono: o slot pisca quando muda. */
@@ -579,7 +582,9 @@ export default function App() {
   // o livro é gravado direto no storage durante a run; a tela do menu lê quando você volta
   const bookRef = useRef(collection);
   // o rival no modo da run (as Peças Pretas mudam corações, baralho e talismãs dele)
-  const rival = rivalOf(state);
+  // versão 2.30: quem joga de dia (data/scenes.js) troca a sala, a mesa e a luz
+  const scene = sceneOfRival(state.rivalId);
+  const rival = scene ? { ...rivalOf(state), room: scene.room, table: scene.table, light: scene.light } : rivalOf(state);
   // Patch 0.8.0: Peças Pretas liberadas (no aparelho) e a moldura equipada; `blackSeen` segura
   // a tela de recompensa até você tocar em continuar
   const blackUnlocked = useSyncExternalStore(subscribeMeta, isBlackTilesUnlocked, () => false);
@@ -1634,6 +1639,7 @@ export default function App() {
         decor={rival.decor}
         atmosphere={atmosphere}
         lighting={rival.light ?? 'lamp'}
+        material={rival.table ?? null}
         room={rival.room ?? LAND_ROOMS[atmosphere] ?? 'landroom'}
         incoming={incoming}
         finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}

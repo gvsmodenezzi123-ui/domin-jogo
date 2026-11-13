@@ -422,6 +422,7 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
           decor={sala.decor}
           atmosphere={sala.atmosphere}
           lighting={sala.lighting}
+          material={sala.material}
           room={sala.room}
           incoming={incoming}
           finaleId={finaleHold && lastPlaced ? lastPlaced.tileId : null}

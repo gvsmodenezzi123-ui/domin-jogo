@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LAND_ROOMS, LAND_ROOM_IDS, paintLandRoom, roomFx } from '../art/landRooms.js';
+import { DAY_ROOMS, LAND_ROOMS, LAND_ROOM_IDS, paintLandRoom, roomFx } from '../art/landRooms.js';
 import { CANDLE_SIZE, FLAME_FRAMES, FLAME_SIZE, candleWick, paintCandle, paintFlameStrip } from '../art/candleArt.js';
 import { landCandleSpots, landCorners } from '../seatGeometry.js';
 import { candleCorners, paintApron, paintTablePlane } from '../art/tablePixels.js';
@@ -41,7 +41,8 @@ describe('versão 2.13: a sala de cada região', () => {
   }, 30000);
 
   it('o shader de cada sala acende fontes dentro da tela (as velas só na mesa das velas)', () => {
-    for (const id of LAND_ROOM_IDS) {
+    // versão 2.30: as salas de dia não têm lâmpada nem velas: quem acende é o sol
+    for (const id of LAND_ROOM_IDS.filter((r) => !DAY_ROOMS.includes(r))) {
       for (const candles of [false, true]) {
         const fx = roomFx(id, 422, 195, { candles });
         expect(fx.lights.length).toBeGreaterThan(0);
@@ -106,10 +107,11 @@ describe('versão 2.13: as velas no canto do aro', () => {
 });
 
 describe('versão 2.13: a sala das mesas online', () => {
-  it('quatro salas, cada uma com a sua trilha; a do Dono da Noite é secreta e acende as velas', () => {
-    expect(MAP_IDS).toEqual(['boteco', 'sinuca', 'bicho', 'noite']);
+  it('as salas, cada uma com a sua trilha; a do Dono da Noite é secreta e acende as velas', () => {
+    // versão 2.30: mais os três cenários de dia, depois das quatro de 2.13
+    expect(MAP_IDS).toEqual(['boteco', 'sinuca', 'bicho', 'noite', 'calcada', 'praia', 'praca']);
     expect(DEFAULT_MAP).toBe('boteco');
-    expect(new Set(TABLE_MAPS.map((m) => m.music)).size).toBe(4);
+    expect(new Set(TABLE_MAPS.map((m) => m.music)).size).toBe(TABLE_MAPS.length);
     expect(mapOf('nada').id).toBe('boteco');
     const noite = mapOf('noite');
     expect(noite.light).toBe('candles');

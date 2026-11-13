@@ -447,3 +447,50 @@ describe('Patch 0.9.4: batida de pedra não acumula nós de áudio', () => {
     }
   });
 });
+
+describe('versão 2.30: o tampo muda o som da pedra', () => {
+  const slam = (surface, isDouble = false) => {
+    const engine = engineWithFakeAudio();
+    engine.setSurface(surface);
+    const before = engine.ctx.sources.length;
+    engine.playTileSlam(isDouble, null);
+    const made = engine.ctx.sources.slice(before);
+    const oscs = made.filter((s) => s.kind === 'osc').map((s) => s.frequency.events.find((e) => e[0] === 'set')?.[1] ?? s.frequency.value);
+    return { engine, made, oscs };
+  };
+
+  it('plástico e tábua trocam o corpo da batida; o resto continua o de sempre', () => {
+    const base = slam(null);
+    const plastic = slam('plastico');
+    const plank = slam('tabua');
+    const concrete = slam('concreto');
+    // o mesmo número de fontes (cabe no orçamento de vozes do iPhone)
+    expect(plastic.made.length).toBeLessThanOrEqual(base.made.length + 1);
+    expect(plank.made.length).toBeLessThanOrEqual(base.made.length + 1);
+    // o "toc" do plástico é mais alto; a tábua ressoa no meio
+    expect(Math.max(...plastic.oscs)).toBeGreaterThan(Math.max(...base.oscs.filter((f) => f < 600)));
+    expect(plastic.oscs.some((f) => f > 400 && f < 520)).toBe(true);
+    expect(plank.oscs.some((f) => f > 220 && f < 280)).toBe(true);
+    // o concreto (e a mesa de sempre) mantém a batida de antes
+    expect(concrete.oscs).toHaveLength(base.oscs.length);
+    for (const s of [plastic, plank]) {
+      expect(s.engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+      for (const v of s.engine.voices) expect(v.end - v.born).toBeLessThanOrEqual(0.121);
+    }
+  });
+
+  it('em rajada, em qualquer tampo, nunca passa de 6 vozes', () => {
+    for (const surface of [null, 'plastico', 'tabua']) {
+      const engine = engineWithFakeAudio();
+      engine.setSurface(surface);
+      engine.playTrack('calcadaPagode');
+      for (let i = 0; i < 40; i += 1) {
+        engine.playTileSlam(i % 3 === 0, i % 5 === 0 ? 'ouro' : null);
+        engine.playClick();
+        expect(engine.liveCost()).toBeLessThanOrEqual(MAX_VOICES);
+        engine.ctx.advance(0.03);
+      }
+      engine.stopMusic();
+    }
+  });
+});

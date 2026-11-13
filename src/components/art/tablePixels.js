@@ -12,6 +12,7 @@
  * Tudo puro e com semente: a mesma pilha sai sempre igual.
  */
 import { paintKit } from './botecoScene.js';
+import { TABLE_KINDS, paintApronKind, paintTableKind } from './tableKinds.js';
 
 const { hex, shift, rngOf, buffer, bayer } = paintKit;
 
@@ -390,7 +391,9 @@ function paintFeltBase(data, w, h, L, M, D, seed) {
  *   o feltro: trama em sarja, manchas grandes, o miolo gasto pelas pedras, fiapos, poeira,
  *   bebida derramada, marca de copo, queimado de cigarro e pó de giz.
  */
-export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark = '#1f2a17', seed = 11, mahogany = false, candles = false }) {
+export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark = '#1f2a17', seed = 11, mahogany = false, candles = false, material = null }) {
+  // versão 2.30: as mesas que não são de feltro (plástico, concreto pintado, tábua) moram em tableKinds.js
+  if (TABLE_KINDS.includes(material)) return paintTableKind(material, { w, h, seed });
   const b = buffer(w, h);
   const r = rngOf(seed);
   const wood = mahogany ? RAIL_WOOD.mogno : RAIL_WOOD.pinho;
@@ -672,8 +675,9 @@ export const APRON_H = 12;
  * A frente da mesa, de `w` pixels: o lábio do aro (luz em cima), a tábua com veio na
  * horizontal, chanfro, pregos, lascas, a cantoneira de latão nas pontas e a sombra no chão.
  */
-export function paintApron(w, { mahogany = false, seed = 5, candles = false } = {}) {
+export function paintApron(w, { mahogany = false, seed = 5, candles = false, material = null } = {}) {
   const h = APRON_H;
+  if (TABLE_KINDS.includes(material)) return paintApronKind(material, w, h, seed);
   const b = buffer(w, h);
   const r = rngOf(seed);
   const wood = mahogany ? RAIL_WOOD.mogno : RAIL_WOOD.pinho;

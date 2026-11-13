@@ -26823,3 +26823,48 @@ html.reduce-motion[data-topview] :is(.table-room, .rival-seat, .roda-seats, .lam
   --rc: rgba(122, 82, 32, 0.35);
   opacity: 0.45;
 }
+
+/* Versão 2.30: os pés das mesas novas (no material de cada uma) */
+.land-table-front.table-plastico .land-leg {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.35) calc(100% - 3px)),
+    linear-gradient(180deg, #d4d7d0, #9a9e96 70%, #4a4c48);
+  border-color: #3a3c38;
+}
+
+.land-table-front.table-concreto .land-leg {
+  width: 9%;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.45) calc(100% - 3px)),
+    linear-gradient(180deg, #8a867a, #5e5a50 70%, #2a2822);
+  border-color: #1e1c18;
+}
+
+.land-table-front.table-tabua .land-leg {
+  background:
+    linear-gradient(90deg, rgba(160, 200, 255, 0.25) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.5) calc(100% - 3px)),
+    linear-gradient(180deg, #2e6aaa, #1f4c80 70%, #0c1e36);
+  border-color: #081424;
+}
+
+/* Versão 2.30: de dia, a mesa não fica no escuro nas pontas (só a vinheta de leve) */
+.tableboard-viewport.is-day .felt-vignette {
+  opacity: 0.3;
+}
+
+/* versão 2.30: na mesa de plástico branco o aviso da vez vira tinta escura */
+html[data-mesa='plastico'] .player-zone .player-hint {
+  color: #2a241d;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+/* versão 2.30: a sala é escolhida com ◀ SALA ▶ (sete salas não cabem lado a lado) */
+.ol-seg-btn.is-wide,
+.pvp-seg-btn.is-wide {
+  flex: 3;
+}
+.lobby-step .lobby-chip.is-on {
+  min-width: 92px;
+}
