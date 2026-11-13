@@ -36,13 +36,13 @@ const Blink = memo(function Blink({ onDone }) {
  * `allowed`: falso no golpe que derruba (aí quem entra é a tela quebrando).
  */
 function HurtBlink({ hurtKey, allowed = true }) {
-  const seen = useRef(hurtKey);
+  const [seen, setSeen] = useState(hurtKey);
   const [active, setActive] = useState(null);
-  useEffect(() => {
-    if (!hurtKey || hurtKey === seen.current) return;
-    seen.current = hurtKey;
+  // (ajuste de estado no render, quando a chave muda: o padrão do React para "derivar da prop")
+  if (hurtKey && hurtKey !== seen) {
+    setSeen(hurtKey);
     if (allowed) setActive(hurtKey);
-  }, [hurtKey, allowed]);
+  }
   if (!active) return null;
   return <Blink key={active} onDone={() => setActive((a) => (a === active ? null : a))} />;
 }
