@@ -172,6 +172,14 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.35.1: a piscada aparece em todo aparelho
+
+- A piscada do dano fica acima do quadro do fim da rodada (antes podia ficar por baixo dele) e
+  numa camada própria, para o tampo 3D da mesa não furar por cima no Safari.
+- Sem o embaçado por `backdrop-filter` (pesado e instável animado no Safari) e com a caixa de
+  tamanho explícito; sai da tela sozinha no fim.
+- Com as animações reduzidas, em vez de sumir, a vista escurece e clareia no mesmo ritmo.
+
 ### 2.35.0: tomou dano, a vista pisca
 
 - Perdeu um coração (sem cair): a vista **pisca** como pálpebras. Fecha devagar, embaçando,
