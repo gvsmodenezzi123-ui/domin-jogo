@@ -401,9 +401,44 @@ function TableBoard({
     // versão 2.33: a sua mão continua na tela (dá para jogar olhando de cima): a mesa cabe no que
     // sobra em cima dela
     const below = handZone > 0 ? Math.min(handZone - 8, vh * 0.42) : 0;
-    const k = Math.min((vw - 20) / W, (vh - 20 - below) / H);
-    const dx = vw / 2 - rect.left - (land.style.left + W / 2);
-    const dy = (vh - below) / 2 - rect.top - land.yNear + (k * H) / 2;
+    const availH = vh - below;
+    // versão 2.33.1: de perto: a mesa ocupa pelo menos 75% da largura da tela e a câmera mira as
+    // pedras jogadas (com uma pedra e meia de folga), sem mostrar o chão além da beirada
+    const kFit = Math.min((vw - 20) / W, (availH - 20) / H);
+    const kMin = Math.max(kFit, (vw * 0.75) / W);
+    let cx = W / 2;
+    let cy = H / 2;
+    let k = kMin;
+    if (layout.tiles.length) {
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      for (const t of layout.tiles) {
+        const b = tileBox(t, t.orientation, unit);
+        const l = areaSide + camera.x + b.left * camera.scale;
+        const tp = BOARD_PADDING + camera.y + b.top * camera.scale;
+        x0 = Math.min(x0, l);
+        y0 = Math.min(y0, tp);
+        x1 = Math.max(x1, l + b.width * camera.scale);
+        y1 = Math.max(y1, tp + b.height * camera.scale);
+      }
+      const pad = B * camera.scale * 1.5;
+      x0 -= pad;
+      y0 -= pad;
+      x1 += pad;
+      y1 += pad;
+      cx = (x0 + x1) / 2;
+      cy = (y0 + y1) / 2;
+      k = Math.max(kMin, Math.min((vw * 0.94) / (x1 - x0), (availH * 0.94) / (y1 - y0), kMin * 1.5));
+    }
+    // a mesa não sai de dentro da tela: o centro fica onde a beirada ainda cobre a vista
+    const hx = vw / (2 * k);
+    const hy = availH / (2 * k);
+    cx = W <= 2 * hx ? W / 2 : Math.min(W - hx, Math.max(hx, cx));
+    cy = H <= 2 * hy ? H / 2 : Math.min(H - hy, Math.max(hy, cy));
+    const dx = vw / 2 - rect.left - land.style.left - W / 2 - k * (cx - W / 2);
+    const dy = availH / 2 - rect.top - land.yNear - k * (cy - H);
     riseVars = { '--rise-persp': `${LAND.persp}px`, '--rise-tilt': `${LAND.tilt}deg`, '--rise-dx': `${Math.round(dx)}px`, '--rise-dy': `${Math.round(dy)}px`, '--rise-k': k.toFixed(3) };
   }
   const setSection = (el) => {

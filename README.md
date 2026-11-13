@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.33.1: a lupa chega mais perto
+
+- Ver a mesa (lupa) agora aproxima de verdade: a mesa ocupa pelo menos 75% da largura da tela
+  e a câmera mira as pedras jogadas (com folga), sem passar da beirada; a sua mão continua
+  embaixo para jogar.
+
 ### 2.33.0: a roda de 2 a 5, jogar olhando de cima e os emotes
 
 - **Roda de 2 a 5**: até 5 na mesa (você e mais 4: um de cada lado e dois lá na frente). Todos
