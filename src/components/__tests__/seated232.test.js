@@ -50,13 +50,16 @@ describe('versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cad
         expect(Math.abs(skull - bustSkull)).toBeLessThan(1.5);
         // a mão encosta na beirada de lado (menos de uma pedra de distância)
         expect(Math.abs(f.hand.x - c.xAt(f.hand.y, side))).toBeLessThan(unit * 2.2);
-        // a fileira das pedras: no tampo, para dentro da beirada, subindo para o lado de lá
-        expect(side < 0 ? f.lane.x > c.xAt(f.lane.y, side) : f.lane.x < c.xAt(f.lane.y, side)).toBe(true);
+        // a fileira das pedras: em cima do aro (logo para dentro da beirada, sem entrar no tampo),
+        // subindo para o lado de lá na linha da beirada
         expect(f.lane.dy).toBeLessThan(0);
-        expect(Math.sign(f.lane.dx)).toBe(-side);
-        const far = { x: f.lane.x + f.lane.dx * 8, y: f.lane.y + f.lane.dy * 8 };
-        expect(far.y).toBeGreaterThan(c.yFar);
-        expect(side < 0 ? far.x > c.xAt(far.y, side) : far.x < c.xAt(far.y, side)).toBe(true);
+        for (let slot = 0; slot <= 9; slot += 1) {
+          const p = { x: f.lane.x + f.lane.dx * slot, y: f.lane.y + f.lane.dy * slot };
+          expect(p.y).toBeGreaterThan(c.yFar);
+          const inward = (p.x - c.xAt(p.y, side)) * -side;
+          expect(inward).toBeGreaterThan(0);
+          expect(inward).toBeLessThan(unit * 1.1);
+        }
         expect(f.clip).toContain(`${h}px`);
       }
       // os dois lados são o espelho um do outro

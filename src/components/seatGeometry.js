@@ -142,13 +142,14 @@ export function sideFigure(w, h, side, bust, unit) {
   const handX = left + (side < 0 ? SEATED_HAND.x : SEATED_W - 1 - SEATED_HAND.x) * k;
   const handY = top + SEATED_HAND.y * k;
   // a fileira começa junto da mão (a primeira pedra, a de perto, é a maior) e sobe para o lado de
-  // lá acompanhando a beirada, entrando um tico no tampo a cada pedra: quase na diagonal
+  // lá em cima do aro, seguindo a linha da beirada (versão 2.32.2: sem entrar no tampo, que em
+  // algumas mesas o aro é fino e as pedras iam parar no meio do jogo)
   const dy = -Math.max(5, Math.round(unit * 0.8 * 10) / 10);
   const slope = (c.xAt(c.yNear, side) - c.xAt(c.yFar, side)) / (c.yNear - c.yFar);
   const y0 = handY + unit * 0.5;
-  const inset = unit * 2.2;
+  const inset = unit * 0.75;
   const x0 = c.xAt(y0, side) - side * inset;
-  const dx = slope * dy - side * unit * 0.22;
+  const dx = slope * dy;
   return {
     ...s,
     clip,

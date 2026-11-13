@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.32.2: as pedras de quem senta do lado ficam na borda
+
+- Na roda, as pedras de quem senta nas laterais ficam de pé em cima do aro, seguindo a linha da
+  beirada (antes a fileira entrava no tampo e, nas mesas de aro fino, ia parar no meio do jogo).
+
 ### 2.32.1: correção do build da 2.32.0 e personagens pintados mais depressa
 
 - Cada forma do desenho dos personagens agora só varre a caixa onde ela pode cair (a figura sai
