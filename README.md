@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.35.2: pisca a cada dano, a tela quebra limpa, a lupa e os emotes
+
+- A piscada vem em **todo** dano: antes ela dependia do golpe continuar na lista curta de
+  eventos e, quando a rodada seguinte começava, sumia no meio (ou nem aparecia).
+- Sem som na piscada (a respiração saiu); fica só a trilha **abafada e baixa**, voltando devagar.
+- A tela quebrando fica igual ao que estava na tela: a cópia guarda o quadro exato de cada coisa
+  que estava animando (antes as pedras e os avisos que estavam entrando sumiam na cópia), copia
+  a luz da sala e o preto e branco virou uma camada por cima (no Safari, filtro numa camada tão
+  grande sumia ou piscava).
+- A lupa voltou a ser a mesa inteira, centrada, só 12% mais perto (a de 2.33.1 ficava grande
+  demais e pulava atrás das pedras).
+- Os emotes ficam **na frente** dos personagens: de quem senta do lado, na frente do rosto; de
+  quem senta lá na frente, do lado da cabeça, por cima de tudo.
+
 ### 2.35.1: a piscada aparece em todo aparelho
 
 - A piscada do dano fica acima do quadro do fim da rodada (antes podia ficar por baixo dele) e

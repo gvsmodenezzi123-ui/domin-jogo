@@ -122,9 +122,9 @@ class FakeAudioContext {
   createBufferSource() {
     return new FakeSource(this, 'buffer');
   }
-  createBuffer(channels, length, rate = this.sampleRate) {
+  createBuffer(channels, length) {
     const data = new Float32Array(length);
-    return { getChannelData: () => data, duration: length / rate };
+    return { getChannelData: () => data };
   }
   /** Avança o relógio e dispara o onended de quem parou. */
   advance(seconds) {
@@ -168,17 +168,15 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     expect(engine.master.outputs.has(engine.ctx.destination)).toBe(true);
   });
 
-  it('versão 2.35: tomou dano: a respiração sai direto no mestre e a trilha abafa, baixa e volta', () => {
+  it('versão 2.35: tomou dano: a trilha abafa e baixa, e volta sozinha depois', () => {
     vi.useFakeTimers();
     const engine = engineWithFakeAudio();
     engine.isPlayingMusic = true;
     const before = engine.musicLevel();
-    engine.playHurtBreath();
-    const breath = engine.ctx.sources.find((src) => src.kind === 'buffer' && src.buffer?.duration > 4);
-    expect(breath).toBeTruthy();
-    // a respiração não passa pelo passa-baixa quente (abafaria o sopro)
-    const voice = engine.voices.find((v) => v.sources.includes(breath));
-    expect(voice.gate.outputs.has(engine.master)).toBe(true);
+    const sources = engine.ctx.sources.length;
+    engine.muffleMusic();
+    // sem som próprio: só a música muda
+    expect(engine.ctx.sources.length).toBe(sources);
     expect(engine.muffle.frequency.events.at(-1).slice(0, 2)).toEqual(['exp', 420]);
     expect(engine.musicLevel()).toBeCloseTo(before * 0.3);
     vi.advanceTimersByTime(2700);

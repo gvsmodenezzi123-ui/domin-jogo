@@ -27167,7 +27167,8 @@ html:not([data-ui='novo']) .emote-pick {
 /* o emote na cadeira: sobe de trás, fica um pouco e some */
 .seat-emote {
   position: absolute;
-  z-index: 0;
+  /* versão 2.35.2: na frente do personagem (antes ficava atrás dele) */
+  z-index: 30;
   display: block;
   width: 30px;
   height: 30px;
@@ -27179,7 +27180,7 @@ html:not([data-ui='novo']) .emote-pick {
 .seat-emote .emote-icon {
   display: block;
 }
-.seat-emote.is-behind {
+.seat-emote.is-front {
   animation-name: seat-emote-behind;
 }
 .seat-emote.is-mine {
@@ -27278,25 +27279,26 @@ html[data-topview] .emote-pick {
 }
 .screen-shard {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  will-change: transform, filter;
-  filter: grayscale(0);
-  animation:
-    screen-shard-gray 700ms ease 260ms forwards,
-    screen-shard-jolt 260ms steps(5, end) both;
+  /* 2.35.2: sem `filter` na metade (no Safari, filtro + clip-path + transform numa camada cheia
+     de canvas some ou pisca): o cinza é uma camada por cima (mistura de saturação) */
+  isolation: isolate;
+  will-change: transform;
+  animation: screen-shard-jolt 260ms steps(5, end) both;
 }
 .screen-shard.is-top {
   transform-origin: 0% 0%;
   animation:
-    screen-shard-gray 700ms ease 260ms forwards,
     screen-shard-jolt 260ms steps(5, end) both,
     screen-shard-top 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
 }
 .screen-shard.is-bottom {
   transform-origin: 100% 100%;
   animation:
-    screen-shard-gray 700ms ease 260ms forwards,
     screen-shard-jolt 260ms steps(5, end) both,
     screen-shard-bottom 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
 }
@@ -27307,13 +27309,33 @@ html[data-topview] .emote-pick {
   contain: layout;
   pointer-events: none;
 }
-/* a cópia é uma foto: nada nela se mexe (o que estava entrando já fica no lugar) */
+/* a cópia é uma foto: nada nela se mexe; o estado de cada coisa animada na hora do golpe vem
+   copiado no estilo da própria cópia (ScreenBreak.jsx: freeze) */
 .screen-shard-copy *,
 .screen-shard-copy *::before,
 .screen-shard-copy *::after {
-  animation-delay: -60s !important;
-  animation-play-state: paused !important;
+  animation: none !important;
   transition: none !important;
+}
+/* preto e branco: a cor some (mistura de saturação com cinza) e escurece um pouco */
+.screen-shard-gray,
+.screen-shard-shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  animation: screen-shard-gray 700ms ease 260ms forwards;
+}
+.screen-shard-gray {
+  background: #808080;
+  mix-blend-mode: saturation;
+}
+.screen-shard-shade {
+  background: #000;
+  animation-name: screen-shard-shade;
 }
 .screen-shard-edge {
   position: absolute;
@@ -27385,7 +27407,12 @@ html[data-topview] .emote-pick {
 }
 @keyframes screen-shard-gray {
   to {
-    filter: grayscale(1) contrast(1.08) brightness(0.84);
+    opacity: 1;
+  }
+}
+@keyframes screen-shard-shade {
+  to {
+    opacity: 0.18;
   }
 }
 @keyframes screen-shard-jolt {
@@ -27433,7 +27460,12 @@ html[data-topview] .emote-pick {
 }
 .reduce-motion .screen-shard.is-top,
 .reduce-motion .screen-shard.is-bottom {
-  animation: screen-shard-gray 300ms ease forwards;
+  animation: none;
+}
+.reduce-motion .screen-shard-gray,
+.reduce-motion .screen-shard-shade {
+  animation-duration: 300ms;
+  animation-delay: 0ms;
 }
 .reduce-motion .screen-shard.is-top {
   transform: translate(0, -3%);

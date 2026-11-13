@@ -1739,7 +1739,7 @@ export default function App() {
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
       {/* versão 2.35: tomou dano (e não caiu): a vista pisca */}
-      {playerHurtKey > 0 && state.phase !== 'gameOver' && <HurtBlink key={`olho-${playerHurtKey}`} />}
+      <HurtBlink hurtKey={playerHurtKey} allowed={state.phase !== 'gameOver'} />
 
       <DangerFx danger={danger} myHearts={myHeartsNow} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />

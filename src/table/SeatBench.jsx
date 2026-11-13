@@ -222,19 +222,6 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
       data-seat={seat.id}
       aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}
     >
-      {/* versão 2.33: o emote: atrás de quem senta do lado (sai por trás das costas, na altura da
-          cabeça), do lado de quem senta lá na frente */}
-      {emote && !out && (
-        <SeatEmote
-          emote={emote}
-          className={side ? 'is-behind' : 'is-beside'}
-          style={
-            side
-              ? { left: side.fig.left + side.fig.w * (side.facing === 'right' ? 0.12 : 0.88), top: side.fig.top + side.fig.h * 0.2 }
-              : { left: `calc(${x * 100}% + ${(x < 0.5 ? -1 : 1) * Math.round(bust.w * 0.44 + 16)}px)`, top: `calc(var(--rail-px) + ${bust.drop - bust.h + Math.round(bust.h * 0.3)}px)` }
-          }
-        />
-      )}
       <div className="chair-clip" aria-hidden="true">
         <div className={`chair-bust seat-bust is-${mood}`} data-seat-photo={seat.id}>
           <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
@@ -243,6 +230,20 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
           {out && <ChalkX />}
         </div>
       </div>
+      {/* versão 2.33: o emote. Versão 2.35.2: sempre NA FRENTE do personagem (por cima de tudo
+          dele): de quem senta do lado, na frente do rosto, na altura dos olhos; de quem senta lá
+          na frente, do lado da cabeça */}
+      {emote && !out && (
+        <SeatEmote
+          emote={emote}
+          className={side ? 'is-front' : 'is-beside'}
+          style={
+            side
+              ? { left: side.fig.left + side.fig.w * (side.facing === 'right' ? 0.6 : 0.4), top: side.fig.top + side.fig.h * 0.17 }
+              : { left: `calc(${x * 100}% + ${(x < 0.5 ? -1 : 1) * Math.round(bust.w * 0.44 + 16)}px)`, top: `calc(var(--rail-px) + ${bust.drop - bust.h + Math.round(bust.h * 0.3)}px)` }
+          }
+        />
+      )}
       {!out && (
         <div className="chair-rack" {...(anchor ? { 'data-danger-anchor': '' } : {})}>
           {seat.hand ? (

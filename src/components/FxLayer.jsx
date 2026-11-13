@@ -124,6 +124,11 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
       draw(now);
     };
     raf = requestAnimationFrame(loop);
+    // versão 2.35.2: a tela quebrando copia este canvas; o WebGL só guarda o desenho até o fim
+    // do quadro, então quem copia pede um redesenho na hora e copia em seguida
+    canvas.fxRedraw = () => {
+      if (size.w) draw(performance.now());
+    };
     const onLost = (e) => {
       e.preventDefault();
       cancelAnimationFrame(raf);
@@ -132,6 +137,7 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
     canvas.addEventListener('webglcontextlost', onLost);
     return () => {
       cancelAnimationFrame(raf);
+      canvas.fxRedraw = null;
       canvas.removeEventListener('webglcontextlost', onLost);
       fx.dispose();
     };

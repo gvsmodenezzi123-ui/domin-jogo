@@ -16,8 +16,6 @@
 //   são 3 vozes). Estourou: a voz mais velha e menos importante (música antes de efeito) sai com fade de 15 ms.
 //   Cada nota termina com .stop() + .disconnect() de todos os nós e as referências zeradas.
 
-import { breathSamples } from './breath.js';
-
 const MUTE_KEY = 'buxaria:muted';
 
 function readMuted() {
@@ -54,8 +52,6 @@ const MUFFLE_SHUT = 420;
 const HURT_DUCK = 0.3;
 const HURT_HOLD = 2.6;
 const HURT_RECOVER = 2.4;
-/** Versão 2.35: a taxa em que a respiração é gerada (metade do trabalho de 48 kHz, sobra agudo). */
-const BREATH_RATE = 24000;
 
 /**
  * Versão 2.5: o coração de fundo quando você está encurralado (nível 1 a 3). Batimentos por
@@ -670,7 +666,6 @@ export class SoundEngine {
     this.heartTimer = null;
     this.dangerDuck = 1;
     this.noiseBuffer = null;
-    this.breathBuf = null; // versão 2.35: a respiração do dano (gerada uma vez)
     this.stopSpeech = null;
     // grafo
     this.master = null;
@@ -704,7 +699,6 @@ export class SoundEngine {
       if (!AudioCtx) return false;
       this.ctx = new AudioCtx();
       this.buildGraph();
-      this.warmBreath();
     }
     if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
       this.ctx.resume().catch(() => {});
@@ -1964,34 +1958,8 @@ export class SoundEngine {
   }
 
   /**
-   * Versão 2.35: tomou dano: a respiração feita por síntese amostra a amostra (breath.js): o
-   * fôlego fundo pela boca enquanto o olho fecha, o ar preso, e o ofegar com um fio de voz quando
-   * abre. Gerada uma vez (de preferência num momento ocioso) e tocada como uma fonte só, direto
-   * no mestre: o passa-baixa quente dos efeitos abafaria o sopro.
-   */
-  breathBuffer() {
-    if (!this.breathBuf && this.ctx) {
-      const data = breathSamples(BREATH_RATE);
-      const buf = this.ctx.createBuffer(1, data.length, BREATH_RATE);
-      buf.getChannelData(0).set(data);
-      this.breathBuf = buf;
-    }
-    return this.breathBuf;
-  }
-
-  /** Deixa a respiração pronta num momento ocioso (para o golpe não engasgar a tela). */
-  warmBreath() {
-    if (this.breathBuf || typeof window === 'undefined') return;
-    const go = () => {
-      if (this.ctx) this.breathBuffer();
-    };
-    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(go, { timeout: 5000 });
-    else setTimeout(go, 1500);
-  }
-
-  /**
    * Versão 2.35: tomou dano: a trilha some para o fundo (abafada e baixa) enquanto o olho fecha e
-   * a respiração ofega, e volta devagar conforme ela se acalma. Os efeitos não passam por aqui.
+   * abre, e volta devagar depois. Os efeitos não passam por aqui (só a música).
    */
   muffleMusic() {
     if (!this.musicBus || !this.muffle || !this.ctx) return;
@@ -2016,29 +1984,6 @@ export class SoundEngine {
       ff.exponentialRampToValueAtTime(MUFFLE_OPEN, now + HURT_RECOVER);
       this.rampMusic(this.musicLevel(), HURT_RECOVER);
     }, HURT_HOLD * 1000);
-  }
-
-  playHurtBreath() {
-    if (this.isMuted || !this.ready()) return;
-    const buffer = this.breathBuffer();
-    if (!buffer) return;
-    const at = this.ctx.currentTime + 0.01;
-    // no volume dos outros efeitos (o sopro é longo: mais baixo que a batida da pedra)
-    const level = this.sfxVolume * 0.55;
-    this.muffleMusic();
-    this.spawn({
-      at,
-      end: at + buffer.duration + 0.05,
-      bus: this.master,
-      priority: PRIORITY.sfx,
-      build: (env) => {
-        env.gain.setValueAtTime(level, at);
-        const src = this.ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(env);
-        return { sources: [src] };
-      },
-    });
   }
 
   playHeartBreak() {
