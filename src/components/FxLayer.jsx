@@ -76,7 +76,8 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
             x: (r.left + r.width / 2 - box.left) * kx,
             y: (r.top + r.height / 2 - box.top) * ky,
             t0: now,
-            k: face?.classList.contains('tile-crosswise') ? 1.35 : 1,
+            // versão 2.29: aprimorada leva +2 no tamanho (o shader separa: comum discreta, aprimorada com a cor dela)
+            k: (face?.classList.contains('tile-crosswise') ? 1.35 : 1) + (enh ? 2 : 0),
             c: enh ? BURST_COLOR[enh] : [1, 0.86, 0.62],
           });
           if (bursts.length > MAX_BURSTS) bursts.shift();

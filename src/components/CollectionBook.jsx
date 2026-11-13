@@ -154,7 +154,7 @@ function DetailSheet({ entry, onClose }) {
 }
 
 /** O estado do álbum (aba, página, item tocado, conquistas), o mesmo em pé e deitado. */
-function useAlbum(collection, sizes) {
+function useAlbum(collection, sizes, perPage = PER_PAGE) {
   const [tab, setTab] = useState('relics');
   const [page, setPage] = useState(0);
   const [picked, setPicked] = useState(null);
@@ -170,9 +170,9 @@ function useAlbum(collection, sizes) {
   // talismã de conquista liberado conta como visto (ele aparece inteiro no livro)
   const isKnown = (id) => seen.has(id) || (tab === 'relics' && unlockedRelic(id) === true);
   const found = current.ids.filter(isKnown).length;
-  const pages = Math.max(1, Math.ceil(current.ids.length / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(current.ids.length / perPage));
   const shownPage = Math.min(page, pages - 1);
-  const ids = current.ids.slice(shownPage * PER_PAGE, shownPage * PER_PAGE + PER_PAGE);
+  const ids = current.ids.slice(shownPage * perPage, shownPage * perPage + perPage);
   const entry = (id) =>
     entryOf(tab, id, { known: isKnown(id), unlocked: tab === 'relics' ? unlockedRelic(id) : null, achievement: ACHIEVEMENT_BY_RELIC[id], progress: achievements.progress }, sizes);
   const turn = (step) => {
@@ -442,6 +442,8 @@ function AlbumLand({ collection, onClose, onStats }) {
 
 
 const SIZES_NOVO = { relic: [34, 70], tile: [10, 20], rival: [42, 84] };
+/** Versão 2.29: a folha da Coleção nova cheia: 6 × 4 figurinhas (antes 2 fileiras e o resto vazio). */
+const PER_PAGE_NOVO = 24;
 const money = (n) => `$${n.toLocaleString('pt-BR')}`;
 
 /** A aba CARREIRA da Coleção nova: o Caderno de Fiado em duas páginas. */
@@ -530,7 +532,7 @@ function CareerPages() {
  * e a aba CARREIRA com as contas da vida.
  */
 export function CollectionNovo({ collection, onClose }) {
-  const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, picked, setPicked } = useAlbum(collection, SIZES_NOVO);
+  const { tab, openTab, current, found, pages, shownPage, ids, entry, turn, picked, setPicked } = useAlbum(collection, SIZES_NOVO, PER_PAGE_NOVO);
   const [career, setCareer] = useState(false);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -607,6 +609,9 @@ export function CollectionNovo({ collection, onClose }) {
                     </button>
                   );
                 })}
+                {Array.from({ length: PER_PAGE_NOVO - ids.length }, (_, i) => (
+                  <span key={`vazio-${i}`} className="q-slot q-empty" aria-hidden="true" />
+                ))}
               </div>
               <div className="q-pager">
                 <button type="button" onClick={() => turn(-1)} disabled={shownPage === 0} aria-label="Folha anterior">

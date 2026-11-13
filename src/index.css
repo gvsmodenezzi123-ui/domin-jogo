@@ -770,8 +770,8 @@
   }
 
   .impact-ring {
-    inset: -8px;
-    border: 3px solid rgba(240, 204, 120, 0.85);
+    inset: -6px;
+    border: 2px solid rgba(240, 204, 120, 0.45);
     border-radius: 8px;
     animation: impact 520ms ease-out 290ms both;
   }
@@ -26811,4 +26811,15 @@ html[data-topview='down'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabi
 
 html.reduce-motion[data-topview] :is(.table-room, .rival-seat, .roda-seats, .lamp-rig, .table-candles, .land-table-front) {
   animation-duration: 120ms;
+}
+
+/* Versão 2.29: a folha da Coleção com 4 fileiras, enchendo a página até a paginação */
+.nvs .nvs-collection .q-page.q-l .q-grid {
+  grid-template-rows: repeat(4, 46px);
+  gap: 7px 6px;
+}
+
+.nvs .nvs-collection .q-slot.q-empty {
+  --rc: rgba(122, 82, 32, 0.35);
+  opacity: 0.45;
 }

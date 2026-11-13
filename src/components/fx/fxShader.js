@@ -276,21 +276,27 @@ void main() {
     col += tint * (aura * amt + pool * (0.6 + 0.4 * amt)) + mix(tint, vec3(1.0), 0.5) * sweep * 0.5;
   }
 
-  // --- o clarão da pedra que caiu: o anel abrindo e o lampejo no meio
+  // --- o clarão da pedra que caiu
+  // versão 2.29: a pedra comum só levanta um anel fino e morno, curto, sem as cores separadas nem
+  // as faíscas (antes parecia que tinha caído uma rara). A aprimorada (B.w > 2) mantém o anel na
+  // cor dela, mais contido, e as faíscas.
   for (int i = 0; i < ${MAX_BURSTS}; i++) {
     vec4 B = u_burst[i];
     if (B.w <= 0.0) continue;
+    float enh = step(2.0, B.w);
+    float k = B.w - 2.0 * enh;
     float age = B.z;
     float r = length(p - B.xy);
-    float rad = (8.0 + age * 90.0) * u * B.w;
-    float life = 1.0 - smoothstep(0.0, 0.55, age);
-    // a onda: as três cores se separam um pouco na crista
-    vec3 ring = vec3(exp(-abs(r - rad * 0.96) / (2.2 * u)), exp(-abs(r - rad) / (2.2 * u)), exp(-abs(r - rad * 1.04) / (2.2 * u))) * life;
-    float flash = exp(-r / (14.0 * u * B.w)) * exp(-age * 7.0);
-    // as faíscas: riscos finos saindo do meio, que somem logo
+    float rad = (7.0 + age * mix(60.0, 80.0, enh)) * u * k;
+    float life = 1.0 - smoothstep(0.0, mix(0.32, 0.5, enh), age);
+    float ring = exp(-abs(r - rad) / (mix(1.4, 2.0, enh) * u)) * life;
+    // na aprimorada, só um fio de separação de cor na crista
+    vec3 crest = mix(vec3(ring), vec3(exp(-abs(r - rad * 0.985) / (2.0 * u)), ring, exp(-abs(r - rad * 1.015) / (2.0 * u))) * life, enh * 0.5);
+    float flash = exp(-r / (11.0 * u * k)) * exp(-age * 9.0);
     float a2 = atan(p.y - B.y, p.x - B.x);
-    float spark = pow(max(0.0, sin(a2 * 7.0 + hash(B.xy) * 6.3)), 24.0) * exp(-abs(r - rad * 0.7) / (7.0 * u)) * exp(-age * 5.0);
-    col += u_bcol[i] * (ring * 0.9 + flash * 1.3) * B.w + mix(u_bcol[i], vec3(1.0), 0.6) * spark * 0.8 * B.w;
+    float spark = pow(max(0.0, sin(a2 * 7.0 + hash(B.xy) * 6.3)), 24.0) * exp(-abs(r - rad * 0.7) / (7.0 * u)) * exp(-age * 6.0) * enh;
+    vec3 tone = mix(mix(u_bcol[i], vec3(1.0, 0.92, 0.78), 0.45), u_bcol[i], enh);
+    col += tone * (crest * mix(0.26, 0.55, enh) + flash * mix(0.35, 0.8, enh)) * k + mix(u_bcol[i], vec3(1.0), 0.6) * spark * 0.5 * k;
   }
 
   // a saída em degraus pontilhados, como a pintura
