@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
+import LampRig from '../components/LampRig.jsx';
 import RivalBust from '../components/RivalBust.jsx';
 import RivalHand from '../components/RivalHand.jsx';
 import DominoTile from '../components/DominoTile.jsx';
@@ -302,6 +303,8 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, o
   const clip = size.w > 0 ? chairClip(size.w, size.h) : undefined;
   return (
     <header ref={ref} className={`seat-bench rival-bench roda-seats roda-n${n}`} style={{ '--rail-y': `${SEAT_RAIL * 100}%`, ...clip }}>
+      {/* versão 2.29.1: o corpo da lâmpada (a luz dela vem do TableBoard), igual à mesa do solo */}
+      <LampRig part="body" lamp={Math.round(bust.h * 0.22)} cord={2} beamWidth={300} className="seat-lamp" />
       {seats.map((seat, i) => (
         <SeatChair
           key={seat.id}

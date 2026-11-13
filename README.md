@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.29.1: a lâmpada da roda online
+
+- **Mesa de 2 a 4** (deitada): a lâmpada aparece de novo (antes só a luz dela aparecia), no mesmo
+  lugar da mesa do solo, pendurada na frente de quem senta no fundo; a plaquinha do nome e a vida
+  dele foram para o lado direito da lâmpada, para não ficarem cobertas.
+
 ### 2.29.0: o clarão da pedra mais discreto e a Coleção com a folha cheia
 
 - **A pedra caindo na mesa**: a pedra comum levanta só um anel fino e morno, curto, sem o
