@@ -31,6 +31,7 @@ import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf, shortName } fro
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/tableSweep.js';
 import { useSecondsLeft } from './useNow.js';
 import { useLandscape } from '../components/useLandscape.js';
+import ScreenBreak from '../components/ScreenBreak.jsx';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
 const RIVAL_FLIGHT_MS = landTime(FLIGHT_RIVAL);
@@ -224,6 +225,9 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
   const finaleHold = Boolean(finaleKey) && finaleDone !== finaleKey;
   const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
   const rr = view.roundResult;
+  // versão 2.34: perdeu o duelo (o último golpe foi dele): a tela racha antes do resultado
+  const loseBreakKey = finaleOver && duel.result?.matchOver && view.hearts.player <= 0 ? finaleKey : null;
+  const [brokeKey, setBrokeKey] = useState(null);
   // versão 2.6: sem placar entre as rodadas: a mesa varre para o dorme e você já fica pronto
   // (a rodada nova sai quando os dois estiverem); o placar fica só para o fim do duelo
   const lastRound = Boolean(duel.result?.matchOver) || !duel.final;
@@ -527,7 +531,9 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
           <span className="sweep-wait-dots" aria-hidden="true" />
         </p>
       )}
-      {duel.result && finaleOver && lastRound && (
+      {/* versão 2.34: perdeu o duelo: a tela racha e fica em preto e branco antes do resultado */}
+      {loseBreakKey && <ScreenBreak key={loseBreakKey} onDone={() => setBrokeKey(loseBreakKey)} />}
+      {duel.result && finaleOver && lastRound && (!loseBreakKey || brokeKey === loseBreakKey) && (
         <PvpRoundResult view={view} result={duel.result} nextSent={duel.nextSent} opp={opp} onNextRound={onNextRound} onFinish={onFinish} />
       )}
       <InfoBalloon info={balloon} />

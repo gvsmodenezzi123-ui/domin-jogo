@@ -63,7 +63,7 @@ function waitingRival(save) {
 }
 
 /** A versão do jogo, no rodapé e nos créditos. */
-const GAME_VERSION = '2.33.1';
+const GAME_VERSION = '2.34.0';
 
 /** Chave das maletas e desafios liberados (muda quando a meta muda). */
 function metaSnapshot() {

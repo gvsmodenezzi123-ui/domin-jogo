@@ -22,6 +22,7 @@ import SeatBench from './SeatBench.jsx';
 import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
 import EmoteBar, { SeatEmote } from './EmoteBar.jsx';
+import ScreenBreak from '../components/ScreenBreak.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { partnerOf, turnOptions } from './tableEngine.js';
 
@@ -377,7 +378,12 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
   const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
   // versão 2.6: entre as rodadas não tem placar: a mesa varre para o dorme e você fica pronto
   // sozinho (na roda online a rodada sai quando todos estiverem); o pódio fica para o fim
-  const showResult = finaleOver && view.phase === 'matchOver';
+  // versão 2.34: você caiu nesta rodada: a tela racha e fica em preto e branco; depois vem o
+  // modo espectador (a cor volta) ou, se a partida acabou, o resultado
+  const iFell = (view.phase === 'roundOver' || view.phase === 'matchOver') && Boolean(view.result?.eliminated?.includes(seatMe));
+  const breakKey = finaleOver && iFell ? `quebra:${view.round}` : null;
+  const [brokeKey, setBrokeKey] = useState(null);
+  const showResult = finaleOver && view.phase === 'matchOver' && (!breakKey || brokeKey === breakKey);
   const sweepKey = finaleOver && view.phase === 'roundOver' ? finaleKey : null;
   const autoNext = useStableHandler(() => onNextRound?.({ auto: true }));
   useEffect(() => {
@@ -559,6 +565,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       {/* versão 2.33: os emotes (o botão ao lado da lupa; o seu aparece em cima da sua vida) */}
       {landscape && onEmote && !spectating && <EmoteBar onEmote={onEmote} />}
       {landscape && <SeatEmote emote={emotes?.[me] ?? null} className="is-mine" />}
+      {breakKey && <ScreenBreak key={breakKey} fade={view.phase !== 'matchOver'} onDone={() => setBrokeKey(breakKey)} />}
       {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );

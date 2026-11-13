@@ -121,6 +121,7 @@ import {
 import { snapshotRun } from './engine/save.js';
 import { markTutorialDone, markTutorialPending, needsTutorial, tutorialStepOf } from './engine/tutorial.js';
 import { sellPriceFor } from './engine/shop.js';
+import ScreenBreak from './components/ScreenBreak.jsx';
 
 // Patch 0.9.2: as pedras de cada rodada saem da semente da run (engine/seedEngine.js), numa
 // sequência própria para cada mesa e rodada (`key`): mesma semente + mesmas escolhas = mesmas mãos
@@ -694,6 +695,8 @@ export default function App() {
   }, [finaleKey, finaleMs]);
   const finaleHold = Boolean(finaleKey) && finaleDone !== finaleKey;
   const finaleOver = Boolean(finaleKey) && finaleDone === finaleKey;
+  const loseBreakKey = finaleOver && state.phase === 'gameOver' && !state.tutorial ? finaleKey : null;
+  const [brokeKey, setBrokeKey] = useState(null);
 
   // Rival: cada mudança de estado na vez dele agenda a próxima ação (cada um tem seu tempo).
   // Ele espera com o menu ou o painel DEV abertos, enquanto você decide
@@ -1741,7 +1744,9 @@ export default function App() {
       {pending?.type === 'drawChoice' && <DrawChoice options={pending.options} onPick={handlePickDraw} />}
 
 
-      {roundFinished && finaleOver && state.phase !== 'roundOver' && !celebrate && !state.tutorial && (
+      {/* versão 2.34: perdeu a run: a tela racha e fica em preto e branco antes do fim de jogo */}
+      {loseBreakKey && <ScreenBreak key={loseBreakKey} onDone={() => setBrokeKey(loseBreakKey)} />}
+      {roundFinished && finaleOver && state.phase !== 'roundOver' && !celebrate && !state.tutorial && (state.phase !== 'gameOver' || brokeKey === loseBreakKey) && (
         <RoundOverlay
           state={state}
           rival={rival}

@@ -1928,6 +1928,19 @@ export class SoundEngine {
    * Versão 2.0: agora é vidro: o "tec" agudo do estalo, duas parciais inarmônicas curtas
    * (o vidro rachando) e o caquinho tilintando logo depois, por cima do baque grave.
    */
+  /**
+   * Versão 2.34: a tela partindo ao perder: o estalo do vidro rachando (agudo e seco), o baque
+   * grave do corpo e uns cacos tilintando depois.
+   */
+  playScreenBreak() {
+    if (this.isMuted || !this.ready()) return;
+    this.noise({ freq: 4200, filter: 'highpass', q: 0.7, peak: 0.42, dur: 0.05 });
+    this.tone({ type: 'sawtooth', freq: 180, freqEnd: 40, peak: 0.5, dur: 0.22, attack: 0.002 });
+    this.tone({ freq: 3100, peak: 0.08, dur: 0.12, attack: 0.001, delay: 0.09 });
+    this.tone({ freq: 4700, peak: 0.06, dur: 0.1, attack: 0.001, delay: 0.17 });
+    this.tone({ freq: 3900, peak: 0.05, dur: 0.12, attack: 0.001, delay: 0.26 });
+  }
+
   playHeartBreak() {
     if (this.isMuted || !this.ready()) return;
     const j = 1 + (Math.random() - 0.5) * 0.08;

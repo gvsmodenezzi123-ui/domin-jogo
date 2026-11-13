@@ -172,6 +172,16 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.34.0: perdeu, a tela racha
+
+- Quando você perde a partida, a tela **racha em duas** (o estalo do vidro, um tranco, a fenda
+  preta abrindo entre as metades) e fica em **preto e branco**. Só depois vem o resto:
+  - **campanha**: a tela de fim de jogo (por cima da tela rachada);
+  - **duelo online 1x1**: o resultado do duelo;
+  - **roda online / treino**: o modo espectador (a cor volta devagar); se a partida acabou com a
+    sua queda, o resultado.
+- Com animações reduzidas: sem tranco, a fenda aparece direto e a tela segue mais rápido.
+
 ### 2.33.1: a lupa chega mais perto
 
 - Ver a mesa (lupa) agora aproxima de verdade: a mesa ocupa pelo menos 75% da largura da tela

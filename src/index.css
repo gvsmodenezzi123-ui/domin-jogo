@@ -27254,3 +27254,147 @@ html[data-topview] .emote-pick {
     opacity: 0;
   }
 }
+
+/* ---------- versão 2.34: perdeu: a tela racha em duas e fica em preto e branco ---------- */
+.screen-break {
+  position: fixed;
+  inset: 0;
+  /* em cima da mesa e do HUD, embaixo das telas de resultado (z-50) */
+  z-index: 49;
+  pointer-events: none;
+}
+.screen-break.is-fade {
+  animation: screen-break-fade 900ms ease 1700ms both;
+}
+.screen-break-gray {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  -webkit-backdrop-filter: grayscale(1) contrast(1.08) brightness(0.86);
+  backdrop-filter: grayscale(1) contrast(1.08) brightness(0.86);
+  opacity: 0;
+  animation: screen-break-gray 900ms ease 220ms forwards;
+}
+.screen-break-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* a rachadura corre de um lado ao outro (o recorte abre da esquerda para a direita) */
+  animation:
+    screen-break-run 220ms linear both,
+    screen-break-jolt 380ms steps(6, end) both;
+}
+.screen-break-top {
+  fill: rgba(255, 255, 255, 0.04);
+  animation: screen-break-top 700ms cubic-bezier(0.2, 0.9, 0.3, 1) 120ms both;
+}
+.screen-break-bottom {
+  fill: rgba(0, 0, 0, 0.14);
+  animation: screen-break-bottom 700ms cubic-bezier(0.2, 0.9, 0.3, 1) 120ms both;
+}
+.screen-break-gap,
+.screen-break-branch,
+.screen-break-edge {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
+}
+.screen-break-gap {
+  stroke: #050505;
+  stroke-width: 2px;
+  animation: screen-break-open 600ms cubic-bezier(0.2, 0.9, 0.3, 1) 160ms both;
+}
+.screen-break-branch {
+  stroke: #0a0a0a;
+  stroke-width: 2px;
+}
+.screen-break-edge {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1.5px;
+  transform: translateY(-0.9%);
+}
+.screen-break-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  animation: screen-break-flash 260ms ease-out both;
+}
+@keyframes screen-break-run {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes screen-break-open {
+  from {
+    stroke-width: 2px;
+  }
+  to {
+    stroke-width: 10px;
+  }
+}
+@keyframes screen-break-top {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-0.6%, -0.8%);
+  }
+}
+@keyframes screen-break-bottom {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(0.6%, 0.8%);
+  }
+}
+@keyframes screen-break-flash {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes screen-break-gray {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes screen-break-jolt {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  20% {
+    translate: -6px 3px;
+  }
+  40% {
+    translate: 5px -2px;
+  }
+  60% {
+    translate: -3px 1px;
+  }
+  80% {
+    translate: 2px 0;
+  }
+}
+@keyframes screen-break-fade {
+  to {
+    opacity: 0;
+  }
+}
+.reduce-motion .screen-break-svg,
+.reduce-motion .screen-break-flash {
+  animation: none;
+}
+.reduce-motion .screen-break-gap {
+  animation: none;
+  stroke-width: 8px;
+}
