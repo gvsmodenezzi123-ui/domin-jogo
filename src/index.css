@@ -26910,8 +26910,13 @@ html[data-mesa='plastico'] .player-zone .player-hint {
   -webkit-mask-image: none;
   mask-image: none;
 }
-.chair.is-side .seat-breath {
-  animation-name: seatBreathSeated;
+/* versão 2.32.3: a cadeira (e as pernas) ficam paradas; quem respira, pensa, se inclina e treme é
+   o corpo de cima (.seated-upper, no RivalBust), girando no quadril */
+.chair.is-side .seat-breath,
+.chair.is-side .seat-hit,
+.chair.is-side .seat-bust.is-hurt,
+.chair.is-side .seat-bust.is-smug {
+  animation: none;
 }
 .chair.is-side .seat-bust.is-thinking {
   rotate: none;
@@ -26927,13 +26932,114 @@ html[data-mesa='plastico'] .player-zone .player-hint {
   top: var(--ry);
   translate: none;
 }
-@keyframes seatBreathSeated {
+.seated-layer {
+  position: absolute;
+  inset: 0;
+}
+.seated-upper {
+  position: absolute;
+  inset: 0;
+  transform-origin: 37% 66%;
+  animation: seatedBreath 3.6s ease-in-out infinite;
+  transition: rotate 300ms ease;
+  will-change: transform;
+}
+.chair.is-side .seat-bust.is-thinking .seated-upper {
+  rotate: -1.5deg;
+  animation-duration: 2.4s;
+}
+.chair.is-side-right .seat-bust.is-thinking .seated-upper {
+  rotate: 1.5deg;
+}
+.chair.is-side .seat-bust.is-hurt .seated-upper {
+  animation:
+    seatedShake 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+    seatedBreath 3.6s ease-in-out infinite;
+}
+.chair.is-side .seat-hit .seated-upper {
+  animation:
+    seatedHit 360ms steps(6, end),
+    seatedBreath 3.6s ease-in-out infinite;
+}
+.chair.is-side-left .seat-bust.is-smug .seated-upper {
+  animation:
+    seatedLeanFwd 900ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    seatedBreath 3.6s ease-in-out infinite;
+}
+.chair.is-side-right .seat-bust.is-smug .seated-upper {
+  animation:
+    seatedLeanBack 900ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    seatedBreath 3.6s ease-in-out infinite;
+}
+.reduce-motion .seated-upper {
+  animation: none;
+}
+@keyframes seatedBreath {
   0%,
   100% {
-    transform: translateY(0);
+    scale: 1 1;
   }
   50% {
-    transform: translateY(-0.6px);
+    scale: 1.012 1.026;
+  }
+}
+@keyframes seatedShake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  12% {
+    translate: -5px 0;
+  }
+  28% {
+    translate: 4px 0;
+  }
+  44% {
+    translate: -2px 0;
+  }
+  62% {
+    translate: 1px 0;
+  }
+}
+@keyframes seatedHit {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  20% {
+    translate: -3px 1px;
+  }
+  40% {
+    translate: 3px -1px;
+  }
+  60% {
+    translate: -2px 0;
+  }
+  80% {
+    translate: 2px 0;
+  }
+}
+/* bateu: o corpo se inclina para a mesa (para a direita quem senta à esquerda, e vice-versa) */
+@keyframes seatedLeanFwd {
+  0% {
+    rotate: 0deg;
+  }
+  35% {
+    rotate: 5deg;
+  }
+  100% {
+    rotate: 2.5deg;
+  }
+}
+@keyframes seatedLeanBack {
+  0% {
+    rotate: 0deg;
+  }
+  35% {
+    rotate: -5deg;
+  }
+  100% {
+    rotate: -2.5deg;
   }
 }
 /* (o HUD de baixo fica por cima das cadeiras: o pé da cadeira da direita passava por cima do dorme) */

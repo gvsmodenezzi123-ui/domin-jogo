@@ -172,6 +172,13 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.32.3: quem senta do lado respira (a cadeira fica parada)
+
+- Os personagens de corpo inteiro das laterais da roda agora se mexem como os de frente: do
+  quadril para cima eles respiram, pendem pensando, se inclinam para a mesa quando batem e tremem
+  no golpe, com a fumaça e o brilho do olho junto. A cadeira e as pernas ficam paradas (a figura
+  é pintada em três camadas: a cadeira, as pernas e o corpo de cima).
+
 ### 2.32.2: as pedras de quem senta do lado ficam na borda
 
 - Na roda, as pedras de quem senta nas laterais ficam de pé em cima do aro, seguindo a linha da

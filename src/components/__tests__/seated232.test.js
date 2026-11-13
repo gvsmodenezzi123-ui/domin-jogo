@@ -70,4 +70,25 @@ describe('versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cad
     }
     expect(SEATED_HAND.y).toBeGreaterThan(70);
   }, 30000);
+
+  it('versão 2.32.3: em camadas: a cadeira parada (a mesma para todos), as pernas e o corpo de cima', () => {
+    const chair = paintSeatedProfile(PORTRAITS.neide, 'idle', false, 'right', 'madeira', 'chair');
+    expect(same(chair, paintSeatedProfile(PORTRAITS.tioZe, 'hurt', true, 'right', 'madeira', 'chair'))).toBe(true);
+    expect(same(chair, paintSeatedProfile(PORTRAITS.neide, 'idle', false, 'right', 'plastico', 'chair'))).toBe(false);
+    for (const id of ['neide', 'sofia', 'arlindo', 'marquinhos']) {
+      const legs = paintSeatedProfile(PORTRAITS[id], 'idle', false, 'right', 'madeira', 'legs');
+      const upper = paintSeatedProfile(PORTRAITS[id], 'idle', false, 'right', 'madeira', 'upper');
+      expect(opaque(legs), id).toBeGreaterThan(900);
+      expect(opaque(upper), id).toBeGreaterThan(opaque(paintProfile(PORTRAITS[id])) * 0.8);
+      // o humor só muda o corpo de cima
+      expect(same(upper, paintSeatedProfile(PORTRAITS[id], 'hurt', false, 'right', 'madeira', 'upper'))).toBe(false);
+      // as três camadas juntas cobrem o mesmo que a figura inteira
+      const all = paintSeatedProfile(PORTRAITS[id]);
+      let miss = 0;
+      for (let p = 3; p < all.data.length; p += 4) if (all.data[p] > 200 && !(chair.data[p] > 200 || legs.data[p] > 200 || upper.data[p] > 200)) miss += 1;
+      expect(miss, id).toBeLessThan(40);
+    }
+    // a silhueta escurece o corpo, nunca a cadeira
+    expect(same(paintSeatedBust(PORTRAITS.tioZe, 'idle', false, { silhouette: true, part: 'chair' }), chair)).toBe(true);
+  }, 30000);
 });

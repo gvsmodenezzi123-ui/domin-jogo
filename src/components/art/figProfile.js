@@ -870,7 +870,13 @@ function seatedTorso(spec) {
   return spec.fem ? any(base, ell(56, 70, 4.6, 6.4)) : base;
 }
 
-function paintSeatedBody(k, spec, S, chair) {
+/**
+ * O corpo sentado. `part`: 'all' (tudo, com o assento e o pé da frente da cadeira entre a canela e
+ * a coxa), 'legs' (só as pernas: a canela, o sapato e a coxa com a roupa) ou 'upper' (do quadril
+ * para cima: o tronco, a roupa e o braço).
+ */
+function paintSeatedBody(k, spec, S, chair, part = 'all') {
+  const legs = part !== 'upper';
   const o = spec.outfit ?? { type: 'shirt', color: '#5a5a5a' };
   const Top = rampOf(o.color ?? '#5a5a5a');
   const low = lowerOf(spec);
@@ -880,10 +886,14 @@ function paintSeatedBody(k, spec, S, chair) {
   const tone = (x, y) => ball(40, 74, 19, 34, 1.6, 5.8)(x, y);
   // a canela descendo do joelho e o sapato (a coxa vem por cima, depois do assento)
   const shin = low.kind === 'skirt' ? S : Low;
-  k.form(poly([[86, 106], [100, 104], [101, 114], [98, 150], [88, 150], [87, 114]]), (x) => tube(86, 102, 1.8, 5.2)(x), shin, { edge: 1, rim: 5, noise: 0.2, seed: 81 });
-  k.form(poly([[84, 148], [99, 147], [108, 150.5], [109, 156], [84, 156]]), (x, y) => (y < 151 ? 4.6 : 2.6), Shoe, { edge: 1, rim: 6, noise: 0.15, seed: 82 });
-  paintChair(k, chair, false);
-  if (low.kind === 'robe') {
+  if (legs) {
+    k.form(poly([[86, 106], [100, 104], [101, 114], [98, 150], [88, 150], [87, 114]]), (x) => tube(86, 102, 1.8, 5.2)(x), shin, { edge: 1, rim: 5, noise: 0.2, seed: 81 });
+    k.form(poly([[84, 148], [99, 147], [108, 150.5], [109, 156], [84, 156]]), (x, y) => (y < 151 ? 4.6 : 2.6), Shoe, { edge: 1, rim: 6, noise: 0.15, seed: 82 });
+  }
+  if (part === 'all') paintChair(k, chair, false);
+  if (!legs) {
+    // (só do quadril para cima)
+  } else if (low.kind === 'robe') {
     k.form(
       poly([[25, 98], [58, 98], [86, 100], [100, 103], [102, 116], [104, 148], [84, 149], [86, 118], [30, 118], [24, 110]]),
       (x, y) => (y < 106 ? 5 : 4) - (x > 86 && y > 112 ? 0.8 : 0) + (Math.sin(x * 0.8 + y * 0.15) > 0.7 && y > 112 ? -1.4 : 0),
@@ -902,6 +912,7 @@ function paintSeatedBody(k, spec, S, chair) {
     if (low.kind === 'skirt') for (let y = 105; y <= 116; y += 1) k.put(101, y, Low[1]);
     else for (let x = 34; x <= 92; x += 1) k.put(x, 102 + Math.round((x - 34) * 0.03), Low[2]);
   }
+  if (part === 'legs') return;
   // o tronco
   const body = k.form(seatedTorso(spec), (x, y) => tone(x, y) - (y > 104 ? 0.6 : 0), Top, { edge: 1, rim: 5, noise: o.type === 'cardigan' ? 0.6 : 0.3, seed: 85 });
   if (o.type === 'cardigan') {
@@ -1036,20 +1047,32 @@ function paintSeatedBody(k, spec, S, chair) {
  * O personagem `spec` de corpo inteiro, sentado de lado na cadeira (`chair`: 'madeira' ou
  * 'plastico'), no humor `mood` e com a boca aberta se `speaking`. `facing` como no perfil.
  * SEATED_W×SEATED_H, fundo transparente; a cabeça no mesmo lugar do perfil de 88×84.
+ * `part`: 'all' (tudo junto), ou uma camada: 'chair' (a cadeira), 'legs' (as pernas) ou 'upper'
+ * (do quadril para cima, com a cabeça): a cadeira fica parada e o corpo respira por cima dela.
  */
-export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing = 'right', chair = 'madeira') {
+export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing = 'right', chair = 'madeira', part = 'all') {
   const k = board(SEATED_W, SEATED_H);
+  // versão 2.32.3: em camadas (a cadeira parada, as pernas e o corpo de cima, que respira)
+  if (part === 'chair') {
+    paintChair(k, chair, true);
+    paintChair(k, chair, false);
+    return finish(k, {}, facing);
+  }
   const g = profileGeo(spec);
   const S = rampOf(spec.skin ?? '#d8a070', 'skin');
   const hairColor = spec.hair?.color ?? spec.facial?.color;
-  paintChair(k, chair, true);
+  if (part === 'legs') {
+    paintSeatedBody(k, spec, S, chair, 'legs');
+    return finish(k, spec, facing);
+  }
+  if (part === 'all') paintChair(k, chair, true);
   // a cabeça é desenhada para o quadro de 88×84: as formas dela só varrem esse canto
   k.setLimit([0, 0, W - 1, H - 1]);
   paintHat(k, spec, g, true);
   paintHairBack(k, spec);
   paintNeck(k, S, g);
   k.setLimit(null);
-  paintSeatedBody(k, spec, S, chair);
+  paintSeatedBody(k, spec, S, chair, part);
   k.setLimit([0, 0, W - 1, H - 1]);
   paintHead(k, { ...spec, __mood: mood }, S, g, hairColor);
   paintEye(k, spec, mood, S);

@@ -65,7 +65,8 @@ export { SEATED_H, SEATED_W };
  * 'plastico'), olhando para `facing`. Sem a sombra da beirada (a mesa não cobre o peito: as
  * pernas é que entram embaixo dela). SEATED_W×SEATED_H.
  */
-export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira' } = {}) {
-  const out = paintSeatedProfile(spec, mood, speaking, facing, chair);
-  return silhouette ? silhouetteOf(out) : out;
+export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira', part = 'all' } = {}) {
+  const out = paintSeatedProfile(spec, mood, speaking, facing, chair, part);
+  // (a cadeira não vira sombra: só quem senta nela)
+  return silhouette && part !== 'chair' ? silhouetteOf(out) : out;
 }
