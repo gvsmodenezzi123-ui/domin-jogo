@@ -172,6 +172,14 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.36.0: quem cai desmaia na cadeira
+
+- Na roda, quem perde as vidas não vira mais cinza com um X: **desmaia** ali mesmo. Olhos
+  fechados e caídos, com olheira, a boca mole e um fio de baba (o humor `out`, pintado de frente
+  e de perfil); quem senta lá na frente tomba de lado e escorrega atrás da beirada, quem senta do
+  lado cai para trás no encosto (a cadeira fica parada). Respira devagar e três estrelinhas rodam
+  em volta da cabeça. A plaquinha continua com a colocação ("FORA · 2º").
+
 ### 2.35.3: código de sala só com números
 
 - O código das mesas online agora é só de **números** (5 dígitos, `MESA-48213` no duelo e

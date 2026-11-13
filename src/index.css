@@ -18320,9 +18320,7 @@
   display: block;
 }
 
-.chair.is-out .chair-bust {
-  filter: grayscale(1) brightness(0.55);
-}
+/* (versão 2.36: quem cai não fica mais cinza: desmaia na cadeira, veja "desmaiado" no fim) */
 
 .chair .seat-chalk {
   position: absolute;
@@ -27817,4 +27815,114 @@ html[data-topview] .emote-pick {
 }
 .reduce-motion .hurt-blink-lid {
   display: none;
+}
+
+/* ---------- versão 2.36: quem perdeu as vidas desmaia na cadeira ----------
+   O rosto vira o humor "out" (olhos fechados e caídos, boca mole com baba); o corpo amolece: de
+   frente, tomba de lado e escorrega um pouco atrás da beirada; de lado, o tronco cai para trás,
+   no encosto. Respira devagar e as estrelinhas rodam em volta da cabeça. */
+.chair .seat-bust.is-out .seat-breath {
+  animation:
+    faint-front 1100ms cubic-bezier(0.3, 0, 0.2, 1) forwards,
+    seatBreath 5.5s ease-in-out 1100ms infinite;
+}
+.chair.is-west .seat-bust.is-out .seat-breath {
+  --faint-tilt: -9deg;
+}
+.chair.is-side .seat-bust.is-out .seat-breath {
+  animation: none;
+}
+.chair.is-side .seat-bust.is-out .seated-upper {
+  animation:
+    faint-side 1200ms cubic-bezier(0.3, 0, 0.2, 1) forwards,
+    seatedBreath 5.5s ease-in-out 1200ms infinite;
+}
+.chair.is-side-right .seat-bust.is-out .seated-upper {
+  --faint-back: 14deg;
+}
+@keyframes faint-front {
+  0% {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+  25% {
+    rotate: calc(var(--faint-tilt, 9deg) * -0.35);
+    translate: 0 -1%;
+  }
+  100% {
+    rotate: var(--faint-tilt, 9deg);
+    translate: 0 9%;
+  }
+}
+@keyframes faint-side {
+  0% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: calc(var(--faint-back, -14deg) * -0.3);
+  }
+  100% {
+    rotate: var(--faint-back, -14deg);
+  }
+}
+.faint-stars {
+  position: absolute;
+  width: 34%;
+  height: 10%;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+.faint-star {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  margin: -11% 0 0 -11%;
+  animation: faint-orbit 2.4s linear infinite;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+}
+/* uma volta achatada (a roda deitada em volta da cabeça): atrás fica menor e mais apagada */
+@keyframes faint-orbit {
+  0% {
+    translate: 0 120%;
+    scale: 1;
+    opacity: 1;
+  }
+  25% {
+    translate: 210% 0;
+    scale: 0.8;
+    opacity: 0.85;
+  }
+  50% {
+    translate: 0 -120%;
+    scale: 0.55;
+    opacity: 0.45;
+  }
+  75% {
+    translate: -210% 0;
+    scale: 0.8;
+    opacity: 0.85;
+  }
+  100% {
+    translate: 0 120%;
+    scale: 1;
+    opacity: 1;
+  }
+}
+.reduce-motion .chair .seat-bust.is-out .seat-breath {
+  animation: none;
+  rotate: var(--faint-tilt, 9deg);
+  translate: 0 9%;
+}
+.reduce-motion .chair.is-side .seat-bust.is-out .seat-breath {
+  rotate: none;
+  translate: none;
+}
+.reduce-motion .chair.is-side .seat-bust.is-out .seated-upper {
+  animation: none;
+  rotate: var(--faint-back, -14deg);
+}
+.reduce-motion .faint-star {
+  animation: none;
 }

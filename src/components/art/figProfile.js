@@ -362,7 +362,7 @@ function paintEye(k, spec, mood, S) {
   const ir = rampOf(spec.iris ?? '#6a3a22');
   const P = (x, y, c) => k.put(x, y, c);
   if (spec.redEyes) {
-    if (mood === 'blink') {
+    if (mood === 'blink' || mood === 'out') {
       for (let x = 48; x <= 52; x += 1) P(x, 32, S[0]);
       return;
     }
@@ -376,7 +376,14 @@ function paintEye(k, spec, mood, S) {
   }
   if (spec.eyesGlow) {
     const g = hex(spec.eyesGlow);
-    for (let x = 48; x <= 52; x += 1) P(x, 32, mood === 'blink' ? S[0] : g);
+    for (let x = 48; x <= 52; x += 1) P(x, 32, mood === 'blink' || mood === 'out' ? S[0] : g);
+    return;
+  }
+  if (mood === 'out') {
+    // versão 2.36: desmaiado: a pálpebra fechada e caída e a olheira embaixo
+    for (let x = 47; x <= 52; x += 1) for (let y = 30; y <= 32; y += 1) P(x, y, S[y < 32 ? 3 : 4]);
+    for (let x = 47; x <= 52; x += 1) P(x, x >= 51 ? 34 : 33, x === 47 ? S[1] : INK);
+    for (let x = 48; x <= 51; x += 1) P(x, 35, mix(S[3], hex('#5a3a5a'), 0.35));
     return;
   }
   if (mood === 'blink') {
@@ -445,6 +452,21 @@ function paintMouth(k, spec, mood, speaking, S, g) {
   const dark = L ? mix(L[0], INK, 0.25) : mix(S[0], INK, 0.35);
   const lip = (i) => (L ? L[i] : mix(S[Math.max(0, i - 2)], hex('#b8504c'), 0.34));
   const gold = hex('#f0c24a');
+  if (mood === 'out') {
+    // versão 2.36: desmaiado: o queixo caído, a boca aberta sem força e a baba escorrendo
+    for (let x = fx - 3; x <= fx; x += 1) {
+      k.put(x, my, x === fx - 3 ? dark : MOUTH_DARK);
+      k.put(x, my + 1, MOUTH_DARK);
+      k.put(x, my + 2, x === fx ? lip(5) : MOUTH_DARK);
+    }
+    k.put(fx - 4, my + 1, dark);
+    k.put(fx, my + 3, lip(4));
+    k.put(fx - 1, my + 3, lip(5));
+    k.put(fx + 1, my + 2, hex('#dff2ff'));
+    k.put(fx + 1, my + 3, hex('#bfe0f4'), 0.85);
+    k.put(fx + 1, my + 4, hex('#bfe0f4'), 0.5);
+    return;
+  }
   if (mood === 'hurt' || speaking) {
     for (let x = fx - 3; x <= fx; x += 1) {
       k.put(x, my - 1, x === fx - 1 && spec.goldTooth ? gold : TOOTH);

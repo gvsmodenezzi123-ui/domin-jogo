@@ -193,7 +193,8 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
  */
 function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, chair = 'madeira', emote = null, onSignal }) {
   const out = !seat.alive;
-  const mood = out ? 'idle' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
+  // versão 2.36: quem perdeu as vidas não vira cinza com um X: desmaia ali mesmo, na cadeira
+  const mood = out ? 'out' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
   return (
     <div
@@ -227,7 +228,6 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
           <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
             <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} />
           </span>
-          {out && <ChalkX />}
         </div>
       </div>
       {/* versão 2.33: o emote. Versão 2.35.2: sempre NA FRENTE do personagem (por cima de tudo

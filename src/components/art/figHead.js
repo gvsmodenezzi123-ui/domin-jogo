@@ -162,7 +162,7 @@ function paintEye(k, side, spec, mood, S, ir) {
   const corner = mix(S[0], INK, 0.45);
   const type = spec.eyes ?? 'open';
   if (spec.eyesGlow) {
-    if (mood === 'blink') {
+    if (mood === 'blink' || mood === 'out') {
       for (let u = -2; u <= 3; u += 1) P(u, 0, S[0]);
       return;
     }
@@ -173,6 +173,21 @@ function paintEye(k, side, spec, mood, S, ir) {
     for (let u = -1; u <= 2; u += 1) P(u, dy - 1, mood === 'smug' || mood === 'hurt' ? mix(g, S[1], 0.6) : g);
     for (let u = -1; u <= 2; u += 1) P(u, dy, hex('#ffd9a8'));
     P(0, dy, hex('#fff6e0'));
+    return;
+  }
+  if (mood === 'out') {
+    // versão 2.36: desmaiado: a pálpebra pesada, fechada e caída para fora, e a olheira
+    for (let u = -2; u <= 3; u += 1) for (let dy = -1; dy <= 2; dy += 1) P(u, dy, S[dy < 1 ? 4 : 5]);
+    for (const [u, dy] of [
+      [-2, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+      [3, 2],
+    ])
+      P(u, dy, K);
+    for (let u = -1; u <= 2; u += 1) P(u, 3, mix(S[3], hex('#5a3a5a'), 0.35));
     return;
   }
   if (mood === 'blink') {
@@ -394,6 +409,18 @@ function paintMouth(k, spec, mood, speaking, S, geo) {
     k.put(37, my + 2, S[2]);
     k.put(50, my + 2, S[2]);
     lower(41, 46, my + 3);
+    return;
+  }
+  if (mood === 'out') {
+    // versão 2.36: desmaiado: a boca mole, entreaberta e torta, com um fio de baba no canto
+    for (let x = 41; x <= 45; x += 1) k.put(x, my, dark);
+    for (let x = 41; x <= 46; x += 1) k.put(x, my + 1, x === 41 || x === 46 ? dark : hex('#3a0c12'));
+    for (let x = 42; x <= 46; x += 1) k.put(x, my + 2, dark);
+    k.put(40, my, S[1]);
+    lower(42, 46, my + 3);
+    k.put(47, my + 2, hex('#dff2ff'));
+    k.put(47, my + 3, hex('#bfe0f4'), 0.85);
+    k.put(47, my + 4, hex('#bfe0f4'), 0.5);
     return;
   }
   if (speaking) {
