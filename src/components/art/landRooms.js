@@ -1740,6 +1740,13 @@ function daySky(b, x0, y0, x1, y1, stops = SKY_DAY) {
   }
 }
 
+/**
+ * Versão 2.31: pintando em camadas (paintDayLayers), as nuvens não vão para a cena: vão para esta
+ * lista e ganham a camada delas, que anda devagar. E o mar sai sem as cristas (elas andam também).
+ */
+let cloudSink = null;
+let seaLayered = false;
+
 /** Nuvem de algodão: bolotas brancas com a barriga cinza-azulada e a luz em cima. */
 function cloud(b, r, cx, cy, wd, ht) {
   const lobes = [];
@@ -1748,10 +1755,16 @@ function cloud(b, r, cx, cy, wd, ht) {
     const rr = ht * (0.45 + Math.sin(t * Math.PI) * 0.55) * (0.8 + r() * 0.3);
     lobes.push([cx - wd / 2 + t * wd, cy - Math.sin(t * Math.PI) * ht * 0.35, rr]);
   }
-  for (const [x, y, rr] of lobes) b.ellipse(x, y + 1, rr, rr * 0.75, hex('#b8cce4'));
-  for (const [x, y, rr] of lobes) b.ellipse(x - rr * 0.1, y - rr * 0.12, rr * 0.86, rr * 0.62, hex('#eef6fc'));
-  for (const [x, y, rr] of lobes) b.ellipse(x - rr * 0.25, y - rr * 0.3, rr * 0.45, rr * 0.3, hex('#ffffff'));
-  b.rect(cx - wd / 2 - ht * 0.3, cy + ht * 0.3, wd + ht * 0.6, 1, hex('#a8bcd8'), 0.7);
+  if (cloudSink) cloudSink.push({ cx, cy, wd, ht, lobes });
+  else drawCloud(b, { cx, cy, wd, ht, lobes }, 0);
+}
+
+/** A nuvem já sorteada, deslocada `dx` px. */
+function drawCloud(b, { cx, cy, wd, ht, lobes }, dx) {
+  for (const [x, y, rr] of lobes) b.ellipse(x + dx, y + 1, rr, rr * 0.75, hex('#b8cce4'));
+  for (const [x, y, rr] of lobes) b.ellipse(x + dx - rr * 0.1, y - rr * 0.12, rr * 0.86, rr * 0.62, hex('#eef6fc'));
+  for (const [x, y, rr] of lobes) b.ellipse(x + dx - rr * 0.25, y - rr * 0.3, rr * 0.45, rr * 0.3, hex('#ffffff'));
+  b.rect(cx + dx - wd / 2 - ht * 0.3, cy + ht * 0.3, wd + ht * 0.6, 1, hex('#a8bcd8'), 0.7);
 }
 
 /** O sol, com o miolo branco e a coroa amarela (vai para a camada que brilha). */
@@ -1897,11 +1910,16 @@ function motorbike(b, x, base) {
   contact(b, x + 20, base, 22, 2, 0.5);
 }
 
+/** O fundo da calçada: o céu e o sol (o que fica atrás das nuvens que andam). */
+function skyCalcada(b, G, g) {
+  daySky(b, 0, 0, g.w, g.Y(44));
+  sun(G, g.L(128), g.Y(7), g.S(5));
+}
+
 function sceneCalcada(b, G, r, g) {
   const { w, h, M, L, R, Y, S, floor } = g;
   // o céu azul, o sol à esquerda, as nuvens e os fios
-  daySky(b, 0, 0, w, Y(44));
-  sun(G, L(128), Y(7), S(5));
+  skyCalcada(b, G, g);
   cloud(b, r, M(176), Y(5), S(44), S(7));
   cloud(b, r, R(370), Y(4), S(36), S(6));
   // a casa vizinha à esquerda: a parede azul-piscina com a janela de grade e o vaso
@@ -2094,11 +2112,34 @@ function gull(b, x, y) {
   b.put(x + 2, y - 1, hex('#3a3a44'));
 }
 
+/** O céu da praia e o sol alto à direita. */
+function skyPraia(b, G, g) {
+  daySky(b, 0, 0, g.w, g.Y(60), pal('#2a6ac8', '#3a86dc', '#5aa4e8', '#82c0f0', '#b0dcf6', '#d8eefa'));
+  sun(G, g.M(268), g.Y(16), g.S(7));
+}
+
+/** As cristas do mar parado (a versão em camadas tira as cristas: elas andam na camada delas). */
+const seaCrest = (x, y, t) => Math.sin(x * 0.12 + y * 1.7) > 0.9 - t * 0.1;
+const SEA = ['#1a5a9a', '#1e72a8', '#2a8ab8', '#3aa8c8', '#5ac4d0'];
+
+/** O mar: o azul-turquesa (com as cristas brancas, se `crests`) e o brilho do sol na água. */
+function seaPraia(b, G, g, crests) {
+  const { w, M, Y, S } = g;
+  const horizon = Y(60);
+  for (let y = horizon; y < Y(80); y += 1) {
+    const t = (y - horizon) / (Y(80) - horizon);
+    for (let x = 0; x < w; x += 1) b.put(x, y, crests && seaCrest(x, y, t) ? hex('#e8f8fc') : ramp(pal(...SEA), t, x, y));
+  }
+  for (let y = horizon + 1; y < Y(78); y += 2) {
+    const half = S(4) + (y - horizon) * 0.4;
+    for (let x = Math.round(M(268) - half); x < M(268) + half; x += 2) if (Math.sin(x * 0.9 + y) > 0.3) G.put(x, y, hex('#fffbe8'), 0.8);
+  }
+  b.rect(0, horizon, w, 1, hex('#1a4a80'));
+}
+
 function scenePraia(b, G, r, g) {
   const { w, h, M, L, R, Y, S, floor } = g;
-  const horizon = Y(60);
-  daySky(b, 0, 0, w, horizon, pal('#2a6ac8', '#3a86dc', '#5aa4e8', '#82c0f0', '#b0dcf6', '#d8eefa'));
-  sun(G, M(268), Y(16), S(7));
+  skyPraia(b, G, g);
   cloud(b, r, M(150), Y(26), S(46), S(9));
   cloud(b, r, L(70), Y(36), S(30), S(6));
   cloud(b, r, M(300), Y(40), S(28), S(5));
@@ -2108,19 +2149,7 @@ function scenePraia(b, G, r, g) {
     [M(118), Y(46)],
   ])
     gull(b, gx, gy);
-  // o mar: o azul-turquesa com as cristas brancas e o brilho do sol
-  for (let y = horizon; y < Y(80); y += 1) {
-    const t = (y - horizon) / (Y(80) - horizon);
-    for (let x = 0; x < w; x += 1) {
-      const crest = Math.sin(x * 0.12 + y * 1.7) > 0.9 - t * 0.1;
-      b.put(x, y, crest ? hex('#e8f8fc') : ramp(pal('#1a5a9a', '#1e72a8', '#2a8ab8', '#3aa8c8', '#5ac4d0'), t, x, y));
-    }
-  }
-  for (let y = horizon + 1; y < Y(78); y += 2) {
-    const half = S(4) + (y - horizon) * 0.4;
-    for (let x = Math.round(M(268) - half); x < M(268) + half; x += 2) if (Math.sin(x * 0.9 + y) > 0.3) G.put(x, y, hex('#fffbe8'), 0.8);
-  }
-  b.rect(0, horizon, w, 1, hex('#1a4a80'));
+  seaPraia(b, G, g, !seaLayered);
   // a espuma na beira e a areia clara até o deque
   for (let y = Math.floor(Y(80)); y < floor; y += 1) for (let x = 0; x < w; x += 1) b.put(x, y, ramp(pal('#c8a874', '#dcbe8a', '#ecd2a2', '#f6e2ba'), 0.55 + Math.sin(x * 0.05 + y * 0.3) * 0.08 - (Math.max(0, y - Y(81)) / (floor - Y(81))) * 0.2, x, y));
   for (let x = 0; x < w; x += 1) b.put(x, Y(80) + Math.round(Math.sin(x * 0.2) * 1.2), hex('#ffffff'));
@@ -2313,10 +2342,15 @@ function pigeon(b, x, y, dir = 1) {
   b.put(x, y + 2, hex('#d87a5a'));
 }
 
+/** O céu grande da praça, com o sol à direita. */
+function skyPraca(b, G, g) {
+  daySky(b, 0, 0, g.w, g.Y(84));
+  sun(G, g.M(290), g.Y(10), g.S(6));
+}
+
 function scenePraca(b, G, r, g) {
   const { w, h, M, L, R, Y, S, floor } = g;
-  daySky(b, 0, 0, w, Y(84));
-  sun(G, M(290), Y(10), S(6));
+  skyPraca(b, G, g);
   cloud(b, r, M(150), Y(14), S(40), S(7));
   cloud(b, r, M(260), Y(30), S(30), S(5));
   // a igreja lá no fundo, atrás do rival (o frontão com o relógio por cima da cabeça dele)
@@ -2400,14 +2434,142 @@ export function paintLandRoom(name, w, h, seed = 1955) {
   relight(b, lights, { ambient, mask: G.mask, bands: room.bands });
   room.finish?.(b, g);
   // a vinheta: escurece as quinas e o chão embaixo da mesa
-  b.light(0, 0, width, height, BLACK, (x, y) => {
-    const dx = (x - width / 2) / (width * 0.62);
-    const dy = (y - height * 0.4) / (height * 0.85);
-    const t = Math.max(0, Math.hypot(dx, dy) - 0.5) * 1.5;
-    return t > bayer(x, y) * 0.2 ? t : 0;
-  });
+  b.light(0, 0, width, height, BLACK, (x, y) => vignetteAt(x, y, width, height));
   return { w: width, h: height, data: b.data };
 }
+
+/** O quanto a vinheta escurece o pixel (0: nada), em pontilhado. */
+function vignetteAt(x, y, width, height) {
+  const dx = (x - width / 2) / (width * 0.62);
+  const dy = (y - height * 0.4) / (height * 0.85);
+  const t = Math.max(0, Math.hypot(dx, dy) - 0.5) * 1.5;
+  return t > bayer(x, y) * 0.2 ? t : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Versão 2.31: o céu e o mar que se mexem nas salas de dia
+// ---------------------------------------------------------------------------
+
+/** O fundo de cada sala de dia: só o que fica atrás das nuvens (o céu, o sol e o mar). */
+const DAY_BACKS = {
+  landcalcada: skyCalcada,
+  landpraia: (b, G, g) => {
+    skyPraia(b, G, g);
+    seaPraia(b, G, g, false);
+  },
+  landpraca: skyPraca,
+};
+
+/** As duas camadas de cristas do mar: o período (px), a velocidade (px/s), o sentido e a cor. */
+export const WAVE_LAYERS = Object.freeze([
+  Object.freeze({ period: 104, speed: 4, dir: -1, len: [4, 8], color: '#e8f8fc', seed: 3 }),
+  Object.freeze({ period: 78, speed: 2.2, dir: 1, len: [2, 6], color: '#c8eef6', seed: 9 }),
+]);
+
+/** Uma faixa que dá a volta: pinta o ladrilho de `period` px e repete até cobrir `period + w`. */
+function tiled(tile, period, w) {
+  const out = buffer(period + w, tile.h);
+  for (let y = 0; y < tile.h; y += 1) {
+    for (let x = 0; x < out.w; x += 1) {
+      const i = (y * tile.w + (x % period)) * 4;
+      const o = (y * out.w + x) * 4;
+      out.data[o] = tile.data[i];
+      out.data[o + 1] = tile.data[i + 1];
+      out.data[o + 2] = tile.data[i + 2];
+      out.data[o + 3] = tile.data[i + 3];
+    }
+  }
+  return out;
+}
+
+/**
+ * A sala de dia em camadas (components/BotecoBackdrop.jsx), de trás para a frente:
+ *   back    o céu, o sol e o mar liso, sem a vinheta
+ *   clouds  as nuvens numa faixa que dá a volta (`period` px): anda devagar para a esquerda
+ *   waves   (praia) as cristas do mar, duas faixas andando em sentidos opostos, a partir de `y`
+ *   shade   a vinheta sozinha (preto com transparência), por cima do céu e do mar que andam
+ *   front   a sala inteira, já com a luz e a vinheta, com buraco onde é céu ou mar
+ * A cena é a mesma da pintura parada (paintLandRoom): só as nuvens e as cristas saem dela.
+ */
+export function paintDayLayers(name, w, h, seed = 1955) {
+  const room = ROOMS[name];
+  const width = Math.max(8, Math.round(w));
+  const height = Math.max(8, Math.round(h));
+  const g = geometry(width, height);
+  const { ambient, lights } = room.lights(g);
+  const develop = (b, G) => {
+    relight(b, lights, { ambient, mask: G.mask, bands: room.bands });
+    room.finish?.(b, g);
+  };
+  // a sala inteira, sem as nuvens (vão para a lista) e com o mar liso
+  const clouds = [];
+  const full = buffer(width, height);
+  const Gf = glowLayer(full);
+  cloudSink = clouds;
+  seaLayered = true;
+  try {
+    room.paint(full, Gf, rngOf(seed), g);
+  } finally {
+    cloudSink = null;
+    seaLayered = false;
+  }
+  develop(full, Gf);
+  // o fundo sozinho, com a mesma luz: onde a sala inteira ficou igual a ele, é céu (ou mar)
+  const back = buffer(width, height);
+  const Gb = glowLayer(back);
+  DAY_BACKS[name](back, Gb, g);
+  develop(back, Gb);
+  const shade = buffer(width, height);
+  const fd = full.data;
+  const bd = back.data;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * 4;
+      const v = vignetteAt(x, y, width, height);
+      if (v > 0) shade.put(x, y, BLACK, Math.min(1, v) * 0.9);
+      if (bd[i + 3] === 255 && fd[i] === bd[i] && fd[i + 1] === bd[i + 1] && fd[i + 2] === bd[i + 2]) fd[i + 3] = 0;
+    }
+  }
+  full.light(0, 0, width, height, BLACK, (x, y) => (fd[(y * width + x) * 4 + 3] ? vignetteAt(x, y, width, height) : 0));
+  // as nuvens: um ladrilho da largura da tela (cada uma pintada também uma volta antes e depois)
+  const period = width;
+  let ch = 1;
+  for (const c of clouds) ch = Math.max(ch, Math.ceil(c.cy + c.ht * 1.2) + 2);
+  const tile = buffer(period, Math.min(height, ch));
+  for (const c of clouds) for (const dx of [-period, 0, period]) drawCloud(tile, c, dx);
+  relight(tile, lights, { ambient, bands: room.bands });
+  const layers = {
+    back: { w: width, h: height, data: back.data },
+    clouds: { ...pick(tiled(tile, period, width)), period, speed: 1.2 },
+    waves: [],
+    shade: { w: width, h: height, data: shade.data },
+    front: { w: width, h: height, data: full.data },
+  };
+  // as cristas do mar (só a praia tem mar): tracinhos sorteados por linha, mais compridos e mais
+  // juntos perto da areia
+  if (name === 'landpraia') {
+    const y0 = g.Y(60) + 1;
+    const y1 = g.Y(80);
+    for (const wl of WAVE_LAYERS) {
+      const wt = buffer(wl.period, y1 - y0);
+      const r = rngOf(wl.seed * 7919 + width);
+      for (let y = 0; y < wt.h; y += 1) {
+        const t = y / Math.max(1, wt.h - 1);
+        const n = t > 0.55 ? 2 : 1;
+        for (let k = 0; k < n; k += 1) {
+          const x = Math.floor(r() * wl.period);
+          const len = Math.round(wl.len[0] + (wl.len[1] - wl.len[0]) * (0.4 * r() + 0.6 * t));
+          for (let j = 0; j < len; j += 1) wt.put((x + j) % wl.period, y, hex(wl.color), j === 0 || j === len - 1 ? 0.6 : 1);
+        }
+      }
+      relight(wt, lights, { ambient, bands: room.bands, oy: -y0 });
+      layers.waves.push({ ...pick(tiled(wt, wl.period, width)), y: y0, period: wl.period, speed: wl.speed, dir: wl.dir });
+    }
+  }
+  return layers;
+}
+
+const pick = (b) => ({ w: b.w, h: b.h, data: b.data });
 
 /**
  * Versão 2.13: o que o shader da mesa (components/FxLayer.jsx) acende por cima de cada sala, nas

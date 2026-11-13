@@ -26868,3 +26868,30 @@ html[data-mesa='plastico'] .player-zone .player-hint {
 .lobby-step .lobby-chip.is-on {
   min-width: 92px;
 }
+
+/* versão 2.31: a sala de dia em camadas (BotecoBackdrop.jsx): as nuvens e o mar andam */
+.day-backdrop {
+  overflow: hidden;
+}
+.day-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  image-rendering: pixelated;
+}
+.day-fill {
+  width: 100%;
+  height: 100%;
+}
+.day-drift {
+  will-change: transform;
+}
+.reduce-motion .day-drift {
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-drift {
+    transform: none !important;
+  }
+}

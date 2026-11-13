@@ -172,6 +172,14 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.31.0: as nuvens e o mar andando
+
+- Nos cenários de dia as **nuvens** andam devagar pelo céu (passam por trás dos coqueiros, das
+  árvores, da igreja e na frente do sol) e no Quiosque da Praia as **cristas do mar** vão e vêm,
+  em duas faixas em sentidos opostos. A sala é pintada em camadas (o céu atrás, as nuvens, o mar,
+  a sala por cima com buraco no céu) e o que anda é só `transform`, de 1 em 1 pixel da cena: a
+  pixel art não borra e o iPhone só compõe. Com animações reduzidas, fica tudo parado.
+
 ### 2.30.0: três cenários de dia, com mesa, trilha e som próprios
 
 - **Cenários de dia** (deitado), com o sol pintado e no shader (o brilho, os raios girando
