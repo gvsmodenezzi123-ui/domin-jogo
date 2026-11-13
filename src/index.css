@@ -17521,16 +17521,10 @@
   translate: -50% calc(-100% + 6px);
 }
 
-/* a lâmpada pende na frente do rival, acima da cabeça dele (versão 2.29.1: e na roda online) */
-.rival-seat .seat-lamp,
-.roda-seats .seat-lamp {
+/* a lâmpada pende na frente do rival, acima da cabeça dele */
+.rival-seat .seat-lamp {
   top: -10px;
   z-index: 1;
-}
-
-/* na roda, a lâmpada fica na frente de quem senta lá no fundo */
-.roda-seats .seat-lamp {
-  z-index: 3;
 }
 
 .seat-rack .rival-slot {
@@ -26687,7 +26681,7 @@ html[data-ui='novo'] .px-skins .board-view-btn {
 html[data-topview='up'] .table-room,
 html[data-topview='up'] .rival-seat,
 html[data-topview='up'] .roda-seats,
-html[data-topview='up'] .lamp-rig:not(.seat-lamp),
+html[data-topview='up'] .lamp-rig,
 html[data-topview='up'] .table-candles {
   animation: rise-scene-up 620ms cubic-bezier(0.5, 0, 0.2, 1) both;
   pointer-events: none;
@@ -26696,7 +26690,7 @@ html[data-topview='up'] .table-candles {
 html[data-topview='down'] .table-room,
 html[data-topview='down'] .rival-seat,
 html[data-topview='down'] .roda-seats,
-html[data-topview='down'] .lamp-rig:not(.seat-lamp),
+html[data-topview='down'] .lamp-rig,
 html[data-topview='down'] .table-candles {
   animation: rise-scene-down 500ms cubic-bezier(0.4, 0, 0.3, 1) both;
   pointer-events: none;
@@ -26828,11 +26822,4 @@ html.reduce-motion[data-topview] :is(.table-room, .rival-seat, .roda-seats, .lam
 .nvs .nvs-collection .q-slot.q-empty {
   --rc: rgba(122, 82, 32, 0.35);
   opacity: 0.45;
-}
-
-/* Versão 2.29.1: na roda, quem senta no fundo fica embaixo da lâmpada: a plaquinha e a vida dele
-   vão para o lado direito da lâmpada (senão a lâmpada cobre o nome) */
-.roda-seats .chair:not(.is-side) .chair-plate {
-  translate: 24px 0;
-  align-items: flex-start;
 }
