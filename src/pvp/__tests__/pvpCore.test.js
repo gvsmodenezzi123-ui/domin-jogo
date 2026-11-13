@@ -16,24 +16,27 @@ function duel({ host = profileOf(run('classica')), guest = profileOf(run('borrac
 }
 
 describe('Patch PvP: ID da sala', () => {
-  it('5 caracteres legíveis, mostrados como MESA-XXXXX, e o ID do anfitrião no PeerJS', () => {
+  it('versão 2.35.3: 5 números, mostrados como MESA-XXXXX, e o ID do anfitrião no PeerJS', () => {
     let i = 0;
     const code = generateRoomCode(() => [0.1, 0.5, 0.9, 0.33, 0.77][i++]);
-    expect(code).toHaveLength(5);
-    expect([...code].every((ch) => ROOM_ALPHABET.includes(ch))).toBe(true);
-    expect(ROOM_ALPHABET).not.toMatch(/[01OIL]/);
+    expect(code).toBe('15937');
+    expect(code).toMatch(/^[0-9]{5}$/);
+    expect(ROOM_ALPHABET).toBe('0123456789');
+    for (let k = 0; k < 200; k += 1) expect(generateRoomCode()).toMatch(/^[0-9]{5}$/);
     expect(formatRoomId(code)).toBe(`MESA-${code}`);
-    expect(peerIdOf('8B2KQ')).toBe('buxaria-mesa-8b2kq');
+    expect(peerIdOf('48213')).toBe('buxaria-mesa-48213');
   });
 
   it('aceita o ID digitado de vários jeitos (e um link) e recusa o que não é código', () => {
-    expect(parseRoomInput('MESA-8B2KQ')).toBe('8B2KQ');
-    expect(parseRoomInput(' mesa 8b2kq ')).toBe('8B2KQ');
-    expect(parseRoomInput('8b2kq')).toBe('8B2KQ');
-    expect(parseRoomInput('https://x.github.io/domin-jogo/?mesa=8B2KQ')).toBe('8B2KQ');
-    expect(parseRoomInput('MESA-8B2K')).toBeNull();
-    expect(parseRoomInput('MESA-0O1IL')).toBeNull();
-    expect(maskRoomInput('mesa-8b2kq77')).toBe('8B2KQ');
+    expect(parseRoomInput('MESA-48213')).toBe('48213');
+    expect(parseRoomInput(' mesa 48213 ')).toBe('48213');
+    expect(parseRoomInput('48213')).toBe('48213');
+    expect(parseRoomInput('09120')).toBe('09120');
+    expect(parseRoomInput('https://x.github.io/domin-jogo/?mesa=MESA-48213')).toBe('48213');
+    expect(parseRoomInput('MESA-4821')).toBeNull();
+    expect(parseRoomInput('MESA-8B2KQ')).toBeNull();
+    expect(maskRoomInput('mesa-48213 77')).toBe('48213');
+    expect(maskRoomInput('4a8b2c1d3')).toBe('48213');
   });
 });
 

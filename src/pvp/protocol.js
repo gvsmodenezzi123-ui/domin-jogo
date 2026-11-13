@@ -62,10 +62,11 @@ export const MSG = Object.freeze({
 const TYPES = new Set(Object.values(MSG));
 
 // ---------------------------------------------------------------------------
-// ID da sala: 5 caracteres legíveis (sem 0/O, 1/I/L), mostrado como "MESA-8B2KQ"
+// ID da sala: 5 números, mostrado como "MESA-48213" (versão 2.35.3: só números, fácil de
+// ditar e de digitar no teclado numérico do celular; antes eram letras e números)
 // ---------------------------------------------------------------------------
 
-export const ROOM_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+export const ROOM_ALPHABET = '0123456789';
 export const ROOM_LENGTH = 5;
 export const ROOM_PREFIX = 'MESA-';
 
@@ -76,11 +77,11 @@ export function generateRoomCode(random = Math.random) {
   return code;
 }
 
-/** "MESA-8B2KQ" a partir do código. */
+/** "MESA-48213" a partir do código. */
 export const formatRoomId = (code) => `${ROOM_PREFIX}${code}`;
 
 /**
- * O que a pessoa digitou (ou colou: "mesa-8b2kq", "MESA 8B2KQ", um link com ?mesa=) → o
+ * O que a pessoa digitou (ou colou: "mesa-48213", "MESA 48213", um link com ?mesa=) → o
  * código, ou null se não for um código válido.
  */
 export function parseRoomInput(text) {
@@ -94,12 +95,12 @@ export function parseRoomInput(text) {
   return raw;
 }
 
-/** Máscara do campo "DIGITE O ID DA SALA": só o que cabe, em maiúsculas, com o MESA- na frente. */
+/** Máscara do campo "DIGITE O ID DA SALA": só os números que cabem (sem o MESA- na frente). */
 export function maskRoomInput(text) {
   const raw = String(text ?? '')
     .toUpperCase()
-    .replace(/^MESA-?/, '')
-    .replace(/[^A-Z0-9]/g, '')
+    .replace(/^\s*MESA-?/, '')
+    .replace(/[^0-9]/g, '')
     .slice(0, ROOM_LENGTH);
   return raw;
 }

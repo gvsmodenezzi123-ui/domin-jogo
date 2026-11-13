@@ -195,7 +195,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     tap();
     const code = parseRoomInput(typed);
     if (!code) {
-      setJoinError('Esse ID não parece de mesa: são 5 letras e números (ex.: MESA-8B2KQ).');
+      setJoinError('Esse ID não parece de mesa: são 5 números (ex.: MESA-48213).');
       return;
     }
     begin('guest', code);
@@ -209,7 +209,7 @@ export default function PvpApp({ settings, onSettings, muted, onToggleMute, onEx
     tap();
     const code = parseTableInput(typed);
     if (!code) {
-      setJoinError('Esse código não parece de roda: são 5 letras e números (ex.: RODA-8B2KQ).');
+      setJoinError('Esse código não parece de roda: são 5 números (ex.: RODA-48213).');
       return;
     }
     setJoinError(null);

@@ -119,7 +119,7 @@ const SITE_URL = PRIVACY_URL.replace(/privacy\.html$/, '');
 /**
  * Patch PvP: a entrada da mesa online, antes do Balcão de Maletas.
  *   CRIAR MESA CLANDESTINA → a configuração da mesa (moedas, corações, raridade dos talismãs,
- *   tempo por jogada) → ABRIR A MESA gera o ID ("MESA-8B2KQ"), mostra "Esperando oponente
+ *   tempo por jogada) → ABRIR A MESA gera o ID ("MESA-48213"), mostra "Esperando oponente
  *   sentar à mesa..." e o COPIAR LINK/ID; SENTAR EM UMA MESA → o campo com máscara e o PUXAR CADEIRA.
  * O indicador de conexão fica no canto.
  */
@@ -178,13 +178,14 @@ export default function LobbyView({
         <input
           className="ol-code-input"
           type="text"
-          inputMode="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="_____"
           maxLength={ROOM_LENGTH + prefix.length}
           aria-label={label}
-          autoCapitalize="characters"
+          autoCapitalize="off"
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -529,13 +530,14 @@ export default function LobbyView({
                     <input
                       className="pvp-input pvp-input-room"
                       type="text"
-                      inputMode="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={typedTable}
                       onChange={(e) => setTypedTable(maskTableInput(e.target.value))}
                       placeholder="_____"
                       maxLength={ROOM_LENGTH + TABLE_PREFIX.length}
                       aria-label="Digite o código da roda"
-                      autoCapitalize="characters"
+                      autoCapitalize="off"
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
@@ -618,13 +620,14 @@ export default function LobbyView({
                 <input
                   className="pvp-input pvp-input-room"
                   type="text"
-                  inputMode="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={typed}
                   onChange={(e) => setTyped(maskRoomInput(e.target.value))}
                   placeholder="_____"
                   maxLength={ROOM_LENGTH + ROOM_PREFIX.length}
                   aria-label="Digite o ID da sala"
-                  autoCapitalize="characters"
+                  autoCapitalize="off"
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}

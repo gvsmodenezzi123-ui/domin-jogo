@@ -1,6 +1,6 @@
 /**
  * Versão 2.4: o protocolo da mesa online de 2 a 4. Corre no mesmo canal P2P do duelo (PeerJS),
- * mas com outro ID de anfitrião ("RODA-8B2KQ" em vez de "MESA-8B2KQ") e mensagens próprias.
+ * mas com outro ID de anfitrião ("RODA-48213" em vez de "MESA-48213") e mensagens próprias.
  * A rede é uma estrela: cada convidado fala só com o anfitrião, que roda o motor
  * (tableEngine.js) e manda a cada cadeira o espelho dela (viewFor), nunca o estado inteiro.
  *
@@ -53,13 +53,13 @@ const TYPES = new Set(Object.values(TMSG));
 
 export const TABLE_PREFIX = 'RODA-';
 
-/** "RODA-8B2KQ" a partir do código. */
+/** "RODA-48213" a partir do código. */
 export const formatTableId = (code) => `${TABLE_PREFIX}${code}`;
 
 /** ID do anfitrião da roda no servidor de sinalização (outro espaço que o do duelo). */
 export const tablePeerId = (code) => `buxaria-roda-${String(code).toLowerCase()}`;
 
-/** O que a pessoa digitou ou colou ("roda-8b2kq", um link com ?roda=) → o código, ou null. */
+/** O que a pessoa digitou ou colou ("roda-48213", um link com ?roda=) → o código, ou null. */
 export function parseTableInput(text) {
   if (typeof text !== 'string') return null;
   let raw = text.trim();
@@ -71,12 +71,12 @@ export function parseTableInput(text) {
   return raw;
 }
 
-/** Máscara do campo do código: só o que cabe, em maiúsculas, sem o RODA- na frente. */
+/** Máscara do campo do código: só os números que cabem, sem o RODA- na frente. */
 export function maskTableInput(text) {
   return String(text ?? '')
     .toUpperCase()
-    .replace(/^RODA-?/, '')
-    .replace(/[^A-Z0-9]/g, '')
+    .replace(/^\s*RODA-?/, '')
+    .replace(/[^0-9]/g, '')
     .slice(0, ROOM_LENGTH);
 }
 

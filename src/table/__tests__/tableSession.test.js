@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fakeClock } from '../../pvp/__tests__/kit.js';
 import { botAction } from '../tableEngine.js';
 import { NEXT_AUTO_MS, TABLE_GRACE_MS, createTableSession } from '../tableSession.js';
-import { TABLE_PROTOCOL, TMSG, makeTableMessage, parseTableInput, formatTableId, tablePeerId } from '../tableProtocol.js';
+import { TABLE_PROTOCOL, TMSG, makeTableMessage, maskTableInput, parseTableInput, formatTableId, tablePeerId } from '../tableProtocol.js';
 import { createStarNetwork } from './starKit.js';
 
 /** Monta o anfitrião e `n` convidados ligados na mesma rede de mentira. */
@@ -52,11 +52,14 @@ function playAll({ clock, host, people }, maxMs = 30 * 60 * 1000) {
 
 describe('mesa online de 2 a 4: código e protocolo', () => {
   it('o código da roda tem o próprio prefixo e outro ID de anfitrião que o duelo', () => {
-    expect(formatTableId('8B2KQ')).toBe('RODA-8B2KQ');
-    expect(parseTableInput('roda-8b2kq')).toBe('8B2KQ');
-    expect(parseTableInput('https://x.y/?roda=8B2KQ')).toBe('8B2KQ');
-    expect(parseTableInput('MESA-8B2KQ')).toBe(null);
-    expect(tablePeerId('8B2KQ')).toBe('buxaria-roda-8b2kq');
+    expect(formatTableId('48213')).toBe('RODA-48213');
+    expect(parseTableInput('roda-48213')).toBe('48213');
+    expect(parseTableInput('https://x.y/?roda=48213')).toBe('48213');
+    expect(parseTableInput('MESA-48213')).toBe(null);
+    // versão 2.35.3: só números
+    expect(parseTableInput('RODA-8B2KQ')).toBe(null);
+    expect(maskTableInput('roda-4a8213')).toBe('48213');
+    expect(tablePeerId('48213')).toBe('buxaria-roda-48213');
   });
 });
 

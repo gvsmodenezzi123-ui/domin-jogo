@@ -134,7 +134,7 @@ const dealDeck = (state, key) => {
 /** A semente da run nova: a digitada no Balcão (normalizada) ou uma sorteada. */
 const seedForRun = (typed) => normalizeSeed(typed) ?? generateRandomSeed();
 
-/** Patch PvP: o link de uma mesa online (?mesa=8B2KQ) abre direto o lobby com o ID preenchido. */
+/** Patch PvP: o link de uma mesa online (?mesa=48213) abre direto o lobby com o ID preenchido. */
 function linkedRoom() {
   try {
     const mesa = new URLSearchParams(window.location.search).get('mesa');
@@ -144,7 +144,7 @@ function linkedRoom() {
   }
 }
 
-/** Versão 2.4: o link de uma roda de 2 a 4 (?roda=8B2KQ) abre o modo online já na roda. */
+/** Versão 2.4: o link de uma roda de 2 a 4 (?roda=48213) abre o modo online já na roda. */
 function linkedTable() {
   try {
     const roda = new URLSearchParams(window.location.search).get('roda');

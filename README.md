@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.35.3: código de sala só com números
+
+- O código das mesas online agora é só de **números** (5 dígitos, `MESA-48213` no duelo e
+  `RODA-48213` na roda): fácil de ditar, e o campo abre o teclado numérico no celular. Códigos
+  colados com letras ou espaço são limpos; os antigos, com letras, não valem mais.
+
 ### 2.35.2: pisca a cada dano, a tela quebra limpa, a lupa e os emotes
 
 - A piscada vem em **todo** dano: antes ela dependia do golpe continuar na lista curta de
