@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.35.0: tomou dano, a vista pisca
+
+- Perdeu um coração (sem cair): a vista **pisca** como pálpebras. Fecha devagar, embaçando,
+  com um vermelho nas bordas; fica um instante no escuro, entreabre, pisca de novo e abre de
+  vez. Vale na campanha, no duelo 1x1 e na roda online.
+- O som é a **respiração** de quem levou o golpe: o fôlego fundo pela boca enquanto o olho
+  fecha, o ar preso e, quando abre, o ofegar, que vai se acalmando até sumir. É um fluxo de ar
+  contínuo sintetizado amostra por amostra (`engine/breath.js`): cada fôlego emenda no outro e
+  nenhum é igual (força, duração, boca e voz variam). É gerado uma vez num momento ocioso e
+  tocado no volume dos outros efeitos.
+- Enquanto isso, a **trilha fica abafada e baixa** e volta devagar conforme a respiração acalma.
+
 ### 2.34.1: a tela quebra em duas de verdade
 
 - Perdeu: uma foto parada da tela é cortada em duas pela rachadura; as metades dão um tranco e

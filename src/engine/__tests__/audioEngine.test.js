@@ -122,9 +122,9 @@ class FakeAudioContext {
   createBufferSource() {
     return new FakeSource(this, 'buffer');
   }
-  createBuffer(channels, length) {
+  createBuffer(channels, length, rate = this.sampleRate) {
     const data = new Float32Array(length);
-    return { getChannelData: () => data };
+    return { getChannelData: () => data, duration: length / rate };
   }
   /** Avança o relógio e dispara o onended de quem parou. */
   advance(seconds) {
@@ -159,10 +159,33 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     expect(engine.warmth.Q.value).toBeGreaterThan(1);
     expect(engine.warmth.Q.value).toBeLessThan(3);
     // música e efeitos entram no filtro; o filtro vai ao master e o master à saída
-    expect(engine.musicBus.outputs.has(engine.warmth)).toBe(true);
+    // (versão 2.35: a música passa antes pelo abafador do dano, aberto e transparente)
+    expect(engine.musicBus.outputs.has(engine.muffle)).toBe(true);
+    expect(engine.muffle.outputs.has(engine.warmth)).toBe(true);
+    expect(engine.muffle.frequency.value).toBe(20000);
     expect(engine.sfxBus.outputs.has(engine.warmth)).toBe(true);
     expect(engine.warmth.outputs.has(engine.master)).toBe(true);
     expect(engine.master.outputs.has(engine.ctx.destination)).toBe(true);
+  });
+
+  it('versão 2.35: tomou dano: a respiração sai direto no mestre e a trilha abafa, baixa e volta', () => {
+    vi.useFakeTimers();
+    const engine = engineWithFakeAudio();
+    engine.isPlayingMusic = true;
+    const before = engine.musicLevel();
+    engine.playHurtBreath();
+    const breath = engine.ctx.sources.find((src) => src.kind === 'buffer' && src.buffer?.duration > 4);
+    expect(breath).toBeTruthy();
+    // a respiração não passa pelo passa-baixa quente (abafaria o sopro)
+    const voice = engine.voices.find((v) => v.sources.includes(breath));
+    expect(voice.gate.outputs.has(engine.master)).toBe(true);
+    expect(engine.muffle.frequency.events.at(-1).slice(0, 2)).toEqual(['exp', 420]);
+    expect(engine.musicLevel()).toBeCloseTo(before * 0.3);
+    vi.advanceTimersByTime(2700);
+    expect(engine.musicLevel()).toBeCloseTo(before);
+    expect(engine.muffle.frequency.events.at(-1).slice(0, 2)).toEqual(['exp', 20000]);
+    expect(engine.musicBus.gain.events.at(-1)[0]).toBe('exp');
+    vi.useRealTimers();
   });
 
   it('a camada de tensão abre o filtro para 4500 Hz e fecha de volta', () => {

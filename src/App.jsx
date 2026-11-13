@@ -122,6 +122,7 @@ import { snapshotRun } from './engine/save.js';
 import { markTutorialDone, markTutorialPending, needsTutorial, tutorialStepOf } from './engine/tutorial.js';
 import { sellPriceFor } from './engine/shop.js';
 import ScreenBreak from './components/ScreenBreak.jsx';
+import HurtBlink from './components/HurtBlink.jsx';
 
 // Patch 0.9.2: as pedras de cada rodada saem da semente da run (engine/seedEngine.js), numa
 // sequência própria para cada mesa e rodada (`key`): mesma semente + mesmas escolhas = mesmas mãos
@@ -1737,6 +1738,8 @@ export default function App() {
       </div>
 
       {playerHurtKey > 0 && <div key={playerHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+      {/* versão 2.35: tomou dano (e não caiu): a vista pisca */}
+      {playerHurtKey > 0 && state.phase !== 'gameOver' && <HurtBlink key={`olho-${playerHurtKey}`} />}
 
       <DangerFx danger={danger} myHearts={myHeartsNow} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />

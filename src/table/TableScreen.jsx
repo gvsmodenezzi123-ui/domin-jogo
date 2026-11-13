@@ -23,6 +23,7 @@ import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
 import EmoteBar, { SeatEmote } from './EmoteBar.jsx';
 import ScreenBreak from '../components/ScreenBreak.jsx';
+import HurtBlink from '../components/HurtBlink.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { partnerOf, turnOptions } from './tableEngine.js';
 
@@ -553,6 +554,8 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       </div>
 
       {myHurt > 0 && <div key={myHurt} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+      {/* versão 2.35: tomou dano (e não caiu): a vista pisca e a respiração ofega */}
+      {myHurt > 0 && !iFell && !spectating && <HurtBlink key={`olho-${myHurt}`} />}
       <DangerFx danger={danger} myHearts={mine.hearts} active={dangerOn} />
       {spectating && <div className="spectate-veil pointer-events-none" aria-hidden="true" />}
       <FloatingTexts items={floatItems} onDone={floatDone} />

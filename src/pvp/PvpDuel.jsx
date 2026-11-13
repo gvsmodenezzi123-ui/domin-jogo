@@ -32,6 +32,7 @@ import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/ta
 import { useSecondsLeft } from './useNow.js';
 import { useLandscape } from '../components/useLandscape.js';
 import ScreenBreak from '../components/ScreenBreak.jsx';
+import HurtBlink from '../components/HurtBlink.jsx';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
 const RIVAL_FLIGHT_MS = landTime(FLIGHT_RIVAL);
@@ -514,6 +515,8 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
 
       <NetBadge link={link} ping={ping} place="duel" />
       {myHurtKey > 0 && <div key={myHurtKey} className="hurt-flash pointer-events-none fixed inset-0 z-[60]" />}
+      {/* versão 2.35: tomou dano (e não caiu): a vista pisca e a respiração ofega */}
+      {myHurtKey > 0 && view.hearts.player > 0 && <HurtBlink key={`olho-${myHurtKey}`} />}
       <DangerFx danger={danger} myHearts={view.hearts.player} active={dangerOn} />
       <FloatingTexts items={floatItems} onDone={floatDone} />
       {minePending?.type === 'drawChoice' && !locked && (

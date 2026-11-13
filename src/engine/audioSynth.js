@@ -16,6 +16,8 @@
 //   são 3 vozes). Estourou: a voz mais velha e menos importante (música antes de efeito) sai com fade de 15 ms.
 //   Cada nota termina com .stop() + .disconnect() de todos os nós e as referências zeradas.
 
+import { breathSamples } from './breath.js';
+
 const MUTE_KEY = 'buxaria:muted';
 
 function readMuted() {
@@ -46,6 +48,14 @@ export const DUCK_HOLD = 0.2;
 const DUCK_RELEASE = 0.35;
 /** Prioridade na hora de cortar uma voz quando a polifonia estoura (menor sai primeiro). */
 const PRIORITY = { music: 0, voice: 1, sfx: 2 };
+/** Versão 2.35: o abafador da trilha aberto e fechado (Hz), o quanto ela baixa e por quanto tempo. */
+const MUFFLE_OPEN = 20000;
+const MUFFLE_SHUT = 420;
+const HURT_DUCK = 0.3;
+const HURT_HOLD = 2.6;
+const HURT_RECOVER = 2.4;
+/** Versão 2.35: a taxa em que a respiração é gerada (metade do trabalho de 48 kHz, sobra agudo). */
+const BREATH_RATE = 24000;
 
 /**
  * Versão 2.5: o coração de fundo quando você está encurralado (nível 1 a 3). Batimentos por
@@ -660,10 +670,15 @@ export class SoundEngine {
     this.heartTimer = null;
     this.dangerDuck = 1;
     this.noiseBuffer = null;
+    this.breathBuf = null; // versão 2.35: a respiração do dano (gerada uma vez)
     this.stopSpeech = null;
     // grafo
     this.master = null;
     this.warmth = null;
+    this.muffle = null;
+    // versão 2.35: tomou dano: a trilha fica abafada e baixa por um tempo (1: normal)
+    this.hurtDuck = 1;
+    this.hurtTimer = null;
     this.musicBus = null;
     this.sfxBus = null;
     // vozes vivas (máx. MAX_VOICES) e timers de notas atrasadas
@@ -689,6 +704,7 @@ export class SoundEngine {
       if (!AudioCtx) return false;
       this.ctx = new AudioCtx();
       this.buildGraph();
+      this.warmBreath();
     }
     if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
       this.ctx.resume().catch(() => {});
@@ -713,7 +729,13 @@ export class SoundEngine {
     this.musicBus.gain.value = Math.max(SILENT, this.musicLevel());
     this.sfxBus = ctx.createGain();
     this.sfxBus.gain.value = 1;
-    this.musicBus.connect(this.warmth);
+    // versão 2.35: o abafador só da trilha (aberto: transparente; fecha quando você toma dano)
+    this.muffle = ctx.createBiquadFilter();
+    this.muffle.type = 'lowpass';
+    this.muffle.frequency.value = MUFFLE_OPEN;
+    this.muffle.Q.value = 0.7;
+    this.musicBus.connect(this.muffle);
+    this.muffle.connect(this.warmth);
     this.sfxBus.connect(this.warmth);
     this.warmth.connect(this.master);
     this.master.connect(ctx.destination);
@@ -723,7 +745,7 @@ export class SoundEngine {
   musicLevel() {
     if (this.isMuted) return 0;
     if (this.ctx && this.ctx.currentTime < this.musicHoldUntil) return 0;
-    return this.musicVolume * (TRACKS[this.seq?.name]?.level ?? 1) * this.dangerDuck;
+    return this.musicVolume * (TRACKS[this.seq?.name]?.level ?? 1) * this.dangerDuck * this.hurtDuck;
   }
 
   /**
@@ -1939,6 +1961,84 @@ export class SoundEngine {
     this.tone({ freq: 3100, peak: 0.08, dur: 0.12, attack: 0.001, delay: 0.09 });
     this.tone({ freq: 4700, peak: 0.06, dur: 0.1, attack: 0.001, delay: 0.17 });
     this.tone({ freq: 3900, peak: 0.05, dur: 0.12, attack: 0.001, delay: 0.26 });
+  }
+
+  /**
+   * Versão 2.35: tomou dano: a respiração feita por síntese amostra a amostra (breath.js): o
+   * fôlego fundo pela boca enquanto o olho fecha, o ar preso, e o ofegar com um fio de voz quando
+   * abre. Gerada uma vez (de preferência num momento ocioso) e tocada como uma fonte só, direto
+   * no mestre: o passa-baixa quente dos efeitos abafaria o sopro.
+   */
+  breathBuffer() {
+    if (!this.breathBuf && this.ctx) {
+      const data = breathSamples(BREATH_RATE);
+      const buf = this.ctx.createBuffer(1, data.length, BREATH_RATE);
+      buf.getChannelData(0).set(data);
+      this.breathBuf = buf;
+    }
+    return this.breathBuf;
+  }
+
+  /** Deixa a respiração pronta num momento ocioso (para o golpe não engasgar a tela). */
+  warmBreath() {
+    if (this.breathBuf || typeof window === 'undefined') return;
+    const go = () => {
+      if (this.ctx) this.breathBuffer();
+    };
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(go, { timeout: 5000 });
+    else setTimeout(go, 1500);
+  }
+
+  /**
+   * Versão 2.35: tomou dano: a trilha some para o fundo (abafada e baixa) enquanto o olho fecha e
+   * a respiração ofega, e volta devagar conforme ela se acalma. Os efeitos não passam por aqui.
+   */
+  muffleMusic() {
+    if (!this.musicBus || !this.muffle || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const f = this.muffle.frequency;
+    f.cancelScheduledValues(t);
+    f.setValueAtTime(Math.max(MUFFLE_SHUT, f.value), t);
+    f.exponentialRampToValueAtTime(MUFFLE_SHUT, t + 0.35);
+    this.hurtDuck = HURT_DUCK;
+    this.rampMusic(this.musicLevel(), 0.35);
+    if (this.hurtTimer) clearTimeout(this.hurtTimer);
+    // (timer próprio, não `later`: mesmo no mudo a trilha tem que destravar depois)
+    this.hurtTimer = setTimeout(() => {
+      this.hurtTimer = null;
+      this.hurtDuck = 1;
+      if (!this.ctx || !this.muffle) return;
+      const now = this.ctx.currentTime;
+      const ff = this.muffle.frequency;
+      ff.cancelScheduledValues(now);
+      ff.setValueAtTime(Math.max(MUFFLE_SHUT, ff.value), now);
+      // (exponencial: o ouvido sente a abertura por igual, de 420 Hz até tudo)
+      ff.exponentialRampToValueAtTime(MUFFLE_OPEN, now + HURT_RECOVER);
+      this.rampMusic(this.musicLevel(), HURT_RECOVER);
+    }, HURT_HOLD * 1000);
+  }
+
+  playHurtBreath() {
+    if (this.isMuted || !this.ready()) return;
+    const buffer = this.breathBuffer();
+    if (!buffer) return;
+    const at = this.ctx.currentTime + 0.01;
+    // no volume dos outros efeitos (o sopro é longo: mais baixo que a batida da pedra)
+    const level = this.sfxVolume * 0.55;
+    this.muffleMusic();
+    this.spawn({
+      at,
+      end: at + buffer.duration + 0.05,
+      bus: this.master,
+      priority: PRIORITY.sfx,
+      build: (env) => {
+        env.gain.setValueAtTime(level, at);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(env);
+        return { sources: [src] };
+      },
+    });
   }
 
   playHeartBreak() {

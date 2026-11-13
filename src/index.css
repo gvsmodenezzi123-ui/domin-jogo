@@ -27445,3 +27445,160 @@ html[data-topview] .emote-pick {
 .reduce-motion .screen-break-flash {
   display: none;
 }
+
+/* ---------- versão 2.35: tomou dano: a vista pisca (pálpebras) ---------- */
+.hurt-blink {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  pointer-events: none;
+  overflow: hidden;
+  animation: hurt-blink-life 2400ms linear forwards;
+}
+.hurt-blink-blur {
+  position: absolute;
+  inset: 0;
+  -webkit-backdrop-filter: blur(3px) saturate(0.7);
+  backdrop-filter: blur(3px) saturate(0.7);
+  opacity: 0;
+  animation: hurt-blink-blur 2400ms ease forwards;
+}
+.hurt-blink-red {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(160, 10, 10, 0.55) 100%);
+  opacity: 0;
+  animation: hurt-blink-red 2400ms ease forwards;
+}
+.hurt-blink-lid {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 62%;
+  background: #050303;
+  box-shadow: 0 0 28px 18px #050303;
+  will-change: transform;
+}
+.hurt-blink-lid.is-top {
+  top: 0;
+  border-radius: 0 0 50% 50% / 0 0 38% 38%;
+  transform: translateY(-112%);
+  animation: hurt-lid-top 2400ms forwards;
+}
+.hurt-blink-lid.is-bottom {
+  bottom: 0;
+  border-radius: 50% 50% 0 0 / 38% 38% 0 0;
+  transform: translateY(112%);
+  animation: hurt-lid-bottom 2400ms forwards;
+}
+/* fecha devagar (0–0,55 s), escuro, entreabre (0,9), fecha rápido (1,1), abre de vez (1,25–1,7) */
+@keyframes hurt-lid-top {
+  0% {
+    transform: translateY(-112%);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  23% {
+    transform: translateY(-14%);
+  }
+  37% {
+    transform: translateY(-14%);
+    animation-timing-function: ease-out;
+  }
+  44% {
+    transform: translateY(-58%);
+    animation-timing-function: ease-in;
+  }
+  48% {
+    transform: translateY(-20%);
+    animation-timing-function: ease-out;
+  }
+  52% {
+    transform: translateY(-20%);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  72%,
+  100% {
+    transform: translateY(-112%);
+  }
+}
+@keyframes hurt-lid-bottom {
+  0% {
+    transform: translateY(112%);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  23% {
+    transform: translateY(14%);
+  }
+  37% {
+    transform: translateY(14%);
+    animation-timing-function: ease-out;
+  }
+  44% {
+    transform: translateY(58%);
+    animation-timing-function: ease-in;
+  }
+  48% {
+    transform: translateY(20%);
+    animation-timing-function: ease-out;
+  }
+  52% {
+    transform: translateY(20%);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  72%,
+  100% {
+    transform: translateY(112%);
+  }
+}
+@keyframes hurt-blink-blur {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hurt-blink-red {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.8;
+  }
+  62% {
+    opacity: 0.45;
+  }
+  70% {
+    opacity: 0.7;
+  }
+  78% {
+    opacity: 0.35;
+  }
+  86% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hurt-blink-life {
+  0%,
+  99% {
+    visibility: visible;
+  }
+  100% {
+    visibility: hidden;
+  }
+}
+.reduce-motion .hurt-blink-lid {
+  display: none;
+}
