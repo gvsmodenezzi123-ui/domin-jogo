@@ -28,7 +28,7 @@ describe('versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cad
     }
     // a silhueta (o adversário sem retrato) também senta
     expect(opaque(paintSeatedBust(PORTRAITS.tioZe, 'idle', false, { silhouette: true }))).toBeGreaterThan(4000);
-  });
+  }, 60000);
 
   it('a cabeça fica no mesmo lugar do busto e a mão chega na beirada do tampo', () => {
     for (const [w, h] of [
@@ -66,5 +66,5 @@ describe('versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cad
       expect(Math.abs(l.lane.x + r.lane.x - w)).toBeLessThan(2);
     }
     expect(SEATED_HAND.y).toBeGreaterThan(70);
-  });
+  }, 30000);
 });

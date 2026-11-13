@@ -109,21 +109,41 @@ export function hash(x, y, seed = 0) {
 }
 
 // --- testes de forma ---------------------------------------------------------------------------
-export const ell = (cx, cy, rx, ry) => (x, y) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1;
-export const box = (x0, y0, x1, y1) => (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
-export const poly = (pts) => (x, y) => {
-  let inside = false;
-  const px = x + 0.5;
-  const py = y + 0.5;
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i, i += 1) {
-    const [xi, yi] = pts[i];
-    const [xj, yj] = pts[j];
-    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
+// Versão 2.32: cada teste de forma conhecido leva junto a caixa (`box`: x0, y0, x1, y1, com folga)
+// onde ele pode dar verdadeiro; a forma só varre essa caixa (a figura sai igual, mais depressa).
+const withBox = (test, x0, y0, x1, y1) => Object.assign(test, { box: [Math.floor(x0) - 1, Math.floor(y0) - 1, Math.ceil(x1) + 1, Math.ceil(y1) + 1] });
+export const ell = (cx, cy, rx, ry) => withBox((x, y) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1, cx - rx, cy - ry, cx + rx, cy + ry);
+export const box = (x0, y0, x1, y1) => withBox((x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1, x0, y0, x1, y1);
+export const poly = (pts) =>
+  withBox(
+    (x, y) => {
+      let inside = false;
+      const px = x + 0.5;
+      const py = y + 0.5;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i, i += 1) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    },
+    Math.min(...pts.map((p) => p[0])),
+    Math.min(...pts.map((p) => p[1])),
+    Math.max(...pts.map((p) => p[0])),
+    Math.max(...pts.map((p) => p[1])),
+  );
+export const any = (...ts) => {
+  const t = (x, y) => ts.some((f) => f(x, y));
+  if (!ts.every((f) => f.box)) return t;
+  t.box = [Math.min(...ts.map((f) => f.box[0])), Math.min(...ts.map((f) => f.box[1])), Math.max(...ts.map((f) => f.box[2])), Math.max(...ts.map((f) => f.box[3]))];
+  return t;
 };
-export const any = (...ts) => (x, y) => ts.some((t) => t(x, y));
-export const all = (...ts) => (x, y) => ts.every((t) => t(x, y));
+export const all = (...ts) => {
+  const t = (x, y) => ts.every((f) => f(x, y));
+  const boxed = ts.filter((f) => f.box);
+  if (boxed.length) t.box = [Math.max(...boxed.map((f) => f.box[0])), Math.max(...boxed.map((f) => f.box[1])), Math.min(...boxed.map((f) => f.box[2])), Math.min(...boxed.map((f) => f.box[3]))];
+  return t;
+};
 export const not = (t) => (x, y) => !t(x, y);
 
 /** A luz da lâmpada: de cima e da esquerda, um pouco de frente. */
@@ -149,6 +169,11 @@ export const tube = (x0, x1, lo, hi) => (x) => {
 /** A prancheta: `w`×`h` pixels RGBA (o mesmo formato do buffer do paintKit: data, w, h, put). */
 export function board(w, h) {
   const data = new Uint8ClampedArray(w * h * 4);
+  // versão 2.32: a caixa padrão das formas sem caixa própria (a cabeça do perfil no quadro maior)
+  let limit = null;
+  const setLimit = (r) => {
+    limit = r;
+  };
   const inb = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
   const put = (xi, yi, c, a = 1) => {
     const x = Math.round(xi);
@@ -183,12 +208,14 @@ export function board(w, h) {
    * `R`. A borda cai para o tom `edge` (a de cima e da esquerda, que pega luz, para `rim` se
    * dado). `noise`: quanto o tom varia em manchas. Devolve a máscara (`has`).
    */
-  const form = (test, tone, R, { edge = 1, rim = null, noise = 0.3, seed = 1, x0 = 0, y0 = 0, x1 = w - 1, y1 = h - 1 } = {}) => {
+  const form = (test, tone, R, { edge = 1, rim = null, noise = 0.3, seed = 1, x0, y0, x1, y1 } = {}) => {
     const mask = new Uint8Array(w * h);
-    const ax = Math.max(0, x0);
-    const ay = Math.max(0, y0);
-    const bx = Math.min(w - 1, x1);
-    const by = Math.min(h - 1, y1);
+    // a caixa: a dada, a do teste (ell, poly, box...) ou a da prancheta (`limit`, se marcada)
+    const bb = test.box ?? limit;
+    const ax = Math.max(0, x0 ?? bb?.[0] ?? 0);
+    const ay = Math.max(0, y0 ?? bb?.[1] ?? 0);
+    const bx = Math.min(w - 1, x1 ?? bb?.[2] ?? w - 1);
+    const by = Math.min(h - 1, y1 ?? bb?.[3] ?? h - 1);
     for (let y = ay; y <= by; y += 1) for (let x = ax; x <= bx; x += 1) if (test(x, y)) mask[y * w + x] = 1;
     const m = (x, y) => inb(x, y) && mask[y * w + x] === 1;
     const top = R.length - 1;
@@ -229,5 +256,5 @@ export function board(w, h) {
     for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (!has(x, y) && (has(x - 1, y) || has(x + 1, y) || has(x, y - 1) || has(x, y + 1))) marks.push(x, y);
     for (let i = 0; i < marks.length; i += 2) put(marks[i], marks[i + 1], color);
   };
-  return { data, w, h, put, tint, has, get, erase, form, rect, line, stamp, ink };
+  return { data, w, h, put, tint, has, get, erase, form, rect, line, stamp, ink, setLimit };
 }

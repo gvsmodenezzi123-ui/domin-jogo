@@ -1043,10 +1043,14 @@ export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing
   const S = rampOf(spec.skin ?? '#d8a070', 'skin');
   const hairColor = spec.hair?.color ?? spec.facial?.color;
   paintChair(k, chair, true);
+  // a cabeça é desenhada para o quadro de 88×84: as formas dela só varrem esse canto
+  k.setLimit([0, 0, W - 1, H - 1]);
   paintHat(k, spec, g, true);
   paintHairBack(k, spec);
   paintNeck(k, S, g);
+  k.setLimit(null);
   paintSeatedBody(k, spec, S, chair);
+  k.setLimit([0, 0, W - 1, H - 1]);
   paintHead(k, { ...spec, __mood: mood }, S, g, hairColor);
   paintEye(k, spec, mood, S);
   paintMouth(k, spec, mood, speaking, S, g);
@@ -1057,5 +1061,6 @@ export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing
   paintGlasses(k, spec);
   if (spec.earrings && spec.hat?.type !== 'hood') paintEarrings(k, spec.earrings, spec.earringColor);
   paintSmoke(k, spec, mood, g);
+  k.setLimit(null);
   return finish(k, spec, facing);
 }
