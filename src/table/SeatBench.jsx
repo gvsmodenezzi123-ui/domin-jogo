@@ -3,12 +3,13 @@ import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
 import RivalBust from '../components/RivalBust.jsx';
 import RivalHand from '../components/RivalHand.jsx';
 import DominoTile from '../components/DominoTile.jsx';
-import { RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideFigure } from '../components/seatGeometry.js';
+import { FAR_X, RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideFigure } from '../components/seatGeometry.js';
 import CoinCount from '../components/CoinCount.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
 import { TentoCap, TentosBar } from '../components/TentoCap.jsx';
 import { ordinal, plateName } from './seats.js';
+import { SeatEmote } from './EmoteBar.jsx';
 
 /** Tamanho do retrato e das pedrinhas de cada formato de cadeira (1, 2 ou 3 rivais na mesa). */
 const LAYOUT = Object.freeze({
@@ -190,7 +191,7 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
  * fala da jogada ("JOGOU 4|3", "PASSOU") sai logo embaixo da vida. Os mesmos marcadores da
  * cadeira em pé (data-seat, data-seat-photo, data-seat-fan) para os voos e os efeitos.
  */
-function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, chair = 'madeira', onSignal }) {
+function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, chair = 'madeira', emote = null, onSignal }) {
   const out = !seat.alive;
   const mood = out ? 'idle' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
@@ -221,6 +222,19 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
       data-seat={seat.id}
       aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}
     >
+      {/* versão 2.33: o emote: atrás de quem senta do lado (sai por trás das costas, na altura da
+          cabeça), do lado de quem senta lá na frente */}
+      {emote && !out && (
+        <SeatEmote
+          emote={emote}
+          className={side ? 'is-behind' : 'is-beside'}
+          style={
+            side
+              ? { left: side.fig.left + side.fig.w * (side.facing === 'right' ? 0.12 : 0.88), top: side.fig.top + side.fig.h * 0.2 }
+              : { left: `calc(${x * 100}% + ${(x < 0.5 ? -1 : 1) * Math.round(bust.w * 0.44 + 16)}px)`, top: `calc(var(--rail-px) + ${bust.drop - bust.h + Math.round(bust.h * 0.3)}px)` }
+          }
+        />
+      )}
       <div className="chair-clip" aria-hidden="true">
         <div className={`chair-bust seat-bust is-${mood}`} data-seat-photo={seat.id}>
           <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
@@ -290,7 +304,7 @@ function chairClip(w, h) {
  * (o próximo à sua direita, o da frente no meio, o último à sua esquerda), do mesmo tamanho do
  * rival do duelo. Quem senta na ponta passa da beirada: o corpo desce até a bancada.
  */
-function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, chair, onSignal }) {
+function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, chair, emotes, onSignal }) {
   const ref = useRef(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -304,7 +318,8 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, c
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const n = Math.min(3, seats.length);
+  // versão 2.33: até 4 rivais (a roda de 5): dois deles do lado de lá
+  const n = Math.min(4, seats.length);
   const places = RODA_SIDES[n] ?? RODA_SIDES[3];
   const solo = n === 1;
   // versão 2.14: um tiquinho menores que o rival do duelo (a roda tem até 3 na parede); a cabeça
@@ -312,10 +327,10 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, c
   const bust = seatBust(size.h, 0.34, 0.02);
   const unit = seatUnit(size.h);
   // a régua de cada um cabe no espaço da cadeira (como a do rival da campanha)
-  const room = Math.max(80, Math.min(bust.w * 1.3, 15 * (unit + 3), (size.w || 844) * (n === 3 ? 0.22 : 0.3)));
+  const room = Math.max(80, Math.min(bust.w * 1.3, 15 * (unit + 3), (size.w || 844) * (n === 4 ? 0.17 : n === 3 ? 0.22 : 0.3)));
   // versão 2.18: quem senta nas laterais fica de perfil, olhando para a mesa
   const sideOf = (place) => {
-    if (place === 'far' || !size.w) return null;
+    if (FAR_X[place] != null || !size.w) return null;
     const dir = place === 'left' ? -1 : 1;
     return { name: place, facing: dir < 0 ? 'right' : 'left', ...sideFigure(size.w, size.h, dir, bust, unit) };
   };
@@ -330,7 +345,7 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, c
         <SeatChair
           key={seat.id}
           seat={seat}
-          x={places[i] === 'left' ? 0.2 : places[i] === 'right' ? 0.8 : 0.5}
+          x={places[i] === 'left' ? 0.2 : places[i] === 'right' ? 0.8 : (FAR_X[places[i]] ?? 0.5)}
           side={sideOf(places[i] ?? 'far')}
           bust={bust}
           unit={unit}
@@ -344,6 +359,7 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, c
           hit={hits?.[seat.id] ?? null}
           anchor={seat.id === danger}
           chair={chair}
+          emote={emotes?.[seat.id] ?? null}
           onSignal={onSignal}
         />
       ))}
@@ -351,8 +367,8 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, c
   );
 }
 
-function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '', chair = 'madeira', onSignal }) {
-  if (landscape) return <SeatRow onSignal={onSignal} seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} chair={chair} />;
+function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '', chair = 'madeira', emotes = null, onSignal }) {
+  if (landscape) return <SeatRow onSignal={onSignal} seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} chair={chair} emotes={emotes} />;
   const variant = seats.length >= 3 ? 'third' : seats.length === 2 ? 'half' : 'wide';
   return (
     <header className={`seat-bench seat-bench-${variant} rival-bench relative z-30 shrink-0`} style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>

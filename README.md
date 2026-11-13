@@ -172,6 +172,21 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.33.0: a roda de 2 a 5, jogar olhando de cima e os emotes
+
+- **Roda de 2 a 5**: até 5 na mesa (você e mais 4: um de cada lado e dois lá na frente). Todos
+  recebem o mesmo tanto: com 5, cinco pedras para cada um e as 3 que sobram ficam no dorme (com
+  4, seis e o dorme de 4, como antes). O saguão ganhou a 5ª cadeira e o pódio lista o 4º e o 5º.
+  Mesas de versões diferentes não sentam juntas (protocolo 4).
+- **Ver a mesa (lupa)**: olhando a mesa de cima, a sua mão continua embaixo: escolhe a pedra e
+  joga na ponta sem sair da lupa (a mesa de cima cabe no espaço acima da mão). Tocar fora da mesa
+  volta, como antes.
+- **Emotes** (roda online e treino): o botão ao lado da lupa abre seis (Kkkk, joinha, hmm, bravo,
+  chorando, pegando fogo). O emote aparece atrás de quem senta do lado, do lado de quem senta lá na
+  frente e, o seu, em cima da sua vida; sobe, fica um pouco e some. Para não poluir: um por
+  cadeira de cada vez, um intervalo de 2,5 s entre dois de quem manda, e os bots só reagem de vez
+  em quando no fim da rodada (no máximo dois).
+
 ### 2.32.3: quem senta do lado respira (a cadeira fica parada)
 
 - Os personagens de corpo inteiro das laterais da roda agora se mexem como os de frente: do

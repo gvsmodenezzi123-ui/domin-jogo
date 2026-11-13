@@ -210,7 +210,7 @@ export default function LobbyView({
             MESA ONLINE
             <span>
               {roda
-                ? 'De 2 a 4 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
+                ? 'De 2 a 5 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
                 : 'Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.'}
             </span>
           </h1>
@@ -218,7 +218,7 @@ export default function LobbyView({
             <div className="ol-modes" role="radiogroup" aria-label="Tipo de mesa">
               {[
                 ['duelo', 'DUELO 1×1', 2],
-                ['roda', 'RODA 2 A 4', 4],
+                ['roda', 'RODA 2 A 5', 5],
               ].map(([id, label, pips]) => (
                 <DominoKey
                   key={id}
@@ -447,7 +447,7 @@ export default function LobbyView({
           MESA ONLINE
           <span>
             {roda
-              ? 'De 2 a 4 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
+              ? 'De 2 a 5 na mesma mesa: quem zerar os corações sai e o último vivo leva. Bots completam as cadeiras vazias.'
               : 'Um contra um, de verdade: cada um passa na loja e no Mercado Negro e os dois se enfrentam no duelo.'}
           </span>
         </h1>
@@ -456,7 +456,7 @@ export default function LobbyView({
           <div className="pvp-seg pvp-mode" role="radiogroup" aria-label="Tipo de mesa">
             {[
               ['duelo', 'DUELO 1×1'],
-              ['roda', 'RODA DE 2 A 4'],
+              ['roda', 'RODA DE 2 A 5'],
             ].map(([id, label]) => (
               <button
                 key={id}

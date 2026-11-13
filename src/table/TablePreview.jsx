@@ -1,23 +1,62 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mapOf } from '../data/tableMaps.js';
 import { sound } from '../engine/audioSynth.js';
 import TableLobby, { TableRules } from './TableLobby.jsx';
 import TableScreen from './TableScreen.jsx';
 import { TABLE_FACES, tableNote } from './seats.js';
 import { useLocalTable } from './useLocalTable.js';
+import { EMOTE_MS, botReactions, emoteReady, pushEmote } from './emotes.js';
 
 /** Quem senta nas cadeiras de bot da mesa local. */
 const BOTS = Object.freeze([
   { id: 's1', name: 'Neide', face: 'neide', bot: true, ready: true },
   { id: 's2', name: 'Baiano', face: 'baiano', bot: true, ready: true },
   { id: 's3', name: 'Sofia', face: 'sofia', bot: true, ready: true },
+  // versão 2.33: o quinto da roda de 5
+  { id: 's4', name: 'Zeca', face: 'zeca', bot: true, ready: true },
 ]);
 
 function LocalTable({ seats, seed, hearts, rule, teams = false, scoring = 'coracoes', map = null, onLeave, muted, onToggleMute }) {
   const rules = useMemo(() => ({ batida: rule, teams, scoring }), [rule, teams, scoring]);
-  const { view, clock, act, nextRound, rematch } = useLocalTable({ seats, seed, hearts, coins: 100, rules, turnSec: 30 });
+  const { state, view, clock, act, nextRound, rematch } = useLocalTable({ seats, seed, hearts, coins: 100, rules, turnSec: 30 });
+  // versão 2.33: os emotes no treino (os seus e, no fim da rodada, os dos bots de vez em quando)
+  const [emotes, setEmotes] = useState({});
+  const emoteN = useRef(0);
+  const lastSent = useRef(null);
+  const showEmote = useCallback((seat, id) => {
+    emoteN.current += 1;
+    const key = emoteN.current;
+    setEmotes((feed) => pushEmote(feed, seat, id, key));
+  }, []);
+  const sendEmote = useCallback(
+    (id) => {
+      const now = Date.now();
+      if (!emoteReady(lastSent.current, now)) return;
+      lastSent.current = now;
+      showEmote('s0', id);
+    },
+    [showEmote],
+  );
+  // (para conferir o visual: `dispatchEvent(new CustomEvent('buxaria-emote', { detail: { seat, id } }))`)
+  useEffect(() => {
+    const onEmote = (e) => showEmote(e.detail?.seat, e.detail?.id);
+    window.addEventListener('buxaria-emote', onEmote);
+    return () => window.removeEventListener('buxaria-emote', onEmote);
+  }, [showEmote]);
+  const roundResult = state.phase === 'roundOver' || state.phase === 'matchOver' ? state.result : null;
+  const seatsRef = useRef(state.seats);
+  useEffect(() => {
+    seatsRef.current = state.seats;
+  }, [state.seats]);
+  useEffect(() => {
+    if (!roundResult) return undefined;
+    const ids = botReactions(roundResult, seatsRef.current).map((r, i) => setTimeout(() => showEmote(r.seat, r.emote), 900 + i * EMOTE_MS * 0.6));
+    return () => ids.forEach(clearTimeout);
+  }, [roundResult, showEmote]);
   return (
     <TableScreen
+      emotes={emotes}
+      onEmote={sendEmote}
       view={view}
       map={map}
       me="s0"

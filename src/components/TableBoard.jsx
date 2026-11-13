@@ -398,9 +398,12 @@ function TableBoard({
     const { vw, vh } = riseAt;
     const W = land.width;
     const H = land.planeHeight;
-    const k = Math.min((vw - 20) / W, (vh - 20) / H);
+    // versão 2.33: a sua mão continua na tela (dá para jogar olhando de cima): a mesa cabe no que
+    // sobra em cima dela
+    const below = handZone > 0 ? Math.min(handZone - 8, vh * 0.42) : 0;
+    const k = Math.min((vw - 20) / W, (vh - 20 - below) / H);
     const dx = vw / 2 - rect.left - (land.style.left + W / 2);
-    const dy = vh / 2 - rect.top - land.yNear + (k * H) / 2;
+    const dy = (vh - below) / 2 - rect.top - land.yNear + (k * H) / 2;
     riseVars = { '--rise-persp': `${LAND.persp}px`, '--rise-tilt': `${LAND.tilt}deg`, '--rise-dx': `${Math.round(dx)}px`, '--rise-dy': `${Math.round(dy)}px`, '--rise-k': k.toFixed(3) };
   }
   const setSection = (el) => {

@@ -44,7 +44,7 @@ import {
 import { mixSeed, mulberry32, shuffleWith } from '../engine/seedEngine.js';
 
 export const MIN_SEATS = 2;
-export const MAX_SEATS = 4;
+export const MAX_SEATS = 5;
 
 /** Regras da mesa que o anfitrião escolhe (as decisões abertas do documento). */
 export const DEFAULT_TABLE_RULES = Object.freeze({
@@ -64,6 +64,8 @@ const teamForIndex = (i) => TEAMS[i % 2];
 
 /** Quantas pedras cada um recebe com `alive` jogadores na mesa. */
 export function handSizeFor(alive, rules = DEFAULT_TABLE_RULES) {
+  // versão 2.33: com 5 na mesa, 5 pedras para cada um (as 3 que sobram ficam no dorme)
+  if (alive >= 5) return 5;
   if (alive >= 4) return rules.hand4 === 7 ? 7 : 6;
   return 7;
 }

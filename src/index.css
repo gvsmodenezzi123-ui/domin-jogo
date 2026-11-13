@@ -26774,12 +26774,12 @@ html[data-topview='down'] .land-table-front {
 }
 
 /* o HUD: some logo no começo da subida e volta no fim da sentada */
-html[data-topview='up'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, [data-tut='hand'], .hand-slot, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
+html[data-topview='up'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
   animation: rise-hud-out 160ms ease-out both;
   pointer-events: none;
 }
 
-html[data-topview='down'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, [data-tut='hand'], .hand-slot, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
+html[data-topview='down'] :is(.board-view-btn, .nv-box, .nv-menu-top, .land-cabinet, .cab, .seat-hud, .pvp-clock, .player-hint, .dev-chip, .nv-dev, .mate-rack, .speech-balloon) {
   animation: rise-hud-in 240ms ease-out 260ms both;
   pointer-events: none;
 }
@@ -27045,4 +27045,212 @@ html[data-mesa='plastico'] .player-zone .player-hint {
 /* (o HUD de baixo fica por cima das cadeiras: o pé da cadeira da direita passava por cima do dorme) */
 .roda-seats.roda-seats.rival-bench {
   z-index: 15;
+}
+
+/* versão 2.33: a roda de 5 (dois sentam do lado de lá) */
+.lobby-seat.at-topL {
+  left: 32%;
+  top: 14%;
+}
+.lobby-seat.at-topR {
+  left: 68%;
+  top: 14%;
+}
+.lobby-seat.at-topR .lobby-photo.avatar-frame,
+.lobby-seat.at-topL .lobby-photo.avatar-frame {
+  transform: rotate(3deg);
+}
+.table-lobby-land .lobby-seat.at-topL {
+  left: 48px;
+  top: -52px;
+}
+.table-lobby-land .lobby-seat.at-topR {
+  left: 172px;
+  top: -52px;
+}
+
+/* versão 2.33: olhando a mesa de cima, a sua mão continua embaixo (escolhe a pedra e joga na ponta) */
+html[data-topview] .player-zone.is-landscape {
+  z-index: 61;
+}
+
+/* ---------- versão 2.33: os emotes da roda ---------- */
+.emote-btn {
+  position: fixed;
+  z-index: 41;
+  top: calc(max(env(safe-area-inset-top), 8px) + 42px);
+  right: max(env(safe-area-inset-right), 10px);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4a2a14, #2a160a);
+  box-shadow:
+    0 0 0 1px #0c0502,
+    inset 0 1px 0 rgba(255, 214, 150, 0.3),
+    0 2px 0 #0c0502;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto;
+  transition: opacity 200ms ease;
+}
+html[data-ui='novo'] .emote-btn {
+  top: max(env(safe-area-inset-top), 8px);
+  right: calc(max(env(safe-area-inset-right), 10px) + 76px);
+}
+.emote-btn:active {
+  translate: 0 2px;
+}
+.emote-btn.is-cool {
+  opacity: 0.45;
+}
+.emote-btn .emote-icon {
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+}
+.emote-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.emote-pick {
+  position: fixed;
+  z-index: 43;
+  top: calc(max(env(safe-area-inset-top), 8px) + 38px);
+  right: calc(max(env(safe-area-inset-right), 10px) + 30px);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(58, 34, 16, 0.96), rgba(28, 16, 7, 0.96));
+  box-shadow:
+    0 0 0 1px #0c0502,
+    inset 0 1px 0 rgba(255, 214, 150, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.5);
+  animation: emote-pick-in 140ms ease-out both;
+}
+html:not([data-ui='novo']) .emote-pick {
+  top: calc(max(env(safe-area-inset-top), 8px) + 76px);
+  right: max(env(safe-area-inset-right), 10px);
+}
+.emote-key {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+.emote-key:active,
+.emote-key:hover {
+  background: rgba(255, 214, 150, 0.14);
+}
+@keyframes emote-pick-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* o emote na cadeira: sobe de trás, fica um pouco e some */
+.seat-emote {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
+  animation: seat-emote 2200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.seat-emote .emote-icon {
+  display: block;
+}
+.seat-emote.is-behind {
+  animation-name: seat-emote-behind;
+}
+.seat-emote.is-mine {
+  position: fixed;
+  z-index: 25;
+  left: calc(max(env(safe-area-inset-left), 12px) + 70px);
+  bottom: calc(max(env(safe-area-inset-bottom), 10px) + 70px);
+  top: auto;
+}
+html[data-topview] .seat-emote.is-mine,
+html[data-topview] .emote-btn,
+html[data-topview] .emote-pick {
+  visibility: hidden;
+}
+@keyframes seat-emote {
+  0% {
+    opacity: 0;
+    scale: 0.4;
+    translate: 0 6px;
+  }
+  12% {
+    opacity: 1;
+    scale: 1.12;
+    translate: 0 -2px;
+  }
+  20% {
+    scale: 1;
+    translate: 0 0;
+  }
+  80% {
+    opacity: 1;
+    translate: 0 -4px;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -10px;
+  }
+}
+@keyframes seat-emote-behind {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+    translate: 0 14px;
+  }
+  14% {
+    opacity: 1;
+    scale: 1.08;
+    translate: 0 -6px;
+  }
+  22% {
+    scale: 1;
+    translate: 0 -4px;
+  }
+  80% {
+    opacity: 1;
+    translate: 0 -8px;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -14px;
+  }
+}
+.reduce-motion .seat-emote {
+  animation: seat-emote-still 2200ms linear both;
+}
+@keyframes seat-emote-still {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

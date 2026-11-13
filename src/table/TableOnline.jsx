@@ -263,6 +263,8 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
           ready={snap.ready}
           canRematch={host}
           onIntent={(action) => session.intent(action)}
+          emotes={snap.emotes}
+          onEmote={(id) => session.emote(id)}
           onNextRound={(opts) => {
             if (opts?.auto !== true) tap();
             session.nextRound();

@@ -97,7 +97,10 @@ export const RODA_SPOTS = Object.freeze({ 1: [0.5], 2: [0.69, 0.31], 3: [0.78, 0
  * direita (de perfil, olhando para a mesa), o seguinte na sua frente e o último à sua esquerda;
  * com 2, um de cada lado; com 1, na frente.
  */
-export const RODA_SIDES = Object.freeze({ 1: ['far'], 2: ['right', 'left'], 3: ['right', 'far', 'left'] });
+export const RODA_SIDES = Object.freeze({ 1: ['far'], 2: ['right', 'left'], 3: ['right', 'far', 'left'], 4: ['right', 'farR', 'farL', 'left'] });
+
+/** Versão 2.33: onde senta cada um do lado de lá (fração da largura): um no meio, ou dois lado a lado. */
+export const FAR_X = Object.freeze({ far: 0.5, farR: 0.6, farL: 0.4 });
 
 /**
  * A cadeira da lateral (`side`: -1 a esquerda, 1 a direita): o meio do busto (px), a linha do pé

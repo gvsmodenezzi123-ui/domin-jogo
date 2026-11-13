@@ -12,7 +12,7 @@ describe('HUD da mesa: cadeiras', () => {
   it('cada cadeira tem a sua cor fixa, pela ordem em que sentou', () => {
     expect(colorOf({ seats }, 's0')).toBe(SEAT_COLORS[0]);
     expect(colorOf({ seats }, 's3')).toBe(SEAT_COLORS[3]);
-    expect(new Set(SEAT_COLORS).size).toBe(4);
+    expect(new Set(SEAT_COLORS).size).toBe(5);
   });
 
   it('o balão da última jogada diz o que a pessoa fez', () => {

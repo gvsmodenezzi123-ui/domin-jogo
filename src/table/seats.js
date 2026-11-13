@@ -3,8 +3,8 @@
  * vista de quem está jogando e o texto curto do balão da última jogada.
  */
 
-/** A cor de cada cadeira, pela ordem em que sentaram (âmbar, verde-água, tijolo, lilás). */
-export const SEAT_COLORS = Object.freeze(['#f0b64a', '#5cc4b8', '#e4694c', '#b493e6']);
+/** A cor de cada cadeira, pela ordem em que sentaram (âmbar, verde-água, tijolo, lilás e, com 5, azul). */
+export const SEAT_COLORS = Object.freeze(['#f0b64a', '#5cc4b8', '#e4694c', '#b493e6', '#6ea8e8']);
 
 /** Os rostos que a mesa oferece (retratos 64×64 do jogo), na ordem do seletor do saguão. */
 export const TABLE_FACES = Object.freeze(['marquinhos', 'neide', 'baiano', 'sofia', 'zeca', 'odete', 'carlinhos', 'bigode', 'cida', 'fausto', 'genesio', 'tonho']);
@@ -49,7 +49,7 @@ export function plateName(name) {
  * por tentos, a nota conta a regra ("Duplas: quem senta de frente joga junto.").
  */
 export function tableNote(seats, config = {}) {
-  const base = `Mão de ${seats === 4 ? 6 : 7} pedras · dorme de ${seats === 4 ? 4 : seats === 3 ? 7 : 14}.`;
+  const base = `Mão de ${seats === 5 ? 5 : seats === 4 ? 6 : 7} pedras · dorme de ${seats === 5 ? 3 : seats === 4 ? 4 : seats === 3 ? 7 : 14}.`;
   const duo = seats === 4 && config.teams ? ' Duplas: quem senta de frente joga junto; bateu, os dois vencem.' : '';
   const count = config.scoring === 'tentos' ? ` Cada vitória vale 1 tento; vence quem fizer ${config.hearts ?? 5}.` : '';
   return duo || count ? `${base}${duo}${count}` : `${base} A vez gira no sentido anti-horário.`;

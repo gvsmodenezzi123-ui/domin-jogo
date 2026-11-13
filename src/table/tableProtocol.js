@@ -17,17 +17,21 @@
  *   T_BYE                 { reason }                         saiu de propósito
  *   T_FULL    (anfitrião) { reason }                         'full' · 'started' · 'version'
  *   T_END     (anfitrião) { reason }                         a mesa acabou (o anfitrião saiu)
+ *   T_EMOTE   (os dois)   { emote, seat? }                   versão 2.33: um emote (o anfitrião
+ *                                                            repassa aos outros com a cadeira)
  */
 import { DEFAULT_MAP, MAP_IDS } from '../data/tableMaps.js';
 import { ROOM_ALPHABET, ROOM_LENGTH } from '../pvp/protocol.js';
+import { isEmote } from './emotes.js';
 
 /**
  * Sobe quando o formato muda: mesas de versões diferentes não sentam juntas.
  * 2 (versão 2.7): as duplas e a contagem por tentos (o espelho traz `team`, `tentos`, `target`).
  * 3 (versão 2.13): trocar de lugar no saguão (`place`, `answer`, `swaps`): a cadeira é de quem
  * senta (o id não muda), a posição na mesa é que muda.
+ * 4 (versão 2.33): a roda de 5 (a 5ª cadeira) e os emotes (T_EMOTE).
  */
-export const TABLE_PROTOCOL = 3;
+export const TABLE_PROTOCOL = 4;
 
 export const TMSG = Object.freeze({
   HELLO: 'T_HELLO',
@@ -42,6 +46,7 @@ export const TMSG = Object.freeze({
   BYE: 'T_BYE',
   FULL: 'T_FULL',
   END: 'T_END',
+  EMOTE: 'T_EMOTE',
 });
 
 const TYPES = new Set(Object.values(TMSG));
@@ -77,7 +82,7 @@ export function maskTableInput(text) {
 
 /** O que o anfitrião escolhe ao abrir a mesa. */
 export const TABLE_OPTIONS = Object.freeze({
-  seats: Object.freeze([2, 3, 4]),
+  seats: Object.freeze([2, 3, 4, 5]),
   batida: Object.freeze(['todos', 'pesada']),
   /** com tentos, é a meta: quantos tentos para vencer */
   hearts: Object.freeze([3, 5, 7]),
@@ -103,7 +108,7 @@ const isObj = (x) => Boolean(x) && typeof x === 'object' && !Array.isArray(x);
 const isStr = (x, max = 64) => typeof x === 'string' && x.length <= max;
 const optStr = (x, max) => x == null || isStr(x, max);
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
-const isPlace = (x) => x == null || (Number.isInteger(x) && x >= 0 && x < 4);
+const isPlace = (x) => x == null || (Number.isInteger(x) && x >= 0 && x < 5);
 const isAnswer = (x) => x == null || (isObj(x) && isStr(x.from, 4) && typeof x.yes === 'boolean');
 const isAction = (a) =>
   isObj(a) && (a.type === 'PLAY' ? isStr(a.tileId, 8) && (a.side === 'left' || a.side === 'right' || a.side === 'root') : a.type === 'SIGNAL' ? a.tileId == null || isStr(a.tileId, 8) : a.type === 'DRAW' || a.type === 'PASS');
@@ -122,6 +127,7 @@ const CHECKS = {
   T_BYE: (p) => optStr(p.reason, 40),
   T_FULL: (p) => optStr(p.reason, 20),
   T_END: (p) => optStr(p.reason, 40),
+  T_EMOTE: (p) => isEmote(p.emote) && optStr(p.seat, 4),
 };
 
 /** A mensagem chegou inteira e no formato certo? Versões diferentes: só o HELLO e o FULL passam. */

@@ -74,7 +74,8 @@ function Podium({ view, me, names, onRematch, onLeave, canRematch }) {
   const step = { 1: 'is-1st', 2: 'is-2nd', 3: 'is-3rd', 4: 'is-4th' };
   // 2º à esquerda, 1º no meio (mais alto), 3º à direita; o 4º embaixo
   const top = [ranked[1], ranked[0], ranked[2]].filter(Boolean);
-  const fourth = ranked[3];
+  // versão 2.33: na roda de 5, o 4º e o 5º embaixo
+  const rest = ranked.slice(3);
   const headline = teams
     ? won
       ? 'A SUA DUPLA LEVOU A MESA!'
@@ -106,12 +107,13 @@ function Podium({ view, me, names, onRematch, onLeave, canRematch }) {
             ))}
           </div>
         )}
-        {!teams && fourth && (
-          <p className="table-podium-4th font-pixel" style={{ '--seat': colorOf(view, fourth.id) }}>
-            {ordinal(fourth.place)} · {fourth.id === me ? 'VOCÊ' : plateName(fourth.name)}
-            {tentos ? ` · ${fourth.tentos ?? 0} TENTOS` : ''}
-          </p>
-        )}
+        {!teams &&
+          rest.map((r) => (
+            <p key={r.id} className="table-podium-4th font-pixel" style={{ '--seat': colorOf(view, r.id) }}>
+              {ordinal(r.place)} · {r.id === me ? 'VOCÊ' : plateName(r.name)}
+              {tentos ? ` · ${r.tentos ?? 0} TENTOS` : ''}
+            </p>
+          ))}
         <div className="mt-4 flex gap-2">
           {onLeave && (
             <button type="button" className="btn-pixel flex-1" onClick={onLeave}>

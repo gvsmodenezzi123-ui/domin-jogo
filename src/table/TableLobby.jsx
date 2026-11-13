@@ -15,6 +15,8 @@ const SPOTS = Object.freeze({
   2: ['bottom', 'top'],
   3: ['bottom', 'right', 'left'],
   4: ['bottom', 'right', 'top', 'left'],
+  // versão 2.33: com 5, dois sentam do lado de lá
+  5: ['bottom', 'right', 'topR', 'topL', 'left'],
 });
 
 const seatIndex = (id) => Number(String(id).slice(1)) || 0;
@@ -104,7 +106,7 @@ export default function TableLobby({
             </span>
           )}
         </span>
-        {['bottom', 'right', 'top', 'left'].map((spot) => {
+        {['bottom', 'right', 'top', 'topR', 'topL', 'left'].map((spot) => {
           const k = spots.indexOf(spot);
           if (k < 0) return null;
           const { seat, index } = order[k];
@@ -266,7 +268,7 @@ export function TableRules({ config, onChange = null, minSeats = 2, turn = true 
       <div className="lobby-opt">
         <span className="lobby-opt-label font-pixel">CADEIRAS</span>
         <span className="lobby-chips">
-          {[2, 3, 4].map((n) => (
+          {[2, 3, 4, 5].map((n) => (
             <LobbyChip key={n} on={config.seats === n} disabled={ro || n < minSeats} onClick={() => set('seats', n)} label={`${n} cadeiras`}>
               {n}
             </LobbyChip>

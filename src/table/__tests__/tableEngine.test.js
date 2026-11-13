@@ -35,9 +35,10 @@ function playOut(seed, n, rules) {
 }
 
 describe('mesa de N cadeiras: montagem', () => {
-  it('aceita só 2 a 4 cadeiras, sem id repetido', () => {
+  it('aceita só 2 a 5 cadeiras (versão 2.33), sem id repetido', () => {
     expect(() => createTable({ seed: 1, seats: seatsOf(1) })).toThrow();
-    expect(() => createTable({ seed: 1, seats: seatsOf(5) })).toThrow();
+    expect(() => createTable({ seed: 1, seats: seatsOf(6) })).toThrow();
+    expect(createTable({ seed: 1, seats: seatsOf(5) }).seats).toHaveLength(5);
     expect(() => createTable({ seed: 1, seats: [{ id: 'a' }, { id: 'a' }] })).toThrow();
     expect(createTable({ seed: 1, seats: seatsOf(4) }).seats).toHaveLength(4);
   });
@@ -47,6 +48,15 @@ describe('mesa de N cadeiras: montagem', () => {
     expect(handSizeFor(3)).toBe(7);
     expect(handSizeFor(4)).toBe(6);
     expect(handSizeFor(4, { hand4: 7 })).toBe(7);
+    expect(handSizeFor(5)).toBe(5);
+    expect(handSizeFor(5, { hand4: 7 })).toBe(5);
+  });
+
+  it('versão 2.33: a roda de 5 vai até o fim só com bots, sem sumir pedra', () => {
+    for (const seed of [3, 17, 41]) {
+      const { s } = playOut(seed, 5);
+      expect(s.phase).toBe('matchOver');
+    }
   });
 
   it('distribui pelos vivos, deixa o resto no dorme e conta 28 pedras', () => {
@@ -54,6 +64,8 @@ describe('mesa de N cadeiras: montagem', () => {
       [2, 7, 14],
       [3, 7, 7],
       [4, 6, 4],
+      // versão 2.33: com 5, todos com o mesmo tanto (5) e as 3 que sobram no dorme
+      [5, 5, 3],
     ]) {
       const s = run(createTable({ seed: 99, seats: seatsOf(n) }), { type: 'START_ROUND' });
       expect(s.phase).toBe('playing');

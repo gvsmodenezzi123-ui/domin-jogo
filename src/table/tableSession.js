@@ -11,9 +11,10 @@
  *     error, ended, you, lobby: { config, seats, started }, view, clock: { deadline, totalMs },
  *     ready: [seatId], links: { [seatId]: { lost, graceEndsAt, ping } }, notice, lostAt, graceEndsAt }
  */
-import { botAction, createTable, tableReducer, viewFor } from './tableEngine.js';
+import { MAX_SEATS, botAction, createTable, tableReducer, viewFor } from './tableEngine.js';
 import { TABLE_PROTOCOL, TMSG, makeTableMessage, sanitizeTableConfig, validateTableMessage } from './tableProtocol.js';
 import { TABLE_FACES } from './seats.js';
+import { EMOTE_MS, botReactions, emoteReady, pushEmote } from './emotes.js';
 
 /** Quanto uma cadeira caída tem para voltar antes do W.O. (o mesmo do duelo). */
 export const TABLE_GRACE_MS = 60000;
@@ -68,8 +69,15 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     notice: null,
     lostAt: null,
     graceEndsAt: null,
+    // versão 2.33: o emote de cada cadeira ({ [cadeira]: { id, key } })
+    emotes: {},
   };
   let noticeN = 0;
+  let emoteN = 0;
+  const showEmote = (seat, id) => {
+    emoteN += 1;
+    set({ emotes: pushEmote(snap.emotes, seat, id, emoteN) });
+  };
 
   const emit = () => listeners.forEach((fn) => fn());
   const set = (patch) => {
@@ -122,7 +130,7 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
      */
     const freeId = () => {
       const used = new Set(seats.filter(Boolean).map((s) => s.id));
-      for (let n = 0; n < 4; n += 1) if (!used.has(`s${n}`)) return `s${n}`;
+      for (let n = 0; n < MAX_SEATS; n += 1) if (!used.has(`s${n}`)) return `s${n}`;
       return `s${seats.length}`;
     };
     /** Os pedidos de troca de lugar entre duas pessoas (quem pediu → com quem). */
@@ -240,6 +248,16 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       apply(s);
     }
 
+    /** Versão 2.33: o emote de `seatId` (com o intervalo mínimo) vai para todo mundo menos quem mandou. */
+    const lastEmote = {};
+    function emoteFrom(seatId, emote, skipConn = null) {
+      const now = clock.now();
+      if (!emoteReady(lastEmote[seatId], now)) return;
+      lastEmote[seatId] = now;
+      showEmote(seatId, emote);
+      for (const s of humans()) if (!s.lost && s.connId !== skipConn) send(s.connId, TMSG.EMOTE, { emote, seat: seatId });
+    }
+
     function apply(next) {
       if (!next || next === engine) return;
       const was = engine?.phase;
@@ -247,6 +265,8 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       if (engine.phase === 'roundOver' && was !== 'roundOver') {
         nextReady.clear();
         later('next', startNextRound, NEXT_AUTO_MS);
+        // os bots reagem ao fim da rodada (de vez em quando)
+        botReactions(engine.result, seats.filter(Boolean), random).forEach((r, i) => later(`emote-${i}`, () => emoteFrom(r.seat, r.emote), 900 + i * (EMOTE_MS * 0.6)));
       }
       if (engine.phase !== 'roundOver') cancel('next');
       schedule();
@@ -372,6 +392,9 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         case TMSG.PING:
           send(connId, TMSG.PONG, { t: p.t });
           break;
+        case TMSG.EMOTE:
+          if (engine) emoteFrom(seat.id, p.emote, connId);
+          break;
         case TMSG.PONG:
           seat.ping = Math.max(0, Math.round(clock.now() - p.t));
           break;
@@ -471,6 +494,9 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         if (!engine) return;
         apply(tableReducer(engine, { ...action, seat: 's0' }));
       },
+      emote(id) {
+        if (engine) emoteFrom('s0', id);
+      },
       nextRound() {
         nextReady.add('s0');
         maybeNextRound();
@@ -499,6 +525,7 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
   // convidado
   // =======================================================================================
   else {
+    let lastSent = null;
     let hostConn = null;
     let everConnected = false;
     let leaving = false;
@@ -541,6 +568,9 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         }
         case TMSG.REJECT:
           notice('A mesa mudou antes da sua jogada. Tente de novo.');
+          break;
+        case TMSG.EMOTE:
+          if (p.seat) showEmote(p.seat, p.emote);
           break;
         case TMSG.PING:
           send(connId, TMSG.PONG, { t: p.t });
@@ -599,6 +629,13 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       intent(action) {
         const clean = action.type === 'PLAY' ? { type: 'PLAY', tileId: action.tileId, side: action.side } : action.type === 'SIGNAL' ? { type: 'SIGNAL', tileId: action.tileId ?? null } : { type: action.type };
         if (!send(hostConn, TMSG.INTENT, { action: clean })) notice('Sem conexão com a mesa agora.');
+      },
+      emote(id) {
+        const now = clock.now();
+        if (!snap.you || !emoteReady(lastSent, now)) return;
+        lastSent = now;
+        showEmote(snap.you, id);
+        send(hostConn, TMSG.EMOTE, { emote: id });
       },
       nextRound() {
         send(hostConn, TMSG.NEXT, {});

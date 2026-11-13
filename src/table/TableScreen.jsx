@@ -21,6 +21,7 @@ import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
 import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
+import EmoteBar, { SeatEmote } from './EmoteBar.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { partnerOf, turnOptions } from './tableEngine.js';
 
@@ -86,7 +87,7 @@ function roundLine(result, view, me, partner) {
   return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
 }
 
-export default function TableScreen({ view, me: seatMe, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true }) {
+export default function TableScreen({ view, me: seatMe, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true, emotes = null, onEmote = null }) {
   // versão 2.15: fora da roda, você assiste: a tela inteira passa a ser a de quem você escolheu
   // (a mão dele na sua bancada, a roda girada a partir dele); as ações ficam travadas
   const watchList = view.watch ?? NONE;
@@ -408,7 +409,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       className={`app-shell table-v24 flex h-full flex-col overflow-hidden ${landscape ? 'is-landscape' : ''}`}
       style={{ '--felt-light': sala.felt.light, '--felt-mid': sala.felt.mid, '--felt-dark': sala.felt.dark, '--me': colorOf(view, me) }}
     >
-      <SeatBench onSignal={handleSignal} landscape={landscape} chair={sala.material === 'plastico' ? 'plastico' : 'madeira'} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} roundKey={`mesa:${view.round}`} />
+      <SeatBench onSignal={handleSignal} landscape={landscape} emotes={emotes} chair={sala.material === 'plastico' ? 'plastico' : 'madeira'} seats={bench} maxHearts={view.maxHearts} target={tentosMode ? view.target : null} turnKey={turnKey} turnMs={turnMs} turnLeft={actor !== me ? secondsLeft : null} bubble={bubbleNow} hits={hits} roundKey={`mesa:${view.round}`} />
 
       <div className="relative min-h-0 flex-1 flex flex-col">
         {/* o relógio grande só na sua vez; a dos outros está no anel e nos segundos da cadeira */}
@@ -555,6 +556,9 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
           <span className="sweep-wait-dots" aria-hidden="true" />
         </p>
       )}
+      {/* versão 2.33: os emotes (o botão ao lado da lupa; o seu aparece em cima da sua vida) */}
+      {landscape && onEmote && !spectating && <EmoteBar onEmote={onEmote} />}
+      {landscape && <SeatEmote emote={emotes?.[me] ?? null} className="is-mine" />}
       {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );
