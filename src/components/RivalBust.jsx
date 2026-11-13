@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import PixelCanvas from './PixelCanvas.jsx';
-import { BUST_H, BUST_W, paintBust } from './art/bustPixels.js';
+import { BUST_H, BUST_W, SEATED_H, SEATED_W, paintBust, paintSeatedBust } from './art/bustPixels.js';
 import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
 import { PROFILE_SPOTS } from './art/figProfile.js';
 
@@ -13,7 +13,8 @@ const PUFF_DELAYS = [0, 0.7, 1.4];
  * O busto pintado (art/bustPixels.js): o humor do retrato, a boca mexendo enquanto fala e,
  * sem retrato, a silhueta. Respira (CSS), treme no golpe e se inclina quando bate.
  */
-function RivalBust({ rival, mood = 'idle', speaking = false, profile = null }) {
+function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, seated = null }) {
+  if (seated && profile) return <SeatedBust rival={rival} mood={mood} speaking={speaking} facing={profile} chair={seated} />;
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -56,3 +57,46 @@ function RivalBust({ rival, mood = 'idle', speaking = false, profile = null }) {
 }
 
 export default memo(RivalBust);
+
+/**
+ * Versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cadeira (`chair`), de lado.
+ * O mesmo humor, a boca, a fumaça e o brilho do olho do perfil, no quadro maior.
+ */
+function SeatedBust({ rival, mood, speaking, facing, chair }) {
+  const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
+  const stranger = !PORTRAITS[rival.art];
+  const open = Boolean(speaking) && mood !== 'hurt';
+  const smokes = !stranger && PORTRAIT_EMBER[art]?.moods.includes(mood);
+  const glow = !stranger ? PORTRAIT_GLOW[art] : null;
+  const flip = (x) => (facing === 'left' ? SEATED_W - 1 - x : x);
+  const at = (p, dy = 0) => ({ left: `${(flip(p.x) / SEATED_W) * 100}%`, top: `${((p.y + dy) / SEATED_H) * 100}%` });
+  return (
+    <>
+      <PixelCanvas
+        cacheKey={`sentado-${art}-${mood}-${open ? 1 : 0}${stranger ? '-sombra' : ''}-${facing}-${chair}`}
+        paint={() => paintSeatedBust(PORTRAITS[art], mood, open, { silhouette: stranger, facing, chair })}
+        w={SEATED_W}
+        h={SEATED_H}
+        scale={1}
+        className="seat-bust-px"
+        style={{ width: '100%', height: '100%' }}
+      />
+      {smokes &&
+        PUFF_DELAYS.map((delay) => (
+          <span
+            key={delay}
+            aria-hidden="true"
+            className="smoke-puff seat-smoke pointer-events-none absolute rounded-full bg-zinc-400 blur-[1px]"
+            style={{ ...at(PROFILE_SPOTS.ember), animationDelay: `${delay}s` }}
+          />
+        ))}
+      {glow && (
+        <span
+          aria-hidden="true"
+          className="eye-glow pointer-events-none absolute"
+          style={{ ...at(PROFILE_SPOTS.eye, mood === 'hurt' ? 1 : 0), width: `${(9 / SEATED_W) * 100}%`, '--glow': glow.color }}
+        />
+      )}
+    </>
+  );
+}

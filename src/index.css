@@ -26895,3 +26895,48 @@ html[data-mesa='plastico'] .player-zone .player-hint {
     transform: none !important;
   }
 }
+
+/* versão 2.32: quem senta nas laterais da roda aparece de corpo inteiro, na cadeira; as pernas
+   entram embaixo do tampo (o recorte é só a beirada de lado) e as pedras ficam de pé no tampo,
+   seguindo a linha da beirada */
+.chair.is-side .chair-bust {
+  left: var(--fx);
+  top: var(--fy);
+  width: var(--fw);
+  height: var(--fh);
+  translate: none;
+}
+.chair.is-side .chair-bust .seat-bust-px {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.chair.is-side .seat-breath {
+  animation-name: seatBreathSeated;
+}
+.chair.is-side .seat-bust.is-thinking {
+  rotate: none;
+}
+.chair.is-side .seat-chalk {
+  left: 18%;
+  top: 2%;
+  width: 46%;
+  height: 32%;
+}
+.chair.is-side .chair-rack {
+  left: var(--rx);
+  top: var(--ry);
+  translate: none;
+}
+@keyframes seatBreathSeated {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.6px);
+  }
+}
+/* (o HUD de baixo fica por cima das cadeiras: o pé da cadeira da direita passava por cima do dorme) */
+.roda-seats.roda-seats.rival-bench {
+  z-index: 15;
+}

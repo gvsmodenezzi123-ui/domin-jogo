@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.32.0: na roda, quem senta do lado aparece de corpo inteiro
+
+- **Mesa de 2 a 4** (deitado): quem senta nas laterais não é mais só a cabeça e os ombros.
+  Os 30 personagens ganharam o corpo inteiro sentado de lado na cadeira, com a cabeça do mesmo
+  tamanho de antes: o tronco, o braço com a mão na beirada da mesa, as pernas entrando embaixo do
+  tampo e os sapatos, cada um com a roupa dele (terno com lapela e gravata, avental, uniforme com
+  faixa e distintivo, túnica, saia, calça). A cadeira é de madeira; na Calçada do Bar, a de
+  plástico branco. Os humores, a boca falando, a fumaça e o brilho do olho continuam.
+- **As pedras de quem senta do lado** ficam de pé no tampo, junto da beirada, numa fileira quase
+  na diagonal que sai da mão e vai para o lado de lá (as de perto um pouco maiores).
+- O HUD de baixo fica por cima das cadeiras. Quem senta na frente continua atrás da mesa.
+
 ### 2.31.0: as nuvens e o mar andando
 
 - Nos cenários de dia as **nuvens** andam devagar pelo céu (passam por trás dos coqueiros, das

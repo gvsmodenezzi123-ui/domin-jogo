@@ -52,7 +52,13 @@ function reconcile(prev, tiles, roundKey) {
  * peito do rival, numa fileira centrada (`unit` acompanha a altura da tela). As vagas fixas e
  * o voo da pedra que sai são os mesmos.
  */
-export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, room = ROOM, className = '', unit = UNIT, seat = false }) {
+/**
+ * Versão 2.32, `lane`: as pedras de quem senta na lateral da roda, de pé no tampo seguindo a
+ * beirada de lado ({ dx, dy } por vaga, a partir da pedra de perto; `grow`: quanto cada uma
+ * muda de tamanho a cada vaga; `back`: a fileira vai para longe, cada uma atrás da anterior).
+ * De lado para nós, elas aparecem um pouco estreitas.
+ */
+export default function RivalHand({ tiles, revealedIds, foreseenId = null, roundKey, containerRef, room = ROOM, className = '', unit = UNIT, seat = false, lane = null }) {
   const [book, setBook] = useState(() => reconcile(null, tiles, roundKey));
   const next = reconcile(book, tiles, roundKey);
   if (next !== book) setBook(next);
@@ -89,9 +95,11 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
         data-rival-tile={tile.id}
         className={`rival-slot absolute ${leavingTile ? 'rival-slot-leaving' : ''}`}
         style={
-          seat
-            ? { right: slot * step, bottom: 0, rotate: `${slot % 2 ? -1 : 1}deg` }
-            : { right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }
+          lane
+            ? { left: slot * lane.dx, top: slot * lane.dy, translate: '-50% -100%', scale: `${0.8 * (1 + slot * lane.grow)} ${1 + slot * lane.grow}`, transformOrigin: '50% 100%', zIndex: lane.back ? 40 - slot : slot + 1 }
+            : seat
+              ? { right: slot * step, bottom: 0, rotate: `${slot % 2 ? -1 : 1}deg` }
+              : { right: slot * step, top: '50%', marginTop: -UNIT, rotate: `${slot % 2 ? -2 : 2}deg` }
         }
       >
         {revealed ? (
@@ -114,7 +122,7 @@ export default function RivalHand({ tiles, revealedIds, foreseenId = null, round
       ref={containerRef}
       className={`pointer-events-none ${className}`}
       // de pé na beirada: a fileira tem a largura das vagas e fica no meio
-      style={seat ? { width: Math.round(maxSlot * step + unit), height: unit * 2 } : undefined}
+      style={lane ? { width: 0, height: 0 } : seat ? { width: Math.round(maxSlot * step + unit), height: unit * 2 } : undefined}
       role="img"
       aria-label={`Mão do rival: ${tiles.length} pedras`}
     >

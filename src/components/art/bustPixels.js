@@ -8,7 +8,7 @@
  */
 import { paintKit } from './botecoScene.js';
 import { FIG_H, FIG_MOUTH, FIG_SHOULDER, FIG_W, paintFigure } from './figurePixels.js';
-import { paintProfile } from './figProfile.js';
+import { SEATED_H, SEATED_W, paintProfile, paintSeatedProfile } from './figProfile.js';
 
 const { hex, buffer } = paintKit;
 
@@ -54,5 +54,18 @@ export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = 
     const k = ((y - (BUST_RAIL - 8)) / (BUST_H - (BUST_RAIL - 8))) * 0.42;
     for (let x = 0; x < BUST_W; x += 1) if (alphaAt(out, x, y)) out.put(x, y, [8, 5, 3], k);
   }
+  return silhouette ? silhouetteOf(out) : out;
+}
+
+/** Versão 2.32: o corpo inteiro sentado de lado (quem senta nas laterais da roda). */
+export { SEATED_H, SEATED_W };
+
+/**
+ * Quem senta nas laterais da roda, de corpo inteiro na cadeira (`chair`: 'madeira' ou
+ * 'plastico'), olhando para `facing`. Sem a sombra da beirada (a mesa não cobre o peito: as
+ * pernas é que entram embaixo dela). SEATED_W×SEATED_H.
+ */
+export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira' } = {}) {
+  const out = paintSeatedProfile(spec, mood, speaking, facing, chair);
   return silhouette ? silhouetteOf(out) : out;
 }

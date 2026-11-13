@@ -8,7 +8,7 @@
  * (a ponta do nariz na 58), a orelha em (38, 35), o pescoço de 31 a 46 e o tronco de perfil do
  * ombro (linha 55) até o pé do quadro, com o braço caído na frente dele.
  */
-import { ball, board, box, ell, hash, hex, mix, poly, rampOf, tube } from './figKit.js';
+import { any, ball, board, box, ell, hash, hex, mix, poly, rampOf, tube } from './figKit.js';
 import { INK } from './figHead.js';
 
 const W = 88;
@@ -781,19 +781,25 @@ export function paintProfile(spec, mood = 'idle', speaking = false, facing = 'ri
   paintGlasses(k, spec);
   if (spec.earrings && spec.hat?.type !== 'hood') paintEarrings(k, spec.earrings, spec.earringColor);
   paintSmoke(k, spec, mood, g);
+  return finish(k, spec, facing);
+}
+
+/** O recorte de luz (`spec.rim`), o contorno de tinta e o espelho para quem olha para a esquerda. */
+function finish(k, spec, facing) {
+  const { w, h } = k;
   if (spec.rim) {
     const rim = hex(spec.rim);
     const marks = [];
-    for (let y = 0; y < H; y += 1) for (let x = 0; x < W; x += 1) if (k.has(x, y) && (!k.has(x + 1, y) || !k.has(x, y - 1))) marks.push(x, y);
+    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (k.has(x, y) && (!k.has(x + 1, y) || !k.has(x, y - 1))) marks.push(x, y);
     for (let i = 0; i < marks.length; i += 2) k.put(marks[i], marks[i + 1], rim, 0.55);
   }
   k.ink(INK);
   if (facing === 'left') {
     const d = k.data;
-    for (let y = 0; y < H; y += 1) {
-      for (let x = 0; x < W / 2; x += 1) {
-        const a = (y * W + x) * 4;
-        const b = (y * W + (W - 1 - x)) * 4;
+    for (let y = 0; y < h; y += 1) {
+      for (let x = 0; x < w / 2; x += 1) {
+        const a = (y * w + x) * 4;
+        const b = (y * w + (w - 1 - x)) * 4;
         for (let c = 0; c < 4; c += 1) {
           const t = d[a + c];
           d[a + c] = d[b + c];
@@ -803,4 +809,253 @@ export function paintProfile(spec, mood = 'idle', speaking = false, facing = 'ri
     }
   }
   return k;
+}
+
+// --- versão 2.32: o corpo inteiro, sentado de lado na cadeira ---------------------------------
+// A cabeça é a mesma do perfil e fica no mesmo lugar do quadro (o crânio em 40, 29); embaixo
+// dela, o tronco de perfil, o braço com o antebraço apoiado para a frente (a mão na beirada da
+// mesa), a coxa deitada no assento até o joelho, a canela, o sapato e a cadeira.
+
+export const SEATED_W = 120;
+export const SEATED_H = 164;
+
+/** A cadeira de lado: 'madeira' (a de boteco) ou 'plastico' (a branca de bar). `back`: a parte de trás. */
+function paintChair(k, kind, back) {
+  if (kind === 'plastico') {
+    const P = rampOf('#e9ebe4');
+    const far = rampOf('#b4b8b0');
+    if (back) {
+      // os pés de lá (abertos), o encosto curvo inclinado para trás
+      k.form(poly([[24, 118], [28, 118], [20, 161], [16, 161]]), 2.6, far, { edge: 1, noise: 0.15 });
+      k.form(poly([[74, 118], [78, 118], [86, 160], [82, 160]]), 2.6, far, { edge: 1, noise: 0.15 });
+      k.form(poly([[14, 60], [22, 61], [26, 116], [18, 116], [15, 90]]), (x, y) => tube(13, 26, 2.6, 5.8)(x) - (y % 6 === 0 && y < 100 ? 1 : 0), P, { edge: 1, rim: 6, noise: 0.12, seed: 77 });
+      return;
+    }
+    k.form(poly([[12, 112], [77, 112], [78, 117], [74, 120], [14, 120], [11, 116]]), (x, y) => (y < 115 ? 5.8 : 3.4), P, { edge: 1, rim: 6, noise: 0.12, seed: 78 });
+    k.form(poly([[18, 119], [24, 119], [16, 162], [10.5, 162]]), (x) => tube(10, 25, 2.6, 5.6)(x), P, { edge: 1, rim: 6, noise: 0.12, seed: 79 });
+    k.form(poly([[68, 119], [74, 119], [82, 162], [76.5, 162]]), (x) => tube(68, 83, 2.6, 5.6)(x), P, { edge: 1, rim: 6, noise: 0.12, seed: 80 });
+    return;
+  }
+  const Wd = rampOf('#8a5a34');
+  const far = rampOf(mix(hex('#8a5a34'), hex('#2a1810'), 0.45));
+  if (back) {
+    // os pés de lá (mais escuros), o pé de trás subindo até o encosto, o travessão e uma ripa
+    k.form(poly([[21, 118], [25, 118], [26, 161], [22, 161]]), 2.4, far, { edge: 1, noise: 0.2 });
+    k.form(poly([[75, 118], [79, 118], [80, 160], [76, 160]]), 2.4, far, { edge: 1, noise: 0.2 });
+    k.form(poly([[13, 62], [18.5, 62], [20, 162], [14.5, 162]]), (x) => tube(13, 20, 2.2, 5.4)(x), Wd, { edge: 1, rim: 5, noise: 0.25, seed: 71 });
+    k.form(poly([[10, 58], [21, 58], [21, 63], [10, 63]]), (x, y) => (y < 60 ? 5.6 : 3.6), Wd, { edge: 1, rim: 6, noise: 0.2, seed: 72 });
+    k.form(poly([[11, 80], [20, 80], [20, 84], [11, 84]]), 3.6, Wd, { edge: 1, noise: 0.2, seed: 73 });
+    return;
+  }
+  k.form(poly([[11, 113], [76, 113], [76, 119], [11, 119]]), (x, y) => (y < 115 ? 5.6 : 3.2), Wd, { edge: 1, rim: 6, noise: 0.25, seed: 74 });
+  k.form(poly([[68, 119], [73, 119], [74.5, 162], [69.5, 162]]), (x) => tube(68, 75, 2.2, 5.2)(x), Wd, { edge: 1, rim: 5, noise: 0.25, seed: 75 });
+  k.form(poly([[19, 138], [70, 138], [70, 141], [19, 141]]), 3.4, Wd, { edge: 1, noise: 0.2, seed: 76 });
+}
+
+/** O que vai nas pernas: a saia até o joelho, o vestido até o tornozelo (túnica) ou a calça. */
+function lowerOf(spec) {
+  const o = spec.outfit ?? {};
+  if (o.type === 'robe') return { kind: 'robe', color: o.color };
+  if (spec.fem) return { kind: 'skirt', color: o.skirt ?? '#3a3444' };
+  // a calça: a do terno e a do uniforme combinam; as outras variam (jeans, cáqui, cinza, marrom)
+  const loose = ['#3e3a36', '#2e3e5e', '#5a4e38', '#3a3a48', '#4a3424'][(spec.seed ?? 0) % 5];
+  const pants = o.pants ?? (o.type === 'uniform' || o.type === 'suit' || o.type === 'coat' ? o.color : o.type === 'jacket' ? '#2e3e5e' : loose);
+  return { kind: 'pants', color: pants };
+}
+
+/** O tronco de perfil: as costas à esquerda, o peito, a barriga e o quadril sentado. */
+function seatedTorso(spec) {
+  const add = spec.broad ? 3 : spec.fem ? -1 : 0;
+  const base = poly([[28, 55], [35, 51], [45, 51.5], [52, 56], [56 + add, 64], [58 + add, 74], [58.5 + add, 86], [58 + add, 98], [56, 106], [48, 110], [30, 110], [25, 104], [24, 90], [24.5, 76], [26, 64]]);
+  return spec.fem ? any(base, ell(56, 70, 4.6, 6.4)) : base;
+}
+
+function paintSeatedBody(k, spec, S, chair) {
+  const o = spec.outfit ?? { type: 'shirt', color: '#5a5a5a' };
+  const Top = rampOf(o.color ?? '#5a5a5a');
+  const low = lowerOf(spec);
+  const Low = rampOf(low.color);
+  const Shoe = rampOf(spec.fem ? '#4a1c24' : '#2e1e16');
+  const skinArms = o.type === 'tank';
+  const tone = (x, y) => ball(40, 74, 19, 34, 1.6, 5.8)(x, y);
+  // a canela descendo do joelho e o sapato (a coxa vem por cima, depois do assento)
+  const shin = low.kind === 'skirt' ? S : Low;
+  k.form(poly([[86, 106], [100, 104], [101, 114], [98, 150], [88, 150], [87, 114]]), (x) => tube(86, 102, 1.8, 5.2)(x), shin, { edge: 1, rim: 5, noise: 0.2, seed: 81 });
+  k.form(poly([[84, 148], [99, 147], [108, 150.5], [109, 156], [84, 156]]), (x, y) => (y < 151 ? 4.6 : 2.6), Shoe, { edge: 1, rim: 6, noise: 0.15, seed: 82 });
+  paintChair(k, chair, false);
+  if (low.kind === 'robe') {
+    k.form(
+      poly([[25, 98], [58, 98], [86, 100], [100, 103], [102, 116], [104, 148], [84, 149], [86, 118], [30, 118], [24, 110]]),
+      (x, y) => (y < 106 ? 5 : 4) - (x > 86 && y > 112 ? 0.8 : 0) + (Math.sin(x * 0.8 + y * 0.15) > 0.7 && y > 112 ? -1.4 : 0),
+      Low,
+      { edge: 1, rim: 5, noise: 0.25, seed: 83 },
+    );
+    const Gd = rampOf(o.collar ?? '#e6c34a', 'metal');
+    for (let x = 84; x <= 103; x += 1) k.put(x, 146 + (x > 93 ? 1 : 0), Gd[x % 2 ? 5 : 3]);
+  } else {
+    k.form(
+      poly([[25, 99], [56, 99], [88, 101], [99, 104], [100.5, 112], [94, 117], [30, 117.5], [24.5, 110]]),
+      (x, y) => 5.2 - (y - 99) * 0.17 - (x > 94 ? 0.6 : 0),
+      Low,
+      { edge: 1, rim: 6, noise: 0.25, seed: 84 },
+    );
+    if (low.kind === 'skirt') for (let y = 105; y <= 116; y += 1) k.put(101, y, Low[1]);
+    else for (let x = 34; x <= 92; x += 1) k.put(x, 102 + Math.round((x - 34) * 0.03), Low[2]);
+  }
+  // o tronco
+  const body = k.form(seatedTorso(spec), (x, y) => tone(x, y) - (y > 104 ? 0.6 : 0), Top, { edge: 1, rim: 5, noise: o.type === 'cardigan' ? 0.6 : 0.3, seed: 85 });
+  if (o.type === 'cardigan') {
+    for (let y = 55; y <= 110; y += 1) for (let x = 24; x < 64; x += 1) if (body.has(x, y) && x % 4 === 0) k.put(x, y, Top[Math.max(1, Math.round(tone(x, y) - 2.4))]);
+  }
+  if (o.plaid) {
+    const c = hex(o.plaid);
+    for (let y = 52; y <= 110; y += 1) for (let x = 20; x < 64; x += 1) if (body.has(x, y) && (x % 7 === 2 || y % 7 === 3)) k.put(x, y, c, 0.4);
+  }
+  if (low.kind === 'pants') {
+    const B = rampOf('#2a1c14');
+    for (let x = 24; x <= 62; x += 1) {
+      if (!body.has(x, 103)) continue;
+      k.put(x, 103, B[2]);
+      k.put(x, 104, B[1]);
+    }
+  }
+  const frontX = (y) => {
+    let x = 64;
+    while (x > 30 && !body.has(x, y)) x -= 1;
+    return x;
+  };
+  if (o.type === 'robe') {
+    const Gd = rampOf(o.collar ?? '#e6c34a', 'metal');
+    for (let y = 52; y <= 108; y += 1) {
+      const x = Math.round(43 + (y - 52) * 0.24);
+      if (!body.has(x, y)) continue;
+      k.put(x, y, Gd[5]);
+      k.put(x + 1, y, Gd[3]);
+    }
+  } else if (o.jabot) {
+    const L = rampOf('#f3e3de');
+    k.form(poly([[44, 51.5], [52, 54], [57, 61], [57, 70], [53, 74], [49, 67], [45, 58]]), (x, y) => 5.6 - ((x + y * 2) % 5 === 0 ? 1.6 : 0), L, { edge: 2, rim: 6, noise: 0.2, seed: 86 });
+    const Gm = rampOf('#d78d3a', 'metal');
+    k.form(ell(52, 59, 1.8, 1.8), ball(52, 59, 1.8, 1.8, 2, 6.4), Gm, { edge: 0, noise: 0 });
+    const Bt = rampOf(o.accent ?? '#d8b860', 'metal');
+    for (const y of [80, 89, 98]) {
+      const x = frontX(y) - 2;
+      k.put(x, y, Bt[6]);
+      k.put(x, y + 1, Bt[3]);
+    }
+  } else if (o.type === 'suit' || o.type === 'coat' || o.type === 'jacket') {
+    // o terno, o sobretudo e a jaqueta: a camisa no V do peito, a lapela e a gravata
+    const Wt = rampOf(o.shirt ?? '#f0f0f0');
+    const A = rampOf(o.accent ?? o.color);
+    const end = o.type === 'jacket' ? 66 : 80;
+    const vx = (y) => frontX(y) - 1 - (y - 52) * (o.type === 'jacket' ? 0.16 : 0.22);
+    k.form((x, y) => y >= 52 && y <= end && x >= vx(y) && body.has(x, y), (x) => 5 - (x > 55 ? 1 : 0), Wt, { edge: 2, noise: 0.12, seed: 91 });
+    k.form((x, y) => y >= 52 && y <= end + 6 && x >= vx(y) - 4 && x < vx(y) && body.has(x, y), (x, y) => 4.8 - (y > end ? 1 : 0), A, { edge: 1, rim: 6, noise: 0.15, seed: 92 });
+    if (o.tie) {
+      const T = rampOf(o.tie);
+      k.form((x, y) => y >= 55 && y <= end - 2 && x >= frontX(y) - 3 && x <= frontX(y) - 1 && body.has(x, y), (x, y) => (y === 56 ? 3 : 4.8), T, { edge: 1, noise: 0.1 });
+    }
+    if (o.bow) {
+      const T = rampOf(o.bow);
+      k.form(any(ell(frontX(56) - 2, 56, 2.4, 2), ell(frontX(56) - 2, 56, 1.2, 2.6)), 4.6, T, { edge: 1, noise: 0 });
+    }
+    if (o.type === 'jacket') {
+      const Z = rampOf('#a8b0b6', 'metal');
+      for (let y = 66; y <= 104; y += 1) k.put(frontX(y) - 2, y, Z[y % 2 ? 5 : 2]);
+    } else {
+      const B = rampOf(o.type === 'coat' ? (o.accent ?? o.color) : mix(hex(o.color), hex('#000000'), 0.25));
+      for (const y of [88, 97]) {
+        k.put(frontX(y) - 3, y, B[6]);
+        k.put(frontX(y) - 2, y, B[3]);
+      }
+    }
+  } else if (o.type === 'jersey') {
+    // a camisa de time: a gola redonda e a faixa da manga
+    const C = rampOf(o.collar ?? '#ffffff');
+    k.form((x, y) => body.has(x, y) && y >= 51 && y <= 55 && x >= 30 && x <= frontX(y), (x) => (x > 50 ? 4 : 5.6), C, { edge: 1, noise: 0 });
+  } else if (!skinArms) {
+    const C = rampOf(o.collar ?? o.color);
+    k.form(poly([[42, 50], [51, 52.5], [55, 59], [49, 60], [43, 55]]), 4.6, C, { edge: 1, rim: 6, noise: 0.15, seed: 87 });
+    if (o.stripes && o.type === 'shirt') {
+      const c = hex(o.stripes);
+      for (let y = 60; y <= 110; y += 1) for (let x = 24; x < 64; x += 1) if (body.has(x, y) && x % 4 === 1) k.put(x, y, c, 0.7);
+    }
+    const A = rampOf(o.accent ?? mix(hex(o.color), hex('#ffffff'), 0.6));
+    for (let y = 61; y <= 101; y += 1) k.put(frontX(y) - 3, y, Top[1]);
+    for (const y of [67, 77, 87, 97]) {
+      const x = frontX(y) - 2;
+      k.put(x, y, A[6]);
+      k.put(x + 1, y, A[4]);
+      k.put(x, y + 1, A[3]);
+    }
+    if (o.type === 'apron') {
+      // o avental na frente: do peito até o colo, com a alça no pescoço
+      const Ap = rampOf(o.accent ?? '#f0f0f0');
+      k.form((x, y) => body.has(x, y) && y >= 64 && x >= frontX(y) - 13, (x, y) => tube(40, 62, 2.6, 6.2)(x) - (y === 64 ? 1 : 0), Ap, { edge: 2, rim: 6, noise: 0.15, seed: 93 });
+      k.form((x, y) => y >= 98 && y <= 112 && x >= 46 && x <= 64 - (y - 98) * 0.2, 5, Ap, { edge: 2, noise: 0.15, seed: 94 });
+      for (let y = 52; y <= 64; y += 1) k.put(Math.round(47 + (y - 52) * 0.5), y, Ap[2]);
+    }
+  }
+  // os enfeites: as faixas refletivas, o emblema, o distintivo, as pérolas, a medalha, o boá
+  if (o.stripes && o.type === 'uniform') {
+    const V = rampOf(o.stripes, 'metal');
+    for (let x = 0; x < SEATED_W; x += 1) for (let y = 86; y <= 88; y += 1) if (body.has(x, y)) k.put(x, y, V[y === 86 ? 6 : y === 87 ? 5 : 3]);
+  }
+  if (o.patch) k.form(box(35, 64, 40, 69), (x, y) => (y < 66 ? 6 : 4), rampOf(o.patch), { edge: 1, noise: 0 });
+  if (o.badge) {
+    const G = rampOf(o.type === 'uniform' ? '#e6c34a' : '#e8e8e8', 'metal');
+    const bx = frontX(68) - 5.5;
+    k.form((x, y) => y >= 65 && y <= 71 && Math.abs(x + 0.5 - bx) <= (y < 69 ? 2.6 : 2.6 - (y - 68) * 0.9), (x) => (x + 0.5 < bx ? 6 : 4), G, { edge: 1, noise: 0 });
+  }
+  if (o.pearls) for (let i = 0; i <= 8; i += 1) k.put(Math.round(46 + i * 1.2), Math.round(53 + Math.sin((i / 8) * Math.PI) * 3), hex(i % 2 ? '#ffffff' : '#b9aab8'));
+  if (o.boa) {
+    const F = rampOf(o.boa, 'hair');
+    for (const [cx, cy] of [[30, 54], [36, 56], [42, 56.5], [48, 56], [53, 59], [55, 65]]) k.form(ell(cx, cy, 3.6, 3.2), ball(cx, cy, 3.6, 3.2, 2, 6), F, { edge: 1, noise: 0.4, seed: 40, x0: cx - 5, x1: cx + 5, y0: cy - 5, y1: cy + 5 });
+  }
+  if (o.chain) {
+    for (let i = 0; i <= 8; i += 1) k.put(47 + i * 0.6, 53 + i * 1.1, hex(i % 2 ? '#fae167' : '#bf7f12'));
+    if (o.medal) {
+      const G = rampOf('#e2b23a', 'metal');
+      k.form(ell(52.5, 65.5, 2.6, 2.6), ball(52.5, 65.5, 2.6, 2.6, 2, 6.6), G, { edge: 1, noise: 0 });
+    }
+  }
+  if (o.scarf) {
+    const C = rampOf(o.scarf);
+    k.form(any(poly([[30, 49], [50, 51], [52, 57], [31, 56]]), poly([[46, 55], [52, 55], [53, 78], [47, 78]])), (x, y) => 4.8 + (Math.sin(x * 0.9 + y * 1.3) > 0.5 ? -1.2 : 0), C, { edge: 1, rim: 5, noise: 0.2 });
+  }
+  // o braço de cá: o ombro, o cotovelo para trás e o antebraço para a frente, a mão na beirada
+  const Sl = skinArms ? S : Top;
+  k.form(any(poly([[32, 58], [46, 57], [49.5, 84], [46.5, 91], [38, 90], [33.5, 72]]), ell(39.5, 61, 8.2, 7.4)), (x, y) => ball(39, 66, 10, 22, 2, 5.8)(x, y), Sl, { edge: 1, rim: 5, noise: 0.25, seed: 88 });
+  k.form(poly([[41, 84], [48, 83], [68, 81], [69.5, 88], [48, 92], [42, 92]]), (x, y) => 5 - (y - 82) * 0.3, Sl, { edge: 1, rim: 6, noise: 0.2, seed: 89 });
+  if (!skinArms) for (let y = 81; y <= 88; y += 1) k.put(67, y, Top[1]);
+  k.form(any(ell(73, 85.5, 4.8, 4), ell(76.5, 83, 2.2, 1.6)), ball(73, 85, 4.8, 4, 2.2, 5.8), S, { edge: 1, rim: 5, noise: 0.1, seed: 90 });
+  for (const x of [72, 74, 76]) k.put(x, 88, S[2]);
+}
+
+/**
+ * O personagem `spec` de corpo inteiro, sentado de lado na cadeira (`chair`: 'madeira' ou
+ * 'plastico'), no humor `mood` e com a boca aberta se `speaking`. `facing` como no perfil.
+ * SEATED_W×SEATED_H, fundo transparente; a cabeça no mesmo lugar do perfil de 88×84.
+ */
+export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing = 'right', chair = 'madeira') {
+  const k = board(SEATED_W, SEATED_H);
+  const g = profileGeo(spec);
+  const S = rampOf(spec.skin ?? '#d8a070', 'skin');
+  const hairColor = spec.hair?.color ?? spec.facial?.color;
+  paintChair(k, chair, true);
+  paintHat(k, spec, g, true);
+  paintHairBack(k, spec);
+  paintNeck(k, S, g);
+  paintSeatedBody(k, spec, S, chair);
+  paintHead(k, { ...spec, __mood: mood }, S, g, hairColor);
+  paintEye(k, spec, mood, S);
+  paintMouth(k, spec, mood, speaking, S, g);
+  paintFacialHair(k, spec, g);
+  paintHairFront(k, spec, g);
+  paintEar(k, spec, S);
+  paintHat(k, spec, g, false);
+  paintGlasses(k, spec);
+  if (spec.earrings && spec.hat?.type !== 'hood') paintEarrings(k, spec.earrings, spec.earringColor);
+  paintSmoke(k, spec, mood, g);
+  return finish(k, spec, facing);
 }

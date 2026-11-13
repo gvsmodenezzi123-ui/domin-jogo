@@ -9,7 +9,7 @@
  * width:      a largura da beirada de perto (fração da largura, limitada pela altura)
  * tilt/persp: o tombo do tampo (graus) e a perspectiva (px)
  */
-import { BUST_H, BUST_MOUTH, BUST_RAIL, BUST_W } from './art/bustPixels.js';
+import { BUST_H, BUST_MOUTH, BUST_RAIL, BUST_W, SEATED_H, SEATED_W } from './art/bustPixels.js';
 
 // versão 2.18: a mesa QUADRADA (bem mais estreita e funda): sobra sala dos dois lados para quem senta nas laterais
 export const LAND = Object.freeze({ far: 0.37, near: 0.87, width: 0.44, maxWidthH: 0.98, tilt: 28, persp: 1000 });
@@ -114,4 +114,46 @@ export function sideSeat(w, h, side, bust) {
       ? `polygon(0 0, ${r(c.farL)}px 0, ${r(c.farL)}px ${c.yFar}px, ${r(c.nearL)}px ${c.yNear}px, 0 ${c.yNear}px)`
       : `polygon(${w}px 0, ${r(c.farR)}px 0, ${r(c.farR)}px ${c.yFar}px, ${r(c.nearR)}px ${c.yNear}px, ${w}px ${c.yNear}px)`;
   return { x, y, clip };
+}
+
+/** Onde fica a mão no quadro do corpo sentado (olhando para a direita). */
+export const SEATED_HAND = Object.freeze({ x: 73, y: 85 });
+
+/**
+ * Versão 2.32: quem senta na lateral de corpo inteiro, na cadeira. O quadro (SEATED_W×SEATED_H,
+ * na mesma escala do busto e com a cabeça no mesmo lugar dele), o recorte só da beirada de lado
+ * (as pernas entram embaixo do tampo; desce até o pé da tela) e a fileira das pedras dele (`lane`):
+ * de pé no tampo, junto da beirada de lado e seguindo a linha dela, de lá para cá, cada uma um
+ * pouco maior (a perspectiva), com a mão dele no meio da fileira.
+ */
+export function sideFigure(w, h, side, bust, unit) {
+  const c = landCorners(w, h);
+  const s = sideSeat(w, h, side, bust);
+  const k = bust.w / BUST_W;
+  const bustLeft = s.x - bust.w / 2;
+  // olhando para a esquerda o desenho é o espelho: o crânio sai da coluna 47 do busto e da 79 do corpo
+  const left = Math.round(side < 0 ? bustLeft : bustLeft - (SEATED_W - BUST_W) * k);
+  const top = s.y - bust.h;
+  const r = Math.round;
+  const clip =
+    side < 0
+      ? `polygon(0 0, ${r(c.farL)}px 0, ${r(c.farL)}px ${c.yFar}px, ${r(c.xAt(h, -1))}px ${h}px, 0 ${h}px)`
+      : `polygon(${w}px 0, ${r(c.farR)}px 0, ${r(c.farR)}px ${c.yFar}px, ${r(c.xAt(h, 1))}px ${h}px, ${w}px ${h}px)`;
+  const handX = left + (side < 0 ? SEATED_HAND.x : SEATED_W - 1 - SEATED_HAND.x) * k;
+  const handY = top + SEATED_HAND.y * k;
+  // a fileira começa junto da mão (a primeira pedra, a de perto, é a maior) e sobe para o lado de
+  // lá acompanhando a beirada, entrando um tico no tampo a cada pedra: quase na diagonal
+  const dy = -Math.max(5, Math.round(unit * 0.8 * 10) / 10);
+  const slope = (c.xAt(c.yNear, side) - c.xAt(c.yFar, side)) / (c.yNear - c.yFar);
+  const y0 = handY + unit * 0.5;
+  const inset = unit * 2.2;
+  const x0 = c.xAt(y0, side) - side * inset;
+  const dx = slope * dy - side * unit * 0.22;
+  return {
+    ...s,
+    clip,
+    fig: { left, top, w: r(SEATED_W * k), h: r(SEATED_H * k) },
+    hand: { x: handX, y: handY },
+    lane: { x: r(x0), y: r(y0), dx: r(dx * 100) / 100, dy, grow: -0.03, back: true },
+  };
 }

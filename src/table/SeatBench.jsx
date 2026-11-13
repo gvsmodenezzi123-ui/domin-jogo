@@ -3,7 +3,7 @@ import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
 import RivalBust from '../components/RivalBust.jsx';
 import RivalHand from '../components/RivalHand.jsx';
 import DominoTile from '../components/DominoTile.jsx';
-import { RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideSeat } from '../components/seatGeometry.js';
+import { RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideFigure } from '../components/seatGeometry.js';
 import CoinCount from '../components/CoinCount.jsx';
 import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
@@ -47,11 +47,11 @@ const NO_REVEAL = new Set();
  * das pedras do rival da campanha (a régua do RivalSeat). A roda só sabe quantas são: cada uma
  * vira uma pedra de costas com um id fixo pela posição (quando a mão diminui, a da ponta sai).
  */
-function ChairRack({ id, count, unit, room, roundKey }) {
+function ChairRack({ id, count, unit, room, roundKey, lane = null }) {
   const tiles = useMemo(() => Array.from({ length: count }, (_, i) => ({ id: `${id}:${i}` })), [id, count]);
   return (
     <span className="chair-fan" data-seat-fan={id} aria-label={`${count} pedras na mão`}>
-      <RivalHand tiles={tiles} revealedIds={NO_REVEAL} roundKey={roundKey} room={room} unit={unit} seat className="seat-rack-tiles relative" />
+      <RivalHand tiles={tiles} revealedIds={NO_REVEAL} roundKey={roundKey} room={room} unit={unit} seat lane={lane} className="seat-rack-tiles relative" />
     </span>
   );
 }
@@ -190,28 +190,52 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
  * fala da jogada ("JOGOU 4|3", "PASSOU") sai logo embaixo da vida. Os mesmos marcadores da
  * cadeira em pé (data-seat, data-seat-photo, data-seat-fan) para os voos e os efeitos.
  */
-function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, onSignal }) {
+function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, chair = 'madeira', onSignal }) {
   const out = !seat.alive;
   const mood = out ? 'idle' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
   return (
     <div
       className={`seat chair ${solo ? 'is-solo' : ''} ${side ? `is-side is-side-${side.name}` : ''} ${x < 0.45 ? 'is-west' : ''} ${seat.isTurn ? 'is-turn' : ''} ${out ? 'is-out' : ''} ${seat.lostLeft != null ? 'is-lost' : ''} ${seat.danger && !out ? 'is-danger' : ''} ${seat.partner ? 'is-partner' : ''}`}
-      style={{ '--seat': seat.color, '--x': `${x * 100}%`, '--bust-w': `${bust.w}px`, '--bust-h': `${bust.h}px`, '--bust-drop': `${bust.drop}px`, ...(side ? { '--sx': `${side.x}px`, '--sy': `${side.y}px`, '--side-clip': side.clip } : null) }}
+      style={{
+        '--seat': seat.color,
+        '--x': `${x * 100}%`,
+        '--bust-w': `${bust.w}px`,
+        '--bust-h': `${bust.h}px`,
+        '--bust-drop': `${bust.drop}px`,
+        // versão 2.32: de lado, o corpo inteiro na cadeira e as pedras de pé na linha da beirada
+        ...(side
+          ? {
+              '--sx': `${side.x}px`,
+              '--sy': `${side.y}px`,
+              '--side-clip': side.clip,
+              '--fx': `${side.fig.left}px`,
+              '--fy': `${side.fig.top}px`,
+              '--fw': `${side.fig.w}px`,
+              '--fh': `${side.fig.h}px`,
+              '--rx': `${side.lane.x}px`,
+              '--ry': `${side.lane.y}px`,
+            }
+          : null),
+      }}
       data-seat={seat.id}
       aria-label={`${seat.name}${out ? `, fora em ${ordinal(seat.place)} lugar` : ''}${seat.isTurn ? ', na vez' : ''}`}
     >
       <div className="chair-clip" aria-hidden="true">
         <div className={`chair-bust seat-bust is-${mood}`} data-seat-photo={seat.id}>
           <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
-            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} />
+            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} />
           </span>
           {out && <ChalkX />}
         </div>
       </div>
       {!out && (
         <div className="chair-rack" {...(anchor ? { 'data-danger-anchor': '' } : {})}>
-          {seat.hand ? <MateRack id={seat.id} hand={seat.hand} marked={seat.marked} unit={Math.max(unit, 13)} onSignal={onSignal} /> : <ChairRack id={seat.id} count={seat.count} unit={unit} room={room} roundKey={roundKey} />}
+          {seat.hand ? (
+            <MateRack id={seat.id} hand={seat.hand} marked={seat.marked} unit={Math.max(unit, 13)} onSignal={onSignal} />
+          ) : (
+            <ChairRack id={seat.id} count={seat.count} unit={unit} room={room} roundKey={roundKey} lane={side ? side.lane : null} />
+          )}
         </div>
       )}
       {/* em cima da cabeça, só a plaquinha do nome e a vida; a fala da jogada logo embaixo */}
@@ -266,7 +290,7 @@ function chairClip(w, h) {
  * (o próximo à sua direita, o da frente no meio, o último à sua esquerda), do mesmo tamanho do
  * rival do duelo. Quem senta na ponta passa da beirada: o corpo desce até a bancada.
  */
-function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, onSignal }) {
+function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, chair, onSignal }) {
   const ref = useRef(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -293,7 +317,7 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, o
   const sideOf = (place) => {
     if (place === 'far' || !size.w) return null;
     const dir = place === 'left' ? -1 : 1;
-    return { name: place, facing: dir < 0 ? 'right' : 'left', ...sideSeat(size.w, size.h, dir, bust) };
+    return { name: place, facing: dir < 0 ? 'right' : 'left', ...sideFigure(size.w, size.h, dir, bust, unit) };
   };
   // o selo do perigo encosta nas pedras de quem está por uma
   const danger = seats.find((s) => s.danger && s.alive)?.id ?? seats.find((s) => s.alive)?.id;
@@ -319,6 +343,7 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, o
           bubble={bubble?.seat === seat.id ? bubble : null}
           hit={hits?.[seat.id] ?? null}
           anchor={seat.id === danger}
+          chair={chair}
           onSignal={onSignal}
         />
       ))}
@@ -326,8 +351,8 @@ function SeatRow({ seats, maxHearts, target, turnLeft, bubble, hits, roundKey, o
   );
 }
 
-function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '', onSignal }) {
-  if (landscape) return <SeatRow onSignal={onSignal} seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} />;
+function SeatBench({ seats, maxHearts, target = null, turnKey, turnMs, turnLeft = null, bubble, hits, landscape = false, roundKey = '', chair = 'madeira', onSignal }) {
+  if (landscape) return <SeatRow onSignal={onSignal} seats={seats} maxHearts={maxHearts} target={target} turnLeft={turnLeft} bubble={bubble} hits={hits} roundKey={roundKey} chair={chair} />;
   const variant = seats.length >= 3 ? 'third' : seats.length === 2 ? 'half' : 'wide';
   return (
     <header className={`seat-bench seat-bench-${variant} rival-bench relative z-30 shrink-0`} style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>
