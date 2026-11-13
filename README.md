@@ -172,6 +172,12 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.34.1: a tela quebra em duas de verdade
+
+- Perdeu: uma foto parada da tela é cortada em duas pela rachadura; as metades dão um tranco e
+  se separam (a de cima sobe girando para um lado, a de baixo desce girando para o outro), com o
+  vão escuro no meio e a borda clara da quebra, e vão ficando em preto e branco.
+
 ### 2.34.0: perdeu, a tela racha
 
 - Quando você perde a partida, a tela **racha em duas** (o estalo do vidro, um tranco, a fenda

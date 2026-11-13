@@ -27255,25 +27255,83 @@ html[data-topview] .emote-pick {
   }
 }
 
-/* ---------- versão 2.34: perdeu: a tela racha em duas e fica em preto e branco ---------- */
+/* ---------- versão 2.34: perdeu: a tela quebra em duas, as metades se separam e fica em preto e branco ---------- */
 .screen-break {
   position: fixed;
   inset: 0;
   /* em cima da mesa e do HUD, embaixo das telas de resultado (z-50) */
   z-index: 49;
   pointer-events: none;
+  overflow: hidden;
+  /* o vão entre as metades: o escuro do fundo */
+  background: radial-gradient(ellipse at 50% 52%, #161412 0%, #050505 70%);
+  animation: screen-break-bg 200ms linear both;
 }
 .screen-break.is-fade {
-  animation: screen-break-fade 900ms ease 1700ms both;
+  animation:
+    screen-break-bg 200ms linear both,
+    screen-break-fade 900ms ease 1900ms forwards;
 }
-.screen-break-gray {
+.screen-shards {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.18);
-  -webkit-backdrop-filter: grayscale(1) contrast(1.08) brightness(0.86);
-  backdrop-filter: grayscale(1) contrast(1.08) brightness(0.86);
-  opacity: 0;
-  animation: screen-break-gray 900ms ease 220ms forwards;
+}
+.screen-shard {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  will-change: transform, filter;
+  filter: grayscale(0);
+  animation:
+    screen-shard-gray 700ms ease 260ms forwards,
+    screen-shard-jolt 260ms steps(5, end) both;
+}
+.screen-shard.is-top {
+  transform-origin: 0% 0%;
+  animation:
+    screen-shard-gray 700ms ease 260ms forwards,
+    screen-shard-jolt 260ms steps(5, end) both,
+    screen-shard-top 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
+}
+.screen-shard.is-bottom {
+  transform-origin: 100% 100%;
+  animation:
+    screen-shard-gray 700ms ease 260ms forwards,
+    screen-shard-jolt 260ms steps(5, end) both,
+    screen-shard-bottom 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
+}
+.screen-shard-copy {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  contain: layout;
+  pointer-events: none;
+}
+/* a cópia é uma foto: nada nela se mexe (o que estava entrando já fica no lugar) */
+.screen-shard-copy *,
+.screen-shard-copy *::before,
+.screen-shard-copy *::after {
+  animation-delay: -60s !important;
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+.screen-shard-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.screen-shard-edge polyline {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 2px;
+  stroke-linejoin: miter;
+}
+.screen-shard-edge .screen-shard-branch {
+  stroke: rgba(8, 8, 8, 0.9);
+  stroke-width: 2px;
 }
 .screen-break-svg {
   position: absolute;
@@ -27281,46 +27339,28 @@ html[data-topview] .emote-pick {
   width: 100%;
   height: 100%;
   overflow: visible;
-  /* a rachadura corre de um lado ao outro (o recorte abre da esquerda para a direita) */
   animation:
-    screen-break-run 220ms linear both,
-    screen-break-jolt 380ms steps(6, end) both;
-}
-.screen-break-top {
-  fill: rgba(255, 255, 255, 0.04);
-  animation: screen-break-top 700ms cubic-bezier(0.2, 0.9, 0.3, 1) 120ms both;
-}
-.screen-break-bottom {
-  fill: rgba(0, 0, 0, 0.14);
-  animation: screen-break-bottom 700ms cubic-bezier(0.2, 0.9, 0.3, 1) 120ms both;
-}
-.screen-break-gap,
-.screen-break-branch,
-.screen-break-edge {
-  fill: none;
-  vector-effect: non-scaling-stroke;
-  stroke-linejoin: miter;
+    screen-break-run 200ms linear both,
+    screen-break-out 220ms ease 260ms forwards;
 }
 .screen-break-gap {
+  fill: none;
+  vector-effect: non-scaling-stroke;
   stroke: #050505;
-  stroke-width: 2px;
-  animation: screen-break-open 600ms cubic-bezier(0.2, 0.9, 0.3, 1) 160ms both;
-}
-.screen-break-branch {
-  stroke: #0a0a0a;
-  stroke-width: 2px;
-}
-.screen-break-edge {
-  stroke: rgba(255, 255, 255, 0.75);
-  stroke-width: 1.5px;
-  transform: translateY(-0.9%);
+  stroke-width: 3px;
+  stroke-linejoin: miter;
 }
 .screen-break-flash {
   position: absolute;
   inset: 0;
   background: #fff;
   opacity: 0;
-  animation: screen-break-flash 260ms ease-out both;
+  animation: screen-break-flash 300ms ease-out both;
+}
+@keyframes screen-break-bg {
+  from {
+    background-color: transparent;
+  }
 }
 @keyframes screen-break-run {
   from {
@@ -27330,59 +27370,60 @@ html[data-topview] .emote-pick {
     clip-path: inset(0 0 0 0);
   }
 }
-@keyframes screen-break-open {
-  from {
-    stroke-width: 2px;
-  }
+@keyframes screen-break-out {
   to {
-    stroke-width: 10px;
-  }
-}
-@keyframes screen-break-top {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(-0.6%, -0.8%);
-  }
-}
-@keyframes screen-break-bottom {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(0.6%, 0.8%);
+    opacity: 0;
   }
 }
 @keyframes screen-break-flash {
   0% {
-    opacity: 0.55;
+    opacity: 0.6;
   }
   100% {
     opacity: 0;
   }
 }
-@keyframes screen-break-gray {
+@keyframes screen-shard-gray {
   to {
-    opacity: 1;
+    filter: grayscale(1) contrast(1.08) brightness(0.84);
   }
 }
-@keyframes screen-break-jolt {
+@keyframes screen-shard-jolt {
   0%,
   100% {
     translate: 0 0;
   }
-  20% {
-    translate: -6px 3px;
+  25% {
+    translate: -7px 4px;
   }
-  40% {
-    translate: 5px -2px;
+  50% {
+    translate: 6px -3px;
   }
-  60% {
+  75% {
     translate: -3px 1px;
   }
-  80% {
-    translate: 2px 0;
+}
+/* a de cima sobe e gira para a esquerda; a de baixo desce e gira para a direita */
+@keyframes screen-shard-top {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  35% {
+    transform: translate(-1.2%, -4.5%) rotate(-2.4deg);
+  }
+  100% {
+    transform: translate(-1.6%, -6.5%) rotate(-3.2deg);
+  }
+}
+@keyframes screen-shard-bottom {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  35% {
+    transform: translate(1.2%, 5%) rotate(2.2deg);
+  }
+  100% {
+    transform: translate(1.6%, 7.5%) rotate(3deg);
   }
 }
 @keyframes screen-break-fade {
@@ -27390,11 +27431,17 @@ html[data-topview] .emote-pick {
     opacity: 0;
   }
 }
+.reduce-motion .screen-shard.is-top,
+.reduce-motion .screen-shard.is-bottom {
+  animation: screen-shard-gray 300ms ease forwards;
+}
+.reduce-motion .screen-shard.is-top {
+  transform: translate(0, -3%);
+}
+.reduce-motion .screen-shard.is-bottom {
+  transform: translate(0, 3%);
+}
 .reduce-motion .screen-break-svg,
 .reduce-motion .screen-break-flash {
-  animation: none;
-}
-.reduce-motion .screen-break-gap {
-  animation: none;
-  stroke-width: 8px;
+  display: none;
 }
