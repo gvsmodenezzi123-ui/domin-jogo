@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.36.1: o desmaiado fica na mesa até o fim
+
+- Quem cai continua **desmaiado na cadeira até a partida acabar** (antes, desde a 2.15, a
+  cadeira sumia da roda no fim da rodada em que a pessoa caiu).
+
 ### 2.36.0: quem cai desmaia na cadeira
 
 - Na roda, quem perde as vidas não vira mais cinza com um X: **desmaia** ali mesmo. Olhos

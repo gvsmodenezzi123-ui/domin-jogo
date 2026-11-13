@@ -321,9 +321,9 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
   const noop = useStableHandler(() => {});
 
   // a fileira de cima: os rivais na ordem de jogo a partir de você
-  // versão 2.15: quem saiu some da roda (o X de giz fica só até o fim da rodada em que caiu)
-  const goneNow = new Set(view.events.filter((e) => e.type === 'eliminated').map((e) => e.who));
-  const ordered = seatsFrom(view.seats, me).filter((s, i) => i === 0 || s.alive || (!playing && goneNow.has(s.id)));
+  // versão 2.36.1: quem cai fica desmaiado na cadeira até a partida acabar (antes, desde a 2.15,
+  // sumia da roda no fim da rodada em que caiu)
+  const ordered = seatsFrom(view.seats, me);
   const mine = ordered[0];
   // versão 2.7: duplas (o seu parceiro) e a contagem por tentos
   const teams = Boolean(view.rules?.teams);
