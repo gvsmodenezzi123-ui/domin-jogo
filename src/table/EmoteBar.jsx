@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react';
 import { EmoteIcon, GestureHand } from '../components/art/EmoteArt.jsx';
-import { EMOTES, EMOTE_COOLDOWN_MS, EMOTE_MS } from './emotes.js';
+import { EMOTES, EMOTE_COOLDOWN_MS } from './emotes.js';
 
 /**
  * Versão 2.33: o botão dos emotes (ao lado da lupa, no alto): abre uma fileira com os seis gestos e
@@ -42,27 +42,6 @@ function EmoteBar({ onEmote }) {
 }
 
 export default memo(EmoteBar);
-
-/**
- * Versão 2.41: o emote "vivo" de uma cadeira: o que chegou há menos de EMOTE_MS (depois disso o
- * personagem volta ao normal). `emote`: { id, key } ou null.
- */
-export function useLiveEmote(emote) {
-  const key = emote?.key ?? null;
-  const [seen, setSeen] = useState(null);
-  const [live, setLive] = useState(false);
-  // (ajuste de estado no render quando a chave muda: o padrão do React para "derivar da prop")
-  if (key !== seen) {
-    setSeen(key);
-    setLive(key != null);
-  }
-  useEffect(() => {
-    if (key == null) return undefined;
-    const id = setTimeout(() => setLive(false), EMOTE_MS);
-    return () => clearTimeout(id);
-  }, [key]);
-  return live ? emote : null;
-}
 
 /**
  * Versão 2.41: o gesto na cadeira: a mão do personagem (na pele e com a manga dele) sobe, faz o

@@ -9,7 +9,8 @@ import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
 import { TentoCap, TentosBar } from '../components/TentoCap.jsx';
 import { ordinal, plateName } from './seats.js';
-import { SeatGesture, useLiveEmote } from './EmoteBar.jsx';
+import { SeatGesture } from './EmoteBar.jsx';
+import { useLiveEmote } from './useLiveEmote.js';
 import { EMOTE_MOOD } from './emotes.js';
 import { PORTRAITS } from '../components/art/portraitSpecs.js';
 
