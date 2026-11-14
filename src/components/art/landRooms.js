@@ -143,6 +143,19 @@ function groundOf(g) {
   };
 }
 
+/** Copia os pixels pintados de `leaf` para `whole` (as duas do mesmo tamanho). */
+function stampOnto(whole, leaf) {
+  const a = leaf.data;
+  const o = whole.data;
+  for (let i = 0; i < a.length; i += 4) {
+    if (!a[i + 3]) continue;
+    o[i] = a[i];
+    o[i + 1] = a[i + 1];
+    o[i + 2] = a[i + 2];
+    o[i + 3] = 255;
+  }
+}
+
 /** Tijolo aparente: cada um no seu tom, a quina de cima pegando luz, lascas e fuligem. */
 function brickWall(b, r, x0, y0, x1, y1, { bw = 9, bh = 4, tones, mortar }) {
   b.rect(x0, y0, x1 - x0, y1 - y0, mortar);
@@ -1795,6 +1808,12 @@ function daySky(b, x0, y0, x1, y1, stops = SKY_DAY) {
  * lista e ganham a camada delas, que anda devagar. E o mar sai sem as cristas (elas andam também).
  */
 let cloudSink = null;
+/**
+ * Versão 2.41: quando ligado, as copas e as palmas são pintadas também numa folha solta (elas
+ * balançam). A sala continua com a árvore parada por baixo: balançando 1° ou 2°, a solta nunca
+ * abre buraco. O que foi pintado por cima da árvore depois (a placa, o sapê) é recortado da folha.
+ */
+let swaySink = null;
 let seaLayered = false;
 
 /** Nuvem de algodão: bolotas brancas com a barriga cinza-azulada e a luz em cima. */
@@ -2077,6 +2096,9 @@ function palm(b, x, base, top, lean, scale = 1) {
     b.put(px + Math.ceil(wd / 2) - 1, py, hex('#5a3a1e'));
   }
   const cx = Math.round(x + Math.sin(1.4) * lean);
+  // (em camadas: as palmas vão para uma folha só delas, que balança presa no alto do tronco)
+  const whole = b;
+  if (swaySink) b = buffer(whole.w, whole.h);
   for (let f = 0; f < 9; f += 1) {
     const a = -Math.PI * 1.05 + (f / 8) * Math.PI * 1.1;
     const len = (22 + (f % 3) * 5) * scale;
@@ -2093,6 +2115,10 @@ function palm(b, x, base, top, lean, scale = 1) {
   }
   b.ellipse(cx - 1, top + 2, 2.5, 2, hex('#6a8a2a'));
   b.ellipse(cx + 2, top + 3, 2.5, 2, hex('#4a6a1a'));
+  if (swaySink) {
+    stampOnto(whole, b);
+    swaySink.push({ buf: b, px: cx, py: top + 3, amp: 1.6 });
+  }
 }
 
 /** O sapê: as palhas penduradas na beirada do teto do quiosque. */
@@ -2280,6 +2306,9 @@ function canopy(b, r, cx, cy, rx, ry, n) {
   // versão 2.39: uma copa de verdade. Antes eram bolinhas soltas (dava para ver o céu entre elas,
   // pareciam flutuar). Agora: uma massa fechada de lóbulos grandes, a sombra por baixo, os tufos
   // de folhas por cima (mais claros para o lado do sol, em cima à esquerda) e a beirada rendada.
+  // (em camadas: a copa vai para uma folha só dela, que balança presa no pé do tronco)
+  const whole = b;
+  if (swaySink) b = buffer(whole.w, whole.h);
   const DEEP = hex('#123a1a');
   const DARK = hex('#1b5424');
   const MID = hex('#2b7430');
@@ -2317,6 +2346,10 @@ function canopy(b, r, cx, cy, rx, ry, n) {
     const x = cx + Math.cos(a) * rx * (0.98 + r() * 0.1);
     const y = cy + Math.sin(a) * ry * (0.95 + r() * 0.12);
     b.ellipse(x, y, 1.6 + r() * 1.6, 1.2 + r(), Math.sin(a) < -0.2 ? MID : DARK);
+  }
+  if (swaySink) {
+    stampOnto(whole, b);
+    swaySink.push({ buf: b, px: cx, py: cy + ry * 0.9, amp: 1 });
   }
 }
 
@@ -2598,13 +2631,22 @@ export function paintDayLayers(name, w, h, seed = 1955) {
   const clouds = [];
   const full = buffer(width, height);
   const Gf = glowLayer(full);
+  const swaying = [];
   cloudSink = clouds;
+  swaySink = swaying;
   seaLayered = true;
   try {
     room.paint(full, Gf, rngOf(seed), g);
   } finally {
     cloudSink = null;
+    swaySink = null;
     seaLayered = false;
+  }
+  // só fica na folha solta o que ainda aparece na sala (o resto foi coberto por algo da frente)
+  for (const t of swaying) {
+    const a = t.buf.data;
+    const o = full.data;
+    for (let i = 0; i < a.length; i += 4) if (a[i + 3] && (a[i] !== o[i] || a[i + 1] !== o[i + 1] || a[i + 2] !== o[i + 2])) a[i + 3] = 0;
   }
   develop(full, Gf);
   // o fundo sozinho, com a mesma luz: onde a sala inteira ficou igual a ele, é céu (ou mar)
@@ -2633,11 +2675,39 @@ export function paintDayLayers(name, w, h, seed = 1955) {
   relight(tile, lights, { ambient, bands: room.bands });
   const layers = {
     back: { w: width, h: height, data: back.data },
-    clouds: { ...pick(tiled(tile, period, width)), period, speed: 1.2 },
+    // (versão 2.41: 7 px da cena por segundo; a 1,2 ninguém via as nuvens andando)
+    clouds: { ...pick(tiled(tile, period, width)), period, speed: 7 },
+    trees: [],
     waves: [],
     shade: { w: width, h: height, data: shade.data },
     front: { w: width, h: height, data: full.data },
   };
+  // versão 2.41: as copas e as palmas, cada uma na sua folha recortada, com a mesma luz e a mesma
+  // vinheta da sala; `px, py` é onde ela prende no tronco (o eixo do balanço)
+  for (const t of swaying) {
+    relight(t.buf, lights, { ambient, bands: room.bands });
+    const td = t.buf.data;
+    t.buf.light(0, 0, width, height, BLACK, (x, y) => (td[(y * width + x) * 4 + 3] ? vignetteAt(x, y, width, height) : 0));
+    let x0 = width;
+    let y0 = height;
+    let x1 = -1;
+    let y1 = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (!td[(y * width + x) * 4 + 3]) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    if (x1 < x0) continue;
+    const cw = x1 - x0 + 1;
+    const chh = y1 - y0 + 1;
+    const cut = new Uint8ClampedArray(cw * chh * 4);
+    for (let y = 0; y < chh; y += 1) cut.set(td.subarray(((y0 + y) * width + x0) * 4, ((y0 + y) * width + x0 + cw) * 4), y * cw * 4);
+    layers.trees.push({ w: cw, h: chh, data: cut, x: x0, y: y0, px: t.px - x0, py: t.py - y0, amp: t.amp });
+  }
   // as cristas do mar (só a praia tem mar): tracinhos sorteados por linha, mais compridos e mais
   // juntos perto da areia
   if (name === 'landpraia') {

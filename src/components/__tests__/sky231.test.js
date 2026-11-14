@@ -22,6 +22,8 @@ function compose(L, W, H, off = 0) {
   for (const wv of L.waves) over(wv, off % wv.period, wv.y);
   over(L.shade, 0, 0);
   over(L.front, 0, 0);
+  // (versão 2.41: as copas e as palmas são folhas soltas por cima da sala)
+  for (const t of L.trees ?? []) over(t, -t.x, t.y);
   return img;
 }
 
@@ -34,7 +36,8 @@ describe('versão 2.31: o céu e o mar das salas de dia andam', () => {
       const img = compose(paintDayLayers(name, W, H), W, H);
       let diff = 0;
       for (let p = 0; p < W * H; p += 1) for (let c = 0; c < 3; c += 1) if (Math.abs(img[p * 4 + c] - still.data[p * 4 + c]) > 3) diff += 1;
-      expect(diff).toBeLessThan(W * H * 0.002);
+      // (0,3%: a copa solta leva a luz sozinha; uns poucos pixels da beirada diferem um fio)
+      expect(diff).toBeLessThan(W * H * 0.003);
     }
   }, 30000);
 

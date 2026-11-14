@@ -21,7 +21,7 @@ import { dangerOf } from '../engine/danger.js';
 import SeatBench from './SeatBench.jsx';
 import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
-import EmoteBar, { SeatEmote } from './EmoteBar.jsx';
+import EmoteBar, { SeatGesture, useLiveEmote } from './EmoteBar.jsx';
 import ScreenBreak from '../components/ScreenBreak.jsx';
 import HurtBlink from '../components/HurtBlink.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
@@ -87,6 +87,12 @@ function roundLine(result, view, me, partner) {
   }
   const shown = hurt.slice(0, 3).map(([id, d]) => `${name(id)} −${d}♥`);
   return hurt.length > 3 ? `${shown.join(' · ')} …` : shown.join(' · ');
+}
+
+/** Versão 2.41: o seu próprio gesto (você não tem retrato na mesa): a mão sobe em cima da sua vida. */
+function MyGesture({ emote }) {
+  const live = useLiveEmote(emote);
+  return <SeatGesture emote={live} className="is-mine" />;
 }
 
 export default function TableScreen({ view, me: seatMe, map = null, clock = null, onIntent, onNextRound, onRematch, onLeave, muted, onToggleMute, onMenu, tag = null, links = null, ready = null, canRematch = true, emotes = null, onEmote = null }) {
@@ -567,7 +573,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       )}
       {/* versão 2.33: os emotes (o botão ao lado da lupa; o seu aparece em cima da sua vida) */}
       {landscape && onEmote && !spectating && <EmoteBar onEmote={onEmote} />}
-      {landscape && <SeatEmote emote={emotes?.[me] ?? null} className="is-mine" />}
+      {landscape && <MyGesture emote={emotes?.[me] ?? null} />}
       {breakKey && <ScreenBreak key={breakKey} fade={view.phase !== 'matchOver'} onDone={() => setBrokeKey(breakKey)} />}
       {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>

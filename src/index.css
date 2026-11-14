@@ -26888,11 +26888,8 @@ html[data-mesa='plastico'] .player-zone .player-hint {
 .reduce-motion .day-drift {
   transform: none !important;
 }
-@media (prefers-reduced-motion: reduce) {
-  .day-drift {
-    transform: none !important;
-  }
-}
+/* (versão 2.41: só a opção do jogo para as nuvens; o "reduzir movimento" do aparelho as
+   congelava sem ninguém pedir, e por isso pareciam nunca andar) */
 
 /* versão 2.32: quem senta nas laterais da roda aparece de corpo inteiro, na cadeira; as pernas
    entram embaixo do tampo (o recorte é só a beirada de lado) e as pedras ficam de pé no tampo,
@@ -27162,30 +27159,23 @@ html:not([data-ui='novo']) .emote-pick {
   }
 }
 
-/* o emote na cadeira: sobe de trás, fica um pouco e some */
+/* versão 2.41: o emote é um gesto do personagem: a mão sobe, faz o gesto e desce (2,6 s) */
 .seat-emote {
   position: absolute;
-  /* versão 2.35.2: na frente do personagem (antes ficava atrás dele) */
   z-index: 30;
   display: block;
-  width: 30px;
-  height: 30px;
-  margin: -15px 0 0 -15px;
+  width: 36px;
+  height: 40px;
+  margin: -20px 0 0 -18px;
   pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
-  animation: seat-emote 2200ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.seat-emote .emote-icon {
-  display: block;
-}
-.seat-emote.is-front {
-  animation-name: seat-emote-behind;
+  animation: gesture-pop 2600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .seat-emote.is-mine {
   position: fixed;
   z-index: 25;
   left: calc(max(env(safe-area-inset-left), 12px) + 70px);
-  bottom: calc(max(env(safe-area-inset-bottom), 10px) + 70px);
+  bottom: calc(max(env(safe-area-inset-bottom), 10px) + 62px);
   top: auto;
 }
 html[data-topview] .seat-emote.is-mine,
@@ -27193,56 +27183,281 @@ html[data-topview] .emote-btn,
 html[data-topview] .emote-pick {
   visibility: hidden;
 }
-@keyframes seat-emote {
+.gesture-hand {
+  display: block;
+}
+.emote-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.emote-icon-ha {
+  font-family: var(--font-pixel);
+  line-height: 1.05;
+  text-align: center;
+  color: #ffe08a;
+  text-shadow:
+    1px 1px 0 #3a1c08,
+    -1px 0 0 #3a1c08,
+    0 -1px 0 #3a1c08;
+}
+@keyframes gesture-pop {
   0% {
     opacity: 0;
-    scale: 0.4;
-    translate: 0 6px;
+    scale: 0.55;
+    translate: 0 20px;
   }
-  12% {
+  9% {
     opacity: 1;
-    scale: 1.12;
-    translate: 0 -2px;
+    scale: 1.1;
+    translate: 0 -4px;
   }
-  20% {
+  15% {
     scale: 1;
     translate: 0 0;
   }
-  80% {
+  86% {
     opacity: 1;
-    translate: 0 -4px;
+    scale: 1;
+    translate: 0 0;
   }
   100% {
     opacity: 0;
-    translate: 0 -10px;
+    scale: 0.8;
+    translate: 0 16px;
   }
 }
-@keyframes seat-emote-behind {
+.gesture-move {
+  display: block;
+  transform-origin: 50% 95%;
+}
+/* joinha: sobe e dá duas bombadas para cima */
+.is-joinha .gesture-move {
+  animation: gesture-pump 560ms ease-in-out 420ms 3;
+}
+@keyframes gesture-pump {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  45% {
+    translate: 0 -6px;
+    rotate: -7deg;
+  }
+}
+.is-joinha.is-flip .gesture-move {
+  animation-name: gesture-pump-flip;
+}
+@keyframes gesture-pump-flip {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  45% {
+    translate: 0 -6px;
+    rotate: 7deg;
+  }
+}
+/* joinha para baixo: empurra para baixo, devagar, três vezes */
+.is-negativo .gesture-move {
+  transform-origin: 50% 30%;
+  animation: gesture-down 620ms ease-in-out 420ms 3;
+}
+@keyframes gesture-down {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 7px;
+  }
+}
+/* o dedo: sobe firme e sacode de leve, de raiva */
+.is-dedo .gesture-move {
+  animation:
+    gesture-thrust 360ms cubic-bezier(0.2, 1.5, 0.4, 1) 380ms both,
+    gesture-shake 150ms ease-in-out 800ms 8;
+}
+@keyframes gesture-thrust {
+  0% {
+    translate: 0 6px;
+  }
+  100% {
+    translate: 0 -5px;
+  }
+}
+@keyframes gesture-shake {
+  0%,
+  100% {
+    rotate: -3deg;
+  }
+  50% {
+    rotate: 3deg;
+  }
+}
+/* o aceno: a mão aberta balança de um lado para o outro, presa no punho */
+.is-aceno .gesture-move {
+  animation: gesture-wave 380ms ease-in-out 380ms 5 alternate;
+}
+@keyframes gesture-wave {
+  0% {
+    rotate: -16deg;
+  }
+  100% {
+    rotate: 16deg;
+  }
+}
+/* as palmas: as duas mãos se encontram e se afastam, com o estalo no meio */
+.gesture-clap {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gesture-clap-a,
+.gesture-clap-b {
+  position: absolute;
+  top: 6px;
+  display: block;
+}
+.gesture-clap-a {
+  left: -8px;
+  rotate: 22deg;
+  animation: gesture-clap-a 250ms ease-in 380ms 8 alternate;
+}
+.gesture-clap-b {
+  right: -8px;
+  rotate: -22deg;
+  animation: gesture-clap-b 250ms ease-in 380ms 8 alternate;
+}
+@keyframes gesture-clap-a {
+  0% {
+    translate: -4px 0;
+  }
+  100% {
+    translate: 6px 0;
+  }
+}
+@keyframes gesture-clap-b {
+  0% {
+    translate: 4px 0;
+  }
+  100% {
+    translate: -6px 0;
+  }
+}
+.gesture-clap > i {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 14px;
+  height: 8px;
+  margin-left: -7px;
+  background:
+    linear-gradient(#fff3b0, #fff3b0) 50% 0 / 2px 5px no-repeat,
+    linear-gradient(#fff3b0, #fff3b0) 0 60% / 4px 2px no-repeat,
+    linear-gradient(#fff3b0, #fff3b0) 100% 60% / 4px 2px no-repeat;
+  opacity: 0;
+  animation: gesture-clap-pop 500ms steps(1, end) 630ms 4;
+}
+@keyframes gesture-clap-pop {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* a risada: os "HA" sobem um atrás do outro, e o personagem chacoalha rindo */
+.gesture-ha {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gesture-ha > b {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1;
+  color: #ffe08a;
+  text-shadow:
+    1px 1px 0 #3a1c08,
+    -1px 0 0 #3a1c08,
+    1px 0 0 #3a1c08,
+    0 -1px 0 #3a1c08;
+  opacity: 0;
+  animation: gesture-ha 900ms ease-out both;
+}
+.gesture-ha > b:nth-child(1) {
+  --hx: -16px;
+  --hr: -10deg;
+  animation-delay: 300ms;
+}
+.gesture-ha > b:nth-child(2) {
+  --hx: 2px;
+  --hr: 8deg;
+  animation-delay: 800ms;
+  font-size: 12px;
+}
+.gesture-ha > b:nth-child(3) {
+  --hx: -10px;
+  --hr: -4deg;
+  animation-delay: 1350ms;
+}
+@keyframes gesture-ha {
   0% {
     opacity: 0;
-    scale: 0.5;
-    translate: 0 14px;
+    transform: translate(calc(-50% + var(--hx, 0px)), 6px) rotate(var(--hr, 0deg)) scale(0.6);
   }
-  14% {
+  20% {
     opacity: 1;
-    scale: 1.08;
-    translate: 0 -6px;
+    transform: translate(calc(-50% + var(--hx, 0px)), -6px) rotate(var(--hr, 0deg)) scale(1.1);
   }
-  22% {
-    scale: 1;
-    translate: 0 -4px;
-  }
-  80% {
+  70% {
     opacity: 1;
-    translate: 0 -8px;
+    transform: translate(calc(-50% + var(--hx, 0px)), -16px) rotate(var(--hr, 0deg)) scale(1);
   }
   100% {
     opacity: 0;
-    translate: 0 -14px;
+    transform: translate(calc(-50% + var(--hx, 0px)), -24px) rotate(var(--hr, 0deg)) scale(1);
+  }
+}
+.chair:not(.is-side) .seat-bust .seat-breath.seat-laughing {
+  animation: seat-laugh 260ms ease-in-out 9;
+}
+.chair.is-side .seat-bust .seat-laughing .seated-upper {
+  animation: seat-laugh 260ms ease-in-out 9;
+}
+@keyframes seat-laugh {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  50% {
+    translate: 0 -2.2%;
+    rotate: 1.2deg;
   }
 }
 .reduce-motion .seat-emote {
-  animation: seat-emote-still 2200ms linear both;
+  animation: seat-emote-still 2600ms linear both;
+}
+.reduce-motion .gesture-move,
+.reduce-motion .gesture-clap-a,
+.reduce-motion .gesture-clap-b,
+.reduce-motion .seat-laughing,
+.reduce-motion .seat-laughing .seated-upper {
+  animation: none !important;
+}
+.reduce-motion .gesture-ha > b {
+  animation-duration: 2000ms;
 }
 @keyframes seat-emote-still {
   0%,
@@ -28455,53 +28670,12 @@ html[data-topview] .emote-pick {
   height: 2px;
   box-shadow: 0 0 3px 1px rgba(255, 220, 120, 0.7);
 }
-/* a sombra de alguém passando lá no fundo: cabeça, tronco e as pernas trocando o passo */
-.amb-walker {
-  opacity: 0.8;
-  background:
-    radial-gradient(circle at 50% 50%, #050406 0 62%, transparent 66%) 50% 0 / 44% 19% no-repeat,
-    linear-gradient(#050406, #050406) 50% 24% / 62% 40% no-repeat;
-  animation: amb-bob 520ms ease-in-out infinite;
-}
-.amb-walker.is-hat {
-  background:
-    linear-gradient(#050406, #050406) 50% 2% / 78% 5% no-repeat,
-    radial-gradient(circle at 50% 50%, #050406 0 62%, transparent 66%) 50% 0 / 44% 19% no-repeat,
-    linear-gradient(#050406, #050406) 50% 24% / 62% 40% no-repeat;
-}
-.amb-walker.is-slow {
-  opacity: 0.6;
-  animation-duration: 900ms;
-}
-.amb-walker > i {
+
+/* versão 2.41: a copa (ou a palma) solta, que balança presa no tronco */
+.day-tree {
   position: absolute;
-  left: 22%;
-  right: 22%;
-  top: 58%;
-  bottom: 0;
-  background:
-    linear-gradient(#050406, #050406) 0 0 / 40% 100% no-repeat,
-    linear-gradient(#050406, #050406) 100% 0 / 40% 100% no-repeat;
-  animation: amb-step 520ms steps(1, end) infinite;
+  will-change: transform;
 }
-.amb-walker.is-slow > i {
-  animation-duration: 900ms;
-}
-@keyframes amb-bob {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -2px;
-  }
-}
-@keyframes amb-step {
-  0%,
-  100% {
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 60% 100%, 60% 0, 40% 0, 40% 86%, 0 86%);
-  }
-  50% {
-    clip-path: polygon(0 0, 100% 0, 100% 86%, 60% 86%, 60% 0, 40% 0, 40% 100%, 0 100%);
-  }
+.reduce-motion .day-tree {
+  animation: none;
 }

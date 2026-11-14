@@ -9,7 +9,9 @@ import { HeartsBar, PixelHeart } from '../components/PixelHeart.jsx';
 import RivalAvatar from '../components/RivalAvatar.jsx';
 import { TentoCap, TentosBar } from '../components/TentoCap.jsx';
 import { ordinal, plateName } from './seats.js';
-import { SeatEmote } from './EmoteBar.jsx';
+import { SeatGesture, useLiveEmote } from './EmoteBar.jsx';
+import { EMOTE_MOOD } from './emotes.js';
+import { PORTRAITS } from '../components/art/portraitSpecs.js';
 
 /** Tamanho do retrato e das pedrinhas de cada formato de cadeira (1, 2 ou 3 rivais na mesa). */
 const LAYOUT = Object.freeze({
@@ -194,7 +196,11 @@ function SeatCard({ seat, variant, maxHearts, target, turnKey, turnMs, turnLeft,
 function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, target, turnLeft, bubble, hit, anchor, side = null, chair = 'madeira', emote = null, onSignal }) {
   const out = !seat.alive;
   // versão 2.36: quem perdeu as vidas não vira cinza com um X: desmaia ali mesmo, na cadeira
-  const mood = out ? 'out' : hit ? 'hurt' : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
+  // versão 2.41: enquanto faz um gesto (o emote), o rosto acompanha
+  const gesture = useLiveEmote(emote);
+  const spec = PORTRAITS[seat.face] ?? null;
+  const laughing = gesture?.id === 'risada' && !out && !hit;
+  const mood = out ? 'out' : hit ? 'hurt' : gesture ? (EMOTE_MOOD[gesture.id] ?? 'idle') : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
   return (
     <div
@@ -228,25 +234,28 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
           {/* versão 2.38: a cada jogada falada (o balão) o personagem se mexe: inclina para a mesa e
               mexe a boca; parado, balança de leve no seu próprio ritmo */}
           <span
-            key={`${hit ?? 0}:${bubble && !out ? bubble.key : ''}`}
-            className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''} ${bubble && !out && !hit ? 'seat-acting' : ''}`}
+            key={`${hit ?? 0}:${bubble && !out ? bubble.key : ''}:${laughing ? gesture.key : ''}`}
+            className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''} ${laughing ? 'seat-laughing' : bubble && !out && !hit ? 'seat-acting' : ''}`}
             style={{ '--sway-dur': `${(6 + (seat.name.length % 5) * 0.7).toFixed(1)}s`, '--sway-delay': `${(-((seat.name.charCodeAt(0) ?? 0) % 9) * 0.6).toFixed(1)}s` }}
           >
-            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} talking={Boolean(bubble) && !out && !hit} />
+            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} talking={(Boolean(bubble) || laughing) && !out && !hit} />
           </span>
         </div>
       </div>
-      {/* versão 2.33: o emote. Versão 2.35.2: sempre NA FRENTE do personagem (por cima de tudo
-          dele): de quem senta do lado, na frente do rosto, na altura dos olhos; de quem senta lá
-          na frente, do lado da cabeça */}
-      {emote && !out && (
-        <SeatEmote
-          emote={emote}
+      {/* versão 2.41: o emote é um gesto do personagem: a mão dele (na pele e com a manga dele)
+          sobe na frente do rosto de quem senta do lado, ou ao lado da cabeça de quem senta lá na
+          frente, faz o gesto e desce */}
+      {gesture && !out && (
+        <SeatGesture
+          emote={gesture}
+          skin={spec?.skin}
+          sleeve={spec?.outfit?.shirt ?? spec?.outfit?.color}
+          flip={side ? side.facing === 'right' : x >= 0.5}
           className={side ? 'is-front' : 'is-beside'}
           style={
             side
-              ? { left: side.fig.left + side.fig.w * (side.facing === 'right' ? 0.6 : 0.4), top: side.fig.top + side.fig.h * 0.17 }
-              : { left: `calc(${x * 100}% + ${(x < 0.5 ? -1 : 1) * Math.round(bust.w * 0.44 + 16)}px)`, top: `calc(var(--rail-px) + ${bust.drop - bust.h + Math.round(bust.h * 0.3)}px)` }
+              ? { left: side.fig.left + side.fig.w * (side.facing === 'right' ? 0.62 : 0.38), top: side.fig.top + side.fig.h * 0.2 }
+              : { left: `calc(${x * 100}% + ${(x < 0.5 ? -1 : 1) * Math.round(bust.w * 0.44 + 16)}px)`, top: `calc(var(--rail-px) + ${bust.drop - bust.h + Math.round(bust.h * 0.36)}px)` }
           }
         />
       )}

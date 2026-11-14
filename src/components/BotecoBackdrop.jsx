@@ -90,6 +90,7 @@ function DayBackdrop({ scene, seed, className, style }) {
     const root = ref.current;
     if (!root || typeof ImageData === 'undefined') return undefined;
     const [back, clouds, waveA, waveB, shade, front] = root.children;
+    let trees = [];
     let last = '';
     let anims = [];
     const drift = (el, layer, sx, sy, top) => {
@@ -124,6 +125,30 @@ function DayBackdrop({ scene, seed, className, style }) {
       const sy = box.height / h;
       putLayer(clouds, L.clouds);
       drift(clouds, L.clouds, sx, sy, 0);
+      // versão 2.41: as copas das árvores e as palmas dos coqueiros balançam com o vento, cada uma
+      // presa no seu tronco (uma inclinação pequena, indo e voltando, cada árvore no seu tempo)
+      for (const el of trees) el.remove();
+      trees = (L.trees ?? []).map((t, i) => {
+        const el = document.createElement('canvas');
+        el.className = 'day-layer day-tree';
+        putLayer(el, t);
+        Object.assign(el.style, { left: `${t.x * sx}px`, top: `${t.y * sy}px`, width: `${t.w * sx}px`, height: `${t.h * sy}px`, transformOrigin: `${t.px * sx}px ${t.py * sy}px` });
+        root.appendChild(el);
+        if (typeof el.animate === 'function') {
+          const a = 1.1 * (t.amp ?? 1);
+          anims.push(
+            el.animate(
+              [
+                { transform: `skewX(${-a}deg) rotate(${-a * 0.5}deg)` },
+                { transform: `skewX(${a * 0.4}deg) rotate(${a * 0.25}deg)`, offset: 0.45 },
+                { transform: `skewX(${a}deg) rotate(${a * 0.5}deg)` },
+              ],
+              { duration: 4200 + i * 900, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out', delay: -i * 1300 },
+            ),
+          );
+        }
+        return el;
+      });
       [waveA, waveB].forEach((el, k) => {
         const wave = L.waves[k];
         el.style.display = wave ? '' : 'none';
@@ -138,6 +163,7 @@ function DayBackdrop({ scene, seed, className, style }) {
     return () => {
       observer?.disconnect();
       for (const a of anims) a.cancel();
+      for (const el of trees) el.remove();
     };
   }, [scene, seed]);
   return (

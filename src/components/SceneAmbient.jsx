@@ -6,8 +6,8 @@ import { prefersReducedMotion } from './motion.js';
  * relógio (toda partida vê, mas não é toda hora), sem tirar o olho de quem joga:
  * - salas abertas (calçada, praia, praça): pássaros cruzam o céu, o sol dá um brilho, folhas
  *   caem das árvores (as nuvens e o mar já andavam);
- * - salas fechadas (boteco, sinuca, bicho, noite): o luminoso falha e apaga soltando faíscas, e
- *   sombras de gente passam lá no fundo.
+ * - salas fechadas (boteco, sinuca, bicho): o luminoso falha e apaga soltando faíscas.
+ *   (Versão 2.41: as sombras de gente passando no fundo saíram.)
  * Tudo fica na camada da sala, atrás da mesa e dos personagens. São poucos elementos soltos,
  * animados só com transform e opacity (WAAPI) e removidos no fim: não pesa. Com as animações
  * reduzidas, nada acontece.
@@ -19,10 +19,9 @@ const SCENES = {
   landcalcada: { sky: [4, 30], sun: ['L', 128, 7], birds: true },
   landpraia: { sky: [6, 44], sun: ['M', 268, 16], birds: true, leaves: [['L', 92, 26, 22], ['R', 332, 32, 20]], gulls: true },
   landpraca: { sky: [4, 34], sun: ['M', 290, 10], birds: true, leaves: [['L', 34, 26, 60], ['R', 388, 30, 60]] },
-  landroom: { neon: ['M', 250, 5, 66, 14, '#ffb43a'], walkers: true },
-  landsinuca: { neon: ['M', 253, 8, 108, 26, '#ff3d9e'], walkers: true },
-  landbicho: { neon: ['M', 252, 11, 86, 13, '#ff5a3a'], walkers: true },
-  landnoite: { walkers: true, slow: true },
+  landroom: { neon: ['M', 250, 5, 66, 14, '#ffb43a'] },
+  landsinuca: { neon: ['M', 253, 8, 108, 26, '#ff3d9e'] },
+  landbicho: { neon: ['M', 252, 11, 86, 13, '#ff5a3a'] },
 };
 
 /** Os relógios (segundos): [primeira vez de, até] e [depois, a cada de, até]. */
@@ -31,7 +30,6 @@ const CLOCK = {
   leaves: [[3, 8], [9, 20]],
   sun: [[6, 10], [16, 30]],
   neon: [[12, 25], [40, 80]],
-  walkers: [[8, 18], [25, 55]],
 };
 
 const between = (a, b) => a + Math.random() * (b - a);
@@ -190,18 +188,6 @@ function spawnNeon(layer, cfg, box, at) {
   }
 }
 
-function spawnWalker(layer, cfg, box) {
-  const u = box.height / 195;
-  const dir = Math.random() < 0.5 ? 1 : -1;
-  const tall = between(40, 50) * u;
-  const walker = make(layer, `amb-walker ${cfg.slow ? 'is-slow' : ''} ${Math.random() < 0.35 ? 'is-hat' : ''}`, { top: `${98 * u - tall}px`, height: `${tall}px`, width: `${tall * 0.5}px` });
-  walker.appendChild(document.createElement('i'));
-  const flip = dir < 0 ? ' scaleX(-1)' : '';
-  const from = dir > 0 ? -tall : box.width + tall;
-  const to = dir > 0 ? box.width + tall : -tall;
-  play(walker, [{ transform: `translate3d(${from}px, 0, 0)${flip}` }, { transform: `translate3d(${to}px, 0, 0)${flip}` }], { duration: between(cfg.slow ? 16000 : 10000, cfg.slow ? 22000 : 15000), easing: 'linear' });
-}
-
 function SceneAmbient({ scene }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -238,7 +224,6 @@ function SceneAmbient({ scene }) {
     if (cfg.leaves) every('leaves', (box, at) => spawnLeaves(layer, cfg, box, at));
     if (cfg.sun) every('sun', (box, at) => spawnSun(layer, cfg, box, at));
     if (cfg.neon) every('neon', (box, at) => spawnNeon(layer, cfg, box, at));
-    if (cfg.walkers) every('walkers', (box) => spawnWalker(layer, cfg, box));
     return () => {
       alive = false;
       for (const id of timers) clearTimeout(id);

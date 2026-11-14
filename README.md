@@ -172,6 +172,19 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.41.0: emotes de gesto, árvores balançando, nuvens andando de verdade
+
+- **Emotes novos**: são gestos do personagem. A mão dele (na cor da pele e com a manga da roupa
+  dele) sobe ao lado do rosto e faz o gesto: joinha, joinha para baixo, dedo do meio, aceno e
+  palmas (as duas mãos, com o estalo); na risada ele chacoalha rindo, com os "HA" subindo. O
+  rosto acompanha. As carinhas amarelas saíram.
+- **Árvores**: as copas da praça e as palmas dos coqueiros da praia balançam com o vento, cada
+  uma no seu tempo, presas no tronco.
+- **Nuvens**: andavam a 1,2 px por segundo (não dava para ver) e ficavam congeladas quando o
+  aparelho pedia "reduzir movimento". Agora andam a 7 px por segundo e só param com a opção do
+  próprio jogo.
+- As sombras de gente passando no fundo das salas fechadas saíram.
+
 ### 2.40.0: a vida das salas e a lupa enchendo a tela
 
 - **Salas vivas** (`SceneAmbient.jsx`), por relógio: toda partida vê, mas não é toda hora.

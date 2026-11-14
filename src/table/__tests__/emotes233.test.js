@@ -32,9 +32,9 @@ describe('versão 2.33: a roda de 5 e os emotes', () => {
     expect(isEmote('risada')).toBe(true);
     expect(isEmote('xingamento')).toBe(false);
     let feed = pushEmote({}, 's1', 'risada', 1);
-    feed = pushEmote(feed, 's1', 'bravo', 2);
+    feed = pushEmote(feed, 's1', 'negativo', 2);
     feed = pushEmote(feed, 's2', 'nada', 3);
-    expect(feed).toEqual({ s1: { id: 'bravo', key: 2 } });
+    expect(feed).toEqual({ s1: { id: 'negativo', key: 2 } });
     expect(emoteReady(null, 0)).toBe(true);
     expect(emoteReady(1000, 1000 + EMOTE_COOLDOWN_MS - 1)).toBe(false);
     expect(emoteReady(1000, 1000 + EMOTE_COOLDOWN_MS)).toBe(true);
@@ -51,8 +51,8 @@ describe('versão 2.33: a roda de 5 e os emotes', () => {
   });
 
   it('o protocolo aceita o emote só com um dos seis e a 5ª cadeira no saguão', () => {
-    expect(validateTableMessage(makeTableMessage(TMSG.EMOTE, { emote: 'fogo' }))).toBe(true);
-    expect(validateTableMessage(makeTableMessage(TMSG.EMOTE, { emote: 'fogo', seat: 's4' }))).toBe(true);
+    expect(validateTableMessage(makeTableMessage(TMSG.EMOTE, { emote: 'dedo' }))).toBe(true);
+    expect(validateTableMessage(makeTableMessage(TMSG.EMOTE, { emote: 'dedo', seat: 's4' }))).toBe(true);
     expect(validateTableMessage(makeTableMessage(TMSG.EMOTE, { emote: '<script>' }))).toBe(false);
     expect(validateTableMessage(makeTableMessage(TMSG.SEAT, { place: 4 }))).toBe(true);
     expect(validateTableMessage(makeTableMessage(TMSG.SEAT, { place: 5 }))).toBe(false);
@@ -73,14 +73,14 @@ describe('versão 2.33: a roda de 5 e os emotes', () => {
     for (const s of [t.host, ...t.people]) expect(s.getSnapshot().emotes[me]?.id).toBe('joinha');
     const key = t.people[1].getSnapshot().emotes[me].key;
     // cedo demais: não sai
-    t.people[0].emote('bravo');
+    t.people[0].emote('negativo');
     t.clock.advance(200);
     expect(t.people[1].getSnapshot().emotes[me]).toMatchObject({ id: 'joinha', key });
     t.clock.advance(EMOTE_COOLDOWN_MS);
-    t.host.emote('fogo');
+    t.host.emote('dedo');
     t.people[0].emote('risada');
     t.clock.advance(200);
-    expect(t.people[1].getSnapshot().emotes.s0?.id).toBe('fogo');
+    expect(t.people[1].getSnapshot().emotes.s0?.id).toBe('dedo');
     expect(t.people[1].getSnapshot().emotes[me]?.id).toBe('risada');
   });
 });
