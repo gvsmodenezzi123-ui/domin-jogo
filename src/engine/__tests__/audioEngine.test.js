@@ -186,6 +186,27 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     vi.useRealTimers();
   });
 
+  it('versão 2.37: o som do dano (respiração + zumbido) sai direto no mestre, numa voz só', async () => {
+    const engine = engineWithFakeAudio();
+    const buffer = { duration: 5, getChannelData: () => new Float32Array(8) };
+    engine.ctx.decodeAudioData = (bytes) => {
+      expect(bytes.byteLength).toBeGreaterThan(30000);
+      return Promise.resolve(buffer);
+    };
+    expect(await engine.loadHurtSound()).toBe(buffer);
+    const before = engine.ctx.sources.length;
+    engine.playHurtSound();
+    const added = engine.ctx.sources.slice(before);
+    expect(added).toHaveLength(1);
+    expect(added[0].buffer).toBe(buffer);
+    const voice = engine.voices.find((v) => v.sources.includes(added[0]));
+    expect(voice.gate.outputs.has(engine.master)).toBe(true);
+    // no mudo, nada
+    engine.isMuted = true;
+    engine.playHurtSound();
+    expect(engine.ctx.sources.length).toBe(before + 1);
+  });
+
   it('a camada de tensão abre o filtro para 4500 Hz e fecha de volta', () => {
     const engine = engineWithFakeAudio();
     engine.setTension(true);

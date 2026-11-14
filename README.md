@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.37.0: o dano com respiração de verdade, o zumbido e a vista embaçada
+
+- A piscada do dano ganhou som de novo, agora **gravado**: a falta de ar enquanto o olho fecha e
+  o ofegante quando abre (gravações limpas de ruído de fundo, do apito do microfone e do vento
+  do sopro batendo nele), com o **"tuin"** do ouvido zunindo (um apito fino perto de 4 kHz, com
+  a ondulação lenta de dois tons quase iguais) que entra no golpe e some devagar. Tudo num MP3
+  só, embutido no código (`engine/hurtSoundData.js`, ~50 KB): funciona offline e é uma voz só.
+  No volume padrão a respiração fica a 15% da trilha e o zumbido a 10%; a trilha continua
+  abafada e baixa durante o golpe.
+- A **vista embaça** junto da piscada (fecha embaçando, abre borrada e volta ao foco). Com as
+  animações reduzidas, não embaça.
+
 ### 2.36.1: o desmaiado fica na mesa até o fim
 
 - Quem cai continua **desmaiado na cadeira até a partida acabar** (antes, desde a 2.15, a

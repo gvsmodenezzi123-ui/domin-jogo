@@ -1,13 +1,30 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { sound } from '../engine/audioSynth.js';
+import { prefersReducedMotion } from './motion.js';
 
 /** Quanto dura a piscada inteira (fecha, fica no escuro, abre tonto). */
 export const HURT_BLINK_MS = 2400;
 
 /**
+ * Versão 2.37: a vista embaça junto: fecha embaçando, abre ainda borrada e vai voltando ao foco.
+ * (Um `filter` animado no #root, só durante a piscada: o `backdrop-filter` falhava no Safari.)
+ */
+const BLUR_FRAMES = [
+  { offset: 0, filter: 'blur(0px)' },
+  { offset: 0.23, filter: 'blur(6px)' },
+  { offset: 0.37, filter: 'blur(6px)' },
+  { offset: 0.44, filter: 'blur(4.5px)' },
+  { offset: 0.52, filter: 'blur(5px)' },
+  { offset: 0.72, filter: 'blur(3px)' },
+  { offset: 0.88, filter: 'blur(1.2px)' },
+  { offset: 1, filter: 'blur(0px)' },
+];
+
+/**
  * Versão 2.35: tomou dano. A vista fecha devagar como pálpebras, fica um instante no escuro com
  * o vermelho do golpe, entreabre, pisca de novo e abre de vez; a trilha fica abafada e baixa e
- * volta devagar. Com as animações reduzidas, a vista só escurece e clareia.
+ * volta devagar. Com as animações reduzidas, a vista só escurece e clareia (sem embaçar).
+ * Versão 2.37: embaça junto, com a respiração gravada e o zumbido no ouvido.
  */
 const Blink = memo(function Blink({ onDone }) {
   const done = useRef(onDone);
@@ -16,8 +33,15 @@ const Blink = memo(function Blink({ onDone }) {
   }, [onDone]);
   useEffect(() => {
     sound.muffleMusic?.();
+    // versão 2.37: a falta de ar e o ofegante gravados, com o "tuin" do ouvido zunindo
+    sound.playHurtSound?.();
+    const root = document.getElementById('root');
+    const blur = !prefersReducedMotion() && typeof root?.animate === 'function' ? root.animate(BLUR_FRAMES, { duration: HURT_BLINK_MS, easing: 'linear' }) : null;
     const id = setTimeout(() => done.current?.(), HURT_BLINK_MS + 100);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      blur?.cancel();
+    };
   }, []);
   return (
     <div className="hurt-blink" aria-hidden="true">
