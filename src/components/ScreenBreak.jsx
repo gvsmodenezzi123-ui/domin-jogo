@@ -33,7 +33,56 @@ const BRANCHES = [
     [79, 61],
     [84, 50],
   ],
+  // versão 2.38: mais trincas finas saindo da rachadura
+  [
+    [44, 53],
+    [41, 43],
+    [45, 35],
+    [43, 30],
+  ],
+  [
+    [16, 40],
+    [12, 31],
+  ],
+  [
+    [35, 45],
+    [37, 56],
+    [33, 63],
+  ],
+  [
+    [88, 58],
+    [91, 68],
+    [89, 74],
+  ],
+  [
+    [70, 55],
+    [72, 46],
+    [69, 41],
+  ],
 ];
+/** Em qual metade cada trinca cai (as de cima sobem da rachadura, as de baixo descem). */
+const BRANCH_TOP = BRANCHES.map((b) => b[1][1] < b[0][1]);
+
+/**
+ * Versão 2.38: as lascas de vidro que saltam da rachadura: [x%, y% (na rachadura), tamanho px,
+ * para onde voa (dx, dy em px), giro, atraso ms, o recorte (triângulo)].
+ */
+const CHIPS = CRACK.slice(1, -1).flatMap(([x, y], i) => {
+  const a = (i * 7919) % 97;
+  const b = (i * 104729) % 89;
+  const up = i % 2 === 0;
+  const one = (k, sgn) => ({
+    x: x + ((a + k * 13) % 7) - 3,
+    y: y + ((b + k * 5) % 3) - 1,
+    s: 7 + ((a + k * 11) % 12),
+    dx: (((a * (k + 1)) % 90) - 45) * 1.6,
+    dy: sgn * (30 + ((b * (k + 2)) % 60)),
+    r: (((a + b * (k + 1)) % 2 ? 1 : -1) * (180 + ((a * 3 + k * 40) % 320))),
+    d: 230 + ((a + k * 31) % 140),
+    clip: [`polygon(50% 0%, 100% 78%, 12% 100%)`, `polygon(0% 18%, 100% 0%, 62% 100%)`, `polygon(22% 0%, 100% 42%, 0% 100%)`][(a + k) % 3],
+  });
+  return [one(0, up ? -1 : 1), one(1, up ? 1 : -1)];
+});
 const line = (pts) => pts.map(([x, y]) => `${x},${y}`).join(' ');
 const pct = (pts) => pts.map(([x, y]) => `${x}% ${y}%`).join(', ');
 /** As duas metades (clip-path): a de cima e a de baixo da rachadura. */
@@ -121,7 +170,7 @@ function edgeOf(top) {
   pl.setAttribute('points', line(CRACK.map(([x, y]) => [x, y + (top ? -0.35 : 0.35)])));
   svg.appendChild(pl);
   // os galhos da rachadura que caem nesta metade
-  for (const b of top ? [BRANCHES[0], BRANCHES[2]] : [BRANCHES[1]]) {
+  for (const b of BRANCHES.filter((_, i) => BRANCH_TOP[i] === top)) {
     const br = document.createElementNS(SVG_NS, 'polyline');
     br.setAttribute('points', line(b));
     br.setAttribute('class', 'screen-shard-branch');
@@ -175,6 +224,15 @@ function ScreenBreak({ onDone, fade = false }) {
   return (
     <div ref={ref} className={`screen-break ${fade ? 'is-fade' : ''}`} aria-hidden="true">
       <div className="screen-shards" />
+      <div className="screen-chips">
+        {CHIPS.map((c, i) => (
+          <span
+            key={i}
+            className="screen-chip"
+            style={{ left: `${c.x}%`, top: `${c.y}%`, '--s': `${c.s}px`, '--dx': `${c.dx}px`, '--dy': `${c.dy}px`, '--r': `${c.r}deg`, '--d': `${c.d}ms`, clipPath: c.clip, WebkitClipPath: c.clip }}
+          />
+        ))}
+      </div>
       <svg className="screen-break-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
         <polyline className="screen-break-gap" points={line(CRACK)} />
       </svg>

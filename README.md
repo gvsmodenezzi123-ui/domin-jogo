@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.38.0: personagens mais vivos, o chão em perspectiva, a quebra e a piscada melhores
+
+- **Personagens**: piscam (cada um no seu tempo), balançam de leve quando parados e, a cada
+  jogada falada (o balão), inclinam para a mesa e mexem a boca. Vale para os de frente e os de
+  lado, e o rival da campanha também pisca.
+- **Mapas**: o chão de todas as salas agora foge para o fundo na mesma perspectiva (`groundOf`
+  em `landRooms.js`): as tábuas do boteco, o cimento da sinuca, o taco e o tapete do bicho, as
+  ondas da pedra portuguesa da calçada e da praça e as emendas do deque da praia diminuem e
+  convergem para o horizonte, como quem senta na mesa vê (antes eram pintados chapados).
+- **Tela quebrando**: lascas de vidro saltam da rachadura e caem girando, mais trincas finas, um
+  soco de zoom na batida e as metades continuam se afastando devagar.
+- **Piscada do dano**: a vista balança (o tranco e a tontura) enquanto embaça e volta ao foco.
+- **Lupa**: um pouco maior (26% mais perto que a mesa inteira, antes 12%).
+
 ### 2.37.1: o som do dano toca no celular
 
 - O som do dano não dependia mais só do jogo: era um MP3 que o aparelho precisava decodificar,

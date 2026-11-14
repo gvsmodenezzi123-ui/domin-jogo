@@ -33,8 +33,16 @@ function FaintStars({ style }) {
  * O busto pintado (art/bustPixels.js): o humor do retrato, a boca mexendo enquanto fala e,
  * sem retrato, a silhueta. Respira (CSS), treme no golpe e se inclina quando bate.
  */
-function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, seated = null }) {
-  if (seated && profile) return <SeatedBust rival={rival} mood={mood} speaking={speaking} facing={profile} chair={seated} />;
+/** Versão 2.38: cada um pisca no seu tempo (o nome decide o ritmo e o atraso, sempre os mesmos). */
+function blinkStyle(name = '') {
+  const n = [...name].reduce((s, ch) => (s * 33 + ch.charCodeAt(0)) >>> 0, 11);
+  return { animationDuration: `${(4.1 + (n % 23) / 10).toFixed(1)}s`, animationDelay: `${(-(n % 47) / 10).toFixed(1)}s` };
+}
+/** Os humores em que o personagem pisca (no golpe e desmaiado, não). */
+const BLINKS = new Set(['idle', 'thinking', 'smug']);
+
+function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, seated = null, talking = false }) {
+  if (seated && profile) return <SeatedBust rival={rival} mood={mood} speaking={speaking} facing={profile} chair={seated} talking={talking} />;
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -55,6 +63,29 @@ function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, sea
         className="seat-bust-px"
         style={{ width: '100%', height: '100%' }}
       />
+      {/* versão 2.38: mais vivo: pisca de tempos em tempos e mexe a boca quando fala a jogada */}
+      {BLINKS.has(mood) && !open && (
+        <PixelCanvas
+          cacheKey={`busto-${art}-blink-0${stranger ? '-sombra' : ''}${profile ? `-${profile}` : ''}`}
+          paint={() => paintBust(PORTRAITS[art], 'blink', false, { silhouette: stranger, profile })}
+          w={BUST_W}
+          h={BUST_H}
+          scale={1}
+          className="seat-bust-px seat-blink"
+          style={{ width: '100%', height: '100%', ...blinkStyle(rival.name) }}
+        />
+      )}
+      {talking && BLINKS.has(mood) && !open && (
+        <PixelCanvas
+          cacheKey={`busto-${art}-${mood}-1${stranger ? '-sombra' : ''}${profile ? `-${profile}` : ''}`}
+          paint={() => paintBust(PORTRAITS[art], mood, true, { silhouette: stranger, profile })}
+          w={BUST_W}
+          h={BUST_H}
+          scale={1}
+          className="seat-bust-px seat-talk"
+          style={{ width: '100%', height: '100%' }}
+        />
+      )}
       {ember &&
         PUFF_DELAYS.map((delay) => (
           <span
@@ -84,7 +115,7 @@ export default memo(RivalBust);
  * Versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cadeira (`chair`), de lado.
  * O mesmo humor, a boca, a fumaça e o brilho do olho do perfil, no quadro maior.
  */
-function SeatedBust({ rival, mood, speaking, facing, chair }) {
+function SeatedBust({ rival, mood, speaking, facing, chair, talking = false }) {
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -92,15 +123,15 @@ function SeatedBust({ rival, mood, speaking, facing, chair }) {
   const glow = !stranger && mood !== 'out' ? PORTRAIT_GLOW[art] : null;
   const flip = (x) => (facing === 'left' ? SEATED_W - 1 - x : x);
   const at = (p, dy = 0) => ({ left: `${(flip(p.x) / SEATED_W) * 100}%`, top: `${((p.y + dy) / SEATED_H) * 100}%` });
-  const layer = (key, part, m = 'idle', o = false) => (
+  const layer = (key, part, m = 'idle', o = false, extra = '', style = null) => (
     <PixelCanvas
       cacheKey={key}
       paint={() => paintSeatedBust(PORTRAITS[art], m, o, { silhouette: stranger, facing, chair, part })}
       w={SEATED_W}
       h={SEATED_H}
       scale={1}
-      className="seat-bust-px seated-layer"
-      style={{ width: '100%', height: '100%' }}
+      className={`seat-bust-px seated-layer ${extra}`}
+      style={{ width: '100%', height: '100%', ...style }}
     />
   );
   const shade = stranger ? '-sombra' : '';
@@ -112,6 +143,9 @@ function SeatedBust({ rival, mood, speaking, facing, chair }) {
       {layer(`sentado-pernas-${art}${shade}-${facing}`, 'legs')}
       <span className="seated-upper">
         {layer(`sentado-${art}-${mood}-${open ? 1 : 0}${shade}-${facing}`, 'upper', mood, open)}
+        {/* versão 2.38: pisca e mexe a boca quando fala a jogada */}
+        {BLINKS.has(mood) && !open && layer(`sentado-${art}-blink-0${shade}-${facing}`, 'upper', 'blink', false, 'seat-blink', blinkStyle(rival.name))}
+        {talking && BLINKS.has(mood) && !open && layer(`sentado-${art}-${mood}-1${shade}-${facing}`, 'upper', mood, true, 'seat-talk')}
         {smokes &&
           PUFF_DELAYS.map((delay) => (
             <span

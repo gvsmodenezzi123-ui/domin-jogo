@@ -225,8 +225,14 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
     >
       <div className="chair-clip" aria-hidden="true">
         <div className={`chair-bust seat-bust is-${mood}`} data-seat-photo={seat.id}>
-          <span key={hit ?? 0} className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''}`}>
-            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} />
+          {/* versão 2.38: a cada jogada falada (o balão) o personagem se mexe: inclina para a mesa e
+              mexe a boca; parado, balança de leve no seu próprio ritmo */}
+          <span
+            key={`${hit ?? 0}:${bubble && !out ? bubble.key : ''}`}
+            className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''} ${bubble && !out && !hit ? 'seat-acting' : ''}`}
+            style={{ '--sway-dur': `${(6 + (seat.name.length % 5) * 0.7).toFixed(1)}s`, '--sway-delay': `${(-((seat.name.charCodeAt(0) ?? 0) % 9) * 0.6).toFixed(1)}s` }}
+          >
+            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} talking={Boolean(bubble) && !out && !hit} />
           </span>
         </div>
       </div>

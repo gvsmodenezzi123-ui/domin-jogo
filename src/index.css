@@ -27292,13 +27292,15 @@ html[data-topview] .emote-pick {
   transform-origin: 0% 0%;
   animation:
     screen-shard-jolt 260ms steps(5, end) both,
-    screen-shard-top 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
+    screen-shard-top 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both,
+    screen-shard-top-drift 7s linear 1340ms forwards;
 }
 .screen-shard.is-bottom {
   transform-origin: 100% 100%;
   animation:
     screen-shard-jolt 260ms steps(5, end) both,
-    screen-shard-bottom 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both;
+    screen-shard-bottom 1100ms cubic-bezier(0.18, 0.9, 0.25, 1) 240ms both,
+    screen-shard-bottom-drift 7s linear 1340ms forwards;
 }
 .screen-shard-copy {
   position: relative;
@@ -27474,6 +27476,73 @@ html[data-topview] .emote-pick {
 .reduce-motion .screen-break-svg,
 .reduce-motion .screen-break-flash {
   display: none;
+}
+
+/* versão 2.38: a quebra mais bonita: as metades continuam se afastando bem devagar depois do
+   tranco, a batida dá um soco de zoom, e lascas de vidro saltam da rachadura e caem girando */
+@keyframes screen-shard-top-drift {
+  from {
+    transform: translate(-1.6%, -6.5%) rotate(-3.2deg);
+  }
+  to {
+    transform: translate(-2.6%, -9.5%) rotate(-4.3deg);
+  }
+}
+@keyframes screen-shard-bottom-drift {
+  from {
+    transform: translate(1.6%, 7.5%) rotate(3deg);
+  }
+  to {
+    transform: translate(2.6%, 10.5%) rotate(4.1deg);
+  }
+}
+.screen-shards {
+  animation: screen-punch 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes screen-punch {
+  0% {
+    scale: 1.045;
+  }
+  100% {
+    scale: 1;
+  }
+}
+.screen-chips {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.screen-chip {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(170, 190, 200, 0.55) 55%, rgba(40, 46, 52, 0.7));
+  opacity: 0;
+  animation: screen-chip 1100ms cubic-bezier(0.2, 0.6, 0.4, 1) var(--d, 240ms) forwards;
+}
+@keyframes screen-chip {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.9)) rotate(calc(var(--r) * 0.45)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), calc(var(--dy) * 0.4 + 46vh)) rotate(var(--r)) scale(0.7);
+  }
+}
+.reduce-motion .screen-chips {
+  display: none;
+}
+.reduce-motion .screen-shards {
+  animation: none;
 }
 
 /* ---------- versão 2.35: tomou dano: a vista pisca (pálpebras) ----------
@@ -27924,5 +27993,124 @@ html[data-topview] .emote-pick {
   rotate: var(--faint-back, -14deg);
 }
 .reduce-motion .faint-star {
+  animation: none;
+}
+
+/* ---------- versão 2.38: os personagens mais vivos ----------
+   Piscam (cada um no seu tempo), balançam de leve parados, e a cada jogada falada inclinam para
+   a mesa e mexem a boca. */
+.seat-blink,
+.seat-talk {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.seat-blink {
+  animation: seat-blink 4.8s steps(1, end) infinite;
+}
+.seat-talk {
+  animation: seat-talk 620ms steps(1, end) both;
+}
+@keyframes seat-blink {
+  0%,
+  57% {
+    opacity: 0;
+  }
+  58% {
+    opacity: 1;
+  }
+  60.5% {
+    opacity: 0;
+  }
+  93% {
+    opacity: 1;
+  }
+  95.5%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes seat-talk {
+  0%,
+  36%,
+  72% {
+    opacity: 1;
+  }
+  18%,
+  54%,
+  90%,
+  100% {
+    opacity: 0;
+  }
+}
+/* parado: o corpo balança de leve (por cima da respiração, que mexe só o tamanho) */
+.chair:not(.is-side) .seat-bust.is-idle .seat-breath {
+  animation:
+    seatBreath 3.6s ease-in-out infinite,
+    seat-sway var(--sway-dur, 7s) ease-in-out var(--sway-delay, 0s) infinite;
+}
+.chair.is-side .seat-bust.is-idle .seated-upper {
+  animation:
+    seatedBreath 3.6s ease-in-out infinite,
+    seat-sway-side var(--sway-dur, 7s) ease-in-out var(--sway-delay, 0s) infinite;
+}
+@keyframes seat-sway {
+  0%,
+  100% {
+    rotate: -0.9deg;
+    translate: -0.6% 0;
+  }
+  50% {
+    rotate: 1deg;
+    translate: 0.6% 0.4%;
+  }
+}
+@keyframes seat-sway-side {
+  0%,
+  100% {
+    rotate: -1.1deg;
+  }
+  50% {
+    rotate: 1.2deg;
+  }
+}
+/* falou a jogada: vai para a frente (para a mesa) e volta */
+.chair:not(.is-side) .seat-bust .seat-breath.seat-acting {
+  animation:
+    seat-act 520ms cubic-bezier(0.3, 0, 0.2, 1) both,
+    seatBreath 3.6s ease-in-out 520ms infinite;
+}
+.chair.is-side .seat-bust .seat-acting .seated-upper {
+  animation:
+    seat-act-side 520ms cubic-bezier(0.3, 0, 0.2, 1) both,
+    seatedBreath 3.6s ease-in-out 520ms infinite;
+}
+.chair.is-side-right .seat-bust .seat-acting .seated-upper {
+  --act-lean: -5deg;
+}
+@keyframes seat-act {
+  0%,
+  100% {
+    translate: 0 0;
+    scale: 1;
+  }
+  35% {
+    translate: 0 3.5%;
+    scale: 1.035;
+  }
+}
+@keyframes seat-act-side {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  35% {
+    rotate: var(--act-lean, 5deg);
+  }
+}
+.reduce-motion .seat-blink,
+.reduce-motion .seat-talk {
   animation: none;
 }

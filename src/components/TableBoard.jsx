@@ -32,7 +32,7 @@ import {
  */
 const BOARD_PADDING = Math.round(RAIL_WOOD_W * TABLE_PX) + 2;
 /** Versão 2.35.2: quanto a lupa chega mais perto que "a mesa inteira cabendo" (um pouco). */
-const LUPA_BOOST = 1.12;
+const LUPA_BOOST = 1.26;
 /** O tamanho da pintura da mesa anda de 8 em 8 pixels (a barra do Safari não repinta a mesa). */
 const PLANE_STEP = 8;
 const planePixels = (px) => Math.max(PLANE_STEP * 4, Math.round(px / TABLE_PX / PLANE_STEP) * PLANE_STEP);

@@ -10,14 +10,17 @@ export const HURT_BLINK_MS = 2400;
  * (Um `filter` animado no #root, só durante a piscada: o `backdrop-filter` falhava no Safari.)
  */
 const BLUR_FRAMES = [
-  { offset: 0, filter: 'blur(0px)' },
-  { offset: 0.23, filter: 'blur(6px)' },
-  { offset: 0.37, filter: 'blur(6px)' },
-  { offset: 0.44, filter: 'blur(4.5px)' },
-  { offset: 0.52, filter: 'blur(5px)' },
-  { offset: 0.72, filter: 'blur(3px)' },
-  { offset: 0.88, filter: 'blur(1.2px)' },
-  { offset: 1, filter: 'blur(0px)' },
+  { offset: 0, filter: 'blur(0px)', transform: 'translate(0, 0) rotate(0deg) scale(1)' },
+  // (versão 2.38: o tranco do golpe e a tontura: a vista balança enquanto volta ao foco; o zoom
+  // de 3% esconde as bordas enquanto a tela gira)
+  { offset: 0.05, filter: 'blur(1.5px)', transform: 'translate(-0.7%, 0.5%) rotate(-0.5deg) scale(1.03)' },
+  { offset: 0.23, filter: 'blur(6px)', transform: 'translate(0.5%, 0.9%) rotate(0.6deg) scale(1.035)' },
+  { offset: 0.37, filter: 'blur(6px)', transform: 'translate(0.2%, 1.1%) rotate(0.3deg) scale(1.035)' },
+  { offset: 0.44, filter: 'blur(4.5px)', transform: 'translate(-0.5%, 0.7%) rotate(-0.7deg) scale(1.035)' },
+  { offset: 0.52, filter: 'blur(5px)', transform: 'translate(-0.2%, 0.9%) rotate(-0.4deg) scale(1.035)' },
+  { offset: 0.72, filter: 'blur(3px)', transform: 'translate(0.5%, 0.3%) rotate(0.55deg) scale(1.03)' },
+  { offset: 0.88, filter: 'blur(1.2px)', transform: 'translate(-0.2%, 0.1%) rotate(-0.2deg) scale(1.012)' },
+  { offset: 1, filter: 'blur(0px)', transform: 'translate(0, 0) rotate(0deg) scale(1)' },
 ];
 
 /**

@@ -125,6 +125,24 @@ function geometry(w, h) {
   };
 }
 
+/**
+ * Versão 2.38: a perspectiva do chão, uma só para todas as salas, do jeito que quem senta na
+ * mesa vê: o chão foge para o fundo (o horizonte fica lá em cima, atrás da parede), tudo diminui
+ * e as linhas convergem para o meio. Para cada pixel do chão devolve a posição no chão de
+ * verdade, em "px de perto" (1 unidade = 1 px na última linha da tela): `x` para os lados e `z`
+ * para o fundo. Antes cada sala pintava o chão chapado, como se fosse visto de cima.
+ */
+function groundOf(g) {
+  const hy = g.floor - (g.h - g.floor) * 0.8;
+  const near = g.h - hy;
+  return {
+    x: (px, py) => ((px - g.cx) * near) / (py - hy),
+    z: (py) => (near * near) / (py - hy) - near,
+    /** Quanto as coisas encolhem nesta linha (1 embaixo, ~0,45 no rodapé). */
+    k: (py) => (py - hy) / near,
+  };
+}
+
 /** Tijolo aparente: cada um no seu tom, a quina de cima pegando luz, lascas e fuligem. */
 function brickWall(b, r, x0, y0, x1, y1, { bw = 9, bh = 4, tones, mortar }) {
   b.rect(x0, y0, x1 - x0, y1 - y0, mortar);
@@ -427,13 +445,22 @@ function sceneBoteco(b, G, r, g) {
   shelf(b, r, sx, Y(62), sw, [0, 3, 'mug', 5, 2, 1, 'mug', 4, 3, 0]);
   eggJar(b, M(316), Y(62));
   // embaixo: o taco do chão, a cadeira e os engradados à esquerda, o freezer à direita
-  for (let y = floor; y < h; y += 1) {
-    const t = (y - floor) / (h - floor);
-    const row = Math.floor(Math.sqrt(t) * 9);
-    for (let x = 0; x < w; x += 1) {
-      const u = (x - g.cx) / (w / 2);
-      const seam = Math.abs((u * (1 + t * 2.2) * 9) % 1) < 0.05;
-      b.put(x, y, seam ? hex('#1a0e06') : ramp(RAMP_8, 0.55 - t * 0.25 + (row % 2 ? 0.1 : 0) + Math.sin(x * 0.4 + row * 3) * 0.08, x, y));
+  {
+    // (versão 2.38: as tábuas correm para o fundo e convergem; as emendas ficam mais juntas lá longe)
+    const gr = groundOf(g);
+    const plank = S(15);
+    for (let y = floor; y < h; y += 1) {
+      const t = (y - floor) / (h - floor);
+      const gz = gr.z(y);
+      for (let x = 0; x < w; x += 1) {
+        const gx = gr.x(x, y) / plank;
+        const col = Math.floor(gx);
+        const fx = gx - col;
+        const row = Math.floor((gz + ((col * 37) % 60)) / (plank * 5));
+        const fz = (gz + ((col * 37) % 60)) / (plank * 5) - row;
+        const seam = fx < 0.06 || fz < 0.03 / Math.max(0.35, gr.k(y));
+        b.put(x, y, seam ? hex('#1a0e06') : ramp(RAMP_8, 0.62 - (1 - t) * 0.3 + ((col + row) % 2 ? 0.1 : 0) + Math.sin(col * 3.7 + row * 1.9) * 0.08, x, y));
+      }
     }
   }
   b.rect(0, floor, w, S(3), hex('#24140a'));
@@ -714,7 +741,7 @@ function longNeck(b, x, base, c = '#3d1d0b') {
 }
 
 function sceneSinuca(b, G, r, g) {
-  const { w, h, cx, M, L, R, Y, S, floor } = g;
+  const { w, h, M, L, R, Y, S, floor } = g;
   // o teto de laje com a tubulação
   b.rect(0, 0, w, Y(7), hex('#1a1618'));
   brickWall(b, r, 0, Y(7), w, floor, { bw: S(9), bh: S(4), tones: BRICK, mortar: hex('#22140f') });
@@ -782,12 +809,22 @@ function sceneSinuca(b, G, r, g) {
   tourneyPoster(b, M(300), Y(36));
 
   // os lados de baixo: o chão de cimento e as mesas de sinuca do fundo, sob as luminárias
-  for (let y = floor; y < h; y += 1) {
-    const t = (y - floor) / (h - floor);
-    for (let x = 0; x < w; x += 1) {
-      const n = Math.sin(x * 0.11 + y * 0.3) + Math.sin(x * 0.031 - y * 0.07) * 1.4;
-      const seam = Math.abs(((x - cx) / (1 + t * 3)) % S(40)) < 0.6;
-      b.put(x, y, seam ? hex('#141416') : ramp(RAMP_11, 0.5 + n * 0.18 - t * 0.2, x, y));
+  {
+    // (versão 2.38: as placas de cimento em perspectiva: as juntas convergem e apertam no fundo)
+    const gr = groundOf(g);
+    const slab = S(64);
+    for (let y = floor; y < h; y += 1) {
+      const t = (y - floor) / (h - floor);
+      const gz = gr.z(y);
+      const kk = Math.max(0.35, gr.k(y));
+      for (let x = 0; x < w; x += 1) {
+        const gx = gr.x(x, y);
+        const n = Math.sin(gx * 0.07 + gz * 0.05) + Math.sin(gx * 0.019 - gz * 0.023) * 1.4;
+        const fx = (((gx / slab) % 1) + 1) % 1;
+        const fz = ((gz / slab) % 1 + 1) % 1;
+        const seam = fx < 0.012 / kk || fz < 0.012 / kk;
+        b.put(x, y, seam ? hex('#141416') : ramp(RAMP_11, 0.5 + n * 0.18 - t * 0.2, x, y));
+      }
     }
   }
   b.rect(0, floor, w, S(2), hex('#120e0e'));
@@ -1289,12 +1326,19 @@ function bookieDesk(b, G, x, y, w) {
 
 /** O chão: o taco em espinha de peixe perto da parede e o tapete persa com a barra. */
 function parquetAndRug(b, r, y0, h, g) {
+  // versão 2.38: o taco em espinha e o tapete em perspectiva (o desenho diminui para o fundo)
+  const gr = groundOf(g);
+  const cell = g.S(7);
   for (let y = y0; y < h; y += 1) {
+    const gz = gr.z(y);
     for (let x = 0; x < g.w; x += 1) {
-      const a = Math.floor((x + y * 2) / 6);
-      const c = Math.floor((x - y * 2) / 6);
-      const tone = (a + c) % 2 ? hex('#3a1e0e') : hex('#2c160a');
-      const seam = (x + y * 2) % 6 === 0 || (x - y * 2) % 6 === 0;
+      const gx = gr.x(x, y);
+      const a = (gx + gz) / cell;
+      const c = (gx - gz) / cell;
+      const tone = (Math.floor(a) + Math.floor(c)) % 2 ? hex('#3a1e0e') : hex('#2c160a');
+      const fa = a - Math.floor(a);
+      const fc = c - Math.floor(c);
+      const seam = fa < 0.1 || fc < 0.1;
       b.put(x, y, seam ? hex('#160a04') : shift(tone, Math.round((r() - 0.5) * 6)));
     }
   }
@@ -1302,20 +1346,26 @@ function parquetAndRug(b, r, y0, h, g) {
   // a franja, a barra azul e dourada, e o campo vinho com os medalhões
   for (let x = 0; x < g.w; x += 2) b.rect(x, ry - 2, 1, 2, hex('#d8ccb0'));
   b.rect(0, ry, g.w, g.S(2), hex('#1a1e3a'));
+  const band = g.S(22);
   for (let y = ry + g.S(2); y < ry + g.S(7); y += 1) {
     for (let x = 0; x < g.w; x += 1) {
-      const m = (x + (y - ry) * 0) % 8;
-      const dia = Math.abs(m - 4) + Math.abs(y - ry - g.S(4.5)) < 3;
+      const m = (((gr.x(x, y) / band) % 1) + 1) % 1;
+      const dia = Math.abs(m - 0.5) * 8 + Math.abs(y - ry - g.S(4.5)) < 3;
       b.put(x, y, dia ? hex('#7a1218') : hex('#8a6a2a'));
     }
   }
   b.rect(0, ry + g.S(7), g.w, g.S(2), hex('#1a1e3a'));
+  const z0 = gr.z(ry + g.S(9));
+  const mw = g.S(56);
+  const mh = g.S(44);
   for (let y = ry + g.S(9); y < h; y += 1) {
+    const gz = z0 - gr.z(y);
     for (let x = 0; x < g.w; x += 1) {
-      const u2 = ((x % 24) - 12) / 12;
-      const v2 = (((y - ry) % 16) - 8) / 8;
+      const gx = gr.x(x, y);
+      const u2 = ((((gx / mw) % 1) + 1) % 1) * 2 - 1;
+      const v2 = ((((gz / mh) % 1) + 1) % 1) * 2 - 1;
       const med = Math.abs(u2) + Math.abs(v2);
-      const c = med < 0.35 ? hex('#1a1e3a') : med < 0.5 ? hex('#8a6a2a') : med > 0.95 && med < 1.05 ? hex('#6a1018') : ramp(RAMP_18, 0.5 + Math.sin(x * 0.7 + y) * 0.3, x, y);
+      const c = med < 0.35 ? hex('#1a1e3a') : med < 0.5 ? hex('#8a6a2a') : med > 0.95 && med < 1.05 ? hex('#6a1018') : ramp(RAMP_18, 0.5 + Math.sin(gx * 0.3 + gz * 0.4) * 0.3, x, y);
       b.put(x, y, c);
     }
   }
@@ -1784,17 +1834,20 @@ function wire(b, x0, y0, x1, y1, sag, c = '#1a1a22') {
 
 /** Pedra portuguesa (as ondas pretas e brancas do calçadão), em perspectiva até o pé da tela. */
 function calcadao(b, x0, y0, x1, y1, g, light = '#e6dece', dark = '#6e675c') {
+  // versão 2.38: as ondas da pedra portuguesa deitadas no chão: largas e abertas aqui perto,
+  // apertadas e miúdas lá no fundo, correndo para o horizonte
   const L = hex(light);
   const D = hex(dark);
+  const gr = groundOf(g);
+  const unit = g.S(9);
   for (let y = y0; y < y1; y += 1) {
-    const t = (y - y0) / Math.max(1, y1 - y0);
-    const z = 1 + t * 2.4;
+    const v = gr.z(y) / unit;
+    const kk = Math.max(0.3, gr.k(y));
     for (let x = x0; x < x1; x += 1) {
-      const u = ((x - g.cx) / (g.w * 0.5)) * z * 11;
-      const v = t * 16;
-      const wave = Math.sin(u * 1.1 + Math.sin(v * 0.9) * 1.8) * 0.8 + Math.sin(v * 1.9 + u * 0.15) * 0.5;
-      const stone = ((Math.floor(u * 5) + Math.floor(v * 6)) & 1) === 1;
-      const edge = Math.abs(wave) < 0.06;
+      const u = gr.x(x, y) / unit;
+      const wave = Math.sin(v * 1.15 + Math.sin(u * 0.55) * 1.9) * 0.8 + Math.sin(u * 1.1 + v * 0.2) * 0.35;
+      const stone = ((Math.floor(u * 3.2) + Math.floor(v * 3.2)) & 1) === 1;
+      const edge = Math.abs(wave) < 0.05 / kk;
       b.put(x, y, edge ? shift(D, -10) : wave > 0 ? shift(L, stone ? -14 : 0) : shift(D, stone ? 10 : 0));
     }
   }
@@ -2182,7 +2235,10 @@ function scenePraia(b, G, r, g) {
       const off = (row * 37) % 53;
       for (let yy = y; yy < Math.min(h, y + bh); yy += 1) {
         for (let x = 0; x < w; x += 1) {
-          const joint = (x + off) % Math.round(70 * g.u) === 0;
+          // (versão 2.38: as emendas das tábuas acompanham a perspectiva)
+          const jx = groundOf(g).x(x, yy) + off;
+          const jw = 110 * g.u;
+          const joint = (((jx / jw) % 1) + 1) % 1 < 0.9 / (jw * Math.max(0.35, groundOf(g).k(yy)));
           const k = yy - y;
           const c = k === 0 ? hex('#5a3a1e') : k === 1 ? hex('#e8c494') : joint ? hex('#6a4626') : ramp(pal('#8a6238', '#a87c4c', '#c49a64', '#dcb47e'), 0.62 - t * 0.15 + Math.sin(x * 0.07 + row * 2.3) * 0.08, x, yy);
           b.put(x, yy, c);
