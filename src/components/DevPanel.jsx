@@ -273,6 +273,12 @@ export default function DevPanel({ state, onAction, onClose, blackUnlocked = fal
             <button type="button" data-tone="blood" className="btn-pixel" disabled={!playing} onClick={() => dev('damageTioZe')}>
               −1 VIDA RIVAL
             </button>
+            <button type="button" data-tone="blood" className="btn-pixel" disabled={!playing} onClick={() => dev('damagePlayer')}>
+              −1 VIDA EM VOCÊ
+            </button>
+            <button type="button" data-tone="blood" className="btn-pixel" disabled={!playing} onClick={() => dev('killPlayer')}>
+              SE MATAR
+            </button>
             <button type="button" className="btn-pixel" disabled={!playing} onClick={() => dev('emptyTioZeHand')}>
               ESVAZIAR MÃO DO RIVAL
             </button>

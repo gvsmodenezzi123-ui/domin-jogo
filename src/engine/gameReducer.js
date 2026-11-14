@@ -1766,7 +1766,7 @@ function tutorialNext(state) {
 // Painel DEV (src/components/DevPanel.jsx)
 // ---------------------------------------------------------------------------
 
-const DEV_PLAYING_ONLY = new Set(['fillBoard', 'addTile', 'damageTioZe', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch', 'setTableMod']);
+const DEV_PLAYING_ONLY = new Set(['fillBoard', 'addTile', 'damageTioZe', 'damagePlayer', 'killPlayer', 'emptyTioZeHand', 'clearBoard', 'forceTranca', 'winMatch', 'setTableMod']);
 
 /** Põe [a|b] na sua mão: puxa do dorme ou do rival; se a pedra estiver na mesa, cria uma cópia. */
 function devAddTile(state, { a, b, enhancement }) {
@@ -1822,6 +1822,15 @@ function devAction(state, action) {
       return emit({ ...state, hearts: { ...state.maxHearts } }, { type: 'dev', op });
     case 'damageTioZe': {
       const next = directDamage(state, 'tioZe', 1, 'dev');
+      return checkKnockout(next) ?? next;
+    }
+    // versão 2.38.1: para testar a piscada do dano e a tela quebrando
+    case 'damagePlayer': {
+      const next = directDamage(state, 'player', 1, 'dev');
+      return checkKnockout(next) ?? next;
+    }
+    case 'killPlayer': {
+      const next = directDamage(state, 'player', state.hearts.player, 'dev');
       return checkKnockout(next) ?? next;
     }
     case 'winMatch': {
