@@ -122,9 +122,9 @@ class FakeAudioContext {
   createBufferSource() {
     return new FakeSource(this, 'buffer');
   }
-  createBuffer(channels, length) {
+  createBuffer(channels, length, rate = this.sampleRate) {
     const data = new Float32Array(length);
-    return { getChannelData: () => data };
+    return { getChannelData: () => data, duration: length / rate };
   }
   /** Avança o relógio e dispara o onended de quem parou. */
   advance(seconds) {
@@ -186,14 +186,17 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     vi.useRealTimers();
   });
 
-  it('versão 2.37: o som do dano (respiração + zumbido) sai direto no mestre, numa voz só', async () => {
+  it('versão 2.37.1: o som do dano (respiração + zumbido) sai das amostras, direto no mestre, numa voz só', async () => {
     const engine = engineWithFakeAudio();
-    const buffer = { duration: 5, getChannelData: () => new Float32Array(8) };
-    engine.ctx.decodeAudioData = (bytes) => {
-      expect(bytes.byteLength).toBeGreaterThan(30000);
-      return Promise.resolve(buffer);
-    };
-    expect(await engine.loadHurtSound()).toBe(buffer);
+    const buffer = await engine.loadHurtSound();
+    // ~5 s a 22.050 Hz, montado sem decodificar nada
+    expect(buffer.duration).toBeGreaterThan(4.5);
+    expect(buffer.duration).toBeLessThan(5.5);
+    const data = buffer.getChannelData(0);
+    let peak = 0;
+    for (const v of data) peak = Math.max(peak, Math.abs(v));
+    expect(peak).toBeGreaterThan(0.9);
+    expect(peak).toBeLessThanOrEqual(1);
     const before = engine.ctx.sources.length;
     engine.playHurtSound();
     const added = engine.ctx.sources.slice(before);
@@ -201,10 +204,18 @@ describe('direção de áudio (Patch 0.5.4)', () => {
     expect(added[0].buffer).toBe(buffer);
     const voice = engine.voices.find((v) => v.sources.includes(added[0]));
     expect(voice.gate.outputs.has(engine.master)).toBe(true);
+    // segue o volume da trilha: mais música, mais respiração
+    const lvl = () => voice.env.gain.events.find((e) => e[0] === 'set')[1];
+    const base = lvl();
+    engine.setVolumes({ music: 0.8 });
+    engine.playHurtSound();
+    const v2 = engine.voices.at(-1);
+    expect(v2.env.gain.events.find((e) => e[0] === 'set')[1]).toBeCloseTo(base * 2);
     // no mudo, nada
     engine.isMuted = true;
+    const n = engine.ctx.sources.length;
     engine.playHurtSound();
-    expect(engine.ctx.sources.length).toBe(before + 1);
+    expect(engine.ctx.sources.length).toBe(n);
   });
 
   it('a camada de tensão abre o filtro para 4500 Hz e fecha de volta', () => {

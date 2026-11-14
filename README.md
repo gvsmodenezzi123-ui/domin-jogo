@@ -172,13 +172,21 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.37.1: o som do dano toca no celular
+
+- O som do dano não dependia mais só do jogo: era um MP3 que o aparelho precisava decodificar,
+  e no celular não chegava a tocar. Agora vai em amostras cruas (µ-law de 8 bits, 22.050 Hz) e
+  o jogo monta o áudio sozinho, sem decodificador.
+- O volume segue a trilha (15% dela): se a música está mais alta nas opções, a respiração
+  acompanha (ou segue os efeitos, se eles estiverem mais altos).
+
 ### 2.37.0: o dano com respiração de verdade, o zumbido e a vista embaçada
 
 - A piscada do dano ganhou som de novo, agora **gravado**: a falta de ar enquanto o olho fecha e
   o ofegante quando abre (gravações limpas de ruído de fundo, do apito do microfone e do vento
   do sopro batendo nele), com o **"tuin"** do ouvido zunindo (um apito fino perto de 4 kHz, com
-  a ondulação lenta de dois tons quase iguais) que entra no golpe e some devagar. Tudo num MP3
-  só, embutido no código (`engine/hurtSoundData.js`, ~50 KB): funciona offline e é uma voz só.
+  a ondulação lenta de dois tons quase iguais) que entra no golpe e some devagar. Tudo numa faixa
+  só, embutida no código (`engine/hurtSoundData.js`): funciona offline e é uma voz só.
   No volume padrão a respiração fica a 15% da trilha e o zumbido a 10%; a trilha continua
   abafada e baixa durante o golpe.
 - A **vista embaça** junto da piscada (fecha embaçando, abre borrada e volta ao foco). Com as

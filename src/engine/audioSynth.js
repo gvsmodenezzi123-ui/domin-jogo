@@ -16,7 +16,7 @@
 //   são 3 vozes). Estourou: a voz mais velha e menos importante (música antes de efeito) sai com fade de 15 ms.
 //   Cada nota termina com .stop() + .disconnect() de todos os nós e as referências zeradas.
 
-import { HURT_SOUND_GAIN, HURT_SOUND_MP3 } from './hurtSoundData.js';
+import { HURT_SOUND_GAIN, HURT_SOUND_RATE, hurtSoundSamples } from './hurtSoundData.js';
 
 const MUTE_KEY = 'buxaria:muted';
 
@@ -675,7 +675,6 @@ export class SoundEngine {
     this.muffle = null;
     // versão 2.37: o som do dano (respiração + zumbido), decodificado uma vez
     this.hurtBuf = null;
-    this.hurtLoading = null;
     // versão 2.35: tomou dano: a trilha fica abafada e baixa por um tempo (1: normal)
     this.hurtDuck = 1;
     this.hurtTimer = null;
@@ -1992,28 +1991,23 @@ export class SoundEngine {
     }, HURT_HOLD * 1000);
   }
 
-  /** Versão 2.37: decodifica o som do dano (o MP3 embutido) uma vez; devolve a promessa. */
+  /**
+   * Versão 2.37: o som do dano num AudioBuffer, montado uma vez. Versão 2.37.1: direto das
+   * amostras (sem decodificar MP3: no celular a decodificação não chegava a tocar). Devolve a
+   * promessa do buffer (já resolvida: a montagem é síncrona e leva poucos ms).
+   */
   loadHurtSound() {
-    if (this.hurtBuf || !this.ctx || typeof this.ctx.decodeAudioData !== 'function' || typeof globalThis.atob !== 'function') return Promise.resolve(this.hurtBuf);
-    if (!this.hurtLoading) {
-      const bin = globalThis.atob(HURT_SOUND_MP3);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-      // (o Safari antigo só aceita a forma com callbacks)
-      this.hurtLoading = new Promise((resolve) => {
-        const done = (buf) => {
-          this.hurtBuf = buf ?? null;
-          resolve(this.hurtBuf);
-        };
-        try {
-          const p = this.ctx.decodeAudioData(bytes.buffer, done, () => done(null));
-          if (p && typeof p.then === 'function') p.then(done, () => done(null));
-        } catch {
-          done(null);
-        }
-      });
+    if (!this.hurtBuf && this.ctx && typeof globalThis.atob === 'function') {
+      try {
+        const data = hurtSoundSamples();
+        const buf = this.ctx.createBuffer(1, data.length, HURT_SOUND_RATE);
+        buf.getChannelData(0).set(data);
+        this.hurtBuf = buf;
+      } catch {
+        this.hurtBuf = null;
+      }
     }
-    return this.hurtLoading;
+    return Promise.resolve(this.hurtBuf);
   }
 
   /** Deixa o som do dano pronto num momento ocioso (o golpe não espera a decodificação). */
@@ -2026,37 +2020,32 @@ export class SoundEngine {
 
   /**
    * Versão 2.37: tomou dano: a respiração gravada e o "tuin" do ouvido, no volume combinado com a
-   * trilha (sobe e desce com o volume dos efeitos). Vai direto ao mestre: o passa-baixa quente
-   * dos efeitos comeria o zumbido agudo. Se ainda não estava decodificado, entra assim que
-   * ficar pronto, já no ponto certo (a respiração continua no tempo da piscada).
+   * trilha (acompanha o volume da música, ou o dos efeitos se estiver mais alto). Vai direto ao
+   * mestre: o passa-baixa quente dos efeitos comeria o zumbido agudo.
    */
   playHurtSound() {
     if (this.isMuted || !this.ready()) return;
-    const asked = this.ctx.currentTime;
-    const start = (buffer) => {
-      if (!buffer || this.isMuted || !this.ctx) return;
-      const late = Math.max(0, this.ctx.currentTime - asked);
-      if (late > buffer.duration - 0.2) return;
-      const at = this.ctx.currentTime + 0.005;
-      const level = HURT_SOUND_GAIN * (this.sfxVolume / 0.7);
-      this.spawn({
-        at,
-        end: at + buffer.duration - late + 0.05,
-        bus: this.master,
-        priority: PRIORITY.sfx,
-        offset: late,
-        build: (env) => {
-          env.gain.setValueAtTime(Math.max(SILENT, level), at);
-          const src = this.ctx.createBufferSource();
-          src.buffer = buffer;
-          src.connect(env);
-          return { sources: [src] };
-        },
-      });
-    };
-    if (this.hurtBuf) start(this.hurtBuf);
-    else this.loadHurtSound().then(start);
+    if (!this.hurtBuf) this.loadHurtSound();
+    const buffer = this.hurtBuf;
+    if (!buffer) return;
+    const at = this.ctx.currentTime + 0.005;
+    // 15% da trilha: acompanha o volume da música (e o dos efeitos, se ele estiver mais alto)
+    const level = HURT_SOUND_GAIN * Math.max(this.musicVolume / 0.4, this.sfxVolume / 0.7);
+    this.spawn({
+      at,
+      end: at + buffer.duration + 0.05,
+      bus: this.master,
+      priority: PRIORITY.sfx,
+      build: (env) => {
+        env.gain.setValueAtTime(Math.max(SILENT, level), at);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(env);
+        return { sources: [src] };
+      },
+    });
   }
+
 
   playHeartBreak() {
     if (this.isMuted || !this.ready()) return;
