@@ -28388,3 +28388,120 @@ html[data-topview] .emote-pick {
 .reduce-motion .nvs .q-dom {
   animation: none;
 }
+
+/* ---------- versão 2.40: a vida das salas (SceneAmbient.jsx) ---------- */
+.scene-ambient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.scene-ambient > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  will-change: transform, opacity;
+}
+/* o pássaro: duas asas em V que batem (dois quadros) */
+.amb-bird {
+  background:
+    linear-gradient(#22242e, #22242e) 0 0 / 34% 22% no-repeat,
+    linear-gradient(#22242e, #22242e) 22% 30% / 30% 22% no-repeat,
+    linear-gradient(#22242e, #22242e) 50% 62% / 22% 30% no-repeat,
+    linear-gradient(#22242e, #22242e) 78% 30% / 30% 22% no-repeat,
+    linear-gradient(#22242e, #22242e) 100% 0 / 34% 22% no-repeat;
+  image-rendering: pixelated;
+  opacity: 0.8;
+  animation: amb-flap var(--flap, 320ms) steps(1, end) infinite;
+}
+.amb-bird.is-gull {
+  filter: invert(0.92);
+  opacity: 0.9;
+}
+@keyframes amb-flap {
+  0%,
+  100% {
+    clip-path: inset(0 0 0 0);
+    rotate: 0deg;
+  }
+  50% {
+    clip-path: inset(28% 0 0 0);
+    rotate: 0deg;
+  }
+}
+.amb-leaf {
+  width: 4px;
+  height: 3px;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
+}
+/* o brilho do sol: um clarão redondo e dois riscos cruzados */
+.amb-flare {
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(255, 250, 220, 0.9) 50%, transparent 100%) 50% 50% / 100% 4% no-repeat,
+    linear-gradient(0deg, transparent 0%, rgba(255, 250, 220, 0.9) 50%, transparent 100%) 50% 50% / 4% 100% no-repeat,
+    radial-gradient(circle, rgba(255, 246, 200, 0.75) 0%, rgba(255, 236, 160, 0.3) 28%, transparent 62%);
+  mix-blend-mode: screen;
+}
+/* o luminoso apagado: uma sombra por cima da placa e do clarão dela */
+.amb-outage {
+  background: radial-gradient(ellipse at 50% 50%, rgba(4, 3, 6, 0.96) 0%, rgba(4, 3, 6, 0.9) 55%, rgba(4, 3, 6, 0) 100%);
+}
+.amb-spark {
+  width: 2px;
+  height: 2px;
+  box-shadow: 0 0 3px 1px rgba(255, 220, 120, 0.7);
+}
+/* a sombra de alguém passando lá no fundo: cabeça, tronco e as pernas trocando o passo */
+.amb-walker {
+  opacity: 0.8;
+  background:
+    radial-gradient(circle at 50% 50%, #050406 0 62%, transparent 66%) 50% 0 / 44% 19% no-repeat,
+    linear-gradient(#050406, #050406) 50% 24% / 62% 40% no-repeat;
+  animation: amb-bob 520ms ease-in-out infinite;
+}
+.amb-walker.is-hat {
+  background:
+    linear-gradient(#050406, #050406) 50% 2% / 78% 5% no-repeat,
+    radial-gradient(circle at 50% 50%, #050406 0 62%, transparent 66%) 50% 0 / 44% 19% no-repeat,
+    linear-gradient(#050406, #050406) 50% 24% / 62% 40% no-repeat;
+}
+.amb-walker.is-slow {
+  opacity: 0.6;
+  animation-duration: 900ms;
+}
+.amb-walker > i {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 58%;
+  bottom: 0;
+  background:
+    linear-gradient(#050406, #050406) 0 0 / 40% 100% no-repeat,
+    linear-gradient(#050406, #050406) 100% 0 / 40% 100% no-repeat;
+  animation: amb-step 520ms steps(1, end) infinite;
+}
+.amb-walker.is-slow > i {
+  animation-duration: 900ms;
+}
+@keyframes amb-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2px;
+  }
+}
+@keyframes amb-step {
+  0%,
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 60% 100%, 60% 0, 40% 0, 40% 86%, 0 86%);
+  }
+  50% {
+    clip-path: polygon(0 0, 100% 0, 100% 86%, 60% 86%, 60% 0, 40% 0, 40% 100%, 0 100%);
+  }
+}

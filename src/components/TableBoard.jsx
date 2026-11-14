@@ -11,6 +11,7 @@ import { tableModifierOf } from '../data/tableModifiers.js';
 import { TableModIcon } from './art/TableModArt.jsx';
 import { startTileLighting } from './tileLighting.js';
 import BotecoBackdrop from './BotecoBackdrop.jsx';
+import SceneAmbient from './SceneAmbient.jsx';
 import { BoneyardPile, EndsSum } from './BoneyardPile.jsx';
 import PixelCanvas from './PixelCanvas.jsx';
 import { LupaGlyph } from './UiGlyphs.jsx';
@@ -31,8 +32,6 @@ import {
  * folga; as pedras da ponta podem encostar na tabela de feltro, como numa mesa de verdade.
  */
 const BOARD_PADDING = Math.round(RAIL_WOOD_W * TABLE_PX) + 2;
-/** Versão 2.35.2: quanto a lupa chega mais perto que "a mesa inteira cabendo" (um pouco). */
-const LUPA_BOOST = 1.26;
 /** O tamanho da pintura da mesa anda de 8 em 8 pixels (a barra do Safari não repinta a mesa). */
 const PLANE_STEP = 8;
 const planePixels = (px) => Math.max(PLANE_STEP * 4, Math.round(px / TABLE_PX / PLANE_STEP) * PLANE_STEP);
@@ -403,12 +402,13 @@ function TableBoard({
     // versão 2.33: a sua mão continua na tela (dá para jogar olhando de cima): a mesa cabe no que
     // sobra em cima dela
     const below = handZone > 0 ? Math.min(handZone - 8, vh * 0.42) : 0;
-    // versão 2.35.2: a lupa volta a ser a mesa inteira centrada (a de 2.33.1, mirando as pedras
-    // de pertinho, ficava grande demais e pulava), só que um pouco mais perto: 12% maior, o que
-    // corta só uma beiradinha da mesa em cima e embaixo
-    const k = Math.min((vw - 20) / W, (vh - 20 - below) / H) * LUPA_BOOST;
+    // versão 2.40: a lupa enche a tela: a mesa inteira cabe na altura toda (só 30% da faixa da
+    // mão é reservada), e o leque da sua mão passa por cima da beirada de baixo da mesa. Antes a
+    // mesa era espremida no que sobrava acima da mão, e por isso a lupa parecia sempre pequena.
+    const keep = below * 0.3;
+    const k = Math.min((vw - 16) / W, (vh - 10 - keep) / H);
     const dx = vw / 2 - rect.left - (land.style.left + W / 2);
-    const dy = (vh - below) / 2 - rect.top - land.yNear + (k * H) / 2;
+    const dy = (vh - keep) / 2 - rect.top - land.yNear + (k * H) / 2;
     riseVars = { '--rise-persp': `${LAND.persp}px`, '--rise-tilt': `${LAND.tilt}deg`, '--rise-dx': `${Math.round(dx)}px`, '--rise-dy': `${Math.round(dy)}px`, '--rise-k': k.toFixed(3) };
   }
   const setSection = (el) => {
@@ -439,6 +439,8 @@ function TableBoard({
       {/* Versão 2.0: a sala em volta da mesa (aparece nos cantos do fundo, onde a mesa afina) */}
       <div ref={roomRef} aria-hidden="true" className="table-room pointer-events-none absolute inset-0">
         <BotecoBackdrop scene={landscape ? (roomScene ?? 'landroom') : 'tableroom'} className="absolute inset-0" />
+        {/* versão 2.40: a vida da sala (pássaros, folhas, o sol; o luminoso falhando, gente passando) */}
+        {landscape && <SceneAmbient scene={roomScene ?? 'landroom'} />}
       </div>
 
       {/* o plano da mesa, inclinado: feltro, aro de madeira e as pedras, tudo em perspectiva */}

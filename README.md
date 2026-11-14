@@ -172,6 +172,19 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.40.0: a vida das salas e a lupa enchendo a tela
+
+- **Salas vivas** (`SceneAmbient.jsx`), por relógio: toda partida vê, mas não é toda hora.
+  - Abertas (calçada, praia, praça): pássaros cruzam o céu (a cada 28–60 s), o sol dá um
+    brilho (16–30 s) e folhas caem das árvores e dos coqueiros (9–20 s). As nuvens e o mar já
+    andavam.
+  - Fechadas (boteco, sinuca, bicho): o luminoso falha e apaga soltando faíscas, com a luz da
+    sala caindo à meia-luz por uns 3 s (a cada 40–80 s); e sombras de gente passam lá no fundo
+    (25–55 s; na sala do Dono da Noite, mais lentas). Tudo atrás da mesa e dos personagens.
+  - A primeira vez de cada coisa vem cedo (entre 3 e 25 s). Com as animações reduzidas, nada.
+- **Lupa**: a mesa inteira enche a altura da tela e o leque da sua mão passa por cima da
+  beirada de baixo (antes a mesa era espremida no espaço acima da mão).
+
 ### 2.39.0: banho de loja, mapa e menus; as árvores da praça; caça a bugs
 
 - **Loja**: a luz do lustre respira, o neon falha, a mercadoria escolhida sobe e flutua, um
