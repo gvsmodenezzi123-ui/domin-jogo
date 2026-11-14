@@ -63,7 +63,7 @@ function waitingRival(save) {
 }
 
 /** A versão do jogo, no rodapé e nos créditos. */
-const GAME_VERSION = '2.38.1';
+const GAME_VERSION = '2.39.0';
 
 /** Chave das maletas e desafios liberados (muda quando a meta muda). */
 function metaSnapshot() {
@@ -173,7 +173,7 @@ function Credits() {
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">SOM</span>
-        Tudo sintetizado na hora (Web Audio): nenhuma gravação.
+        Quase tudo sintetizado na hora (Web Audio); a respiração do dano é gravada.
       </p>
       <p>
         <span className="block font-pixel text-[8px] text-bone-400">FEITO COM</span>

@@ -2277,16 +2277,46 @@ function finishPraia(raw, g) {
 
 /** A copa da árvore: bolotas de folha em três tons, a de cima pegando o sol. */
 function canopy(b, r, cx, cy, rx, ry, n) {
+  // versão 2.39: uma copa de verdade. Antes eram bolinhas soltas (dava para ver o céu entre elas,
+  // pareciam flutuar). Agora: uma massa fechada de lóbulos grandes, a sombra por baixo, os tufos
+  // de folhas por cima (mais claros para o lado do sol, em cima à esquerda) e a beirada rendada.
+  const DEEP = hex('#123a1a');
+  const DARK = hex('#1b5424');
+  const MID = hex('#2b7430');
+  const LIT = hex('#46983e');
+  const SUN = hex('#7cc456');
+  const lobes = [[cx, cy, rx * 0.72, ry * 0.82]];
+  const big = 10;
+  for (let i = 0; i < big; i += 1) {
+    const a = (i / big) * Math.PI * 2 + r() * 0.5;
+    lobes.push([cx + Math.cos(a) * rx * 0.6, cy + Math.sin(a) * ry * 0.5, rx * 0.4 * (0.85 + r() * 0.35), ry * 0.55 * (0.85 + r() * 0.35)]);
+  }
+  // a massa (com um contorno escuro por baixo, 1 px maior) e a barriga da copa na sombra
+  for (const [x, y, a, c] of lobes) b.ellipse(x, y + 1, a + 1, c + 1, DEEP);
+  for (const [x, y, a, c] of lobes) b.ellipse(x, y, a, c, DARK);
+  // os tufos: de baixo para cima, cada um com o seu lado claro
+  const tufts = [];
+  for (let i = 0; i < n * 2; i += 1) {
+    const a = r() * Math.PI * 2;
+    const d = Math.sqrt(r()) * 0.92;
+    tufts.push([cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, 3.5 + r() * 5.5, r()]);
+  }
+  tufts.sort((p, q) => q[1] - p[1]);
+  for (const [x, y, rr, k] of tufts) {
+    // quanto de sol este tufo pega: em cima e à esquerda mais, embaixo quase nada
+    const sun = Math.max(0, Math.min(1, 0.55 - (y - cy) / (ry * 1.6) - (x - cx) / (rx * 4)));
+    b.ellipse(x, y + 1, rr, rr * 0.75, DEEP, 0.55);
+    b.ellipse(x, y, rr, rr * 0.75, sun > 0.35 ? MID : DARK);
+    if (sun > 0.3) b.ellipse(x - rr * 0.2, y - rr * 0.22, rr * 0.7, rr * 0.5, sun > 0.6 ? LIT : MID);
+    if (sun > 0.62) b.ellipse(x - rr * 0.35, y - rr * 0.38, rr * 0.38, rr * 0.26, k < 0.5 ? SUN : LIT);
+    if (sun > 0.8 && k < 0.3) b.put(Math.round(x - rr * 0.4), Math.round(y - rr * 0.5), hex('#b4e884'));
+  }
+  // a beirada: folhas miúdas escapando da massa
   for (let i = 0; i < n; i += 1) {
     const a = r() * Math.PI * 2;
-    const d = Math.sqrt(r());
-    const x = cx + Math.cos(a) * rx * d;
-    const y = cy + Math.sin(a) * ry * d;
-    const rr = 4 + r() * 6;
-    b.ellipse(x, y, rr, rr * 0.8, hex('#1e5a26'));
-    b.ellipse(x - 1, y - 1, rr * 0.8, rr * 0.6, hex('#2e7a32'));
-    b.ellipse(x - 2, y - 2, rr * 0.45, rr * 0.35, hex('#5aa84a'));
-    if (r() < 0.3) b.ellipse(x - 2, y - 3, rr * 0.2, rr * 0.15, hex('#9ad86a'));
+    const x = cx + Math.cos(a) * rx * (0.98 + r() * 0.1);
+    const y = cy + Math.sin(a) * ry * (0.95 + r() * 0.12);
+    b.ellipse(x, y, 1.6 + r() * 1.6, 1.2 + r(), Math.sin(a) < -0.2 ? MID : DARK);
   }
 }
 
@@ -2417,6 +2447,13 @@ function scenePraca(b, G, r, g) {
     b.rect(tx, Y(30), S(7), floor - Y(30), hex('#6a4a2e'));
     b.rect(tx, Y(30), 1, floor - Y(30), hex('#9a7448'));
     b.rect(tx + S(7) - 1, Y(30), 1, floor - Y(30), hex('#3a2614'));
+  }
+  // (versão 2.39: os galhos abrindo do tronco para dentro da copa)
+  for (const [tx, dir] of [[L(40), 1], [R(380), -1]]) {
+    const top = Y(30);
+    for (const [dx, dy, th] of [[-16, -14, 3], [14, -12, 3], [-6, -18, 2], [22 * dir, -6, 2]]) {
+      for (let k = 0; k < th; k += 1) b.line(tx + S(3) + k, top + S(4), tx + S(3) + S(dx) + k, top + S(dy), hex(k === 0 ? '#9a7448' : '#5a3c22'));
+    }
   }
   canopy(b, r, L(30), Y(12), S(64), S(28), 54);
   canopy(b, r, R(392), Y(16), S(64), S(30), 54);

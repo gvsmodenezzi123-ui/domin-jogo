@@ -28114,3 +28114,277 @@ html[data-topview] .emote-pick {
 .reduce-motion .seat-talk {
   animation: none;
 }
+
+/* ---------- versão 2.39: um banho de loja, mapa, menus e quadros (a mesa de partida fica como está) ----------
+   Só coisas leves (transform, opacity, sombra): as telas ganham vida sem pesar. */
+
+/* --- loja: a luz respira, o neon falha, a mercadoria escolhida sobe e flutua, o COMPRAR chama --- */
+.nvs .q-cone {
+  animation: q-cone-breath 5.2s ease-in-out infinite;
+}
+@keyframes q-cone-breath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.86;
+  }
+  52% {
+    opacity: 0.95;
+  }
+  60% {
+    opacity: 0.84;
+  }
+}
+.nvs .q-neon {
+  animation: q-neon-flick 6.4s steps(1, end) infinite;
+}
+@keyframes q-neon-flick {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  41% {
+    opacity: 0.55;
+  }
+  42.5% {
+    opacity: 1;
+  }
+  44% {
+    opacity: 0.4;
+  }
+  46% {
+    opacity: 1;
+  }
+  83% {
+    opacity: 0.7;
+  }
+  84.5% {
+    opacity: 1;
+  }
+}
+.nvs .nvs-shop .q-it {
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    filter 160ms ease;
+}
+.nvs .nvs-shop .q-it:active {
+  transform: translateY(2px);
+}
+.nvs .nvs-shop .q-it.q-sel {
+  transform: translateY(-4px);
+  z-index: 2;
+}
+.nvs .nvs-shop .q-it.q-sel .q-art > * {
+  animation: q-float 2.6s ease-in-out infinite;
+}
+.nvs .nvs-shop .q-detail .q-big > * {
+  animation: q-float 3.4s ease-in-out infinite;
+}
+@keyframes q-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -3px;
+  }
+}
+/* o brilho que passa na etiqueta de preço e no botão dourado (uma faixa clara correndo) */
+.nvs .q-gold {
+  position: relative;
+  overflow: hidden;
+}
+.nvs .q-gold::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 34%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-140%) skewX(-18deg);
+  animation: q-sheen 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes q-sheen {
+  0%,
+  62% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  82%,
+  100% {
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+.nvs .q-gold:active {
+  transform: translateY(2px);
+  filter: brightness(0.94);
+}
+.nvs .q-btn {
+  transition: transform 90ms ease;
+}
+.nvs .q-btn:active {
+  transform: translateY(2px);
+}
+/* a entrada da loja: a prateleira chega de cima, o balcão de detalhes de baixo */
+.nvs .nvs-shop .q-shelf {
+  animation: q-drop-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.nvs .nvs-shop .q-detail,
+.nvs .nvs-shop .q-bag {
+  animation: q-rise-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 80ms both;
+}
+@keyframes q-drop-in {
+  from {
+    opacity: 0;
+    translate: 0 -14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes q-rise-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* --- mapa: a parada da vez pulsa, as abertas respondem ao toque, o chefe ameaça, o carimbo bate --- */
+.nvs .nvs-map .q-node {
+  transition: transform 140ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.nvs .nvs-map .q-node:not(.q-lock):active {
+  transform: scale(0.95);
+}
+.nvs .nvs-map .q-node.q-now .q-pic {
+  animation: q-now-pulse 1.9s ease-in-out infinite;
+}
+@keyframes q-now-pulse {
+  0%,
+  100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  50% {
+    scale: 1.06;
+    filter: brightness(1.14);
+  }
+}
+.nvs .nvs-map .q-node.q-boss .q-crown {
+  animation: q-float 2.2s ease-in-out infinite;
+}
+.nvs .nvs-map .q-node.q-lock {
+  opacity: 0.86;
+}
+.nvs .nvs-map .q-stamp {
+  animation: q-stamp-in 520ms cubic-bezier(0.2, 1.4, 0.4, 1) 260ms both;
+}
+@keyframes q-stamp-in {
+  from {
+    opacity: 0;
+    scale: 1.7;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+.nvs .nvs-map .q-side {
+  animation: q-side-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes q-side-in {
+  from {
+    opacity: 0;
+    translate: 18px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.nvs .q-deskcoins,
+.nvs .q-dom {
+  animation: q-float 4.4s ease-in-out infinite;
+}
+
+/* --- os quadros de menu (desafios, créditos, opções): moldura com quinas de latão, giz no título --- */
+.mml-board {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 60% 50% at 30% 30%, rgba(80, 96, 88, 0.3), transparent),
+    radial-gradient(ellipse 40% 40% at 75% 70%, rgba(80, 96, 88, 0.2), transparent),
+    #222b26;
+}
+.mml-board::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  pointer-events: none;
+  background:
+    linear-gradient(#e8b85a, #e8b85a) left top / 14px 3px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) left top / 3px 14px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) right top / 14px 3px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) right top / 3px 14px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) left bottom / 14px 3px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) left bottom / 3px 14px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) right bottom / 14px 3px no-repeat,
+    linear-gradient(#e8b85a, #e8b85a) right bottom / 3px 14px no-repeat;
+  filter: drop-shadow(0 1px 0 #3a1c08);
+}
+.mml-head {
+  padding-bottom: 8px;
+  border-bottom: 2px dashed rgba(244, 236, 210, 0.22);
+}
+.mml-title {
+  letter-spacing: 1px;
+}
+.challenge-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.42));
+  box-shadow:
+    inset 3px 0 0 rgba(242, 184, 75, 0.45),
+    inset 0 1px 0 rgba(244, 236, 210, 0.08),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease;
+}
+.challenge-card.is-locked {
+  box-shadow:
+    inset 3px 0 0 rgba(233, 220, 180, 0.15),
+    inset 0 1px 0 rgba(244, 236, 210, 0.05),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+.challenge-card.is-done {
+  box-shadow:
+    inset 3px 0 0 #9fe08a,
+    inset 0 1px 0 rgba(244, 236, 210, 0.08),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+.challenge-card:not(.is-locked):active {
+  transform: translateY(1px);
+}
+
+.reduce-motion .nvs .q-cone,
+.reduce-motion .nvs .q-neon,
+.reduce-motion .nvs .q-gold::after,
+.reduce-motion .nvs .nvs-shop .q-it.q-sel .q-art > *,
+.reduce-motion .nvs .nvs-shop .q-detail .q-big > *,
+.reduce-motion .nvs .nvs-shop .q-shelf,
+.reduce-motion .nvs .nvs-shop .q-detail,
+.reduce-motion .nvs .nvs-shop .q-bag,
+.reduce-motion .nvs .nvs-map .q-node.q-now .q-pic,
+.reduce-motion .nvs .nvs-map .q-node.q-boss .q-crown,
+.reduce-motion .nvs .nvs-map .q-stamp,
+.reduce-motion .nvs .nvs-map .q-side,
+.reduce-motion .nvs .q-deskcoins,
+.reduce-motion .nvs .q-dom {
+  animation: none;
+}

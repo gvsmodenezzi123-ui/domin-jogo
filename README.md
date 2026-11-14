@@ -172,6 +172,22 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.39.0: banho de loja, mapa e menus; as árvores da praça; caça a bugs
+
+- **Loja**: a luz do lustre respira, o neon falha, a mercadoria escolhida sobe e flutua, um
+  brilho corre no botão dourado, e a prateleira e o balcão entram deslizando.
+- **Mapa**: a parada da vez pulsa, as paradas respondem ao toque, a coroa do chefe flutua, o
+  carimbo da região bate na folha e o painel do lado entra deslizando.
+- **Quadros de menu** (desafios, créditos, opções): quinas de latão na moldura, o título
+  sublinhado a giz e os cartões de desafio com relevo.
+- **Praça**: as copas das árvores viraram copas de verdade (uma massa fechada, sombra embaixo,
+  tufos claros do lado do sol, beirada rendada) com galhos saindo do tronco; antes eram bolinhas
+  verdes soltas.
+- **Caça a bugs**: 400 partidas sorteadas da roda (2 a 5 cadeiras, com e sem duplas, corações e
+  tentos, com desistências) conferindo a cada passo que nenhuma pedra some, ninguém trava e a
+  vez nunca fica com quem saiu: nada encontrado (o teste fica no projeto). Os créditos diziam
+  "nenhuma gravação" (a respiração do dano agora é gravada): corrigido.
+
 ### 2.38.1: o painel DEV tira vida de você
 
 - Dois botões novos no painel DEV (RECURSOS E MESA), para testar a piscada do dano e a tela
