@@ -47,6 +47,8 @@ export const TMSG = Object.freeze({
   FULL: 'T_FULL',
   END: 'T_END',
   EMOTE: 'T_EMOTE',
+  /** versão 2.42: a cópia da mesa para o herdeiro (quem assume se o anfitrião sair ou cair) */
+  BACKUP: 'T_BACKUP',
 });
 
 const TYPES = new Set(Object.values(TMSG));
@@ -128,6 +130,7 @@ const CHECKS = {
   T_FULL: (p) => optStr(p.reason, 20),
   T_END: (p) => optStr(p.reason, 40),
   T_EMOTE: (p) => isEmote(p.emote) && optStr(p.seat, 4),
+  T_BACKUP: (p) => p.state == null || (isObj(p.state) && isObj(p.state.cfg) && Array.isArray(p.state.seats) && isStr(p.state.hostSeat, 4)),
 };
 
 /** A mensagem chegou inteira e no formato certo? Versões diferentes: só o HELLO e o FULL passam. */

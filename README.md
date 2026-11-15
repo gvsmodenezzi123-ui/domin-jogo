@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.42.0: a roda continua sem o dono
+
+- **A roda online não acaba quando o anfitrião sai** (`table/tableRoaming.js`). O anfitrião
+  manda, a cada mudança, uma cópia da mesa para o herdeiro (a primeira pessoa ligada, na ordem
+  das cadeiras). Se o anfitrião sair, ou cair de vez, o herdeiro abre o mesmo código, segue a
+  partida de onde parou (bots, relógio, rodadas) e os outros reconectam nele sozinhos. A cadeira
+  de quem saiu fica fora (W.O.), como a de qualquer jogador; se ele só caiu, tem o prazo de
+  sempre para voltar, agora como convidado. Só acaba se não sobrar ninguém ligado.
+- Os convidados esperam a roda voltar por até 2,5 min (antes, 1 min).
+- Saiu o aviso "A mesa mudou antes da sua jogada. Tente de novo.": quando uma jogada chega
+  atrasada, a mesa de agora é mandada de novo e a tela se acerta sozinha.
+
 ### 2.41.0: emotes de gesto, árvores balançando, nuvens andando de verdade
 
 - **Emotes novos**: são gestos do personagem. A mão dele (na cor da pele e com a manga da roupa

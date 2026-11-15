@@ -33,7 +33,7 @@ function emitter() {
 }
 
 /** Tentativas de registrar o ID da sala de novo (a página do anfitrião recarregou e o servidor ainda segura o ID antigo). */
-const TAKEN_RETRIES = 20;
+const TAKEN_RETRIES = 45;
 const TAKEN_RETRY_MS = 3000;
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeClock } from '../../pvp/__tests__/kit.js';
 import { botAction } from '../tableEngine.js';
-import { NEXT_AUTO_MS, TABLE_GRACE_MS, createTableSession } from '../tableSession.js';
+import { NEXT_AUTO_MS, TABLE_GRACE_MS, createTableSession, HOST_WAIT_MS } from '../tableSession.js';
 import { TABLE_PROTOCOL, TMSG, makeTableMessage, maskTableInput, parseTableInput, formatTableId, tablePeerId } from '../tableProtocol.js';
 import { createStarNetwork } from './starKit.js';
 
@@ -201,6 +201,8 @@ describe('mesa online de 2 a 4: a partida', () => {
     t.clock.advance(TABLE_GRACE_MS + 500);
     const seat = t.host.getSnapshot().view.seats.find((s) => s.id === 's2');
     expect(seat).toMatchObject({ alive: false, hearts: 0 });
+    // (versão 2.42: o convidado espera mais, para dar tempo de um herdeiro assumir a roda)
+    t.clock.advance(HOST_WAIT_MS);
     expect(b.s.getSnapshot().stage).toBe('ended');
   });
 
@@ -221,7 +223,7 @@ describe('mesa online de 2 a 4: a partida', () => {
     expect(t.host.getSnapshot().view.round).toBe(round + 1);
   });
 
-  it('o anfitrião saiu: a mesa acaba para todo mundo; revanche volta ao saguão', () => {
+  it('revanche volta ao saguão; o anfitrião sai sem ninguém ligado e a roda acaba', () => {
     const t = setup({ guests: 1, config: { seats: 2, hearts: 3, turn: 30, batida: 'todos' } });
     t.people[0].s.setReady(true);
     t.clock.advance(100);
@@ -234,9 +236,13 @@ describe('mesa online de 2 a 4: a partida', () => {
     expect(t.host.getSnapshot().stage).toBe('lobby');
     expect(t.people[0].s.getSnapshot().stage).toBe('lobby');
     expect(t.host.canStart()).toBe(false);
-    t.host.leave();
+    // versão 2.42: o anfitrião sai e a mesa vai para o herdeiro (tableRoaming.js faz a troca; ver
+    // roaming242.test.js). Sem mais ninguém ligado, aí sim a roda acaba.
+    t.net.cut(t.people[0].transport, true);
     t.clock.advance(100);
-    expect(t.people[0].s.getSnapshot()).toMatchObject({ stage: 'ended', ended: 'host-left' });
+    t.host.leave();
+    t.clock.advance(HOST_WAIT_MS + 4000);
+    expect(t.people[0].s.getSnapshot()).toMatchObject({ stage: 'ended', ended: 'lost' });
   });
 });
 

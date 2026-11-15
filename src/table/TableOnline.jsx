@@ -11,7 +11,7 @@ import TableScreen from './TableScreen.jsx';
 import { mapOf } from '../data/tableMaps.js';
 import { TABLE_FACES, tableNote } from './seats.js';
 import { formatTableId, tablePeerId } from './tableProtocol.js';
-import { createTableSession } from './tableSession.js';
+import { createRoamingTable } from './tableRoaming.js';
 
 const FACE_KEY = 'buxaria:mesa:face';
 
@@ -41,7 +41,7 @@ const ERRORS = {
   'browser-incompatible': 'Esta página não deixa fazer conexão direta entre aparelhos (WebRTC). Abra o Buxaria pelo site ou pelo app.',
 };
 const ENDED = {
-  'host-left': 'O anfitrião saiu: a roda acabou.',
+  'host-left': 'O anfitrião saiu e não ficou mais ninguém: a roda acabou.',
   lost: 'A conexão com a roda caiu e não voltou.',
 };
 
@@ -102,7 +102,7 @@ function TableMenu({ playing, host, muted, onToggleMute, onResume, onQuit }) {
           SAIR DA RODA
         </button>
         <p className="mt-3 font-term text-base leading-tight text-bone-300">
-          {host ? 'Você é o anfitrião: se sair, a roda acaba para todo mundo.' : playing ? 'Sair no meio da partida é W.O.: a sua cadeira fica fora.' : 'Você pode voltar pelo código enquanto a roda não começar.'}
+          {host ? 'Você é o anfitrião: se sair, a roda continua com os outros (a sua cadeira fica fora).' : playing ? 'Sair no meio da partida é W.O.: a sua cadeira fica fora.' : 'Você pode voltar pelo código enquanto a roda não começar.'}
         </p>
       </div>
     </div>
@@ -118,7 +118,8 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
   const [face, setFace] = useState(loadFace);
   // a sessão vale para esta roda (o PvpApp troca a key a cada roda nova)
   const [session] = useState(() =>
-    createTableSession({ role, code, me: { id: me.id, name: me.name, face: loadFace() }, transport: createPeerTransport({ role, code, hostPeerId: tablePeerId(code) }), config }),
+    // versão 2.42: a roda continua sem o dono (tableRoaming.js troca o papel quando precisa)
+    createRoamingTable({ role, code, me: { id: me.id, name: me.name, face: loadFace() }, config, makeTransport: (r, opts) => createPeerTransport({ role: r, code, hostPeerId: tablePeerId(code), ...opts }) }),
   );
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -161,7 +162,8 @@ export default function TableOnline({ role, code, me, config = null, onExit, mut
     return <TableCard kicker={formatTableId(code)} title="FIM DA RODA" text={ENDED[snap.ended] ?? ENDED.lost} button="VOLTAR" onButton={leave} />;
   }
 
-  const host = role === 'host';
+  // (versão 2.42: o papel pode mudar no meio: quem herda a roda vira o anfitrião)
+  const host = snap.role === 'host';
   const lost = !host && snap.link === 'lost' && <LostOverlay graceEndsAt={snap.graceEndsAt} />;
   const humansIn = (snap.lobby?.seats ?? []).filter((s) => s && !s.bot && !s.host).length;
   const badgeLink = snap.link === 'ok' ? (host && humansIn === 0 ? 'waiting' : 'open') : snap.link;

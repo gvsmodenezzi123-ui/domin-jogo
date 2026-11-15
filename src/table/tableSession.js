@@ -49,7 +49,15 @@ const cleanName = (name) =>
     .trim()
     .slice(0, 14) || 'Jogador';
 
-export function createTableSession({ role, code, me, transport, clock = realClock, config = null, random = Math.random }) {
+/** Versão 2.42: quanto um convidado espera a roda voltar (o anfitrião caiu e o herdeiro está assumindo). */
+export const HOST_WAIT_MS = 150000;
+
+/**
+ * `resume` (anfitrião): a cópia da mesa que o herdeiro recebeu; ele assume de onde ela parou.
+ * `onTakeover` (convidado): chamado com a cópia quando é a hora de este convidado virar o
+ * anfitrião (tableRoaming.js troca a sessão).
+ */
+export function createTableSession({ role, code, me, transport, clock = realClock, config = null, random = Math.random, resume = null, onTakeover = null }) {
   const listeners = new Set();
   const timers = {};
   let destroyed = false;
@@ -60,7 +68,7 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     stage: 'connecting',
     error: null,
     ended: null,
-    you: role === 'host' ? 's0' : null,
+    you: role === 'host' ? (resume?.mySeat ?? 's0') : null,
     lobby: null,
     view: null,
     clock: null,
@@ -113,14 +121,26 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
   // anfitrião
   // =======================================================================================
   if (role === 'host') {
-    const cfg = sanitizeTableConfig(config);
+    const cfg = sanitizeTableConfig(resume?.cfg ?? config);
+    /** A cadeira de quem roda a mesa (o anfitrião): 's0' em quem abriu, a do herdeiro em quem assumiu. */
+    const mine = resume?.mySeat ?? 's0';
     const seats = Array.from({ length: cfg.seats }, () => null);
-    seats[0] = { id: 's0', playerId: me.id, name: cleanName(me.name), face: me.face ?? TABLE_FACES[0], bot: false, ready: true, host: true, connId: null, lost: false, lostAt: null, ping: null };
+    if (resume) {
+      // versão 2.42: assumindo a mesa: as mesmas cadeiras, nos mesmos lugares; as outras pessoas
+      // entram como "caídas" até reconectarem aqui (e o antigo anfitrião vira uma cadeira comum)
+      resume.seats.slice(0, cfg.seats).forEach((s, i) => {
+        if (!s) return;
+        const local = s.id === mine;
+        seats[i] = { id: s.id, playerId: s.playerId ?? null, name: s.name, face: s.face, bot: Boolean(s.bot), ready: local || Boolean(s.bot) || Boolean(s.ready), host: local, connId: null, lost: !local && !s.bot, lostAt: !local && !s.bot ? clock.now() : null, ping: null };
+      });
+    } else {
+      seats[0] = { id: 's0', playerId: me.id, name: cleanName(me.name), face: me.face ?? TABLE_FACES[0], bot: false, ready: true, host: true, connId: null, lost: false, lostAt: null, ping: null };
+    }
     const connSeat = new Map();
-    let engine = null;
+    let engine = resume?.engine ?? null;
     let lastTurnKey = null;
     let turnDeadline = null;
-    const nextReady = new Set();
+    const nextReady = new Set(resume?.ready ?? []);
 
     const seatById = (id) => seats.find((s) => s?.id === id) ?? null;
     /**
@@ -191,11 +211,33 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     const localLinks = (links) =>
       Object.fromEntries(Object.entries(links).map(([id, l]) => [id, { lost: l.lost, graceEndsAt: l.lost ? clock.now() + l.graceMs : null, ping: l.ping }]));
 
+    /**
+     * Versão 2.42: o herdeiro: a primeira pessoa ligada, na ordem das cadeiras. Ele recebe a
+     * cópia da mesa inteira a cada mudança; se o anfitrião sair ou cair, é ele quem assume.
+     */
+    const heirSeat = () => humans().find((s) => !s.lost && s.connId != null) ?? null;
+    let lastHeir = null;
+    const backupOf = (extra = {}) => ({
+      cfg: { ...cfg },
+      seats: seats.map((s) => s && { id: s.id, playerId: s.playerId, name: s.name, face: s.face, bot: s.bot, ready: s.ready }),
+      engine,
+      ready: [...nextReady],
+      hostSeat: mine,
+      ...extra,
+    });
+    function sendBackup() {
+      const heir = heirSeat();
+      if (lastHeir && lastHeir !== heir && !lastHeir.lost) send(lastHeir.connId, TMSG.BACKUP, { state: null });
+      lastHeir = heir;
+      if (heir) send(heir.connId, TMSG.BACKUP, { state: backupOf() });
+    }
+
     function publishLobby() {
       swaps = swaps.filter((r) => seatById(r.from) && seatById(r.to));
       const lobby = { config: cfg, seats: seats.map(publicSeat), started: Boolean(engine), swaps: engine ? [] : swaps.map((r) => ({ ...r })) };
       for (const s of humans()) if (!s.lost) send(s.connId, TMSG.LOBBY, { ...lobby, you: s.id });
       set({ lobby, stage: engine ? 'table' : 'lobby' });
+      sendBackup();
     }
 
     function broadcast() {
@@ -208,7 +250,8 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         if (s.lost || s.connId == null) continue;
         send(s.connId, TMSG.STATE, { view: viewFor(engine, s.id), clock: msLeft != null ? { msLeft, totalMs } : null, ready, links });
       }
-      set({ stage: 'table', view: viewFor(engine, 's0'), clock: turnDeadline != null ? { deadline: turnDeadline, totalMs } : null, ready, links: localLinks(links) });
+      set({ stage: 'table', view: viewFor(engine, mine), clock: turnDeadline != null ? { deadline: turnDeadline, totalMs } : null, ready, links: localLinks(links) });
+      sendBackup();
     }
 
     /** Cronômetro da vez, bots e quem caiu; e a próxima rodada que começa sozinha. */
@@ -304,6 +347,14 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       seat.lost = true;
       seat.lostAt = clock.now();
       seat.connId = null;
+      awaitBack(seat);
+      schedule();
+      broadcast();
+      maybeNextRound();
+    }
+
+    /** O prazo para a cadeira caída voltar; se não voltar, W.O. (ou, no saguão, a cadeira vaga). */
+    function awaitBack(seat) {
       later(
         `grace:${seat.id}`,
         () => {
@@ -316,9 +367,6 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         },
         TABLE_GRACE_MS,
       );
-      schedule();
-      broadcast();
-      maybeNextRound();
     }
 
     function onHello(connId, p) {
@@ -381,8 +429,11 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         case TMSG.INTENT: {
           if (!engine) return;
           const next = tableReducer(engine, { ...p.action, seat: seat.id });
-          if (next === engine) send(connId, TMSG.REJECT, { reason: 'stale' });
-          else apply(next);
+          // (a jogada não vale mais: manda a mesa de agora de novo; versão 2.42: sem aviso na tela)
+          if (next === engine) {
+            send(connId, TMSG.REJECT, { reason: 'stale' });
+            broadcast();
+          } else apply(next);
           break;
         }
         case TMSG.NEXT:
@@ -427,9 +478,23 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       start() {
         transport.start();
         timers.ping = clock.setInterval(pinger, PING_MS);
+        if (!resume) return;
+        // versão 2.42: a mesa continua já (os bots jogam, o relógio da vez recomeça) enquanto as
+        // outras pessoas reconectam; quem não voltar no prazo leva W.O.
+        for (const s of humans()) awaitBack(s);
+        const gone = resume.left ? seatById(resume.left) : null;
+        if (gone && gone.id !== mine) {
+          // o antigo anfitrião saiu de propósito: a cadeira dele fica fora, como a de qualquer um
+          if (engine && engine.phase !== 'matchOver') engine = tableReducer(engine, { type: 'FORFEIT', seat: gone.id });
+          freeSeat(gone);
+        }
+        if (engine?.phase === 'roundOver') later('next', startNextRound, NEXT_AUTO_MS);
+        publishLobby();
+        schedule();
+        broadcast();
       },
       setFace(face) {
-        const me0 = seatById('s0');
+        const me0 = seatById(mine);
         if (engine || !me0) return;
         me0.face = freeFace(face) === face ? face : me0.face;
         publishLobby();
@@ -437,10 +502,10 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       setReady() {},
       /** Versão 2.13: mudar de cadeira (ou pedir a troca a quem está nela). */
       moveTo(place) {
-        moveSeat(seatById('s0'), place);
+        moveSeat(seatById(mine), place);
       },
       answerSwap(fromId, yes) {
-        answerSwap(seatById('s0'), fromId, yes);
+        answerSwap(seatById(mine), fromId, yes);
       },
       /** As regras, ainda no saguão: a mesa não encolhe para menos cadeiras do que as ocupadas. */
       setConfig(patch) {
@@ -492,13 +557,13 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
       },
       intent(action) {
         if (!engine) return;
-        apply(tableReducer(engine, { ...action, seat: 's0' }));
+        apply(tableReducer(engine, { ...action, seat: mine }));
       },
       emote(id) {
-        if (engine) emoteFrom('s0', id);
+        if (engine) emoteFrom(mine, id);
       },
       nextRound() {
-        nextReady.add('s0');
+        nextReady.add(mine);
         maybeNextRound();
       },
       /** Revanche: todo mundo volta ao saguão (as pessoas marcam PRONTO de novo). */
@@ -515,7 +580,11 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
         publishLobby();
       },
       leave() {
-        for (const s of humans()) if (!s.lost) send(s.connId, TMSG.END, { reason: 'host-left' });
+        // versão 2.42: a roda continua sem o anfitrião: a mesa vai para o herdeiro, que assume o
+        // código; os outros reconectam nele. Sem mais ninguém ligado, a roda acaba.
+        const heir = heirSeat();
+        if (heir) send(heir.connId, TMSG.BACKUP, { state: backupOf({ left: mine }) });
+        else for (const s of humans()) if (!s.lost) send(s.connId, TMSG.END, { reason: 'host-left' });
         closeSoon();
       },
     });
@@ -530,12 +599,22 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     let everConnected = false;
     let leaving = false;
     let lostSince = null;
+    // versão 2.42: a cópia da mesa (só o herdeiro tem) e se o anfitrião avisou que está saindo
+    let backup = null;
+    let handoff = false;
+    function takeover() {
+      if (destroyed || leaving || !backup || !onTakeover || !snap.you) return false;
+      leaving = true;
+      cancel('retry');
+      onTakeover({ ...backup, mySeat: snap.you });
+      return true;
+    }
 
     const hello = () => send(hostConn, TMSG.HELLO, { id: me.id, name: cleanName(me.name), face: me.face ?? null, version: TABLE_PROTOCOL });
 
     function retry() {
       if (destroyed || leaving || hostConn != null) return;
-      if (lostSince != null && clock.now() - lostSince >= TABLE_GRACE_MS) {
+      if (lostSince != null && clock.now() - lostSince >= HOST_WAIT_MS) {
         set({ stage: 'ended', ended: 'lost', link: 'lost' });
         return;
       }
@@ -567,7 +646,11 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
           break;
         }
         case TMSG.REJECT:
-          notice('A mesa mudou antes da sua jogada. Tente de novo.');
+          // (versão 2.42: sem aviso: a mesa de agora chega em seguida e a tela se acerta sozinha)
+          break;
+        case TMSG.BACKUP:
+          backup = p.state ?? null;
+          handoff = Boolean(p.state?.left);
           break;
         case TMSG.EMOTE:
           if (p.seat) showEmote(p.seat, p.emote);
@@ -590,14 +673,19 @@ export function createTableSession({ role, code, me, transport, clock = realCloc
     transport.on('disconnect', () => {
       hostConn = null;
       if (destroyed || leaving) return;
+      // o anfitrião avisou que saiu e deixou a mesa comigo: assumo já
+      if (handoff && takeover()) return;
       lostSince = clock.now();
-      set({ link: 'lost', lostAt: lostSince, graceEndsAt: lostSince + TABLE_GRACE_MS });
+      set({ link: 'lost', lostAt: lostSince, graceEndsAt: lostSince + HOST_WAIT_MS });
       later('retry', retry, RETRY_MS);
     });
     transport.on('error', (err) => {
       if (destroyed || leaving) return;
       const type = err?.type ?? 'network';
       if (everConnected) {
+        // versão 2.42: o código da roda não existe mais no servidor (o anfitrião caiu de vez) e a
+        // minha internet está de pé: se a cópia da mesa está comigo, eu assumo
+        if (type === 'peer-unavailable' && hostConn == null && lostSince != null && transport.isSignalUp?.() !== false && takeover()) return;
         // caiu e está tentando voltar: o erro de cada tentativa não acaba a mesa
         if (timers.retry == null) later('retry', retry, RETRY_MS);
         return;
