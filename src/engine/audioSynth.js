@@ -2372,6 +2372,25 @@ export class SoundEngine {
     this.tone({ type: 'triangle', freq: 1900, freqEnd: 240, peak: 0.06, dur: 0.16, delay: FLICKER_OUT + 0.01 });
   }
 
+  /** Versão 2.44, o ritual: um talismã arrancado do nicho e arrastado pelo ar (sopro subindo). */
+  playRitualPull() {
+    this.noise({ freq: 700, filter: 'lowpass', q: 0.7, peak: 0.2, dur: 0.32, attack: 0.22 });
+    this.tone({ type: 'sine', freq: 196, freqEnd: 392, peak: 0.05, dur: 0.38, attack: 0.18 });
+  }
+
+  /** O ritual girando: um zumbido grave que sobe junto com o giro, e um coro fino por cima. */
+  playRitualSpin(seconds = 2) {
+    this.tone({ type: 'sawtooth', freq: 55, freqEnd: 110, peak: 0.08, dur: seconds * 0.25, attack: seconds * 0.75 });
+    this.tone({ type: 'sine', freq: 311, freqEnd: 622, peak: 0.045, dur: seconds * 0.2, attack: seconds * 0.8, partials: [[1, 1], [1.5, 0.4]] });
+    this.noise({ freq: 520, filter: 'bandpass', q: 0.7, peak: 0.12, dur: seconds * 0.2, attack: seconds * 0.8 });
+  }
+
+  /** O talismã voltando ao nicho: um toque seco de madeira. */
+  playRitualLand() {
+    this.tone({ type: 'triangle', freq: 170, freqEnd: 84, peak: 0.3, dur: 0.1 });
+    this.noise({ freq: 2400, filter: 'bandpass', q: 3, peak: 0.1, dur: 0.03 });
+  }
+
   /** 2: no escuro total, dois pares de batidas de coração graves. */
   playHeartbeat() {
     [0, 0.2, 0.78, 0.98].forEach((delay, i) => this.tone({ type: 'triangle', freq: i % 2 ? 64 : 74, freqEnd: 38, peak: i % 2 ? 0.5 : 0.62, dur: 0.16, delay }));
@@ -2460,14 +2479,29 @@ export class SoundEngine {
   }
 
   /** Entrada da Dona Odete: tic-tac do relógio da dívida, o baque do carimbo e a caixa registradora. */
-  playDebtStamp() {
+  playDebtStamp(stampAt = 1.15) {
     this.duck();
     [0, 0.25, 0.5, 0.75].forEach((delay, i) => this.noise({ freq: i % 2 ? 2200 : 3000, filter: 'bandpass', q: 6, peak: 0.18, dur: 0.02, delay }));
-    this.later(1.15, () => {
+    this.later(stampAt, () => {
       this.tone({ type: 'sine', freq: 90, freqEnd: 40, peak: 0.6, dur: 0.22 });
       this.noise({ freq: 700, filter: 'lowpass', q: 0.8, peak: 0.32, dur: 0.12 });
     });
-    this.tone({ type: 'triangle', freq: 2637, peak: 0.06, dur: 0.5, delay: 1.45, partials: [[1, 1], [2.4, 0.3]] });
+    this.tone({ type: 'triangle', freq: 2637, peak: 0.06, dur: 0.5, delay: stampAt + 0.3, partials: [[1, 1], [2.4, 0.3]] });
+  }
+
+  /**
+   * Versão 2.44: o chefe acendendo na entrada (BossIntro): o ar subindo por 0,26 s, o estrondo
+   * grave com o estalo do clarão e um rastro metálico por cima.
+   */
+  playBossReveal() {
+    this.noise({ freq: 900, filter: 'bandpass', q: 0.8, peak: 0.2, dur: 0.02, attack: 0.24 });
+    this.later(0.26, () => {
+      this.duck();
+      this.tone({ type: 'sine', freq: 62, freqEnd: 30, peak: 0.75, dur: 0.9, attack: 0.005 });
+      this.noise({ freq: 380, filter: 'lowpass', q: 0.7, peak: 0.42, dur: 0.45 });
+      this.noise({ freq: 4200, filter: 'highpass', q: 0.7, peak: 0.22, dur: 0.07 });
+      this.tone({ type: 'triangle', freq: 1046, freqEnd: 988, peak: 0.05, dur: 0.9, attack: 0.01, delay: 0.02, partials: [[1, 1], [2.76, 0.4]] });
+    });
   }
 
   /**

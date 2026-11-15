@@ -6518,917 +6518,769 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' fill='none' stroke='%23a3121b' stroke-width='2' stroke-linecap='round' opacity='0.4'%3E%3Cpath d='M12 12 L48 12 L12 48 L48 48'/%3E%3C/svg%3E") 84% 16% / 44px 44px no-repeat;
 }
 
-/* ---------- Patch 0.9.0: entrada dos chefes (BossIntro.jsx) ----------
-   Um cartão comum (retrato, nome, título e a fala de entrada) e o efeito de cada um:
-   navalha (Arlindo), ferro (Beto) e ouro (Comendador). Tudo some no fim (--bi-total). */
-.boss-intro {
+/* ---------- versão 2.44: entrada dos chefes (BossIntro.jsx + bossIntroStage.js) ----------
+   Tudo animado por WAAPI (transform e opacity); aqui só o desenho. A ordem das camadas:
+   fundo, o número (piece), o palco (faixa, retrato, texto), o que cobre (over), as faixas de
+   cinema, o clarão e o "toque para pular". */
+.boss-intro2 {
   color: var(--color-bone-50);
-  animation: bi-out 300ms ease-in calc(var(--bi-total, 2900ms) - 300ms) forwards;
+  isolation: isolate;
+  contain: strict;
 }
 
-@keyframes bi-out {
-  to {
-    opacity: 0;
-    visibility: hidden;
-  }
+.bi2-back,
+.bi2-over,
+.bi2-piece,
+.bi2-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.bi-backdrop {
-  background: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(20, 10, 6, 0.86), rgba(0, 0, 0, 0.96) 75%);
-  animation: rc-fade 220ms ease-out both;
+.bi2-piece,
+.bi2-over {
+  overflow: hidden;
 }
 
-.bi-card {
-  position: relative;
-  padding: 16px 14px 18px;
-  background: linear-gradient(180deg, rgba(18, 10, 6, 0.94), rgba(6, 3, 2, 0.96));
-  border: 2px solid #0b0705;
+.bi2-back {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, var(--bi-deep) 0%, rgba(4, 2, 2, 0.95) 72%),
+    #050303;
+  opacity: 0.94;
 }
 
-.bi-kicker {
-  font-size: 8px;
-  letter-spacing: 0.14em;
-  color: #f2b84b;
-}
-
-.bi-portrait {
-  width: fit-content;
-  padding: 4px;
-  background: #0b0705;
-  border: 2px solid #f2b84b;
-}
-
-.bi-name {
-  font-size: 15px;
-  line-height: 1.3;
-  color: #f4ecd2;
-  text-shadow: 0 3px 0 #000;
-}
-
-.bi-title {
-  font-size: 19px;
-  line-height: 1;
-  color: #d9a946;
-}
-
-.bi-quote {
-  font-size: 18px;
-  line-height: 1.05;
-  color: var(--color-bone-200);
-  animation: rc-fade 400ms ease-out 900ms both;
-}
-
-.bi-skip {
+.bi2-bar {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: #000;
+  z-index: 3;
+}
+
+.bi2-bar.is-top {
+  top: 0;
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.04);
+}
+
+.bi2-bar.is-bottom {
+  bottom: 0;
+}
+
+.bi2-flash {
+  background: #fff;
+  opacity: 0;
+  z-index: 4;
+}
+
+/* a faixa na cor do chefe */
+.bi2-band {
+  position: absolute;
+  left: -6%;
+  width: 112%;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 10px, transparent 10px 26px),
+    linear-gradient(180deg, var(--bi-ink) 0%, var(--bi-deep) 22%, var(--bi-deep) 78%, var(--bi-ink) 100%);
+  border-top: 4px solid var(--bi-accent);
+  border-bottom: 4px solid var(--bi-accent);
+  box-shadow:
+    0 0 0 3px #000,
+    0 14px 40px rgba(0, 0, 0, 0.7);
+  will-change: transform;
+}
+
+.bi2-streaks i {
+  position: absolute;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--bi-accent), transparent);
+}
+
+.bi2-rays {
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.13) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 18%, transparent 66%);
+  opacity: 0;
+}
+
+.bi2-portrait {
+  position: absolute;
+  will-change: transform;
+}
+
+.bi2-sil,
+.bi2-lit {
+  position: absolute;
+  inset: 0;
+}
+
+.bi2-sil {
+  filter: brightness(0) drop-shadow(0 0 2px var(--bi-accent)) drop-shadow(0 0 9px var(--bi-accent));
+}
+
+.bi2-lit {
+  opacity: 0;
+}
+
+.bi2-frame {
+  position: absolute;
+  inset: -6px;
+  border: 3px solid var(--bi-accent);
+  box-shadow:
+    0 0 0 3px #000,
+    0 0 22px var(--bi-accent),
+    inset 0 0 0 3px #000;
+  opacity: 0;
+}
+
+/* o texto */
+.bi2-text {
+  position: absolute;
+  z-index: 1;
+}
+
+.bi2-kicker {
+  display: inline-block;
+  padding: 5px 12px 4px 8px;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--bi-ink);
+  background: var(--bi-accent);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+}
+
+.bi2-name {
+  display: block;
+  position: relative;
+  margin-top: 10px;
+  line-height: 1.3;
+  color: #f4ecd2;
+  text-shadow:
+    3px 3px 0 #000,
+    0 0 14px var(--bi-accent);
+  white-space: normal;
+}
+
+.bi2-name span {
+  display: inline-block;
+  will-change: transform;
+}
+
+.bi2-name .is-space {
+  width: 0.6em;
+}
+
+.bi2-name.is-neon {
+  color: #ffe0f0;
+  text-shadow:
+    0 0 4px var(--bi-accent),
+    0 0 14px var(--bi-accent),
+    3px 3px 0 #000;
+}
+
+.bi2-name.is-gold {
+  color: #ffe08a;
+  text-shadow:
+    3px 3px 0 #3a2606,
+    0 0 16px rgba(242, 184, 75, 0.8);
+}
+
+.bi2-shine {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 20%;
+  background: linear-gradient(90deg, transparent, rgba(255, 252, 230, 0.7), transparent);
+  pointer-events: none;
+}
+
+.bi2-title {
+  margin-top: 4px;
+  font-size: 23px;
+  line-height: 1;
+  color: var(--bi-accent);
+  text-shadow: 2px 2px 0 #000;
+}
+
+.bi2-hearts {
+  display: flex;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.bi2-heart {
+  display: block;
+  filter: drop-shadow(1px 1px 0 #000);
+}
+
+.bi2-quote {
+  margin-top: 10px;
+  padding: 6px 10px 7px;
+  font-size: 20px;
+  line-height: 1.05;
+  color: #f4ecd2;
+  background: rgba(0, 0, 0, 0.74);
+  border-left: 3px solid var(--bi-accent);
+}
+
+.bi2-text.is-tall {
+  text-align: center;
+}
+
+.bi2-text.is-tall .bi2-hearts {
+  justify-content: center;
+}
+
+.bi2-text.is-tall .bi2-quote {
+  border-left: 0;
+  border-top: 3px solid var(--bi-accent);
+}
+
+.bi2-skip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
   font-size: 7px;
   letter-spacing: 0.14em;
   text-align: center;
-  color: rgba(244, 236, 210, 0.32);
+  color: rgba(244, 236, 210, 0.38);
   pointer-events: none;
 }
 
-/* --- navalha: Seu Arlindo --- */
-.boss-intro-navalha .bi-card {
-  border-color: #3a0f22;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 79, 163, 0.35),
-    0 0 26px rgba(255, 40, 120, 0.35);
-}
-
-.boss-intro-navalha .bi-portrait {
-  border-color: #ff4fa3;
-  box-shadow: 0 0 14px rgba(255, 79, 163, 0.6);
-}
-
-.boss-intro-navalha .bi-kicker {
-  color: #ff8cc6;
-}
-
-/* o nome acende como letreiro: duas falhas e fica (2 piscadas em 0,6 s) */
-.boss-intro-navalha .bi-name {
-  color: #ffd6ec;
-  text-shadow:
-    0 0 4px #ff4fa3,
-    0 0 12px #ff1f7a,
-    0 3px 0 #000;
-  animation: bi-neon 700ms steps(1, end) 520ms both;
-}
-
-@keyframes bi-neon {
-  0% {
-    opacity: 0.15;
-  }
-  18% {
-    opacity: 1;
-  }
-  34% {
-    opacity: 0.2;
-  }
-  52%,
-  100% {
-    opacity: 1;
-  }
-}
-
-/* duas metades pretas cobrem o cartão e se abrem pelo corte da navalha */
-.bi-half {
-  background: #050203;
-}
-
-.bi-half-a {
-  clip-path: polygon(0 0, 100% 0, 100% 34%, 0 66%);
-  animation: bi-half-a 420ms cubic-bezier(0.5, 0, 0.2, 1) 330ms forwards;
-}
-
-.bi-half-b {
-  clip-path: polygon(0 66%, 100% 34%, 100% 100%, 0 100%);
-  animation: bi-half-b 420ms cubic-bezier(0.5, 0, 0.2, 1) 330ms forwards;
-}
-
-@keyframes bi-half-a {
-  to {
-    transform: translate(-14%, -62%);
-    opacity: 0;
-  }
-}
-
-@keyframes bi-half-b {
-  to {
-    transform: translate(14%, 62%);
-    opacity: 0;
-  }
-}
-
-/* o fio da navalha riscando a tela na diagonal */
-.bi-slash {
-  left: -10%;
-  top: 50%;
-  width: 120%;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, #fff 18%, #ffe0f0 60%, #ff4fa3 85%, transparent);
-  box-shadow:
-    0 0 10px #ff4fa3,
-    0 0 26px rgba(255, 40, 120, 0.8);
-  transform-origin: 0 50%;
-  transform: rotate(-17deg) scaleX(0);
-  opacity: 0;
-  animation: bi-slash 380ms ease-out 200ms both;
-}
-
-@keyframes bi-slash {
-  0% {
-    transform: rotate(-17deg) scaleX(0);
-    opacity: 1;
-  }
-  45% {
-    transform: rotate(-17deg) scaleX(1);
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(-17deg) scaleX(1);
-    opacity: 0;
-  }
-}
-
-/* --- ferro: Beto Cigano --- */
-.boss-intro-ferro {
-  animation:
-    bi-shake 360ms ease-out 470ms,
-    bi-out 300ms ease-in calc(var(--bi-total, 2900ms) - 300ms) forwards;
-}
-
-@keyframes bi-shake {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  15% {
-    transform: translate(-6px, 5px);
-  }
-  30% {
-    transform: translate(6px, -4px);
-  }
-  45% {
-    transform: translate(-4px, 3px);
-  }
-  60% {
-    transform: translate(3px, -2px);
-  }
-  80% {
-    transform: translate(-1px, 1px);
-  }
-}
-
-/* a chapa: ferro enferrujado com rebites nos cantos */
-.boss-intro-ferro .bi-card {
+/* --- navalha (Seu Arlindo) --- */
+.bi2-cover {
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at 12px 12px, #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
-    radial-gradient(circle at calc(100% - 12px) 12px, #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
-    radial-gradient(circle at 12px calc(100% - 12px), #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
-    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), #c9cfd4 0 2px, #4b5157 2px 4px, transparent 4.5px),
-    radial-gradient(ellipse 40% 30% at 20% 30%, rgba(160, 80, 30, 0.45), transparent 70%),
-    radial-gradient(ellipse 35% 25% at 80% 75%, rgba(150, 70, 25, 0.45), transparent 70%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #4d3a2c, #2e221a 60%, #1d150f);
-  border: 3px solid #120b06;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 200, 150, 0.18),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.5),
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: bi-plate-drop 340ms cubic-bezier(0.55, 0, 1, 0.45) 130ms both;
+    radial-gradient(ellipse 60% 50% at 50% 50%, #1a0610, #050203 70%),
+    #050203;
 }
 
-@keyframes bi-plate-drop {
-  0% {
-    transform: translateY(-130vh) rotate(-4deg);
-  }
-  100% {
-    transform: translateY(0) rotate(0);
-  }
-}
-
-.boss-intro-ferro .bi-portrait {
-  border-color: #b8743a;
-}
-
-.boss-intro-ferro .bi-kicker,
-.boss-intro-ferro .bi-title {
-  color: #e2a46a;
-}
-
-/* o nome carimbado no ferro */
-.boss-intro-ferro .bi-name {
-  color: #d5c2ae;
-  text-shadow:
-    -1px -1px 0 rgba(0, 0, 0, 0.7),
-    1px 1px 0 rgba(255, 220, 190, 0.18);
-}
-
-/* poeira do impacto */
-.boss-intro-ferro .bi-stage::after {
-  content: '';
+.bi2-slash-wrap {
   position: absolute;
-  left: -10%;
-  right: -10%;
-  bottom: -18px;
-  height: 36px;
-  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(170, 140, 110, 0.55), transparent 70%);
-  opacity: 0;
-  animation: bi-dust 900ms ease-out 470ms both;
-  pointer-events: none;
-}
-
-@keyframes bi-dust {
-  0% {
-    opacity: 0;
-    transform: scaleX(0.4);
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: scaleX(1.4) translateY(-8px);
-  }
-}
-
-.bi-sparks {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
   width: 0;
   height: 0;
 }
 
-.bi-sparks i {
+.bi2-slash {
   position: absolute;
-  width: 3px;
-  height: 3px;
-  background: #ffd27a;
-  box-shadow: 0 0 5px #ff8a2a;
-  opacity: 0;
-  animation: bi-spark 600ms ease-out 470ms both;
-}
-
-.bi-sparks i:nth-child(odd) {
-  background: #fff3c4;
-  animation-duration: 760ms;
-}
-
-@keyframes bi-spark {
-  0% {
-    transform: translate(0, 0);
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--dx), calc(var(--dy) + 60px));
-    opacity: 0;
-  }
-}
-
-/* --- ouro: Comendador Moreira --- */
-.boss-intro-ouro .bi-card {
-  border: 3px solid #6b4a12;
+  top: -2px;
+  height: 4px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, transparent, #fff 15%, var(--c) 60%, transparent);
   box-shadow:
-    inset 0 0 0 2px #e8b84a,
-    inset 0 0 0 4px #3a2508,
-    0 0 30px rgba(232, 184, 74, 0.35),
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: rc-fade 400ms ease-out 250ms both;
+    0 0 10px var(--c),
+    0 0 26px var(--c);
 }
 
-.boss-intro-ouro .bi-portrait {
-  border: 3px double #e8b84a;
-  box-shadow: 0 0 16px rgba(232, 184, 74, 0.55);
-}
-
-.boss-intro-ouro .bi-kicker {
-  color: #ffe08a;
-}
-
-/* nome em ouro com o brilho passando */
-.boss-intro-ouro .bi-name {
-  background: linear-gradient(100deg, #b9861f 0%, #ffe9a8 40%, #fff8dc 50%, #ffe9a8 60%, #b9861f 100%);
-  background-size: 250% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: none;
-  filter: drop-shadow(0 3px 0 #000);
-  animation: bi-gold 1600ms ease-in-out 700ms both;
-}
-
-@keyframes bi-gold {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: 0 0;
-  }
-}
-
-.bi-spot {
-  background: radial-gradient(ellipse 46% 60% at 50% 42%, rgba(255, 214, 140, 0.32), transparent 70%);
-  animation: rc-fade 700ms ease-out 400ms both;
-}
-
-/* cortinas de veludo vermelho com franja dourada */
-.bi-curtain {
-  width: 51%;
-  background:
-    linear-gradient(0deg, #e8b84a 0 8px, #6b4a12 8px 11px, transparent 11px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 6px, rgba(255, 255, 255, 0.05) 6px 16px, rgba(0, 0, 0, 0.2) 16px 26px),
-    linear-gradient(180deg, #8a1622, #5c0c15 70%, #3d0710);
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
-}
-
-.bi-curtain-l {
-  animation: bi-curtain-l 760ms cubic-bezier(0.6, 0, 0.3, 1) 220ms forwards;
-}
-
-.bi-curtain-r {
-  animation: bi-curtain-r 760ms cubic-bezier(0.6, 0, 0.3, 1) 220ms forwards;
-}
-
-@keyframes bi-curtain-l {
-  to {
-    transform: translateX(-100%) scaleX(0.6);
-    transform-origin: 0 50%;
-  }
-}
-
-@keyframes bi-curtain-r {
-  to {
-    transform: translateX(100%) scaleX(0.6);
-    transform-origin: 100% 50%;
-  }
-}
-
-/* moedas caindo e girando */
-.bi-coins i {
+.bi2-glint {
   position: absolute;
-  top: -20px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff4c4 0 2px, #f2c14e 3px, #b9861f 6px);
-  box-shadow:
-    inset 0 0 0 1px #7a5512,
-    0 0 6px rgba(255, 210, 100, 0.6);
-  opacity: 0;
-  animation: bi-coin 1500ms cubic-bezier(0.4, 0, 0.9, 0.6) both;
-}
-
-@keyframes bi-coin {
-  0% {
-    transform: translateY(0) scaleX(1);
-    opacity: 1;
-  }
-  25% {
-    transform: translateY(28vh) scaleX(0.2);
-  }
-  50% {
-    transform: translateY(56vh) scaleX(1);
-  }
-  75% {
-    transform: translateY(84vh) scaleX(0.2);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(112vh) scaleX(1);
-    opacity: 0;
-  }
-}
-
-/* --- versão 1.4: rifa (Genésio da Rifa) --- */
-.boss-intro-rifa .bi-card {
-  border: 3px solid #5c1414;
-  background:
-    repeating-linear-gradient(0deg, rgba(255, 220, 160, 0.06) 0 1px, transparent 1px 9px),
-    linear-gradient(180deg, #3a0e0e, #1f0707 70%, #120404);
-  box-shadow:
-    inset 0 0 0 2px #e9c46a,
-    0 0 24px rgba(233, 80, 60, 0.35),
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: bi-pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1) 220ms both;
-}
-
-@keyframes bi-pop {
-  0% {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.boss-intro-rifa .bi-portrait {
-  border-color: #e9c46a;
-}
-
-.boss-intro-rifa .bi-kicker,
-.boss-intro-rifa .bi-title {
-  color: #ffd27a;
-}
-
-.boss-intro-rifa .bi-name {
-  color: #fff1d6;
-  text-shadow:
-    0 0 6px rgba(255, 90, 60, 0.7),
-    0 3px 0 #000;
-}
-
-/* o globo da rifa girando atrás do cartão */
-.bi-globe {
-  left: 50%;
-  top: 44%;
-  width: 300px;
-  height: 300px;
-  margin: -150px 0 0 -150px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, transparent 0 58%, rgba(233, 196, 106, 0.22) 58% 60%, transparent 60%),
-    repeating-conic-gradient(from 0deg, rgba(233, 196, 106, 0.5) 0 4deg, transparent 4deg 30deg);
-  -webkit-mask: radial-gradient(circle, transparent 0 62%, #000 62% 70%, transparent 70%);
-  mask: radial-gradient(circle, transparent 0 62%, #000 62% 70%, transparent 70%);
-  animation:
-    rc-fade 300ms ease-out both,
-    bi-spin 1100ms cubic-bezier(0.2, 0.6, 0.4, 1) both;
-}
-
-@keyframes bi-spin {
-  from {
-    transform: rotate(-540deg);
-  }
-  to {
-    transform: rotate(0);
-  }
-}
-
-/* a bolinha sorteada salta do cartão */
-.bi-ball {
-  position: absolute;
-  right: -12px;
-  top: -14px;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-size: 12px;
-  color: #3a0e0e;
-  background: radial-gradient(circle at 35% 30%, #fff 0 3px, #ffe9b0 5px, #e9c46a 12px, #b8862a 15px);
-  box-shadow:
-    0 0 0 2px #0b0705,
-    0 0 12px rgba(255, 210, 120, 0.7);
-  animation: bi-ball 620ms cubic-bezier(0.3, 1.8, 0.5, 1) 1000ms both;
-}
-
-@keyframes bi-ball {
-  0% {
-    transform: translate(-60px, 60px) scale(0.2);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
-  }
-}
-
-/* bilhetes de rifa caindo e girando */
-.bi-tickets i {
-  position: absolute;
-  top: -24px;
+  left: -8px;
+  top: -8px;
   width: 16px;
-  height: 10px;
-  background:
-    linear-gradient(90deg, transparent 0 4px, rgba(90, 20, 20, 0.6) 4px 5px, transparent 5px),
-    #f4e3b8;
-  border: 1px solid #8a5a2a;
-  opacity: 0;
-  animation: bi-ticket 1600ms cubic-bezier(0.4, 0, 0.8, 0.6) both;
-}
-
-@keyframes bi-ticket {
-  0% {
-    transform: translateY(0) rotate(0);
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(112vh) rotate(calc(var(--turn, 12deg) * 20));
-    opacity: 0;
-  }
-}
-
-/* --- versão 1.4: chic (Dama Soró) --- */
-.boss-intro-chic .bi-card {
-  border: 3px solid #3a0f2a;
-  background: linear-gradient(180deg, rgba(50, 12, 36, 0.96), rgba(20, 4, 14, 0.97));
+  height: 16px;
+  background: #fff;
   box-shadow:
-    inset 0 0 0 2px #ff8fc8,
-    inset 0 0 0 4px #3a0f2a,
-    0 0 30px rgba(255, 110, 190, 0.35),
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: rc-fade 420ms ease-out 360ms both;
+    0 0 14px #fff,
+    0 0 30px #ff4fa3;
 }
 
-.boss-intro-chic .bi-portrait {
-  border: 3px double #ff8fc8;
-  box-shadow: 0 0 16px rgba(255, 143, 200, 0.55);
-}
-
-.boss-intro-chic .bi-kicker,
-.boss-intro-chic .bi-title {
-  color: #ffb3dc;
-}
-
-.boss-intro-chic .bi-name {
-  color: #fff0f8;
-  text-shadow:
-    0 0 6px #ff6fbf,
-    0 3px 0 #000;
-  letter-spacing: 0.04em;
-}
-
-.bi-spot-pink {
-  background: radial-gradient(ellipse 46% 60% at 50% 42%, rgba(255, 140, 200, 0.3), transparent 70%);
-}
-
-/* os dois leques de plumas: fechados cobrindo o cartão, abrem para os lados */
-.bi-fan {
-  top: 50%;
-  width: 360px;
-  height: 360px;
-  margin-top: -180px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #1a0612 0 12%, transparent 12.5%),
-    repeating-conic-gradient(from 0deg, #f7d6e8 0 6deg, #e79ac2 6deg 9deg, #c25e95 9deg 12deg);
-  -webkit-mask: conic-gradient(from 180deg, #000 0 180deg, transparent 180deg);
-  mask: conic-gradient(from 180deg, #000 0 180deg, transparent 180deg);
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.7));
-}
-
-.bi-fan-l {
-  left: 50%;
-  margin-left: -180px;
-  animation: bi-fan-l 700ms cubic-bezier(0.6, 0, 0.3, 1) 260ms forwards;
-}
-
-.bi-fan-r {
-  left: 50%;
-  margin-left: -180px;
-  transform: scaleX(-1);
-  animation: bi-fan-r 700ms cubic-bezier(0.6, 0, 0.3, 1) 260ms forwards;
-}
-
-@keyframes bi-fan-l {
-  to {
-    transform: translateX(-62%) rotate(-28deg) scale(0.85);
-    opacity: 0;
-  }
-}
-
-@keyframes bi-fan-r {
-  to {
-    transform: scaleX(-1) translateX(-62%) rotate(-28deg) scale(0.85);
-    opacity: 0;
-  }
-}
-
-/* paetê piscando no escuro */
-.bi-sequins i {
+/* faíscas (ferro, porta de aço) */
+.bi2-spark {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: #fff;
+  margin: -2px;
+  background: #ffe08a;
+  box-shadow: 0 0 6px #ff9a2e;
+  z-index: 2;
+}
+
+/* --- ferro (Beto Cigano) --- */
+.bi2-plate {
+  position: absolute;
+  border: 6px solid #2a1a10;
+  background:
+    radial-gradient(circle at 22px 22px, #c8a080 0 4px, #3a2618 5px 7px, transparent 8px),
+    radial-gradient(circle at calc(100% - 22px) 22px, #c8a080 0 4px, #3a2618 5px 7px, transparent 8px),
+    radial-gradient(circle at 22px calc(100% - 22px), #c8a080 0 4px, #3a2618 5px 7px, transparent 8px),
+    radial-gradient(circle at calc(100% - 22px) calc(100% - 22px), #c8a080 0 4px, #3a2618 5px 7px, transparent 8px),
+    radial-gradient(ellipse 30% 20% at 30% 70%, rgba(150, 60, 20, 0.55), transparent 70%),
+    radial-gradient(ellipse 22% 30% at 76% 30%, rgba(160, 70, 24, 0.5), transparent 70%),
+    radial-gradient(ellipse 14% 10% at 60% 82%, rgba(30, 16, 8, 0.6), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 9px),
+    linear-gradient(160deg, #6a4a36 0%, #4a3324 40%, #5a3a26 62%, #34221a 100%);
   box-shadow:
-    0 0 6px #ff8fc8,
-    0 0 2px #fff;
-  transform: rotate(45deg);
-  opacity: 0;
-  animation: bi-twinkle 900ms ease-in-out both;
+    inset 0 0 0 4px #7a5a40,
+    inset 0 0 70px rgba(0, 0, 0, 0.6),
+    0 24px 40px #000;
+  will-change: transform;
 }
 
-@keyframes bi-twinkle {
-  0%,
-  100% {
-    opacity: 0;
-    transform: rotate(45deg) scale(0.4);
-  }
-  50% {
-    opacity: 1;
-    transform: rotate(45deg) scale(1.3);
-  }
-}
-
-/* --- versão 1.4: ronda (Sargento Brandão) --- */
-.boss-intro-ronda .bi-card {
-  border: 3px solid #0f1a30;
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 7px),
-    linear-gradient(180deg, #1b2740, #0e1626 70%, #070b14);
-  box-shadow:
-    inset 0 0 0 2px #c9d6ea,
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: rc-fade 300ms ease-out 200ms both;
-}
-
-.boss-intro-ronda .bi-portrait {
-  border-color: #c9d6ea;
-}
-
-.boss-intro-ronda .bi-kicker,
-.boss-intro-ronda .bi-title {
-  color: #9fc2ff;
-}
-
-.boss-intro-ronda .bi-name {
-  color: #f2f6ff;
-  text-shadow: 0 3px 0 #000;
-  animation: bi-blink-name 1400ms steps(1, end) 300ms both;
-}
-
-@keyframes bi-blink-name {
-  0%,
-  50% {
-    text-shadow:
-      0 0 10px #ff3b3b,
-      0 3px 0 #000;
-  }
-  25%,
-  75% {
-    text-shadow:
-      0 0 10px #3b7bff,
-      0 3px 0 #000;
-  }
-  100% {
-    text-shadow: 0 3px 0 #000;
-  }
-}
-
-/* a sirene: metade vermelha, metade azul, alternando */
-.bi-siren {
-  background:
-    linear-gradient(90deg, rgba(255, 40, 40, 0.35), transparent 45%),
-    linear-gradient(270deg, rgba(40, 110, 255, 0.35), transparent 45%);
-  animation: bi-siren 360ms steps(2, jump-none) 4 both;
-}
-
-@keyframes bi-siren {
-  from {
-    filter: hue-rotate(0deg);
-    opacity: 1;
-  }
-  to {
-    filter: hue-rotate(180deg);
-    opacity: 0.4;
-  }
-}
-
-/* o holofote varrendo de um lado para o outro */
-.bi-beam {
-  left: 50%;
-  bottom: -10%;
-  width: 140px;
-  height: 130%;
-  margin-left: -70px;
-  background: linear-gradient(0deg, rgba(255, 248, 210, 0.38), rgba(255, 248, 210, 0) 85%);
-  clip-path: polygon(46% 100%, 54% 100%, 100% 0, 0 0);
-  transform-origin: 50% 100%;
-  animation: bi-beam 1500ms ease-in-out 150ms both;
-}
-
-@keyframes bi-beam {
-  0% {
-    transform: rotate(-38deg);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  70% {
-    transform: rotate(30deg);
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(0);
-    opacity: 0;
-  }
-}
-
-/* --- versão 1.4: agiota (Dona Odete) --- */
-.boss-intro-agiota .bi-card {
-  border: 3px solid #1d0f1d;
-  background:
-    repeating-linear-gradient(180deg, transparent 0 15px, rgba(120, 60, 90, 0.18) 15px 16px),
-    linear-gradient(180deg, #2c172c, #1a0c1a 70%, #0e060e);
-  box-shadow:
-    inset 0 0 0 2px #b88aa8,
-    0 8px 0 rgba(0, 0, 0, 0.6);
-  animation: rc-fade 400ms ease-out 200ms both;
-}
-
-.boss-intro-agiota .bi-portrait {
-  border-color: #b88aa8;
-}
-
-.boss-intro-agiota .bi-kicker,
-.boss-intro-agiota .bi-title {
-  color: #e2b9d2;
-}
-
-/* o relógio da dívida: ponteiro batendo de segundo em segundo */
-.bi-clock {
-  left: 50%;
-  top: 44%;
-  width: 280px;
-  height: 280px;
-  margin: -140px 0 0 -140px;
-  border-radius: 50%;
-  background:
-    linear-gradient(0deg, transparent 49%, rgba(226, 185, 210, 0.55) 49% 51%, transparent 51%) 50% 0 / 4px 50% no-repeat,
-    repeating-conic-gradient(from -2deg, rgba(226, 185, 210, 0.45) 0 4deg, transparent 4deg 30deg),
-    radial-gradient(circle, rgba(40, 18, 40, 0.6) 0 66%, transparent 66%);
-  -webkit-mask: radial-gradient(circle, #000 0 70%, transparent 70%);
-  mask: radial-gradient(circle, #000 0 70%, transparent 70%);
-  animation:
-    rc-fade 300ms ease-out both,
-    bi-tick 1000ms steps(4, end) both;
-}
-
-@keyframes bi-tick {
-  from {
-    transform: rotate(-120deg);
-  }
-  to {
-    transform: rotate(0);
-  }
-}
-
-/* o carimbo vermelho desce torto no cartão */
-.bi-stamp {
+.bi2-plate-text {
   position: absolute;
   left: 50%;
-  top: 70%;
-  padding: 6px 10px;
-  font-size: 14px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 18px 10px;
+  font-size: 26px;
   letter-spacing: 0.12em;
-  color: #ff4d5e;
-  border: 3px solid #ff4d5e;
-  border-radius: 4px;
-  background: rgba(40, 0, 6, 0.25);
-  transform: translate(-50%, -50%) rotate(-14deg);
-  mix-blend-mode: screen;
-  opacity: 0;
-  animation: bi-stamp 300ms cubic-bezier(0.5, 0, 1, 0.5) 1150ms both;
-  pointer-events: none;
-}
-
-@keyframes bi-stamp {
-  0% {
-    transform: translate(-50%, -50%) rotate(-14deg) scale(2.6);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(-14deg) scale(1);
-    opacity: 0.9;
-  }
-}
-
-/* --- versão 1.4: contrabando (Valtinho Renegado) --- */
-.boss-intro-contrabando .bi-card {
-  border: 3px solid #26150a;
-  background: linear-gradient(180deg, rgba(56, 32, 15, 0.97), rgba(26, 14, 6, 0.98));
+  color: #f0c030;
+  background: #1a1206;
+  border: 4px solid #f0c030;
   box-shadow:
-    inset 0 0 0 2px #d8a05a,
-    0 8px 0 rgba(0, 0, 0, 0.6);
+    0 0 0 4px #1a1206,
+    0 0 0 8px #f0c030;
 }
 
-.boss-intro-contrabando .bi-portrait {
-  border-color: #d8a05a;
+.bi2-dust {
+  position: absolute;
+  width: 90px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(rgba(170, 150, 128, 0.85), transparent 70%);
 }
 
-.boss-intro-contrabando .bi-kicker,
-.boss-intro-contrabando .bi-title {
-  color: #f0c27a;
-}
-
-.boss-intro-contrabando .bi-name {
-  color: #ffe9c8;
-  text-shadow:
-    2px 0 0 #8a1f12,
-    0 3px 0 #000;
-}
-
-/* a porta de aço de enrolar: desce batendo, treme e sobe de novo */
-.bi-shutter {
+/* --- ouro (Comendador) --- */
+.bi2-goldspot {
+  position: absolute;
+  inset: 0;
   background:
-    repeating-linear-gradient(180deg, #8d949c 0 10px, #5d646b 10px 12px, #b4bcc4 12px 13px, #6f767d 13px 22px),
-    #6f767d;
-  box-shadow: inset 0 -6px 0 #2a2e33;
-  transform: translateY(-100%);
-  animation: bi-shutter 1500ms cubic-bezier(0.6, 0, 0.4, 1) 0ms both;
+    radial-gradient(ellipse 34% 56% at 50% 46%, rgba(255, 218, 130, 0.34), transparent 72%),
+    linear-gradient(180deg, rgba(255, 220, 140, 0.18), transparent 60%);
+  opacity: 0;
 }
 
-@keyframes bi-shutter {
-  0% {
-    transform: translateY(-100%);
-  }
-  26% {
-    transform: translateY(0);
-  }
-  32% {
-    transform: translateY(-2%);
-  }
-  36% {
-    transform: translateY(0);
-  }
-  60% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(-105%);
-  }
+.bi2-curtain {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52%;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 30%, transparent 80%, rgba(0, 0, 0, 0.4)),
+    repeating-linear-gradient(90deg, #3e060c 0, #6a0e1a 12px, #9a1828 20px, #6a0e1a 30px, #3e060c 42px);
+  box-shadow: inset 0 -12px 0 #d9a946;
+  will-change: transform;
 }
 
-/* "menos movimento": só o cartão, parado */
-.boss-intro.is-still .bi-half,
-.boss-intro.is-still .bi-slash,
-.boss-intro.is-still .bi-curtain,
-.boss-intro.is-still .bi-coins,
-.boss-intro.is-still .bi-sparks,
-.boss-intro.is-still .bi-stage::after,
-.boss-intro.is-still .bi-globe,
-.boss-intro.is-still .bi-tickets,
-.boss-intro.is-still .bi-fan,
-.boss-intro.is-still .bi-sequins,
-.boss-intro.is-still .bi-siren,
-.boss-intro.is-still .bi-beam,
-.boss-intro.is-still .bi-clock,
-.boss-intro.is-still .bi-shutter {
-  display: none;
+.bi2-curtain.is-left {
+  left: 0;
 }
 
-.boss-intro.is-still,
-.boss-intro.is-still * {
-  animation-duration: 1ms !important;
-  animation-delay: 0ms !important;
+.bi2-curtain.is-right {
+  right: 0;
 }
 
-.boss-intro.is-still {
-  animation: bi-out 300ms ease-in 1500ms forwards !important;
+.bi2-valance {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 17%;
+  background:
+    radial-gradient(circle at 50% 100%, transparent 18px, #6a0e1a 19px) 0 100% / 44px 100% repeat-x,
+    linear-gradient(#4a0810, #8a1422);
+  border-bottom: 5px solid #d9a946;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+
+.bi2-coin {
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  z-index: 2;
+}
+
+.bi2-coin b {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #f2b84b 45%, #a8741a 80%);
+  border: 2px solid #6a4410;
+  box-shadow: inset 0 0 0 3px rgba(255, 240, 160, 0.4);
+}
+
+/* --- rifa (Genésio) --- */
+.bi2-globe {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04) 46%, rgba(0, 0, 0, 0.2));
+  box-shadow:
+    0 0 0 4px #c9a64a,
+    0 0 30px rgba(123, 211, 106, 0.4);
+}
+
+.bi2-cage {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.bi2-cage i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 3px solid #c9a64a;
+  border-radius: 50%;
+}
+
+.bi2-cage i.is-ring {
+  left: 0;
+  right: 0;
+  top: 45%;
+  bottom: 45%;
+}
+
+.bi2-rball {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.bi2-globe-stand {
+  position: absolute;
+  bottom: -16%;
+  left: 30%;
+  width: 40%;
+  height: 16%;
+  background: linear-gradient(#8a6a2a, #4a3410);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+}
+
+.bi2-pick {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #1a1206;
+  background: radial-gradient(circle at 35% 30%, #fff6c0, #ffd24a 55%, #c89a20);
+  border: 3px solid #000;
+  box-shadow: 0 0 14px #ffd24a;
+}
+
+.bi2-ticket {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 20px;
+  background: #f4ecd2;
+  border: 2px dashed #c8261d;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.bi2-ticket b {
+  font-size: 7px;
+  font-weight: normal;
+  color: #c8261d;
+}
+
+/* --- chic (Dama Soró) --- */
+.bi2-pinkspot {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 40% 60% at 50% 50%, rgba(255, 122, 217, 0.3), transparent 72%);
+  opacity: 0;
+}
+
+.bi2-fan {
+  position: absolute;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+
+.bi2-fan i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform-origin: 50% 100%;
+  border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 9px),
+    linear-gradient(0deg, #5a1050 0%, #d0409a 38%, #ff8ae0 70%, #ffe6f8 100%);
+  box-shadow: inset 0 0 0 2px rgba(60, 0, 40, 0.35);
+}
+
+.bi2-sequin {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  box-shadow:
+    0 0 8px #ff7ad9,
+    0 0 2px #fff;
+  opacity: 0;
+}
+
+/* --- ronda (Sargento Brandão) --- */
+.bi2-siren {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.bi2-siren.is-red {
+  background: linear-gradient(90deg, rgba(255, 30, 30, 0.6), transparent 62%);
+}
+
+.bi2-siren.is-blue {
+  background: linear-gradient(270deg, rgba(40, 100, 255, 0.6), transparent 62%);
+}
+
+.bi2-beam {
+  position: absolute;
+  transform-origin: 50% 100%;
+  background: linear-gradient(0deg, rgba(255, 250, 220, 0.55), rgba(255, 250, 220, 0.04));
+  clip-path: polygon(47% 100%, 53% 100%, 100% 0, 0 0);
+  z-index: 1;
+}
+
+.bi2-reticle {
+  position: absolute;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px #ff3b30);
+  z-index: 2;
+}
+
+/* --- agiota (Dona Odete) --- */
+.bi2-clock {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(#f4ecd2 58%, #c8b890);
+  border: 8px solid #2a1a0a;
+  box-shadow:
+    0 0 0 4px #5fc48c,
+    0 20px 50px #000;
+}
+
+.bi2-tick {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  width: 5px;
+  height: 9%;
+  margin-left: -2.5px;
+  background: #1a120a;
+  transform-origin: 50% 511%;
+}
+
+.bi2-hand {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  transform-origin: 50% 100%;
+}
+
+.bi2-hand.is-min {
+  width: 6px;
+  height: 40%;
+  margin-left: -3px;
+  background: #1a120a;
+}
+
+.bi2-hand.is-hour {
+  width: 9px;
+  height: 26%;
+  margin-left: -4.5px;
+  background: #c8261d;
+}
+
+.bi2-clock-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px;
+  border-radius: 50%;
+  background: #2a1a0a;
+}
+
+.bi2-note {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 21px;
+  background: linear-gradient(#8adca8, #3a9a60);
+  border: 2px solid #1a4a2a;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.bi2-note b {
+  font-size: 9px;
+  font-weight: normal;
+  color: #0a2a14;
+}
+
+.bi2-stamp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  padding: 8px 12px 6px;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  color: #ff4a3a;
+  border: 5px double #ff4a3a;
+  background: rgba(30, 0, 0, 0.55);
+  text-shadow: 0 0 2px rgba(232, 57, 43, 0.6);
+  white-space: nowrap;
+}
+
+/* --- contrabando (Valtinho Renegado) --- */
+.bi2-shutter {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.35)),
+    repeating-linear-gradient(180deg, #5a5e62 0, #9aa0a6 5px, #7a8086 11px, #44484c 15px, #1e2022 17px);
+  border-bottom: 12px solid #2a2418;
+  box-shadow: 0 10px 24px #000;
+  will-change: transform;
+}
+
+.bi2-shutter-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 9px 14px 7px;
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  color: #f0a020;
+  background: #1a1206;
+  border: 3px solid #f0a020;
+}
+
+.bi2-beacon {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(255, 170, 30, 0.55) 0deg 34deg, transparent 34deg 180deg, rgba(255, 170, 30, 0.55) 180deg 214deg, transparent 214deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 20%, transparent 70%);
+}
+
+/* ---------- versão 2.44: o ritual do Dono da Noite (secretRitual.js) ---------- */
+.secret-scene.secret-ritual {
+  background: transparent;
+}
+
+.secret-ritual .secret-canvas {
+  opacity: 0;
+}
+
+.sr-layer {
+  z-index: 1;
+}
+
+.sr-dim,
+.sr-flash {
+  position: absolute;
+  inset: 0;
+}
+
+.sr-dim {
+  background: radial-gradient(ellipse 60% 62% at 50% 47%, rgba(36, 0, 6, 0.9), #000 76%);
+}
+
+.sr-flash {
+  background: radial-gradient(circle at 50% 47%, #fff 0%, #ff3020 42%, #500 100%);
+  opacity: 0;
+}
+
+.sr-core {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 70, 40, 0.6), rgba(200, 20, 20, 0.26) 36%, transparent 66%);
+}
+
+.sr-pulse,
+.sr-orbit,
+.sr-runes {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.sr-sigil {
+  position: absolute;
+  overflow: visible;
+}
+
+.sr-line,
+.sr-line-glow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sr-line {
+  stroke: #ff4a32;
+}
+
+.sr-line-glow {
+  stroke: rgba(255, 40, 30, 0.22);
+}
+
+.sr-rune {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+  fill: none;
+  stroke: #ff6a48;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px #ff2a1a);
+}
+
+.sr-talisman {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 0 4px #c86aff) drop-shadow(0 0 12px #ff2a3a);
+  will-change: transform;
+}
+
+.sr-talisman.is-trail {
+  filter: none;
+}
+
+.sr-spin {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.sr-slotglow {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(210, 110, 255, 0.95), rgba(255, 40, 60, 0.45) 40%, transparent 70%);
 }
 
 /* ---------- Patch 0.9.1: Caderno de Fiado (AccountStatsModal.jsx) ----------

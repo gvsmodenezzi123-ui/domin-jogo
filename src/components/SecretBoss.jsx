@@ -1,19 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { RELICS } from '../data/relics.js';
 import { SECRET_BOSS } from '../data/rivals.js';
 import { bossMusicOf } from '../data/campaign.js';
 import { sound } from '../engine/audioSynth.js';
 import { haptic } from '../engine/progress.js';
 import { HeartsBar } from './PixelHeart.jsx';
+import RelicIcon from './RelicIcon.jsx';
 import RivalAvatar from './RivalAvatar.jsx';
 import { prefersReducedMotion } from './motion.js';
 import { DARK_AT, EYES_AT, REVEAL_AT, STROBE_AT, createSecretRenderer } from './secretPixel.js';
+import { RITUAL_MS, buildRitual, ritualSources } from './secretRitual.js';
 
 /**
  * Fases da entrada (ms desde que a cena abre, Patch 0.8.2; desenho em pixel art desde o 1.1,
  * em secretPixel.js): flicker (a luz falha), dark (breu e o coração), strobe (o trovão e o
  * círculo de runas), eyes (os olhos dourados) e reveal (o Dono e a regra da mesa).
  */
-const ORDER = ['flicker', 'dark', 'strobe', 'eyes', 'reveal'];
+const ORDER = ['ritual', 'flicker', 'dark', 'strobe', 'eyes', 'reveal'];
 /** A trilha dele (Patch 0.9.0) entra junto com a revelação. */
 const DONO_TRACK = bossMusicOf(SECRET_BOSS);
 
@@ -25,13 +28,54 @@ const DONO_TRACK = bossMusicOf(SECRET_BOSS);
  * Dono da Noite com a regra da mesa. Tocar na tela durante a entrada pula para o fim.
  * Com "menos movimento": sem piscar, direto para a revelação, com o círculo parado.
  * SENTAR À MESA começa a partida (App → START_SECRET).
+ * Versão 2.44: antes de tudo, o ritual (secretRitual.js): os três Necróticos saem da hotbar,
+ * giram no meio da tela até o círculo se fechar e voltam; daí a entrada segue do breu.
  */
 export default function SecretBoss({ rival, onSit }) {
-  const [stage, setStage] = useState(() => (prefersReducedMotion() ? 'dark' : 'flicker'));
+  // os três talismãs que chamaram o Dono (sem eles na tela, ou com menos movimento, sem ritual)
+  const [ritual] = useState(() => (prefersReducedMotion() ? null : ritualSources()));
+  const off = ritual ? RITUAL_MS - DARK_AT : 0;
+  const [stage, setStage] = useState(() => (prefersReducedMotion() ? 'dark' : ritual ? 'ritual' : 'flicker'));
   const skipped = useRef(false);
+  const ritualAnims = useRef([]);
+  const ritualRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const layer = ritualRef.current;
+    if (!layer || !ritual) return undefined;
+    const r = buildRitual(layer, ritual, window.innerWidth, window.innerHeight);
+    ritualAnims.current = r.anims;
+    const hold = Boolean(globalThis.__HOLD_BOSS);
+    if (hold) {
+      r.anims.forEach((a) => a.pause());
+      globalThis.__ba = r.anims;
+    }
+    const timers = hold
+      ? []
+      : [
+          ...r.lift.map((ms) => setTimeout(() => sound.playRitualPull?.(), ms)),
+          setTimeout(() => sound.playRitualSpin?.((r.spin[1] - r.spin[0]) / 1000), r.spin[0]),
+          setTimeout(() => sound.playRuneIgnite(12, 0.07), 1900),
+          setTimeout(() => {
+            sound.playThunder();
+            haptic([90, 60, 180]);
+          }, r.spin[1]),
+          ...r.land.map((ms) => setTimeout(() => {
+            sound.playRitualLand?.();
+            haptic([14]);
+          }, ms)),
+        ];
+    return () => {
+      timers.forEach(clearTimeout);
+      r.anims.forEach((a) => a.cancel());
+      [...layer.children].forEach((n) => !n.classList.contains('sr-pulse') && !n.classList.contains('sr-talisman') && n.remove());
+      layer.querySelector('.sr-sigil')?.remove();
+    };
+  }, [ritual]);
 
   useEffect(() => {
     const quick = prefersReducedMotion();
+    if (globalThis.__HOLD_BOSS) return undefined;
     const go = (next) => setStage((now) => (ORDER.indexOf(next) > ORDER.indexOf(now) ? next : now));
     const at = (ms, fn) => setTimeout(() => !skipped.current && fn(), ms);
     if (quick) {
@@ -47,33 +91,35 @@ export default function SecretBoss({ rival, onSit }) {
       ];
       return () => timers.forEach(clearTimeout);
     }
-    sound.hushMusic(REVEAL_AT / 1000); // a trilha morre com a luz e volta com ele
-    sound.playLightsFlicker();
-    haptic([1, 139, 15, 445, 15, 485, 15, 305, 40]);
+    sound.hushMusic((REVEAL_AT + off) / 1000); // a trilha morre com a luz e volta com ele
+    if (!off) {
+      sound.playLightsFlicker();
+      haptic([1, 139, 15, 445, 15, 485, 15, 305, 40]);
+    }
     const timers = [
-      at(DARK_AT, () => {
+      at(DARK_AT + off, () => {
         go('dark');
         sound.playHeartbeat();
         haptic([60, 140, 50, 420, 60, 140, 50]);
       }),
-      at(STROBE_AT, () => {
+      at(STROBE_AT + off, () => {
         go('strobe');
         sound.playThunder();
         haptic([80, 60, 160]);
       }),
-      at(STROBE_AT + 700, () => sound.playRuneIgnite()),
-      at(EYES_AT, () => {
+      at(STROBE_AT + off + 700, () => sound.playRuneIgnite()),
+      at(EYES_AT + off, () => {
         go('eyes');
         sound.playDonoEyes();
         haptic([220]);
       }),
-      at(REVEAL_AT, () => {
+      at(REVEAL_AT + off, () => {
         go('reveal');
         sound.playTrack(DONO_TRACK);
       }),
     ];
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [off]);
 
   // o desenho: um canvas em pixel art que segue o relógio da cena (pular salta para a revelação)
   const clock = useRef({ start: 0, jump: null });
@@ -87,17 +133,18 @@ export default function SecretBoss({ rival, onSit }) {
       raf = requestAnimationFrame(loop);
       const now = performance.now();
       const { start, jump } = clock.current;
-      const ms = jump != null ? REVEAL_AT + (now - jump) : now - start;
+      const ms = jump != null ? REVEAL_AT + (now - jump) : Math.max(0, now - start - off);
       r.render(ms, { reduced });
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [off]);
 
   const intro = stage !== 'reveal';
   const skip = () => {
     if (!intro) return;
     skipped.current = true;
+    ritualAnims.current.forEach((a) => a.finish());
     clock.current.jump = performance.now();
     sound.hushMusic(0);
     sound.playTrack(DONO_TRACK);
@@ -112,6 +159,23 @@ export default function SecretBoss({ rival, onSit }) {
       aria-labelledby="secret-title"
       onClick={skip}
     >
+      {stage === 'ritual' && (
+        <div ref={ritualRef} className="sr-layer pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="sr-pulse">
+            <div className="sr-orbit">
+              {ritual.map((src, i) =>
+                [2, 1, 0].map((k) => (
+                  <span key={`${src.id}-${k}`} className={`sr-talisman ${k ? 'is-trail' : ''}`} data-i={i} data-k={k}>
+                    <span className="sr-spin">
+                      <RelicIcon relic={RELICS[src.id]} size={44} />
+                    </span>
+                  </span>
+                )),
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <canvas ref={canvasRef} aria-hidden="true" className="secret-canvas pointer-events-none absolute inset-0 h-full w-full" />
 
       {intro ? (

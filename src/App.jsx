@@ -1760,7 +1760,7 @@ export default function App() {
           ]}
         />
       )}
-      {roundFinished && finaleOver && state.phase !== 'roundOver' && !celebrate && !state.tutorial && (state.phase !== 'gameOver' || brokeKey === loseBreakKey) && (
+      {roundFinished && finaleOver && state.phase !== 'roundOver' && state.phase !== 'secretReveal' && !celebrate && !state.tutorial && (state.phase !== 'gameOver' || brokeKey === loseBreakKey) && (
         <RoundOverlay
           state={state}
           rival={rival}

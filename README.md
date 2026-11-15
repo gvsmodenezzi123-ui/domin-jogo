@@ -172,6 +172,20 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.44.0: as entradas dos chefes e o ritual do Dono
+
+- **Entradas novas para os 8 chefes** (`BossIntro.jsx` + `bossIntroStage.js`, toda em WAAPI):
+  primeiro o número de cada um (a navalha cortando o breu, a chapa de ferro despencando, a
+  cortina de veludo com chuva de moedas, o globo da rifa cuspindo a bolinha, os leques de
+  plumas, a sirene com o holofote na mira, o relógio da dívida e o carimbo COBRADO, a porta de
+  aço); depois as faixas de cinema, a faixa na cor do chefe com riscos de velocidade, o retrato
+  em silhueta que acende num clarão com tranco, o nome batendo letra por letra, os corações e a
+  fala escrita no balão. Som novo no clarão.
+- **O ritual do Dono da Noite** (`secretRitual.js`): os três Necróticos saem da hotbar e vêm
+  arrastados até o meio da tela, giram cada vez mais rápido enquanto o círculo, os triângulos e
+  as runas se desenham, travam num clarão vermelho com trovão e voltam arrastados para os nichos;
+  daí a entrada dele segue do breu (coração, runas, olhos). Com menos movimento, sem ritual.
+
 ### 2.43.1: na roda, a morte curta
 
 - Na roda online, a morte vai só até o último caco cair (uns 5 s) e logo fica o modo espectador:
