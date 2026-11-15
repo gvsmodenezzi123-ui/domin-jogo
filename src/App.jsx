@@ -1748,7 +1748,18 @@ export default function App() {
 
 
       {/* versão 2.34: perdeu a run: a tela racha e fica em preto e branco antes do fim de jogo */}
-      {loseBreakKey && <ScreenBreak key={loseBreakKey} onDone={() => setBrokeKey(loseBreakKey)} />}
+      {/* versão 2.43: a morte termina no letreiro "O BAR FECHOU" com os botões (a lousa da run fica
+          a um toque, em VER A LOUSA) */}
+      {loseBreakKey && brokeKey !== loseBreakKey && (
+        <ScreenBreak
+          key={loseBreakKey}
+          actions={[
+            { label: 'TENTE NOVAMENTE', tone: 'retry', onClick: restartRun },
+            { label: 'VOLTAR', tone: 'back', onClick: backToMenu },
+            { label: 'VER A LOUSA', tone: 'more', onClick: () => setBrokeKey(loseBreakKey) },
+          ]}
+        />
+      )}
       {roundFinished && finaleOver && state.phase !== 'roundOver' && !celebrate && !state.tutorial && (state.phase !== 'gameOver' || brokeKey === loseBreakKey) && (
         <RoundOverlay
           state={state}

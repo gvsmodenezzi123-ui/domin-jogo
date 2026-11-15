@@ -1953,6 +1953,65 @@ export class SoundEngine {
    * Versão 2.34: a tela partindo ao perder: o estalo do vidro rachando (agudo e seco), o baque
    * grave do corpo e uns cacos tilintando depois.
    */
+  /**
+   * Versão 2.43: a morte (ScreenBreak.jsx), no tempo da cena: o golpe surdo, o coração batendo
+   * duas vezes cada vez mais devagar, o vidro estilhaçando e os cacos tilintando ao cair, o
+   * silêncio e a pedra balançando e tombando na mesa. (Poucas vozes de cada vez: o motor toca no
+   * máximo seis, e as mais velhas seriam cortadas.)
+   */
+  playDeath() {
+    if (this.isMuted || !this.ready()) return;
+    // os três golpes: um baque grave e o vidro trincando (o terceiro mais forte)
+    for (const [t, k] of [
+      [0, 1],
+      [1.1, 0.75],
+      [2.1, 1],
+    ]) {
+      this.tone({ type: 'sine', freq: 78, freqEnd: 32, peak: 0.55 * k, dur: 0.6, attack: 0.004, delay: t });
+      this.noise({ freq: 420, q: 0.8, peak: 0.3 * k, attack: 0.002, dur: 0.16, delay: t });
+      this.noise({ freq: 5200, filter: 'highpass', q: 0.7, peak: 0.14 * k, attack: 0.001, dur: 0.06, delay: t + 0.03 });
+      // o estalar das trincas correndo
+      for (let i = 0; i < 3; i += 1) this.tone({ freq: 2400 + ((i * 1733 + t * 997) % 2600), peak: 0.04 * k, dur: 0.045, attack: 0.001, delay: t + 0.12 + i * 0.13 });
+    }
+    // o coração, duas vezes, cada vez mais devagar e mais longe
+    for (const [t, k] of [
+      [0.5, 1],
+      [1.65, 0.6],
+    ]) {
+      // (grave mas com corpo em 90–120 Hz: senão some no alto-falante do celular)
+      this.tone({ type: 'triangle', freq: 120, freqEnd: 52, peak: 0.55 * k, dur: 0.17, attack: 0.004, delay: t });
+      this.tone({ type: 'triangle', freq: 100, freqEnd: 46, peak: 0.4 * k, dur: 0.19, attack: 0.004, delay: t + 0.24 });
+    }
+    // o vidro se partindo e os cacos caindo (um tilintar para cada um, espalhado)
+    this.noise({ freq: 3600, filter: 'highpass', q: 0.6, peak: 0.32, attack: 0.002, dur: 0.4, delay: 3.0 });
+    this.noise({ freq: 1400, q: 0.9, peak: 0.18, attack: 0.002, dur: 0.24, delay: 3.02 });
+    for (let i = 0; i < 14; i += 1) {
+      const t = 3.15 + i * 0.15 + ((i * 0.618) % 1) * 0.08;
+      const f = 3000 + ((i * 2971) % 3800);
+      this.tone({ freq: f, peak: 0.065 - i * 0.003, dur: 0.08 + ((i * 37) % 5) * 0.015, attack: 0.001, delay: t });
+    }
+    // a lâmpada: acende três vezes (o estalo e o zumbido elétrico), apaga de uma vez
+    for (const [on, off] of [
+      [5.2, 6.3],
+      [6.75, 7.85],
+      [8.3, 9.65],
+    ]) {
+      this.noise({ freq: 2600, q: 1.4, peak: 0.12, attack: 0.001, dur: 0.03, delay: on });
+      this.noise({ freq: 2600, q: 1.4, peak: 0.08, attack: 0.001, dur: 0.025, delay: on + 0.13 });
+      this.tone({ type: 'sawtooth', freq: 100, peak: 0.018, dur: off - on - 0.05, attack: 0.05, delay: on + 0.02 });
+      this.noise({ freq: 1800, q: 1.2, peak: 0.1, attack: 0.001, dur: 0.03, delay: off });
+    }
+    // a pedra: dois toques de madeira no balanço e o tombo
+    this.tone({ type: 'triangle', freq: 420, freqEnd: 300, peak: 0.08, dur: 0.05, attack: 0.002, delay: 8.81 });
+    this.tone({ type: 'triangle', freq: 400, freqEnd: 280, peak: 0.07, dur: 0.05, attack: 0.002, delay: 8.91 });
+    this.tone({ type: 'triangle', freq: 210, freqEnd: 90, peak: 0.42, dur: 0.22, attack: 0.002, delay: 9.35 });
+    this.noise({ freq: 700, q: 0.8, peak: 0.25, attack: 0.002, dur: 0.12, delay: 9.35 });
+    this.tone({ type: 'triangle', freq: 260, freqEnd: 140, peak: 0.12, dur: 0.1, attack: 0.002, delay: 9.44 });
+    // o letreiro "O BAR FECHOU" acendendo: os estalos do LED falhando e o zumbido elétrico
+    for (const t of [10.05, 10.19, 10.35]) this.noise({ freq: 3200, q: 1.5, peak: 0.1, attack: 0.001, dur: 0.025, delay: t });
+    this.tone({ type: 'sawtooth', freq: 120, peak: 0.022, dur: 1.1, attack: 0.08, delay: 10.35 });
+  }
+
   playScreenBreak() {
     if (this.isMuted || !this.ready()) return;
     this.noise({ freq: 4200, filter: 'highpass', q: 0.7, peak: 0.42, dur: 0.05 });

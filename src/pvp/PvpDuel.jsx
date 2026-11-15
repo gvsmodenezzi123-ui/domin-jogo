@@ -535,7 +535,15 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
         </p>
       )}
       {/* versão 2.34: perdeu o duelo: a tela racha e fica em preto e branco antes do resultado */}
-      {loseBreakKey && <ScreenBreak key={loseBreakKey} onDone={() => setBrokeKey(loseBreakKey)} />}
+      {loseBreakKey && brokeKey !== loseBreakKey && (
+        <ScreenBreak
+          key={loseBreakKey}
+          actions={[
+            { label: 'VOLTAR', tone: 'retry', onClick: onFinish },
+            { label: 'VER O PLACAR', tone: 'more', onClick: () => setBrokeKey(loseBreakKey) },
+          ]}
+        />
+      )}
       {duel.result && finaleOver && lastRound && (!loseBreakKey || brokeKey === loseBreakKey) && (
         <PvpRoundResult view={view} result={duel.result} nextSent={duel.nextSent} opp={opp} onNextRound={onNextRound} onFinish={onFinish} />
       )}

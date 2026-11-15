@@ -126,24 +126,25 @@ function spawnNeon(layer, cfg, box, at) {
   const [anchor, x, y, w, h, color] = cfg.neon;
   const left = at(anchor, x);
   const dark = make(layer, 'amb-outage', { left: `${left - 8 * u}px`, top: `${(y - 6) * u}px`, width: `${(w + 16) * u}px`, height: `${(h + 12) * u}px` });
-  // falha, falha, apaga de vez, volta piscando
+  // falha, falha, apaga de vez, volta piscando (versão 2.43: o degrau em cada quadro-chave; antes
+  // estava no `easing` da animação inteira e segurava o luminoso aceso até o fim: nunca apagava)
   play(
     dark,
     [
-      { opacity: 0, offset: 0 },
-      { opacity: 0.8, offset: 0.04 },
-      { opacity: 0, offset: 0.08 },
-      { opacity: 0.85, offset: 0.13 },
-      { opacity: 0.1, offset: 0.17 },
-      { opacity: 0.9, offset: 0.22 },
-      { opacity: 0.9, offset: 0.72 },
-      { opacity: 0.2, offset: 0.76 },
-      { opacity: 0.85, offset: 0.8 },
-      { opacity: 0, offset: 0.86 },
-      { opacity: 0.5, offset: 0.9 },
-      { opacity: 0, offset: 1 },
+      { opacity: 0, offset: 0, easing: 'steps(1, end)' },
+      { opacity: 0.8, offset: 0.04, easing: 'steps(1, end)' },
+      { opacity: 0, offset: 0.08, easing: 'steps(1, end)' },
+      { opacity: 0.85, offset: 0.13, easing: 'steps(1, end)' },
+      { opacity: 0.1, offset: 0.17, easing: 'steps(1, end)' },
+      { opacity: 0.9, offset: 0.22, easing: 'steps(1, end)' },
+      { opacity: 0.9, offset: 0.72, easing: 'steps(1, end)' },
+      { opacity: 0.2, offset: 0.76, easing: 'steps(1, end)' },
+      { opacity: 0.85, offset: 0.8, easing: 'steps(1, end)' },
+      { opacity: 0, offset: 0.86, easing: 'steps(1, end)' },
+      { opacity: 0.5, offset: 0.9, easing: 'steps(1, end)' },
+      { opacity: 0, offset: 1, easing: 'steps(1, end)' },
     ],
-    { duration: 3200, easing: 'steps(1, end)' },
+    { duration: 3200 },
   );
   // a luz da sala (o brilho do luminoso e das lâmpadas fica numa camada de luz por cima de tudo:
   // FxLayer): ela falha junto, mas só até a meia-luz, para a mesa continuar legível
@@ -151,20 +152,20 @@ function spawnNeon(layer, cfg, box, at) {
   if (glow && typeof glow.animate === 'function') {
     glow.animate(
       [
-        { opacity: 1, offset: 0 },
-        { opacity: 0.5, offset: 0.04 },
-        { opacity: 1, offset: 0.08 },
-        { opacity: 0.45, offset: 0.13 },
-        { opacity: 0.9, offset: 0.17 },
-        { opacity: 0.42, offset: 0.22 },
-        { opacity: 0.42, offset: 0.72 },
-        { opacity: 0.85, offset: 0.76 },
-        { opacity: 0.45, offset: 0.8 },
-        { opacity: 1, offset: 0.86 },
-        { opacity: 0.7, offset: 0.9 },
-        { opacity: 1, offset: 1 },
+        { opacity: 1, offset: 0, easing: 'steps(1, end)' },
+        { opacity: 0.5, offset: 0.04, easing: 'steps(1, end)' },
+        { opacity: 1, offset: 0.08, easing: 'steps(1, end)' },
+        { opacity: 0.45, offset: 0.13, easing: 'steps(1, end)' },
+        { opacity: 0.9, offset: 0.17, easing: 'steps(1, end)' },
+        { opacity: 0.42, offset: 0.22, easing: 'steps(1, end)' },
+        { opacity: 0.42, offset: 0.72, easing: 'steps(1, end)' },
+        { opacity: 0.85, offset: 0.76, easing: 'steps(1, end)' },
+        { opacity: 0.45, offset: 0.8, easing: 'steps(1, end)' },
+        { opacity: 1, offset: 0.86, easing: 'steps(1, end)' },
+        { opacity: 0.7, offset: 0.9, easing: 'steps(1, end)' },
+        { opacity: 1, offset: 1, easing: 'steps(1, end)' },
       ],
-      { duration: 3200, easing: 'steps(1, end)' },
+      { duration: 3200 },
     );
   }
   // as faíscas: saem de um canto do luminoso quando ele apaga, caem e somem

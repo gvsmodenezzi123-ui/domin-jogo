@@ -172,6 +172,28 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.43.0: a morte nova, "O BAR FECHOU"
+
+- **A morte virou uma cena de 10 s** (`ScreenBreak.jsx`, toda em WAAPI):
+  - **As trincas** (0–3 s): três golpes, cada um com clarão, tranco e a tela chegando mais perto;
+    a cada um, uma leva de trincas corre do impacto para fora (com galhos finos e a teia de arcos
+    em volta do impacto), exatamente onde o vidro vai se partir. O coração bate duas vezes e a
+    cor vai embora; no fim as trincas brilham e abrem um fio.
+  - **O vidro** (3–5,5 s): a tela se parte em uns 17 cacos (células de Voronoi em volta do
+    impacto, com a imagem da tela em cada um), com quina clara, espessura, lascas na beirada e
+    riscos, que caem girando em 3D, os de perto primeiro.
+  - **A última pedra** (5–9,7 s): a luz acende três vezes, piscando como lâmpada velha, e em cada
+    uma a pedra de dominó em pé está mais longe; na terceira a lâmpada é vermelha (a pedra no tom
+    dela), a pedra balança, tomba, levanta poeira e a luz morre.
+  - **O fim**: no escuro, o letreiro de LED vermelho "O BAR FECHOU" acende falhando e sobem os
+    botões. Na campanha: TENTE NOVAMENTE, VOLTAR e VER A LOUSA (a conta da run de antes); no
+    duelo 1x1: VOLTAR e VER O PLACAR; na roda online, sem botões, e depois fica o modo espectador.
+  - Cada caco leva só o pedaço da tela que aparece nele (o resto sai da cópia): uns 7 mil nós no
+    total, em vez de 55 mil.
+  - Som próprio, no tempo da cena (os golpes, o coração, o vidro, a lâmpada, a pedra, o LED).
+- **Luminoso das salas fechadas**: nunca chegava a apagar (o degrau da animação segurava tudo até
+  o fim). Agora falha, apaga e solta faíscas como previsto na 2.40.
+
 ### 2.42.0: a roda continua sem o dono
 
 - **A roda online não acaba quando o anfitrião sai** (`table/tableRoaming.js`). O anfitrião
