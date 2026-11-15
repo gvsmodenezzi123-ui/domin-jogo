@@ -28696,6 +28696,9 @@ html[data-topview] .emote-pick {
 .death-scene.is-fade {
   animation: death-fade 700ms ease 11400ms forwards;
 }
+.death-scene.is-short.is-fade {
+  animation-delay: 5300ms;
+}
 @keyframes death-fade {
   to {
     opacity: 0;

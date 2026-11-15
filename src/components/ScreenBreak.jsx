@@ -19,6 +19,8 @@ import { prefersReducedMotion } from './motion.js';
  *  4. Aí entra o fim de jogo (ou, com `fade`, o escuro some e fica o modo espectador).
  */
 export const BREAK_MS = 11400;
+/** Versão 2.43.1: a versão curta (a roda online): acaba quando o último caco cai. */
+export const SHORT_MS = 5300;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -304,7 +306,7 @@ function inset(poly, cx, cy, b) {
 const pts = (poly) => poly.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
 
 /** Monta e anima a cena inteira dentro de `host`. Devolve as animações (para cancelar). */
-function stage(host, root, sizeW, sizeH) {
+function stage(host, root, sizeW, sizeH, short = false) {
   const W = sizeW;
   const H = sizeH;
   const D = Math.hypot(W, H);
@@ -353,14 +355,14 @@ function stage(host, root, sizeW, sizeH) {
     );
   }
 
-  // --- as três luzes e a pedra cada vez mais longe ------------------------------------------
+  // --- as três luzes e a pedra cada vez mais longe (não na versão curta) ---------------------
   const tall0 = Math.round(Math.min(H * 0.26, W * 0.16));
   const stations = [
     { k: 1, floor: H * 0.7 },
     { k: 0.6, floor: H * 0.6 },
     { k: 0.38, floor: H * 0.535 },
   ];
-  stations.forEach(({ k, floor }, n) => {
+  (short ? [] : stations).forEach(({ k, floor }, n) => {
     const [on, off] = T.lamps[n];
     const last = n === stations.length - 1;
     const tall = Math.round(tall0 * k);
@@ -720,7 +722,15 @@ function stage(host, root, sizeW, sizeH) {
     ]),
     { duration: BREAK_MS },
   );
-  // --- o fim: o letreiro de LED vermelho e os botões ----------------------------------------
+  // --- o fim: o letreiro de LED vermelho e os botões (não na versão curta) -------------------
+  if (!short) endSign(host, A, at, W, H);
+  const vignette = el('div', 'death-vignette', host);
+  A(vignette, at([[0, { opacity: 0 }], [600, { opacity: 0.7 }], [T.fall, { opacity: 1 }], [BREAK_MS, { opacity: 1 }]]), { duration: BREAK_MS, easing: 'ease-out' });
+  return anims;
+}
+
+/** O letreiro "O BAR FECHOU" acendendo no escuro (e a altura dos botões logo abaixo dele). */
+function endSign(host, A, at, W, H) {
   const end = el('div', 'death-end', host);
   const signW = Math.min(W * 0.7, H * 1.5);
   const sign = el('div', 'death-sign', end);
@@ -733,10 +743,6 @@ function stage(host, root, sizeW, sizeH) {
   A(glow, at([...signOn, [BREAK_MS, { opacity: 1 }]], true), { duration: BREAK_MS });
   // (os botões são do React, em cima da cena: aqui só a altura deles, logo abaixo do letreiro)
   host.parentElement?.style.setProperty('--death-actions-top', `${H * 0.3 + signH / 2 + Math.max(24, H * 0.1)}px`);
-
-  const vignette = el('div', 'death-vignette', host);
-  A(vignette, at([[0, { opacity: 0 }], [600, { opacity: 0.7 }], [T.fall, { opacity: 1 }], [BREAK_MS, { opacity: 1 }]]), { duration: BREAK_MS, easing: 'ease-out' });
-  return anims;
 }
 
 /**
@@ -744,9 +750,11 @@ function stage(host, root, sizeW, sizeH) {
  * cena fica no letreiro esperando a escolha. Sem eles (a roda online), `onDone` vem no fim e, com
  * `fade`, o escuro some e fica o modo espectador.
  */
-function ScreenBreak({ onDone, fade = false, actions = null }) {
+function ScreenBreak({ onDone, fade = false, actions = null, short = false }) {
   const ref = useRef(null);
   const done = useRef(onDone);
+  // (o `short` de cada morte é fixo: a `key` troca a cada uma)
+  const isShort = useRef(short);
   useEffect(() => {
     done.current = onDone;
   }, [onDone]);
@@ -755,22 +763,22 @@ function ScreenBreak({ onDone, fade = false, actions = null }) {
     const root = document.getElementById('root');
     if (!host || !root) return undefined;
     const box = host.getBoundingClientRect();
-    const anims = prefersReducedMotion() ? [] : stage(host, root, Math.max(1, box.width), Math.max(1, box.height));
+    const anims = prefersReducedMotion() ? [] : stage(host, root, Math.max(1, box.width), Math.max(1, box.height), isShort.current);
     return () => {
       for (const a of anims) a.cancel();
       host.replaceChildren();
     };
   }, []);
   useEffect(() => {
-    sound.playDeath?.();
+    sound.playDeath?.(isShort.current);
     // (para conferir quadro a quadro: `window.__HOLD_DEATH = true` segura o fim)
     if (globalThis.__HOLD_DEATH) return undefined;
-    const id = setTimeout(() => done.current?.(), prefersReducedMotion() ? 900 : BREAK_MS);
+    const id = setTimeout(() => done.current?.(), prefersReducedMotion() ? 900 : isShort.current ? SHORT_MS : BREAK_MS);
     return () => clearTimeout(id);
   }, []);
   const still = prefersReducedMotion();
   return (
-    <div className={`screen-break death-scene ${fade ? 'is-fade' : ''} ${actions ? 'has-actions' : ''}`} aria-hidden={actions ? undefined : 'true'}>
+    <div className={`screen-break death-scene ${fade ? 'is-fade' : ''} ${short ? 'is-short' : ''} ${actions ? 'has-actions' : ''}`} aria-hidden={actions ? undefined : 'true'}>
       <div ref={ref} className="death-stage" />
       {actions?.length > 0 && (
         <div className="death-actions" role="group" aria-label="O bar fechou" style={{ animationDelay: still ? '0ms' : `${T.buttons}ms` }}>

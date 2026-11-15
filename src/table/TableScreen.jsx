@@ -575,7 +575,9 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       {/* versão 2.33: os emotes (o botão ao lado da lupa; o seu aparece em cima da sua vida) */}
       {landscape && onEmote && !spectating && <EmoteBar onEmote={onEmote} />}
       {landscape && <MyGesture emote={emotes?.[me] ?? null} />}
-      {breakKey && <ScreenBreak key={breakKey} fade={view.phase !== 'matchOver'} onDone={() => setBrokeKey(breakKey)} />}
+      {/* versão 2.43.1: na roda, só até o último caco cair (a pedra e o letreiro ficariam longos para
+          quem vai assistir) */}
+      {breakKey && <ScreenBreak key={breakKey} short fade={view.phase !== 'matchOver'} onDone={() => setBrokeKey(breakKey)} />}
       {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );

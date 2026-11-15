@@ -1959,7 +1959,7 @@ export class SoundEngine {
    * silêncio e a pedra balançando e tombando na mesa. (Poucas vozes de cada vez: o motor toca no
    * máximo seis, e as mais velhas seriam cortadas.)
    */
-  playDeath() {
+  playDeath(short = false) {
     if (this.isMuted || !this.ready()) return;
     // os três golpes: um baque grave e o vidro trincando (o terceiro mais forte)
     for (const [t, k] of [
@@ -1990,6 +1990,8 @@ export class SoundEngine {
       const f = 3000 + ((i * 2971) % 3800);
       this.tone({ freq: f, peak: 0.065 - i * 0.003, dur: 0.08 + ((i * 37) % 5) * 0.015, attack: 0.001, delay: t });
     }
+    // (a versão curta, da roda online, acaba nos cacos)
+    if (short) return;
     // a lâmpada: acende três vezes (o estalo e o zumbido elétrico), apaga de uma vez
     for (const [on, off] of [
       [5.2, 6.3],

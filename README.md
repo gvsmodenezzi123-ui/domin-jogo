@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.43.1: na roda, a morte curta
+
+- Na roda online, a morte vai só até o último caco cair (uns 5 s) e logo fica o modo espectador:
+  sem as três luzes, a pedra e o letreiro, que ficavam longos para quem vai assistir.
+
 ### 2.43.0: a morte nova, "O BAR FECHOU"
 
 - **A morte virou uma cena de 10 s** (`ScreenBreak.jsx`, toda em WAAPI):
