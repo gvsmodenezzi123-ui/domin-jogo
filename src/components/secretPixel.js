@@ -270,7 +270,7 @@ export function createSecretRenderer(canvas) {
     }
   }
 
-  function render(ms, { reduced = false } = {}) {
+  function render(ms, { reduced = false, circle: withCircle = true } = {}) {
     fit();
     const cx = W / 2;
     const cy = Math.round(H / 2);
@@ -316,7 +316,7 @@ export function createSecretRenderer(canvas) {
       const br = 0.55 + 0.45 * Math.sin(((ms - EYES_AT) / 1600) * Math.PI * 2 - Math.PI / 2) ** 2;
       radial(cx, cy, AW * 0.55 * (0.8 + br * 0.3), AW * 0.55 * (0.8 + br * 0.3), [RED[4], RED[5]], 0, BLACK);
       drift(ms, 1);
-      circle(cx, cy, AW * 0.86, rot, Infinity, { color: RUNE_HOT });
+      if (withCircle) circle(cx, cy, AW * 0.86, rot, Infinity, { color: RUNE_HOT });
       eyes(cx, cy, eyeOpen(ms - EYES_AT));
     } else {
       // a revelação: o círculo maior e apagadinho girando atrás do cartão
@@ -324,7 +324,7 @@ export function createSecretRenderer(canvas) {
       const br = reduced ? 0.7 : 0.55 + 0.45 * Math.sin(((ms - REVEAL_AT) / 2800) * Math.PI * 2) ** 2;
       radial(cx, H * 0.38, W * 0.8, H * 0.6 * (0.85 + br * 0.15), [RED[3], RED[4], RED[5]], 0, INK);
       if (!reduced) drift(ms, 1);
-      circle(cx, cy, AW * (0.86 + 0.26 * k), rot, Infinity, { color: k < 0.5 ? RUNE_DIM : RED[2] });
+      if (withCircle) circle(cx, cy, AW * (0.86 + 0.26 * k), rot, Infinity, { color: k < 0.5 ? RUNE_DIM : RED[2] });
     }
     g.putImageData(img, 0, 0);
   }

@@ -172,6 +172,11 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.44.1: um ritual só
+
+- Depois do ritual dos Necróticos, a entrada do Dono não desenha mais o círculo antigo (o trovão
+  com as runas no chão): do breu com o coração vai direto aos olhos e à revelação.
+
 ### 2.44.0: as entradas dos chefes e o ritual do Dono
 
 - **Entradas novas para os 8 chefes** (`BossIntro.jsx` + `bossIntroStage.js`, toda em WAAPI):

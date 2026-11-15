@@ -35,6 +35,8 @@ export default function SecretBoss({ rival, onSit }) {
   // os três talismãs que chamaram o Dono (sem eles na tela, ou com menos movimento, sem ritual)
   const [ritual] = useState(() => (prefersReducedMotion() ? null : ritualSources()));
   const off = ritual ? RITUAL_MS - DARK_AT : 0;
+  // versão 2.44.1: com o ritual, o círculo antigo (trovão e runas no chão) sai: do breu direto aos olhos
+  const cut = ritual ? EYES_AT - STROBE_AT : 0;
   const [stage, setStage] = useState(() => (prefersReducedMotion() ? 'dark' : ritual ? 'ritual' : 'flicker'));
   const skipped = useRef(false);
   const ritualAnims = useRef([]);
@@ -91,7 +93,7 @@ export default function SecretBoss({ rival, onSit }) {
       ];
       return () => timers.forEach(clearTimeout);
     }
-    sound.hushMusic((REVEAL_AT + off) / 1000); // a trilha morre com a luz e volta com ele
+    sound.hushMusic((REVEAL_AT + off - cut) / 1000); // a trilha morre com a luz e volta com ele
     if (!off) {
       sound.playLightsFlicker();
       haptic([1, 139, 15, 445, 15, 485, 15, 305, 40]);
@@ -102,24 +104,28 @@ export default function SecretBoss({ rival, onSit }) {
         sound.playHeartbeat();
         haptic([60, 140, 50, 420, 60, 140, 50]);
       }),
-      at(STROBE_AT + off, () => {
-        go('strobe');
-        sound.playThunder();
-        haptic([80, 60, 160]);
-      }),
-      at(STROBE_AT + off + 700, () => sound.playRuneIgnite()),
-      at(EYES_AT + off, () => {
+      ...(cut
+        ? []
+        : [
+            at(STROBE_AT, () => {
+              go('strobe');
+              sound.playThunder();
+              haptic([80, 60, 160]);
+            }),
+            at(STROBE_AT + 700, () => sound.playRuneIgnite()),
+          ]),
+      at(EYES_AT + off - cut, () => {
         go('eyes');
         sound.playDonoEyes();
         haptic([220]);
       }),
-      at(REVEAL_AT + off, () => {
+      at(REVEAL_AT + off - cut, () => {
         go('reveal');
         sound.playTrack(DONO_TRACK);
       }),
     ];
     return () => timers.forEach(clearTimeout);
-  }, [off]);
+  }, [off, cut]);
 
   // o desenho: um canvas em pixel art que segue o relógio da cena (pular salta para a revelação)
   const clock = useRef({ start: 0, jump: null });
@@ -133,12 +139,13 @@ export default function SecretBoss({ rival, onSit }) {
       raf = requestAnimationFrame(loop);
       const now = performance.now();
       const { start, jump } = clock.current;
-      const ms = jump != null ? REVEAL_AT + (now - jump) : Math.max(0, now - start - off);
-      r.render(ms, { reduced });
+      const t = Math.max(0, now - start - off);
+      const ms = jump != null ? REVEAL_AT + (now - jump) : t >= STROBE_AT ? t + cut : t;
+      r.render(ms, { reduced, circle: !cut });
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, [off]);
+  }, [off, cut]);
 
   const intro = stage !== 'reveal';
   const skip = () => {
