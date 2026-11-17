@@ -27383,6 +27383,8 @@ html[data-topview] .emote-pick {
 .screen-shard-copy *::after {
   animation: none !important;
   transition: none !important;
+  /* versão 2.44.2: nada da cópia pede camada própria na placa de vídeo (eram 17 cópias da tela) */
+  will-change: auto !important;
 }
 /* preto e branco: a cor some (mistura de saturação com cinza) e escurece um pouco */
 .screen-shard-gray,
@@ -28857,4 +28859,32 @@ html[data-topview] .emote-pick {
 .death-btn.is-back {
   color: #f4ecd2;
   background: linear-gradient(180deg, #4a2a1a, #2e1a10);
+}
+
+/* ---------- versão 2.44.2: a morte no online é só um escurecer e clarear (DeathFade.jsx) ---------- */
+.death-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: #000;
+  pointer-events: none;
+  opacity: 0;
+  animation:
+    death-fade-in var(--df-in) ease-in forwards,
+    death-fade-out var(--df-out) ease-out calc(var(--df-in) + var(--df-hold)) forwards;
+}
+
+@keyframes death-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes death-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }

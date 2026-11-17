@@ -59,15 +59,21 @@ function clipHalf(poly, a, b) {
 }
 
 /** Os cacos: as células de Voronoi de sementes em anéis em volta do impacto (em px da tela). */
-function shardsOf(W, H, impact) {
+function shardsOf(W, H, impact, light = false) {
   const r = rngOf(4307);
   const D = Math.hypot(W, H);
   const seeds = [];
-  const rings = [
-    [0.07, 4],
-    [0.2, 6],
-    [0.42, 7],
-  ];
+  // versão 2.44.2: na roda (a versão curta), menos cacos: cada caco é uma cópia da tela inteira
+  const rings = light
+    ? [
+        [0.09, 3],
+        [0.3, 6],
+      ]
+    : [
+        [0.07, 4],
+        [0.2, 6],
+        [0.42, 7],
+      ];
   rings.forEach(([rad, n], k) => {
     const off = r() * Math.PI * 2;
     for (let i = 0; i < n; i += 1) {
@@ -149,10 +155,39 @@ function freezeStates(root, overlay) {
     const path = pathOf(el, root);
     if (!path) continue;
     const cs = getComputedStyle(el);
-    out.push({ path, style: FROZEN.map((p) => [p, cs.getPropertyValue(p)]).filter(([, v]) => v) });
+    out.push({ path, style: FROZEN.map((p) => [p, p === 'transform' ? (flat2d(cs.transform) ?? cs.transform) : cs.getPropertyValue(p)]).filter(([, v]) => v) });
+  }
+  // versão 2.44.2: o que só tem um "3D de enfeite" (translateZ(0), will-change) vira 2D na cópia:
+  // cada um desses virava uma camada na placa de vídeo em cada caco (e puxava as vizinhas junto)
+  for (const el of root.querySelectorAll('*')) {
+    if (seen.has(el) || overlay.contains(el)) continue;
+    const cs = getComputedStyle(el);
+    const flat = flat2d(cs.transform);
+    const hidden = cs.backfaceVisibility === 'hidden';
+    if (!flat && !hidden) continue;
+    const path = pathOf(el, root);
+    if (!path) continue;
+    const style = [];
+    if (flat) style.push(['transform', flat]);
+    if (hidden) style.push(['backface-visibility', 'visible']);
+    out.push({ path, style });
   }
   return out;
 }
+
+/** Um matrix3d que na verdade é 2D (sem giro em X/Y, sem profundidade) → o matrix 2D igual. */
+function flat2d(t) {
+  // (o navegador já devolve "matrix(...)" para um translateZ(0): fixar esse valor na cópia tira o 3D)
+  if (t?.startsWith('matrix(')) return t;
+  if (!t || !t.startsWith('matrix3d(')) return null;
+  const m = t.slice(9, -1).split(',').map(Number);
+  if (m.length !== 16 || m.some((v) => !Number.isFinite(v))) return null;
+  const z = [m[2], m[3], m[6], m[7], m[8], m[9], m[11], m[14]];
+  if (z.some((v) => Math.abs(v) > 1e-6) || Math.abs(m[10] - 1) > 1e-6 || Math.abs(m[15] - 1) > 1e-6) return null;
+  return `matrix(${m[0]}, ${m[1]}, ${m[4]}, ${m[5]}, ${m[12]}, ${m[13]})`;
+}
+
+const CANVAS_LOOK = ['display', 'position', 'top', 'left', 'right', 'bottom', 'width', 'height', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'transform', 'transform-origin', 'image-rendering', 'opacity', 'filter', 'z-index', 'mix-blend-mode', 'flex', 'vertical-align', 'max-width', 'max-height', 'min-width', 'min-height', 'box-sizing', 'border', 'border-radius', 'background', 'clip-path', 'visibility'];
 
 /** Uma cópia parada da tela agora (o DOM do #root, com o desenho de cada canvas copiado). */
 function snapshotOf(root, overlay, frozen) {
@@ -167,17 +202,27 @@ function snapshotOf(root, overlay, frozen) {
   }
   const from = [...root.querySelectorAll('canvas')].filter((c) => !overlay.contains(c));
   const to = [...copy.querySelectorAll('canvas')].filter((c) => !c.closest('.screen-break'));
+  // versão 2.44.2: cada canvas vira uma imagem (a mesma para todos os cacos): canvas copiado é
+  // uma camada própria na placa de vídeo em cada caco, e isso derrubava o celular
   from.forEach((src, i) => {
     const dst = to[i];
-    if (!dst || !src.width || !src.height) return;
-    try {
-      dst.width = src.width;
-      dst.height = src.height;
-      src.fxRedraw?.();
-      dst.getContext('2d')?.drawImage(src, 0, 0);
-    } catch {
-      // (se a luz em WebGL não copiar, fica sem o brilho, sem problema)
+    if (!dst) return;
+    const img = document.createElement('img');
+    for (const { name, value } of dst.attributes) img.setAttribute(name, value);
+    img.alt = '';
+    img.draggable = false;
+    // (as regras do CSS que pegam "canvas" pelo nome não valem para a imagem: o estilo vai junto)
+    const cs = getComputedStyle(src);
+    for (const prop of CANVAS_LOOK) img.style.setProperty(prop, cs.getPropertyValue(prop), 'important');
+    if (src.width && src.height) {
+      try {
+        src.fxRedraw?.();
+        img.src = src.toDataURL();
+      } catch {
+        // (se a luz em WebGL não copiar, fica sem o brilho, sem problema)
+      }
     }
+    dst.replaceWith(img);
   });
   copy.querySelectorAll('.screen-break').forEach((el) => el.remove());
   return copy;
@@ -440,21 +485,19 @@ function stage(host, root, sizeW, sizeH, short = false) {
   });
 
   // --- o vidro: a tela em cacos -------------------------------------------------------------
-  const cells = shardsOf(W, H, impact);
+  const cells = shardsOf(W, H, impact, short);
   // (o zoom, o tranco e a perspectiva em camadas separadas: nenhuma animação briga com outra)
   const zoom = el('div', 'death-glass', host);
   const glass = el('div', 'death-shake', zoom);
   const frozen = freezeStates(root, host);
   const base = snapshotOf(root, host, frozen);
-  const canvasesOf = (n) => [...n.querySelectorAll('canvas')];
-  const baseCanvases = canvasesOf(base);
   // para cada caco, só o que aparece nele: os blocos soltos (absolute/fixed) que ficam inteiros
   // fora do caco saem da cópia (sem mexer no resto da tela). Assim cada caco tem pouca coisa.
   const live = [...root.querySelectorAll('*')].filter((n) => !host.contains(n));
   const boxes = live.map((n) => {
     const b = n.getBoundingClientRect();
     const pos = getComputedStyle(n).position;
-    return { l: b.left, t: b.top, r: b.right, b: b.bottom, loose: pos === 'absolute' || pos === 'fixed' };
+    return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height, loose: pos === 'absolute' || pos === 'fixed' };
   });
   const indexOf = new Map(live.map((n, i) => [n, i]));
   for (let i = live.length - 1; i >= 0; i -= 1) {
@@ -478,40 +521,50 @@ function stage(host, root, sizeW, sizeH, short = false) {
     const nodes = [...copy.querySelectorAll('*')];
     if (nodes.length !== boxes.length) return;
     const drop = [];
+    const hollow = [];
     nodes.forEach((n, k) => {
       const bx = boxes[k];
-      if (bx.loose && (bx.r < L || bx.l > R || bx.b < Tp || bx.t > B)) drop.push(n);
+      if (!(bx.r < L || bx.l > R || bx.b < Tp || bx.t > B)) return;
+      if (bx.loose) drop.push(n);
+      // versão 2.44.2: o que está no fluxo e fica todo fora do caco vira uma caixa vazia do
+      // mesmo tamanho (o resto da tela não se mexe e a cópia tem bem menos coisa)
+      else if (n.firstChild && n.style) hollow.push([n, bx]);
     });
     for (const n of drop) n.remove();
+    for (const [n, bx] of hollow) {
+      if (!n.isConnected) continue;
+      n.style.setProperty('box-sizing', 'border-box', 'important');
+      n.style.setProperty('width', `${bx.w}px`, 'important');
+      n.style.setProperty('height', `${bx.h}px`, 'important');
+      n.style.setProperty('flex', 'none', 'important');
+      n.replaceChildren();
+    }
   };
   cells.forEach((c, i) => {
     // o fio que abre na trinca > a queda em 3D > o recorte do caco (o recorte vai junto com ele)
+    // versão 2.44.2: cada caco é do tamanho dele (antes, cada camada do caco tinha a tela
+    // inteira: ~100 camadas de tela cheia na placa de vídeo derrubavam o celular na roda)
+    const xs = c.poly.map((q) => q[0]);
+    const ys = c.poly.map((q) => q[1]);
+    const bl = Math.floor(Math.min(...xs)) - 3;
+    const bt = Math.floor(Math.min(...ys)) - 3;
+    const bw = Math.ceil(Math.max(...xs)) + 3 - bl;
+    const bh = Math.ceil(Math.max(...ys)) + 3 - bt;
     const wrap = el('div', 'death-shard-wrap', glass);
+    Object.assign(wrap.style, { left: `${bl}px`, top: `${bt}px`, width: `${bw}px`, height: `${bh}px` });
     const fall = el('div', 'death-shard-fall', wrap);
-    fall.style.transformOrigin = `${c.cx}px ${c.cy}px`;
+    fall.style.transformOrigin = `${c.cx - bl}px ${c.cy - bt}px`;
     const shard = el('div', 'death-shard', fall);
     // (o recorte 1 px maior para fora: os cacos se sobrepõem e não aparece fresta antes da hora)
     const clip = `polygon(${inset(c.poly, c.cx, c.cy, -1)
-      .map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`)
+      .map(([x, y]) => `${(x - bl).toFixed(1)}px ${(y - bt).toFixed(1)}px`)
       .join(', ')})`;
     shard.style.clipPath = clip;
     shard.style.webkitClipPath = clip;
     let copy = base;
-    if (i > 0) {
-      copy = base.cloneNode(true);
-      canvasesOf(copy).forEach((dst, k) => {
-        const src = baseCanvases[k];
-        if (!src || !src.width) return;
-        dst.width = src.width;
-        dst.height = src.height;
-        try {
-          dst.getContext('2d')?.drawImage(src, 0, 0);
-        } catch {
-          /* sem a cópia desse canvas */
-        }
-      });
-    }
+    if (i > 0) copy = base.cloneNode(true);
     if (i > 0) prune(copy, c);
+    Object.assign(copy.style, { position: 'absolute', left: `${-bl}px`, top: `${-bt}px`, width: `${W}px`, height: `${H}px` });
     shard.appendChild(copy);
     if (i === cells.length - 1) prune(base, cells[0]);
     const gray = el('div', 'death-gray', shard);
@@ -520,7 +573,7 @@ function stage(host, root, sizeW, sizeH, short = false) {
     // o vidro de verdade: a quina clara, a espessura (uma faixa clara e uma escura por dentro da
     // beirada), lascas tiradas da beirada e riscos de desgaste
     const rr = rngOf(900 + i * 31);
-    const rim = svgEl('svg', { class: 'death-rim', viewBox: `0 0 ${W} ${H}`, width: W, height: H }, shard);
+    const rim = svgEl('svg', { class: 'death-rim', viewBox: `${bl} ${bt} ${bw} ${bh}`, width: bw, height: bh }, shard);
     svgEl('polygon', { class: 'rim-bevel', points: pts(inset(c.poly, c.cx, c.cy, 4 * u + 2)), 'stroke-width': (5 * u + 2).toFixed(1) }, rim);
     svgEl('polygon', { class: 'rim-depth', points: pts(inset(c.poly, c.cx, c.cy, 8 * u + 4)), 'stroke-width': (2 * u + 1.5).toFixed(1) }, rim);
     svgEl('polygon', { class: 'rim-edge', points: pts(c.poly), 'stroke-width': (2.4 * u + 1.6).toFixed(1) }, rim);

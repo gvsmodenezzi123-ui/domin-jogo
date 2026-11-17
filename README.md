@@ -172,6 +172,17 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.44.2: no online, a morte é só um escurecer
+
+- **A roda caía quando alguém perdia todas as vidas.** A tela quebrando faz uma cópia da tela
+  para cada caco; numa roda de 5 isso passava de 60 mil elementos e de 300 telas de memória de
+  vídeo, o bastante para o navegador do celular fechar e recarregar o jogo (e, se era o dono da
+  roda, a sala de todo mundo caía junto). No online (roda de 2 a 5 e duelo) não tem mais cacos:
+  a tela escurece até o preto e clareia já no modo espectador (ou no placar), em 2 segundos
+  (`DeathFade.jsx`).
+- A quebra da campanha continua igual, mais leve: cada caco do tamanho dele, os canvas viram
+  uma imagem só e o 3D de enfeite vira 2D nas cópias (de ~340 para ~100 telas de memória).
+
 ### 2.44.1: um ritual só
 
 - Depois do ritual dos Necróticos, a entrada do Dono não desenha mais o círculo antigo (o trovão

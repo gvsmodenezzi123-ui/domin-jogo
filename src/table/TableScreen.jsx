@@ -23,7 +23,7 @@ import { useLandscape } from '../components/useLandscape.js';
 import TableResult from './TableResult.jsx';
 import EmoteBar, { SeatGesture } from './EmoteBar.jsx';
 import { useLiveEmote } from './useLiveEmote.js';
-import ScreenBreak from '../components/ScreenBreak.jsx';
+import DeathFade from '../components/DeathFade.jsx';
 import HurtBlink from '../components/HurtBlink.jsx';
 import { bubbleText, colorOf, plateName, seatsFrom } from './seats.js';
 import { partnerOf, turnOptions } from './tableEngine.js';
@@ -391,6 +391,7 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
   const iFell = (view.phase === 'roundOver' || view.phase === 'matchOver') && Boolean(view.result?.eliminated?.includes(seatMe));
   const breakKey = finaleOver && iFell ? `quebra:${view.round}` : null;
   const [brokeKey, setBrokeKey] = useState(null);
+  const [fadedKey, setFadedKey] = useState(null);
   const showResult = finaleOver && view.phase === 'matchOver' && (!breakKey || brokeKey === breakKey);
   const sweepKey = finaleOver && view.phase === 'roundOver' ? finaleKey : null;
   const autoNext = useStableHandler(() => onNextRound?.({ auto: true }));
@@ -575,9 +576,8 @@ export default function TableScreen({ view, me: seatMe, map = null, clock = null
       {/* versão 2.33: os emotes (o botão ao lado da lupa; o seu aparece em cima da sua vida) */}
       {landscape && onEmote && !spectating && <EmoteBar onEmote={onEmote} />}
       {landscape && <MyGesture emote={emotes?.[me] ?? null} />}
-      {/* versão 2.43.1: na roda, só até o último caco cair (a pedra e o letreiro ficariam longos para
-          quem vai assistir) */}
-      {breakKey && <ScreenBreak key={breakKey} short fade={view.phase !== 'matchOver'} onDone={() => setBrokeKey(breakKey)} />}
+      {/* versão 2.44.2: no online, sem cacos: a tela escurece e volta no modo espectador (ou no resultado) */}
+      {breakKey && fadedKey !== breakKey && <DeathFade key={breakKey} onPeak={() => setBrokeKey(breakKey)} onDone={() => setFadedKey(breakKey)} />}
       {showResult && <TableResult view={view} me={seatMe} ready={ready} canRematch={canRematch} onNextRound={onNextRound} onRematch={onRematch} onLeave={onLeave} />}
     </div>
   );

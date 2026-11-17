@@ -31,7 +31,7 @@ import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf, shortName } fro
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from '../components/tableSweep.js';
 import { useSecondsLeft } from './useNow.js';
 import { useLandscape } from '../components/useLandscape.js';
-import ScreenBreak from '../components/ScreenBreak.jsx';
+import DeathFade from '../components/DeathFade.jsx';
 import HurtBlink from '../components/HurtBlink.jsx';
 
 const PLAYER_FLIGHT_MS = landTime(FLIGHT_PLAYER);
@@ -229,6 +229,7 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
   // versão 2.34: perdeu o duelo (o último golpe foi dele): a tela racha antes do resultado
   const loseBreakKey = finaleOver && duel.result?.matchOver && view.hearts.player <= 0 ? finaleKey : null;
   const [brokeKey, setBrokeKey] = useState(null);
+  const [fadedKey, setFadedKey] = useState(null);
   // versão 2.6: sem placar entre as rodadas: a mesa varre para o dorme e você já fica pronto
   // (a rodada nova sai quando os dois estiverem); o placar fica só para o fim do duelo
   const lastRound = Boolean(duel.result?.matchOver) || !duel.final;
@@ -535,15 +536,8 @@ export default function PvpDuel({ duel, map = null, opp, relicSlots, link, ping,
         </p>
       )}
       {/* versão 2.34: perdeu o duelo: a tela racha e fica em preto e branco antes do resultado */}
-      {loseBreakKey && brokeKey !== loseBreakKey && (
-        <ScreenBreak
-          key={loseBreakKey}
-          actions={[
-            { label: 'VOLTAR', tone: 'retry', onClick: onFinish },
-            { label: 'VER O PLACAR', tone: 'more', onClick: () => setBrokeKey(loseBreakKey) },
-          ]}
-        />
-      )}
+      {/* versão 2.44.2: no online, sem cacos: a tela escurece e volta no placar */}
+      {loseBreakKey && fadedKey !== loseBreakKey && <DeathFade key={loseBreakKey} onPeak={() => setBrokeKey(loseBreakKey)} onDone={() => setFadedKey(loseBreakKey)} />}
       {duel.result && finaleOver && lastRound && (!loseBreakKey || brokeKey === loseBreakKey) && (
         <PvpRoundResult view={view} result={duel.result} nextSent={duel.nextSent} opp={opp} onNextRound={onNextRound} onFinish={onFinish} />
       )}
