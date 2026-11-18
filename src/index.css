@@ -15445,16 +15445,16 @@
   z-index: 3;
   left: -5px;
   top: -5px;
-  min-width: 15px;
+  min-width: 17px;
   padding: 2px 2px 1px;
-  font-size: 6px;
+  font-size: 7px;
   line-height: 1;
   text-align: center;
-  color: #1a0f06;
-  background: var(--seat);
+  color: #ffe08a;
+  background: #140b04;
   box-shadow:
-    0 0 0 1px #1a0f06,
-    0 1px 0 #000;
+    0 0 0 1px var(--seat),
+    0 1px 0 2px #000;
 }
 .seat-secs.is-urgent {
   color: #fff6dc;
@@ -18199,8 +18199,8 @@
 
 /* os segundos de quem joga: a mesma chapinha de latão para todos (sem a cor da cadeira) */
 .chair-secs.chair-secs:not(.is-urgent) {
-  color: #1a0f06;
-  background: #e8c066;
+  color: #ffe08a;
+  background: #140b04;
 }
 
 /* as pedras dele de pé na beirada, com as costas das pedras do rival da campanha */
@@ -18246,6 +18246,15 @@
 }
 
 .chair-secs.chair-secs {
+  /* versão 2.44.3: o relógio da vez legível (era fonte preta miúda no dourado) */
+  min-width: 22px;
+  padding: 3px 3px 2px;
+  font-size: 9px;
+  box-shadow:
+    0 0 0 1px #e8c066,
+    0 0 0 2px #000,
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 4px rgba(255, 210, 110, 0.55);
   position: absolute;
   left: calc(100% + 5px);
   top: 50%;
@@ -28517,7 +28526,8 @@ html[data-topview] .emote-pick {
 }
 /* o luminoso apagado: uma sombra por cima da placa e do clarão dela */
 .amb-outage {
-  background: radial-gradient(ellipse at 50% 50%, rgba(4, 3, 6, 0.96) 0%, rgba(4, 3, 6, 0.9) 55%, rgba(4, 3, 6, 0) 100%);
+  -webkit-backdrop-filter: brightness(0.32) saturate(0.45);
+  backdrop-filter: brightness(0.32) saturate(0.45);
 }
 .amb-spark {
   width: 2px;

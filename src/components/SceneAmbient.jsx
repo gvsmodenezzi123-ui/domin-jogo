@@ -125,7 +125,9 @@ function spawnNeon(layer, cfg, box, at) {
   const u = box.height / 195;
   const [anchor, x, y, w, h, color] = cfg.neon;
   const left = at(anchor, x);
-  const dark = make(layer, 'amb-outage', { left: `${left - 8 * u}px`, top: `${(y - 6) * u}px`, width: `${(w + 16) * u}px`, height: `${(h + 12) * u}px` });
+  // versão 2.44.3: o apagão é um filtro escurecendo só o próprio luminoso (antes era uma mancha
+  // preta maior que ele, e o que se via era um quadrado preto piscando)
+  const dark = make(layer, 'amb-outage', { left: `${left}px`, top: `${y * u}px`, width: `${w * u}px`, height: `${h * u}px` });
   // falha, falha, apaga de vez, volta piscando (versão 2.43: o degrau em cada quadro-chave; antes
   // estava no `easing` da animação inteira e segurava o luminoso aceso até o fim: nunca apagava)
   play(

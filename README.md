@@ -172,6 +172,14 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.44.3: o relógio da vez e o luminoso apagando
+
+- O relógio da vez de cada jogador na roda estava em fonte preta miúda no dourado: agora é
+  dourado aceso no fundo escuro, maior e com contorno (o da cadeira e o do cartão).
+- O luminoso que falha nas salas fechadas (CERVEJA GELADA, SINUCA, o do bicho) apagava pondo
+  uma mancha preta maior que ele por cima, e o que se via era um quadrado preto piscando. Agora
+  é um filtro que escurece só o próprio luminoso: ele fica apagado, com as letras ainda ali.
+
 ### 2.44.2: no online, a morte é só um escurecer
 
 - **A roda caía quando alguém perdia todas as vidas.** A tela quebrando faz uma cópia da tela
