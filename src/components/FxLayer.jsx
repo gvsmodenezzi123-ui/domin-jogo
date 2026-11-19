@@ -10,6 +10,11 @@ const BURST_COLOR = { ouro: [1, 0.78, 0.3], rubi: [1, 0.15, 0.2], cristal: [0.5,
 const PX = 2;
 /** 30 quadros por segundo bastam para o tremor da luz (e poupam bateria). */
 const FRAME_MS = 1000 / 30;
+/**
+ * Versão 2.45.1: procurar pedra nova na mesa (o clarão) lê a posição de todas as pedras, o que
+ * obriga o navegador a acertar o layout: basta fazer isso de tempos em tempos, não a cada quadro.
+ */
+const MEASURE_MS = 120;
 
 const enhOf = (el) => {
   for (const name of el.classList) if (name.startsWith('tile-enh-') && KIND[name.slice(9)]) return name.slice(9);
@@ -39,6 +44,7 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
     let room = null;
     let tiles = [];
     let seen = null;
+    let measured = -Infinity;
     const bursts = [];
     const start = performance.now();
     const reduced = () => prefersReducedMotion() || document.documentElement.classList.contains('reduce-motion') || Boolean(root.closest('.reduce-motion'));
@@ -119,8 +125,11 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
       // sem ela, a luz da sala basta a 30
       if (!tiles.length && !bursts.length && now - last < FRAME_MS) return;
       last = now;
-      resize();
-      measure(now);
+      if (now - measured >= MEASURE_MS) {
+        measured = now;
+        resize();
+        measure(now);
+      }
       draw(now);
     };
     raf = requestAnimationFrame(loop);

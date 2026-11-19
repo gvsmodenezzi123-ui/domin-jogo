@@ -172,6 +172,27 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.45.1: otimização
+
+Medido no Chromium com o processador 4× mais lento (como um celular), em cada tela parada:
+
+- **Animações que acabavam e ficavam "valendo"** (a entrada de cada pedra na mesa, o clarão
+  dela, o anel da bucha, o coração rachando, a entrada dos painéis): com `both`, cada uma seguia
+  segurando uma camada própria na placa de vídeo para sempre. Agora só seguram o começo
+  (`backwards`), e a pedra fica no estado normal dela. Na mesa da campanha: de 121 para 69
+  camadas.
+- **Corações:** só o último coração vivo bate (na roda de 5 eram 25 corações batendo, cada um
+  uma camada). Na roda: de 48 para 28 animações e de 125 para 78 camadas.
+- **Tela de título:** a chuva e a poeira andavam repintando a área a cada quadro; agora andam
+  por transform (só composição). Pintura de 158 para 14 ms por segundo.
+- **Sala de dia:** a vinheta e a sala viraram um canvas só (uma camada de tela cheia a menos).
+- **Luz da mesa (WebGL):** procurar pedra nova lê a posição de todas as pedras e força o
+  layout; agora é a cada 120 ms, não a cada quadro.
+- **Abertura do app:** o som do dano (~150 KB), o online, o DEV, o chefe secreto, a tela
+  quebrando e a abertura vêm em pedaços à parte, buscados logo que o jogo fica ocioso
+  (`lazyIdle.js`): o pedaço que o celular lê para abrir o jogo ficou bem menor.
+- A cortina das trocas de tela não pede mais camada própria o tempo todo.
+
 ### 2.45.0: os emotes com a mão do personagem
 
 - **Na roda, o personagem faz o emote com a própria mão** (`art/figGesture.js`), em vez da mão

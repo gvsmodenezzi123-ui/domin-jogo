@@ -16,7 +16,6 @@
 //   são 3 vozes). Estourou: a voz mais velha e menos importante (música antes de efeito) sai com fade de 15 ms.
 //   Cada nota termina com .stop() + .disconnect() de todos os nós e as referências zeradas.
 
-import { HURT_SOUND_GAIN, HURT_SOUND_RATE, hurtSoundSamples } from './hurtSoundData.js';
 
 const MUTE_KEY = 'buxaria:muted';
 
@@ -2058,17 +2057,23 @@ export class SoundEngine {
    * promessa do buffer (já resolvida: a montagem é síncrona e leva poucos ms).
    */
   loadHurtSound() {
-    if (!this.hurtBuf && this.ctx && typeof globalThis.atob === 'function') {
-      try {
+    if (this.hurtBuf || !this.ctx || typeof globalThis.atob !== 'function') return Promise.resolve(this.hurtBuf ?? null);
+    // versão 2.45.1: as amostras (~150 KB) vêm à parte, quando o jogo já abriu (não pesam na
+    // abertura do app)
+    this.hurtLoading ??= import('./hurtSoundData.js')
+      .then(({ HURT_SOUND_GAIN, HURT_SOUND_RATE, hurtSoundSamples }) => {
         const data = hurtSoundSamples();
         const buf = this.ctx.createBuffer(1, data.length, HURT_SOUND_RATE);
         buf.getChannelData(0).set(data);
+        this.hurtGain = HURT_SOUND_GAIN;
         this.hurtBuf = buf;
-      } catch {
-        this.hurtBuf = null;
-      }
-    }
-    return Promise.resolve(this.hurtBuf);
+        return buf;
+      })
+      .catch(() => {
+        this.hurtLoading = null;
+        return null;
+      });
+    return this.hurtLoading;
   }
 
   /** Deixa o som do dano pronto num momento ocioso (o golpe não espera a decodificação). */
@@ -2091,7 +2096,7 @@ export class SoundEngine {
     if (!buffer) return;
     const at = this.ctx.currentTime + 0.005;
     // 15% da trilha: acompanha o volume da música (e o dos efeitos, se ele estiver mais alto)
-    const level = HURT_SOUND_GAIN * Math.max(this.musicVolume / 0.4, this.sfxVolume / 0.7);
+    const level = (this.hurtGain ?? 0) * Math.max(this.musicVolume / 0.4, this.sfxVolume / 0.7);
     this.spawn({
       at,
       end: at + buffer.duration + 0.05,

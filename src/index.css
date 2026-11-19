@@ -32,16 +32,19 @@
   --color-brass-400: #d4a64a;
   --color-brass-600: #8f6a24;
 
-  --animate-tile-drop: tile-drop 300ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  /* versão 2.45.1: as entradas terminam no estado normal da peça, então só seguram o começo
+     (backwards): com "both" a animação acabada ficava valendo para sempre e cada pedra da mesa
+     guardava uma camada própria na placa de vídeo */
+  --animate-tile-drop: tile-drop 300ms cubic-bezier(0.2, 0.9, 0.3, 1.25) backwards;
   /* bucha: salta, bate (~62% = 290ms) e assenta */
-  --animate-tile-slam: tile-slam 470ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  --animate-tile-slam: tile-slam 470ms cubic-bezier(0.3, 0.7, 0.4, 1) backwards;
   --animate-power-wiggle: power-wiggle 420ms ease-in-out both;
   /* Versão 1.5: a mão chega em cascata, com um quique no fim */
-  --animate-tile-in: tile-in 350ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+  --animate-tile-in: tile-in 350ms cubic-bezier(0.18, 0.89, 0.32, 1.28) backwards;
   --animate-end-pulse: end-pulse 1.6s ease-in-out infinite;
-  --animate-heart-crack: heart-crack 620ms steps(6, end) both;
+  --animate-heart-crack: heart-crack 620ms steps(6, end) backwards;
   --animate-avatar-hit: avatar-hit 520ms steps(6, end) both;
-  --animate-overlay-in: overlay-in 420ms ease-out 850ms both;
+  --animate-overlay-in: overlay-in 420ms ease-out 850ms backwards;
 
   /* Patch 0.9.4: sem filter nas entradas (o clarão virou uma camada em opacity, .tile-flash) */
   @keyframes tile-drop {
@@ -773,7 +776,8 @@
     inset: -6px;
     border: 2px solid rgba(240, 204, 120, 0.45);
     border-radius: 8px;
-    animation: impact 520ms ease-out 290ms both;
+    opacity: 0;
+    animation: impact 520ms ease-out 290ms backwards;
   }
 
   .end-badge {
@@ -4383,7 +4387,6 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 350ms ease-in-out;
-  will-change: opacity;
 }
 
 .screen-transition-overlay.is-dark {
@@ -9124,7 +9127,8 @@
   border-radius: 4px;
   background: rgba(255, 244, 214, 0.55);
   pointer-events: none;
-  animation: tileFlash 280ms ease-out both;
+  opacity: 0;
+  animation: tileFlash 280ms ease-out backwards;
 }
 
 @keyframes tileFlash {
@@ -28946,4 +28950,76 @@ html[data-topview] .emote-pick {
   align-items: center;
   justify-content: center;
   gap: 1px;
+}
+
+/* ---------- versão 2.45.1: otimização ----------
+   A chuva e a poeira da tela de título andavam mexendo o background-position (o navegador
+   repintava a área a cada quadro): agora a textura está num pseudo-elemento que anda por
+   transform, que a placa de vídeo só compõe. Mesmo desenho, mesmo passo. */
+.tl-rain {
+  overflow: hidden;
+  background: none;
+  animation: none;
+}
+
+.tl-rain::before {
+  content: '';
+  position: absolute;
+  left: -46px;
+  top: -60px;
+  width: calc(100% + 92px);
+  height: calc(100% + 120px);
+  background: repeating-linear-gradient(105deg, transparent 0 9px, rgba(170, 200, 214, 0.26) 9px 10px, transparent 10px 23px);
+  background-size: 46px 60px;
+  animation: tlRainMove 0.7s linear infinite;
+}
+
+@keyframes tlRainMove {
+  to {
+    transform: translate(-14px, 60px);
+  }
+}
+
+.tl-dust {
+  overflow: hidden;
+  background: none;
+  animation: none;
+}
+
+.tl-dust::before,
+.tl-dust::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: calc(100% + 106px);
+}
+
+.tl-dust::before {
+  background: radial-gradient(circle, rgba(255, 230, 170, 0.5) 0 1px, transparent 1.5px) 0 0 / 37px 41px;
+  animation: tlDustA 9s linear infinite;
+}
+
+.tl-dust::after {
+  background: radial-gradient(circle, rgba(255, 230, 170, 0.35) 0 1px, transparent 1.5px) 13px 20px / 29px 53px;
+  animation: tlDustB 9s linear infinite;
+}
+
+@keyframes tlDustA {
+  to {
+    transform: translateY(-82px);
+  }
+}
+
+@keyframes tlDustB {
+  to {
+    transform: translateY(-106px);
+  }
+}
+
+.reduce-motion .tl-rain::before,
+.reduce-motion .tl-dust::before,
+.reduce-motion .tl-dust::after {
+  animation: none;
 }

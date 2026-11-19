@@ -72,6 +72,29 @@ function dayLayers(name, w, h, seed) {
   return layers;
 }
 
+/** `top` por cima de `bottom` (mesmo tamanho; alfa de verdade, como o navegador compunha). */
+function overlay(bottom, top) {
+  if (!bottom || bottom.w !== top.w || bottom.h !== top.h) return top;
+  const out = new Uint8ClampedArray(bottom.data);
+  const t = top.data;
+  for (let i = 0; i < out.length; i += 4) {
+    const a = t[i + 3] / 255;
+    if (a === 0) continue;
+    if (a === 1) {
+      out[i] = t[i];
+      out[i + 1] = t[i + 1];
+      out[i + 2] = t[i + 2];
+      out[i + 3] = 255;
+      continue;
+    }
+    const b = out[i + 3] / 255;
+    const oa = a + b * (1 - a);
+    for (let c = 0; c < 3; c += 1) out[i + c] = (t[i + c] * a + out[i + c] * b * (1 - a)) / (oa || 1);
+    out[i + 3] = oa * 255;
+  }
+  return { w: top.w, h: top.h, data: out };
+}
+
 const putLayer = (canvas, layer) => {
   canvas.width = layer.w;
   canvas.height = layer.h;
@@ -89,7 +112,7 @@ function DayBackdrop({ scene, seed, className, style }) {
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root || typeof ImageData === 'undefined') return undefined;
-    const [back, clouds, waveA, waveB, shade, front] = root.children;
+    const [back, clouds, waveA, waveB, front] = root.children;
     let trees = [];
     let last = '';
     let anims = [];
@@ -119,8 +142,9 @@ function DayBackdrop({ scene, seed, className, style }) {
       for (const a of anims) a.cancel();
       anims = [];
       putLayer(back, L.back);
-      putLayer(shade, L.shade);
-      putLayer(front, L.front);
+      // versão 2.45.1: a vinheta e a sala num canvas só (a sala por cima da vinheta, como era):
+      // uma camada de tela cheia a menos para a placa de vídeo compor
+      putLayer(front, overlay(L.shade, L.front));
       const sx = box.width / w;
       const sy = box.height / h;
       putLayer(clouds, L.clouds);
@@ -172,7 +196,6 @@ function DayBackdrop({ scene, seed, className, style }) {
       <canvas className="day-layer day-drift" />
       <canvas className="day-layer day-drift" />
       <canvas className="day-layer day-drift" />
-      <canvas className="day-layer day-fill" />
       <canvas className="day-layer day-fill" />
     </div>
   );

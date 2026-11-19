@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import { lazyIdle, preloadLazy } from './components/lazyIdle.js';
 import { scheduleTioZeTurn } from './ai/tioZeAI.js';
 import AchievementToast from './components/AchievementToast.jsx';
 import BlackMarketModal from './components/BlackMarketModal.jsx';
@@ -6,7 +7,6 @@ import BossIntro from './components/BossIntro.jsx';
 import CampaignMap from './components/CampaignMap.jsx';
 import CoinEventModal from './components/CoinEventModal.jsx';
 import EncounterModal from './components/EncounterModal.jsx';
-import DevPanel from './components/DevPanel.jsx';
 import DrawChoice from './components/DrawChoice.jsx';
 import FloatingTexts from './components/FloatingTexts.jsx';
 import InfoBalloon from './components/InfoBalloon.jsx';
@@ -14,7 +14,6 @@ import PauseMenu from './components/PauseMenu.jsx';
 import PlayerRack from './components/PlayerRack.jsx';
 import RivalBench from './components/RivalBench.jsx';
 import RoundOverlay from './components/RoundOverlay.jsx';
-import SecretBoss from './components/SecretBoss.jsx';
 import TilesUnlockModal from './components/TilesUnlockModal.jsx';
 import { CoachBox, TutorialCard, TutorialFocus } from './components/TutorialCoach.jsx';
 import ScreenVeil from './components/ScreenTransition.jsx';
@@ -27,12 +26,10 @@ import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/til
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import AccessGate from './opening/AccessGate.jsx';
-import OpeningScene from './opening/OpeningScene.jsx';
 import DangerFx from './components/DangerFx.jsx';
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from './components/tableSweep.js';
 import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf } from './components/finale.js';
 import { dangerOf } from './engine/danger.js';
-import PvpApp from './pvp/PvpApp.jsx';
 import { parseRoomInput } from './pvp/protocol.js';
 import { parseTableInput } from './table/tableProtocol.js';
 import { loadSavedTable } from './pvp/controller.js';
@@ -121,8 +118,14 @@ import {
 import { snapshotRun } from './engine/save.js';
 import { markTutorialDone, markTutorialPending, needsTutorial, tutorialStepOf } from './engine/tutorial.js';
 import { sellPriceFor } from './engine/shop.js';
-import ScreenBreak from './components/ScreenBreak.jsx';
 import HurtBlink from './components/HurtBlink.jsx';
+
+// versão 2.45.1: em pedaços à parte (lazyIdle.js)
+const DevPanel = lazyIdle(() => import('./components/DevPanel.jsx'));
+const SecretBoss = lazyIdle(() => import('./components/SecretBoss.jsx'));
+const OpeningScene = lazyIdle(() => import('./opening/OpeningScene.jsx'));
+const PvpApp = lazyIdle(() => import('./pvp/PvpApp.jsx'));
+const ScreenBreak = lazyIdle(() => import('./components/ScreenBreak.jsx'));
 
 // Patch 0.9.2: as pedras de cada rodada saem da semente da run (engine/seedEngine.js), numa
 // sequência própria para cada mesa e rodada (`key`): mesma semente + mesmas escolhas = mesmas mãos
@@ -552,6 +555,8 @@ function seenNow(state) {
  * em som/feedback, grava o save e liga as telas (menu, mapa, mesa, loja).
  */
 export default function App() {
+  // versão 2.45.1: os pedaços à parte vêm logo que o jogo fica ocioso
+  useEffect(() => preloadLazy(), []);
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const [selectedId, setSelectedId] = useState(null);
   // Versão 2.0: a altura da faixa da mão, deitada na mesa (PlayerRack mede, a mesa reserva)
@@ -1415,6 +1420,7 @@ export default function App() {
     return (
       <>
         <TileSkinContext.Provider value={settings.onlineTiles ?? 'bone'}>
+        <Suspense fallback={<div className="fixed inset-0 bg-[#0b0907]" />}>
         <PvpApp
           settings={settings}
           onSettings={changeSettings}
@@ -1427,6 +1433,7 @@ export default function App() {
             if (sound.ctx) sound.playTrack(REGIONS[0].music);
           }}
         />
+        </Suspense>
         </TileSkinContext.Provider>
         {veil}
       </>
@@ -1462,7 +1469,11 @@ export default function App() {
         />
       </div>
       {!entered && <AccessGate onEnter={enter} />}
-      {entered && opening.on && <OpeningScene skippable={opening.skippable} onDone={openingDone} />}
+      {entered && opening.on && (
+        <Suspense fallback={<div className="fixed inset-0 z-[90] bg-black" />}>
+          <OpeningScene skippable={opening.skippable} onDone={openingDone} />
+        </Suspense>
+      )}
       {veil}
       </TileSkinContext.Provider>
     );
@@ -1471,6 +1482,7 @@ export default function App() {
   // nas cenas (loja, beco, Seu Tião) o saldo mora no topo: o chip DEV desce
   const sceneChip = ['shop', 'blackMarket', 'coinEvent', 'encounter'].includes(state.phase);
   const devPanel = devOpen && (
+    <Suspense fallback={null}>
     <DevPanel
       state={state}
       onAction={devAction}
@@ -1480,6 +1492,7 @@ export default function App() {
       silverUnlocked={silverUnlocked}
       onToggleSilver={toggleSilver}
     />
+    </Suspense>
   );
   // no mapa fica ao lado do menu; na loja, em cima do botão de voltar (o saldo mora no topo)
   const devChip = devUnlocked && (
@@ -1751,14 +1764,16 @@ export default function App() {
       {/* versão 2.43: a morte termina no letreiro "O BAR FECHOU" com os botões (a lousa da run fica
           a um toque, em VER A LOUSA) */}
       {loseBreakKey && brokeKey !== loseBreakKey && (
-        <ScreenBreak
-          key={loseBreakKey}
-          actions={[
-            { label: 'TENTE NOVAMENTE', tone: 'retry', onClick: restartRun },
-            { label: 'VOLTAR', tone: 'back', onClick: backToMenu },
-            { label: 'VER A LOUSA', tone: 'more', onClick: () => setBrokeKey(loseBreakKey) },
-          ]}
-        />
+        <Suspense fallback={null}>
+          <ScreenBreak
+            key={loseBreakKey}
+            actions={[
+              { label: 'TENTE NOVAMENTE', tone: 'retry', onClick: restartRun },
+              { label: 'VOLTAR', tone: 'back', onClick: backToMenu },
+              { label: 'VER A LOUSA', tone: 'more', onClick: () => setBrokeKey(loseBreakKey) },
+            ]}
+          />
+        </Suspense>
       )}
       {roundFinished && finaleOver && state.phase !== 'roundOver' && state.phase !== 'secretReveal' && !celebrate && !state.tutorial && (state.phase !== 'gameOver' || brokeKey === loseBreakKey) && (
         <RoundOverlay
@@ -1786,7 +1801,11 @@ export default function App() {
 
       {showBossIntro && <BossIntro key={bossIntroKey} rival={rival} onDone={finishBossIntro} ball={state.fx.raffle?.number ?? null} />}
 
-      {state.phase === 'secretReveal' && finaleOver && !celebrate && <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />}
+      {state.phase === 'secretReveal' && finaleOver && !celebrate && (
+        <Suspense fallback={null}>
+          <SecretBoss rival={rivalFor(SECRET_BOSS, state.mode)} onSit={sitWithDono} />
+        </Suspense>
+      )}
 
       {/* Patch 0.9.5: a aula do Vô Juca por cima da mesa (some com o menu ou o painel DEV abertos) */}
       {tutorialStep && !menuOpen && !devOpen && (
