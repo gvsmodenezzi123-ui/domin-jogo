@@ -7,7 +7,7 @@
  */
 import { board, poly, rampOf } from './figKit.js';
 import { INK } from './figHead.js';
-import { gridOf } from './EmoteArt.jsx';
+import { gridOf } from './emoteShapes.js';
 import { PORTRAITS } from './portraitSpecs.js';
 
 const HW = 18;
