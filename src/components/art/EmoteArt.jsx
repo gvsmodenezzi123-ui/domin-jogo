@@ -1,4 +1,8 @@
 /**
+ * Versão 2.45: o joinha redesenhado pixel a pixel (os quatro dedos dobrados empilhados na frente
+ * do punho, o polegar subindo do lado de fora), a mão espalmada no peito da risada e as formas
+ * exportadas (gridOf) para os personagens fazerem os gestos com a própria mão (figGesture.js).
+ *
  * Versão 2.41: os emotes da roda são GESTOS do personagem: a mão dele sobe ao lado do rosto, na
  * cor da pele e com o punho da roupa dele, e faz o gesto (o joinha, o joinha para baixo, o dedo do
  * meio, o aceno, as palmas); na risada ele ri. Antes eram carinhas amarelas soltas.
@@ -27,32 +31,44 @@ function tone(hex, k) {
  * riscos escuros por dentro (as dobras dos dedos).
  */
 const SHAPES = {
-  // o punho fechado com o polegar para cima
+  // o punho fechado com o polegar para cima: os quatro dedos dobrados empilhados na frente do
+  // punho (as pontas arredondadas à esquerda) e o polegar subindo do lado direito
   joinha: {
-    skin: [
-      [3, 8, 11, 8],
-      [5, 1, 3, 8],
-      [4, 6, 5, 3],
+    map: [
+      '...........kkk....',
+      '..........khhsk...',
+      '..........khssk...',
+      '..........khsdk...',
+      '..........khsdk...',
+      '..........khsdk...',
+      '....kkkkkkkhsdk...',
+      '...khhhhhhhssdk...',
+      '..khssssssssssdk..',
+      '..kddddddddsssdk..',
+      '..khssssssssssdk..',
+      '..kddddddddsssdk..',
+      '...khsssssssssdk..',
+      '...kdddddddsssdk..',
+      '....khssssssssdk..',
+      '....kkddddddddk...',
+      '.....kcccccccCk...',
+      '.....kcccccccCk...',
+      '.....kcccccccCk...',
+      '.....kkkkkkkkkk...',
     ],
-    lines: [
-      [9, 10, 5, 1],
-      [9, 12, 5, 1],
-      [9, 14, 5, 1],
-      [8, 9, 1, 6],
-    ],
-    cuff: [[4, 17, 9, 3]],
   },
   // o mesmo punho virado: o polegar para baixo, o braço vindo de lado
   negativo: {
     skin: [
       [2, 4, 11, 8],
+      [1, 5, 1, 6],
       [4, 11, 3, 8],
       [3, 11, 5, 3],
     ],
     lines: [
-      [8, 5, 5, 1],
-      [8, 7, 5, 1],
-      [8, 9, 5, 1],
+      [1, 5, 6, 1],
+      [1, 7, 6, 1],
+      [1, 9, 6, 1],
       [7, 5, 1, 6],
     ],
     cuff: [[14, 5, 4, 6]],
@@ -89,14 +105,43 @@ const SHAPES = {
   },
 };
 SHAPES.palmas = SHAPES.aceno;
+// a mão espalmada de lado, os dedos para a esquerda (a mão no peito da risada)
+SHAPES.peito = {
+  skin: [
+    [5, 7, 9, 7],
+    [1, 7, 4, 2],
+    [0, 9, 5, 2],
+    [1, 11, 4, 2],
+    [6, 4, 4, 3],
+  ],
+  lines: [
+    [1, 9, 4, 1],
+    [1, 11, 4, 1],
+  ],
+  cuff: [[14, 7, 4, 7]],
+};
 
 const CACHE = new Map();
 
 /** A grade pintada de um gesto: 's' pele, 'd' sombra, 'h' brilho, 'k' contorno, 'c'/'C' punho. */
-function gridOf(id) {
+export function gridOf(id) {
   let g = CACHE.get(id);
   if (g) return g;
   const shape = SHAPES[id] ?? SHAPES.joinha;
+  if (shape.map) {
+    const rects = [];
+    shape.map.forEach((row, y) => {
+      for (let x = 0; x < row.length; ) {
+        const c = row[x];
+        let w = 1;
+        while (x + w < row.length && row[x + w] === c) w += 1;
+        if (c !== '.') rects.push({ x, y, w, c });
+        x += w;
+      }
+    });
+    CACHE.set(id, rects);
+    return rects;
+  }
   g = Array.from({ length: H }, () => Array(W).fill('.'));
   const fill = (blocks, ch) => {
     for (const [x, y, w, h] of blocks) for (let yy = y; yy < y + h; yy += 1) for (let xx = x; xx < x + w; xx += 1) if (yy >= 0 && yy < H && xx >= 0 && xx < W) g[yy][xx] = ch;
@@ -174,6 +219,14 @@ export const EmoteIcon = memo(function EmoteIcon({ id, size = 28, className = ''
         HA
         <br />
         HA
+      </span>
+    );
+  // versão 2.45: o "calma aí": as duas mãos abertas
+  if (id === 'calma')
+    return (
+      <span className={`emote-icon emote-icon-pair ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+        <GestureHand id="aceno" size={Math.round(size * 0.5)} flip />
+        <GestureHand id="aceno" size={Math.round(size * 0.5)} />
       </span>
     );
   return (

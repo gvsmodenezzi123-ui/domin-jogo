@@ -28898,3 +28898,52 @@ html[data-topview] .emote-pick {
     opacity: 0;
   }
 }
+
+/* ---------- versão 2.45: os emotes com a mão do personagem (RivalBust.jsx, figGesture.js) ---------- */
+/* os quadros das palmas e do "calma aí": cada camada acende na sua vez */
+.gesture-frame:not(.is-first) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.gesture-frame {
+  opacity: 0;
+  animation-timing-function: step-end;
+  animation-iteration-count: infinite;
+}
+
+@keyframes gesture-step-4 {
+  0% {
+    opacity: 1;
+  }
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes gesture-step-6 {
+  0% {
+    opacity: 1;
+  }
+  16.667%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.reduce-motion .gesture-frame {
+  animation: none;
+}
+
+.reduce-motion .gesture-frame.is-first {
+  opacity: 1;
+}
+
+.emote-icon-pair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}

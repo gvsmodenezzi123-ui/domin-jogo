@@ -28,7 +28,7 @@ function setup({ guests = 2, seats = 5 } = {}) {
 
 describe('versão 2.33: a roda de 5 e os emotes', () => {
   it('seis emotes; cada cadeira mostra só o último; o intervalo mínimo entre dois', () => {
-    expect(EMOTES).toHaveLength(6);
+    expect(EMOTES).toHaveLength(7); // versão 2.45: + o calma aí
     expect(isEmote('risada')).toBe(true);
     expect(isEmote('xingamento')).toBe(false);
     let feed = pushEmote({}, 's1', 'risada', 1);

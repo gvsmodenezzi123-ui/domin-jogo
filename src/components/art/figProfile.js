@@ -10,6 +10,7 @@
  */
 import { any, ball, board, box, ell, hash, hex, mix, poly, rampOf, tube } from './figKit.js';
 import { INK } from './figHead.js';
+import { gestureSide } from './figGesture.js';
 
 const W = 88;
 const H = 84;
@@ -1059,6 +1060,10 @@ function paintSeatedBody(k, spec, S, chair, part = 'all') {
   // o braço de cá: o ombro, o cotovelo para trás e o antebraço para a frente, a mão na beirada
   const Sl = skinArms ? S : Top;
   k.form(any(poly([[32, 58], [46, 57], [49.5, 84], [46.5, 91], [38, 90], [33.5, 72]]), ell(39.5, 61, 8.2, 7.4)), (x, y) => ball(39, 66, 10, 22, 2, 5.8)(x, y), Sl, { edge: 1, rim: 5, noise: 0.25, seed: 88 });
+  if (spec.__gesture) {
+    gestureSide(k, spec.__gesture, S, Sl, spec.__frame ?? 0);
+    return;
+  }
   k.form(poly([[41, 84], [48, 83], [68, 81], [69.5, 88], [48, 92], [42, 92]]), (x, y) => 5 - (y - 82) * 0.3, Sl, { edge: 1, rim: 6, noise: 0.2, seed: 89 });
   if (!skinArms) for (let y = 81; y <= 88; y += 1) k.put(67, y, Top[1]);
   k.form(any(ell(73, 85.5, 4.8, 4), ell(76.5, 83, 2.2, 1.6)), ball(73, 85, 4.8, 4, 2.2, 5.8), S, { edge: 1, rim: 5, noise: 0.1, seed: 90 });

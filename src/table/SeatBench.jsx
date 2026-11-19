@@ -1,6 +1,7 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import BotecoBackdrop from '../components/BotecoBackdrop.jsx';
 import RivalBust from '../components/RivalBust.jsx';
+import { handGesture } from '../components/art/figGesture.js';
 import RivalHand from '../components/RivalHand.jsx';
 import DominoTile from '../components/DominoTile.jsx';
 import { FAR_X, RODA_SIDES, SEAT_RAIL, landCorners, seatBust, seatUnit, sideFigure } from '../components/seatGeometry.js';
@@ -201,6 +202,9 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
   const gesture = useLiveEmote(emote);
   const spec = PORTRAITS[seat.face] ?? null;
   const laughing = gesture?.id === 'risada' && !out && !hit;
+  // versão 2.45: o emote feito pelo próprio personagem, com a mão dele (quem não tem retrato
+  // continua com a mão solta ao lado)
+  const byHand = Boolean(gesture) && !out && !hit && handGesture(seat.face, side ? side.facing : null, side ? chair : null);
   const mood = out ? 'out' : hit ? 'hurt' : gesture ? (EMOTE_MOOD[gesture.id] ?? 'idle') : seat.isTurn && seat.bot ? 'thinking' : seat.smug ? 'smug' : 'idle';
   const L = LAYOUT.half;
   return (
@@ -239,14 +243,21 @@ function SeatChair({ seat, x, bust, unit, room, roundKey, solo, maxHearts, targe
             className={`chair-breath seat-breath ${hit ? 'seat-hit' : ''} ${laughing ? 'seat-laughing' : bubble && !out && !hit ? 'seat-acting' : ''}`}
             style={{ '--sway-dur': `${(6 + (seat.name.length % 5) * 0.7).toFixed(1)}s`, '--sway-delay': `${(-((seat.name.charCodeAt(0) ?? 0) % 9) * 0.6).toFixed(1)}s` }}
           >
-            <RivalBust rival={{ art: seat.face, name: seat.name }} mood={mood} profile={side ? side.facing : null} seated={side ? chair : null} talking={(Boolean(bubble) || laughing) && !out && !hit} />
+            <RivalBust
+              rival={{ art: seat.face, name: seat.name }}
+              mood={mood}
+              profile={side ? side.facing : null}
+              seated={side ? chair : null}
+              talking={(Boolean(bubble) || laughing) && !out && !hit && !byHand}
+              gesture={byHand ? gesture.id : null}
+            />
           </span>
         </div>
       </div>
       {/* versão 2.41: o emote é um gesto do personagem: a mão dele (na pele e com a manga dele)
           sobe na frente do rosto de quem senta do lado, ou ao lado da cabeça de quem senta lá na
           frente, faz o gesto e desce */}
-      {gesture && !out && (
+      {gesture && !out && !byHand && (
         <SeatGesture
           emote={gesture}
           skin={spec?.skin}

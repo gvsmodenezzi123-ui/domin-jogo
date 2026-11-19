@@ -172,6 +172,19 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.45.0: os emotes com a mão do personagem
+
+- **Na roda, o personagem faz o emote com a própria mão** (`art/figGesture.js`), em vez da mão
+  solta ao lado: de frente, o antebraço sobe de trás da beirada da mesa e a mão fica ao lado do
+  rosto; de lado, sentado, o braço de cá sai da mesa e a mão vai para a frente do rosto. A mão é
+  pintada na pele dele, com o punho da roupa dele, e o rosto acompanha (o deboche no negativo e
+  no dedo, os olhos fechados e a boca aberta na risada, com a mão no peito ou na barriga).
+- **As palmas batem** (as mãos se afastam e se juntam, quadro a quadro) e entra um emote novo,
+  o **calma aí**: as duas mãos abertas na altura do peito, descendo e subindo devagar.
+- O joinha foi redesenhado pixel a pixel: os quatro dedos dobrados empilhados na frente do punho
+  e o polegar subindo do lado de fora (de frente; de lado, virado para quem ele olha).
+- Quem não tem retrato (o duelo on-line) e o seu próprio emote continuam com a mão solta.
+
 ### 2.44.3: o relógio da vez e o luminoso apagando
 
 - O relógio da vez de cada jogador na roda estava em fonte preta miúda no dourado: agora é

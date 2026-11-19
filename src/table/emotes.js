@@ -11,13 +11,14 @@ export const EMOTES = Object.freeze([
   Object.freeze({ id: 'dedo', label: 'Dedo do meio' }),
   Object.freeze({ id: 'aceno', label: 'Aceno' }),
   Object.freeze({ id: 'palmas', label: 'Palmas' }),
+  Object.freeze({ id: 'calma', label: 'Calma aí' }),
   Object.freeze({ id: 'risada', label: 'Risada' }),
 ]);
 
 export const EMOTE_IDS = Object.freeze(EMOTES.map((e) => e.id));
 
 /** O humor do rosto enquanto faz cada gesto (os humores que os retratos já têm). */
-export const EMOTE_MOOD = Object.freeze({ joinha: 'smug', negativo: 'thinking', dedo: 'smug', aceno: 'idle', palmas: 'smug', risada: 'smug' });
+export const EMOTE_MOOD = Object.freeze({ joinha: 'smug', negativo: 'smug', dedo: 'smug', aceno: 'idle', palmas: 'smug', calma: 'idle', risada: 'smug' });
 
 /** Quanto tempo o emote fica na tela (o CSS usa o mesmo) e o intervalo mínimo entre dois. */
 export const EMOTE_MS = 2600;

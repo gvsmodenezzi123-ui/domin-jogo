@@ -3,6 +3,7 @@ import PixelCanvas from './PixelCanvas.jsx';
 import { BUST_H, BUST_W, SEATED_H, SEATED_W, paintBust, paintSeatedBust } from './art/bustPixels.js';
 import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
 import { PROFILE_SPOTS } from './art/figProfile.js';
+import { GESTURE_FACE, GESTURE_FRAMES } from './art/figGesture.js';
 
 /** Quem não tem retrato (o adversário do duelo on-line) senta como silhueta de um destes. */
 const STRANGERS = ['tioZe', 'paulinho', 'beto', 'zeca', 'marquinhos', 'carlinhos'];
@@ -41,8 +42,47 @@ function blinkStyle(name = '') {
 /** Os humores em que o personagem pisca (no golpe e desmaiado, não). */
 const BLINKS = new Set(['idle', 'thinking', 'smug']);
 
-function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, seated = null, talking = false }) {
-  if (seated && profile) return <SeatedBust rival={rival} mood={mood} speaking={speaking} facing={profile} chair={seated} talking={talking} />;
+/**
+ * Versão 2.45: o emote feito pelo próprio personagem: os quadros do gesto (um só, ou os que se
+ * revezam nas palmas e no "calma aí"), cada um uma camada que o CSS acende na sua vez.
+ * `layer(frame, i, n, style)` pinta um quadro.
+ */
+function GestureLayers({ id, layer }) {
+  const anim = GESTURE_FRAMES[id];
+  if (!anim) return layer(0, 0, 1, null);
+  const n = anim.seq.length;
+  const period = n * anim.ms;
+  return anim.seq.map((frame, i) =>
+    layer(frame, i, n, {
+      animationName: `gesture-step-${n}`,
+      animationDuration: `${period}ms`,
+      animationDelay: `${-(period - (i * period) / n) % period}ms`,
+    }),
+  );
+}
+
+function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, seated = null, talking = false, gesture = null }) {
+  if (seated && profile) return <SeatedBust rival={rival} mood={mood} speaking={speaking} facing={profile} chair={seated} talking={talking} gesture={gesture} />;
+  if (gesture && !profile && PORTRAITS[rival.art]) {
+    const [face, mouth] = GESTURE_FACE[gesture] ?? ['smug', false];
+    return (
+      <GestureLayers
+        id={gesture}
+        layer={(frame, i, n, style) => (
+          <PixelCanvas
+            key={i}
+            cacheKey={`busto-${rival.art}-gesto-${gesture}-${frame}`}
+            paint={() => paintBust(PORTRAITS[rival.art], face, mouth, { gesture, frame })}
+            w={BUST_W}
+            h={BUST_H}
+            scale={1}
+            className={`seat-bust-px ${n > 1 ? `gesture-frame ${i ? '' : 'is-first'}` : ''}`}
+            style={{ width: '100%', height: '100%', ...style }}
+          />
+        )}
+      />
+    );
+  }
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -115,7 +155,7 @@ export default memo(RivalBust);
  * Versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cadeira (`chair`), de lado.
  * O mesmo humor, a boca, a fumaça e o brilho do olho do perfil, no quadro maior.
  */
-function SeatedBust({ rival, mood, speaking, facing, chair, talking = false }) {
+function SeatedBust({ rival, mood, speaking, facing, chair, talking = false, gesture = null }) {
   const art = PORTRAITS[rival.art] ? rival.art : strangerOf(rival.name);
   const stranger = !PORTRAITS[rival.art];
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -135,6 +175,26 @@ function SeatedBust({ rival, mood, speaking, facing, chair, talking = false }) {
     />
   );
   const shade = stranger ? '-sombra' : '';
+  // versão 2.45: o emote com a mão dele: o corpo de cima com o braço erguido (quadro a quadro)
+  const hand = gesture && !stranger ? gesture : null;
+  const [face, mouth] = hand ? (GESTURE_FACE[hand] ?? ['smug', false]) : [mood, false];
+  const gestureLayers = hand ? (
+    <GestureLayers
+      id={hand}
+      layer={(frame, i, n, style) => (
+        <PixelCanvas
+          key={i}
+          cacheKey={`sentado-${art}-gesto-${hand}-${frame}-${facing}`}
+          paint={() => paintSeatedBust(PORTRAITS[art], face, mouth, { facing, chair, part: 'upper', gesture: hand, frame })}
+          w={SEATED_W}
+          h={SEATED_H}
+          scale={1}
+          className={`seat-bust-px seated-layer ${n > 1 ? `gesture-frame ${i ? '' : 'is-first'}` : ''}`}
+          style={{ width: '100%', height: '100%', ...style }}
+        />
+      )}
+    />
+  ) : null;
   // versão 2.32.3: em camadas: a cadeira e as pernas paradas; do quadril para cima respira, pensa,
   // se inclina e treme como o busto de frente (com a fumaça e o brilho do olho junto)
   return (
@@ -142,10 +202,10 @@ function SeatedBust({ rival, mood, speaking, facing, chair, talking = false }) {
       {layer(`sentado-cadeira-${chair}-${facing}`, 'chair')}
       {layer(`sentado-pernas-${art}${shade}-${facing}`, 'legs')}
       <span className="seated-upper">
-        {layer(`sentado-${art}-${mood}-${open ? 1 : 0}${shade}-${facing}`, 'upper', mood, open)}
+        {gestureLayers ?? layer(`sentado-${art}-${mood}-${open ? 1 : 0}${shade}-${facing}`, 'upper', mood, open)}
         {/* versão 2.38: pisca e mexe a boca quando fala a jogada */}
-        {BLINKS.has(mood) && !open && layer(`sentado-${art}-blink-0${shade}-${facing}`, 'upper', 'blink', false, 'seat-blink', blinkStyle(rival.name))}
-        {talking && BLINKS.has(mood) && !open && layer(`sentado-${art}-${mood}-1${shade}-${facing}`, 'upper', mood, true, 'seat-talk')}
+        {!hand && BLINKS.has(mood) && !open && layer(`sentado-${art}-blink-0${shade}-${facing}`, 'upper', 'blink', false, 'seat-blink', blinkStyle(rival.name))}
+        {!hand && talking && BLINKS.has(mood) && !open && layer(`sentado-${art}-${mood}-1${shade}-${facing}`, 'upper', mood, true, 'seat-talk')}
         {smokes &&
           PUFF_DELAYS.map((delay) => (
             <span
