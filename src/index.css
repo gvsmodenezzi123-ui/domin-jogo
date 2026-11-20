@@ -27398,6 +27398,8 @@ html[data-topview] .emote-pick {
   transition: none !important;
   /* versão 2.44.2: nada da cópia pede camada própria na placa de vídeo (eram 17 cópias da tela) */
   will-change: auto !important;
+  /* versão 2.45.2: e nada da cópia monta um contexto 3D (cada um virava várias camadas) */
+  transform-style: flat !important;
 }
 /* preto e branco: a cor some (mistura de saturação com cinza) e escurece um pouco */
 .screen-shard-gray,
@@ -29022,4 +29024,14 @@ html[data-topview] .emote-pick {
 .reduce-motion .tl-dust::before,
 .reduce-motion .tl-dust::after {
   animation: none;
+}
+
+/* ---------- versão 2.45.2: a tela quebrando mais leve ----------
+   Enquanto a cena roda, a tela de verdade (coberta pelos cacos) some: o fundo pintado, a luz em
+   WebGL e a mesa em 3D deixam de ocupar a placa de vídeo. (A cópia dentro dos cacos fica.) */
+.death-on #root .fx-layer:not(.screen-break *),
+.death-on #root .day-backdrop:not(.screen-break *),
+.death-on #root .boteco-backdrop:not(.screen-break *),
+.death-on #root .felt-table:not(.screen-break *) {
+  visibility: hidden;
 }

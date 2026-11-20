@@ -118,7 +118,8 @@ export default function FxLayer({ scene, candles = false, rootRef }) {
 
     const loop = (now) => {
       raf = requestAnimationFrame(loop);
-      if (document.visibilityState === 'hidden') return;
+      // (versão 2.45.2: nem durante a tela quebrando, que esconde a mesa de verdade)
+      if (document.visibilityState === 'hidden' || document.documentElement.classList.contains('death-on')) return;
       // com animações reduzidas, a luz fica parada: só redesenha devagar (pedras novas, tela)
       if (reduced() && !tiles.length && now - last < 400) return;
       // com pedra aprimorada na tela, a aura segue a pedra a cada quadro (60 por segundo);

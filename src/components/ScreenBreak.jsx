@@ -207,6 +207,12 @@ function snapshotOf(root, overlay, frozen) {
   from.forEach((src, i) => {
     const dst = to[i];
     if (!dst) return;
+    // versão 2.45.2: o brilho da luz (WebGL, por cima de tudo com "screen") não vai para os
+    // cacos: em cada cópia ele era mais uma camada da tela inteira
+    if (src.classList.contains('fx-layer')) {
+      dst.remove();
+      return;
+    }
     const img = document.createElement('img');
     for (const { name, value } of dst.attributes) img.setAttribute(name, value);
     img.alt = '';
@@ -485,7 +491,7 @@ function stage(host, root, sizeW, sizeH, short = false) {
   });
 
   // --- o vidro: a tela em cacos -------------------------------------------------------------
-  const cells = shardsOf(W, H, impact, short);
+  const cells = shardsOf(W, H, impact, true);
   // (o zoom, o tranco e a perspectiva em camadas separadas: nenhuma animação briga com outra)
   const zoom = el('div', 'death-glass', host);
   const glass = el('div', 'death-shake', zoom);
@@ -647,7 +653,9 @@ function stage(host, root, sizeW, sizeH, short = false) {
       ]),
       { duration: BREAK_MS },
     );
-    A(fall, frames, { duration: dur, delay, easing: 'linear' });
+    const drop = A(fall, frames, { duration: dur, delay, easing: 'linear' });
+    // versão 2.45.2: o caco que já caiu (fora da tela) sai da página e devolve a memória dele
+    drop?.finished.then(() => wrap.remove()).catch(() => {});
     A(shade, [{ opacity: 0 }, { opacity: 0.75 }], { duration: dur, delay, easing: 'ease-in' });
     // o reflexo corre pelo caco enquanto ele gira
     A(sheen, [{ opacity: 0, transform: 'translateX(-30%)' }, { opacity: 0.95, transform: 'translateX(0%)', offset: 0.25 }, { opacity: 0.2, transform: 'translateX(30%)' }], { duration: dur, delay: delay - 150, easing: 'ease-out' });
@@ -817,7 +825,12 @@ function ScreenBreak({ onDone, fade = false, actions = null, short = false }) {
     if (!host || !root) return undefined;
     const box = host.getBoundingClientRect();
     const anims = prefersReducedMotion() ? [] : stage(host, root, Math.max(1, box.width), Math.max(1, box.height), isShort.current);
+    // versão 2.45.2: a tela de verdade, por baixo dos cacos, some enquanto a cena roda (a cópia
+    // já está nos cacos): o fundo, a luz em WebGL e a mesa param de ocupar a placa de vídeo
+    const html = document.documentElement;
+    if (anims.length) html.classList.add('death-on');
     return () => {
+      html.classList.remove('death-on');
       for (const a of anims) a.cancel();
       host.replaceChildren();
     };

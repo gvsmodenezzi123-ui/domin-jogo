@@ -172,6 +172,18 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.45.2: a tela quebrando sem derrubar o celular (campanha)
+
+- A morte da campanha às vezes fechava o jogo no celular: cada caco é uma cópia da tela, e a
+  mesa em 3D, a luz e as camadas encostadas nelas iam juntas em cada cópia. Agora:
+  - 9 cacos em vez de 17 (os mesmos da roda);
+  - o brilho da luz (WebGL) não vai para as cópias;
+  - nada dentro das cópias monta contexto 3D;
+  - cada caco que já caiu sai da página e devolve a memória;
+  - enquanto a cena roda, a tela de verdade (coberta pelos cacos) some e a luz em WebGL para.
+- No pico (as trincas abrindo), de ~98 para ~35 telas de camadas na placa de vídeo e de 41 mil
+  para 23 mil elementos. O desenho é o mesmo.
+
 ### 2.45.1: otimização
 
 Medido no Chromium com o processador 4× mais lento (como um celular), em cada tela parada:
