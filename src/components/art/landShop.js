@@ -10,7 +10,7 @@
 import { paintKit } from './botecoScene.js';
 import { landKit } from './landScenes.js';
 import { counterKit } from './landCounter.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 import { pixelText, textWidth } from './pixelFont.js';
 
 const { hex, mixRgb, rngOf, bayer, buffer, plank, shelf } = paintKit;
@@ -132,9 +132,11 @@ export function paintShopBack(seed = 41, atmosphere = 'boteco') {
     { x: 330, y: -30, r: 230, c: A.tint, k: 0.5 },
   ];
   if (A.extra) lights.push(A.extra);
-  relight(raw, lights, { ambient: A.ambient, mask: G.mask, ox: PX, oy: PY });
-  for (const sx of slots) halo(raw, sx + PX, r1a + 4 + PY, 14, [255, 230, 170], 0.5, 1.4);
-  halo(raw, SHOP_GEO.npc + PX, 30 + PY, 40, [255, 220, 150], 0.3, 1.2);
-  vignetteBox(raw, PX, PY, SHOP_W, SHOP_H, 0.55, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient: A.ambient, mask: FINE.mask, ox: PX, oy: PY });
+  for (const sx of slots) halo(FINE, sx + PX, r1a + 4 + PY, 14, [255, 230, 170], 0.5, 1.4);
+  halo(FINE, SHOP_GEO.npc + PX, 30 + PY, 40, [255, 220, 150], 0.3, 1.2);
+  vignetteBox(FINE, PX, PY, SHOP_W, SHOP_H, 0.55, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

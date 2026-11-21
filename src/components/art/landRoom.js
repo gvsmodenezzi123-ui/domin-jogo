@@ -6,7 +6,7 @@
  * apoio com a folha das REGRAS DA CASA (as regras vêm por cima, na folha).
  */
 import { paintKit } from './botecoScene.js';
-import { glowLayer, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 
 const { hex, mixRgb, shift, rngOf, buffer, plank, felt } = paintKit;
 
@@ -131,7 +131,9 @@ export function paintBackRoom(seed = 29) {
     { x: tcx, y: tcy, r: 210, c: [1, 0.86, 0.6], k: 1.3 },
     { x: 400, y: 40, r: 240, c: [1, 0.9, 0.72], k: 0.7 },
   ];
-  relight(raw, lights, { ambient: [0.22, 0.2, 0.24], mask: G.mask, ox: PX, oy: PY });
-  vignetteBox(raw, PX, PY, W, H, 0.55, 0.5);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient: [0.22, 0.2, 0.24], mask: FINE.mask, ox: PX, oy: PY });
+  vignetteBox(FINE, PX, PY, W, H, 0.55, 0.5);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

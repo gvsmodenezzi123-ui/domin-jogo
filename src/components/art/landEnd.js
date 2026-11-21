@@ -10,7 +10,7 @@
 import { paintKit } from './botecoScene.js';
 import { counterKit } from './landCounter.js';
 import { landKit } from './landScenes.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 
 const { hex, rngOf, buffer, plank, looseTile, beerGlass } = paintKit;
 const { plaster, woodWall, floorBoards } = landKit;
@@ -104,11 +104,13 @@ export function paintEndBack(won = false, seed = 61) {
   chalkBoard(b, r, G, END_GEO.slate);
   letterBoard(b, r, G, END_GEO.letters);
   const { lights, ambient } = lightsOf(won);
-  relight(raw, lights, { ambient, mask: G.mask, ox: PX, oy: PY });
-  halo(raw, 243 + PX, 14 + PY, 40, hex('#ffe8b0'), 0.3, 2);
-  halo(raw, 416 + PX, 18 + PY, 34, hex('#ffe8b0'), 0.3, 2);
-  vignetteBox(raw, PX, PY, END_W, END_H, 0.5, 0.42);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient, mask: FINE.mask, ox: PX, oy: PY });
+  halo(FINE, 243 + PX, 14 + PY, 40, hex('#ffe8b0'), 0.3, 2);
+  halo(FINE, 416 + PX, 18 + PY, 34, hex('#ffe8b0'), 0.3, 2);
+  vignetteBox(FINE, PX, PY, END_W, END_H, 0.5, 0.42);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 /** O balcãozinho da esquerda, por cima do busto: o tampo com a quina de latão e a frente. */
@@ -157,6 +159,8 @@ export function paintEndFront(won = false, seed = 67) {
   }
   b.rect(x1 - 4, top + 11, 4, Y1 - top - 11, BAR_WOOD.deep);
   const { lights, ambient } = lightsOf(won);
-  relight(raw, lights, { ambient, ox: PX, oy: PY });
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD);
+  relight(FINE, lights, { ambient, ox: PX, oy: PY });
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

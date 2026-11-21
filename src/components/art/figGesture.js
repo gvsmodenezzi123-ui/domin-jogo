@@ -125,13 +125,15 @@ export function gestureFront(fig, spec, id, frame = 0) {
   const S = rampOf(spec.skin ?? '#d8a070', 'skin');
   const o = spec.outfit ?? { color: '#5a5a5a' };
   const Sl = o.type === 'tank' ? S : rampOf(o.color ?? '#5a5a5a');
-  const g = board(fig.w, fig.h);
+  // versão 2.46: a mão na mesma resolução da figura (lógica `lw`×`lh`, `S` finos por pixel)
+  const g = board(fig.lw ?? fig.w, fig.lh ?? fig.h, fig.S ?? 1);
   paintHands(g, FRONT[id] ?? FRONT.joinha, S, Sl, frame);
   g.ink(INK);
+  const paint = fig.px ?? fig.put;
   for (let y = 0; y < fig.h; y += 1) {
     for (let x = 0; x < fig.w; x += 1) {
       const i = (y * fig.w + x) * 4;
-      if (g.data[i + 3]) fig.put(x, y, [g.data[i], g.data[i + 1], g.data[i + 2]]);
+      if (g.data[i + 3]) paint(x, y, [g.data[i], g.data[i + 1], g.data[i + 2]], g.data[i + 3] / 255);
     }
   }
   return fig;

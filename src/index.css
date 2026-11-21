@@ -22561,6 +22561,51 @@
   --ink: #9a560c;
 }
 
+/* ---------- Versão 2.46: a abertura é a tela preta com o BUXARIA (acende, segura, apaga) ---------- */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.splash-logo {
+  width: min(64vw, 560px);
+  opacity: 0;
+  animation: splash-fade 3200ms linear both;
+}
+
+.splash-logo-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@keyframes splash-fade {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  32% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo {
+    animation-duration: 1700ms;
+  }
+}
+
 /* ---------- Versão 2.12: o toque de entrada (a gelada) e a abertura deitada (Efeito Dominó) ---------- */
 .access-gate {
   position: fixed;

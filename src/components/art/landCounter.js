@@ -8,7 +8,7 @@
  */
 import { paintKit } from './botecoScene.js';
 import { landKit } from './landScenes.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 
 const { hex, mixRgb, rngOf, buffer, plank, shelf } = paintKit;
 const { plaster, floorBoards } = landKit;
@@ -172,14 +172,16 @@ export function paintCounterBack(seed = 23, mode = 'normal') {
   longCounter(b, r, COUNTER_GEO.top);
   // a luz da dificuldade
   const { lights, ambient } = lightsOf(mode);
-  relight(raw, lights, { ambient, mask: G.mask, ox: PX, oy: PY });
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient, mask: FINE.mask, ox: PX, oy: PY });
   const m = MODES[mode] ?? MODES.normal;
   const glow = m.tint.map((v) => Math.round(v * 255));
-  halo(raw, COUNTER_GEO.cx + PX, 15 + PY, 34, glow, 0.6, 1.5);
-  halo(raw, 403 + PX, 10 + PY, 40, glow, 0.35, 2);
-  if (m.floor) halo(raw, 250 + PX, 240 + PY, 260, [255, 70, 20], 0.35, 2.5);
-  vignetteBox(raw, PX, PY, COUNTER_W, COUNTER_H, 0.6, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  halo(FINE, COUNTER_GEO.cx + PX, 15 + PY, 34, glow, 0.6, 1.5);
+  halo(FINE, 403 + PX, 10 + PY, 40, glow, 0.35, 2);
+  if (m.floor) halo(FINE, 250 + PX, 240 + PY, 260, [255, 70, 20], 0.35, 2.5);
+  vignetteBox(FINE, PX, PY, COUNTER_W, COUNTER_H, 0.6, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 /** As peças desta cena que as outras telas deitadas também usam (a loja, o beco). */

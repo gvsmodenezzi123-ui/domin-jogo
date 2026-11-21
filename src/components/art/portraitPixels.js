@@ -26,13 +26,14 @@ const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
 const rgb = (c) => [clamp(c[0]), clamp(c[1]), clamp(c[2])];
 
 /** Sombra da figura na parede (um pouco para a direita e para baixo). */
-function dropShadow(bg, fig) {
-  for (let y = G - 1; y >= 0; y -= 1) {
-    for (let x = G - 1; x >= 0; x -= 1) {
-      const sx = x - 3;
-      const sy = y - 2;
+function dropShadow(bg, fig, S = 1) {
+  const n = G * S;
+  for (let y = n - 1; y >= 0; y -= 1) {
+    for (let x = n - 1; x >= 0; x -= 1) {
+      const sx = x - 3 * S;
+      const sy = y - 2 * S;
       if (sx < 0 || sy < 0) continue;
-      if (fig.data[(sy * G + sx) * 4 + 3] > 200) bg.put(x, y, [0, 0, 0], 0.35);
+      if (fig.data[(sy * n + sx) * 4 + 3] > 200) bg.put(x, y, [0, 0, 0], 0.35);
     }
   }
 }
@@ -53,7 +54,7 @@ function over(base, top) {
 // Fundo: a parede de cada um (enche a foto inteira)
 // ---------------------------------------------------------------------------
 
-function paintBackground(b, spec, r) {
+function paintBackground(b, spec, r, light = true) {
   const [top, bottom] = (spec.bg ?? ['#3a2a1e', '#1a120c']).map(hex);
   const pattern = spec.bgPattern ?? 'plain';
   for (let y = 0; y < G; y += 1) {
@@ -75,14 +76,20 @@ function paintBackground(b, spec, r) {
       b.put(x, y, rgb(c));
     }
   }
-  // a luz da lâmpada atrás da cabeça e a vinheta nos cantos
+  if (light) lightOf(b, spec, 1);
+}
+
+/** A luz da lâmpada atrás da cabeça e a vinheta nos cantos (S finos por pixel lógico). */
+function lightOf(b, spec, S) {
   const glow = hex(spec.glow ?? '#ffd890');
-  for (let y = 0; y < G; y += 1) {
-    for (let x = 0; x < G; x += 1) {
+  for (let Y = 0; Y < G * S; Y += 1) {
+    for (let X = 0; X < G * S; X += 1) {
+      const x = (X + 0.5) / S - 0.5;
+      const y = (Y + 0.5) / S - 0.5;
       const d = Math.hypot((x - CX) / 30, (y - 24) / 28);
-      if (d < 1) b.put(x, y, glow, (1 - d) * 0.18);
+      if (d < 1) b.put(X, Y, glow, (1 - d) * 0.18);
       const v = Math.hypot((x - CX) / 40, (y - CX) / 40);
-      if (v > 0.8) b.put(x, y, [0, 0, 0], Math.min(0.5, (v - 0.8) * 1.6));
+      if (v > 0.8) b.put(X, Y, [0, 0, 0], Math.min(0.5, (v - 0.8) * 1.6));
     }
   }
 }
@@ -100,17 +107,32 @@ export function paintPortrait(spec, mood = 'idle', speaking = false, bare = fals
   // versão 2.17: a figura é a nova (art/figurePixels.js), pintada no tamanho do busto; o retrato
   // é o recorte do meio dela
   const full = paintFigure(spec, mood, speaking);
-  const fig = buffer(G, G);
-  for (let y = 0; y < G; y += 1) {
-    for (let x = 0; x < G; x += 1) {
-      const i = (y * full.w + x + FIG_OX) * 4;
+  // versão 2.46: a figura vem em alta (S finos por pixel lógico); o retrato sai do mesmo tamanho
+  const S = full.S ?? 1;
+  const n = G * S;
+  const fig = buffer(n, n);
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
+      const i = (y * full.w + x + FIG_OX * S) * 4;
       if (full.data[i + 3]) fig.put(x, y, [full.data[i], full.data[i + 1], full.data[i + 2]], full.data[i + 3] / 255);
     }
   }
   if (bare) return fig; // só a figura (para a silhueta de quem você ainda não conhece)
-  const bg = buffer(G, G);
-  paintBackground(bg, spec, rngOf(spec.seed ?? 7));
-  dropShadow(bg, fig);
+  const bg = buffer(n, n);
+  if (S === 1) paintBackground(bg, spec, rngOf(spec.seed ?? 7));
+  else {
+    // a parede no tamanho de sempre, ampliada em blocos; a luz e a vinheta lisas por cima
+    const lo = buffer(G, G);
+    paintBackground(lo, spec, rngOf(spec.seed ?? 7), false);
+    for (let y = 0; y < n; y += 1) {
+      for (let x = 0; x < n; x += 1) {
+        const i = (Math.floor(y / S) * G + Math.floor(x / S)) * 4;
+        bg.put(x, y, [lo.data[i], lo.data[i + 1], lo.data[i + 2]]);
+      }
+    }
+    lightOf(bg, spec, S);
+  }
+  dropShadow(bg, fig, S);
   over(bg, fig);
   return bg;
 }

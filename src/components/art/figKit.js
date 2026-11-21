@@ -113,7 +113,7 @@ export function hash(x, y, seed = 0) {
 // onde ele pode dar verdadeiro; a forma só varre essa caixa (a figura sai igual, mais depressa).
 const withBox = (test, x0, y0, x1, y1) => Object.assign(test, { box: [Math.floor(x0) - 1, Math.floor(y0) - 1, Math.ceil(x1) + 1, Math.ceil(y1) + 1] });
 export const ell = (cx, cy, rx, ry) => withBox((x, y) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1, cx - rx, cy - ry, cx + rx, cy + ry);
-export const box = (x0, y0, x1, y1) => withBox((x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1, x0, y0, x1, y1);
+export const box = (x0, y0, x1, y1) => withBox((x, y) => x >= x0 - 0.5 && x < x1 + 0.5 && y >= y0 - 0.5 && y < y1 + 0.5, x0, y0, x1, y1);
 export const poly = (pts) =>
   withBox(
     (x, y) => {
@@ -166,80 +166,221 @@ export const tube = (x0, x1, lo, hi) => (x) => {
   return lo + (hi - lo) * clamp01((n * -0.5 + nz * 0.82 + 0.25) / 1.2);
 };
 
-/** A prancheta: `w`×`h` pixels RGBA (o mesmo formato do buffer do paintKit: data, w, h, put). */
-export function board(w, h) {
-  const data = new Uint8ClampedArray(w * h * 4);
+/**
+ * A prancheta: `w`×`h` pixels RGBA (o mesmo formato do buffer do paintKit: data, w, h, put).
+ *
+ * Versão 2.46 (HD): com `scale` 2 a prancheta guarda o dobro de pixels em cada eixo, mas o
+ * desenho continua falando em pixels LÓGICOS (o `put` pinta o bloco 2×2, o `rect` e o `stamp`
+ * também). As FORMAS é que ganham a resolução: o teste e o tom são lidos no meio de cada pixel
+ * fino, então a borda das curvas, as dobras e os degradês saem lisos, e a linha de separação
+ * (a borda escura de cada forma) e o contorno de tinta ficam com 1 pixel fino. Os testes
+ * escritos com limites inteiros (`x >= 40 && x <= 44`) e os tons com listras (`x % 4 === 0`)
+ * continuam valendo: a forma nota quando o teste fino só come a borda do teste inteiro (e usa o
+ * inteiro) e o tom de cada bloco cai para o inteiro quando o fino diverge dele. Para o desenho
+ * novo, `px` / `fput` / `fstamp` pintam direto no pixel fino. `w` e `h` são os da imagem (os
+ * finos); `lw`/`lh` os lógicos. Cada pixel guarda a CAMADA que o pintou (`layer(n)`), para o
+ * acabamento (sombra de contato entre as partes).
+ */
+export function board(w, h, scale = 1) {
+  const S = scale;
+  const PW = w * S;
+  const PH = h * S;
+  const data = new Uint8ClampedArray(PW * PH * 4);
+  const zbuf = new Uint8Array(PW * PH);
+  let z = 0;
+  const layer = (n) => {
+    z = n;
+  };
   // versão 2.32: a caixa padrão das formas sem caixa própria (a cabeça do perfil no quadro maior)
   let limit = null;
   const setLimit = (r) => {
     limit = r;
   };
   const inb = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
-  const put = (xi, yi, c, a = 1) => {
-    const x = Math.round(xi);
-    const y = Math.round(yi);
-    if (!inb(x, y) || a <= 0) return;
-    const i = (y * w + x) * 4;
+  /** Um pixel fino (X, Y). */
+  const px = (X, Y, c, a = 1) => {
+    if (X < 0 || Y < 0 || X >= PW || Y >= PH || a <= 0) return;
+    const p = Y * PW + X;
+    const i = p * 4;
     if (a >= 1 || data[i + 3] === 0) {
       data[i] = c[0];
       data[i + 1] = c[1];
       data[i + 2] = c[2];
       data[i + 3] = 255;
+      zbuf[p] = z;
       return;
     }
     data[i] = Math.round(data[i] + (c[0] - data[i]) * a);
     data[i + 1] = Math.round(data[i + 1] + (c[1] - data[i + 1]) * a);
     data[i + 2] = Math.round(data[i + 2] + (c[2] - data[i + 2]) * a);
   };
-  /** Só pinta por cima do que já existe (sombras e brilhos que não vazam para fora da figura). */
-  const tint = (x, y, c, a = 1) => {
-    if (inb(x, y) && data[(y * w + x) * 4 + 3]) put(x, y, c, a);
+  const put = (xi, yi, c, a = 1) => {
+    const x = Math.round(xi);
+    const y = Math.round(yi);
+    if (!inb(x, y) || a <= 0) return;
+    if (S === 1) {
+      px(x, y, c, a);
+      return;
+    }
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) px(x * S + i, y * S + j, c, a);
   };
-  const has = (x, y) => inb(x, y) && data[(y * w + x) * 4 + 3] > 0;
+  /** O pixel fino onde cai o ponto lógico (x, y) (x = 37.5 é a metade direita da coluna 37). */
+  const fput = (x, y, c, a = 1) => px(Math.round(x * S), Math.round(y * S), c, a);
+  const hasP = (X, Y) => X >= 0 && Y >= 0 && X < PW && Y < PH && data[(Y * PW + X) * 4 + 3] > 0;
+  /** Só pinta por cima do que já existe (sombras e brilhos que não vazam para fora da figura). */
+  const tint = (xi, yi, c, a = 1) => {
+    const x = Math.round(xi);
+    const y = Math.round(yi);
+    if (!inb(x, y)) return;
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) if (hasP(x * S + i, y * S + j)) px(x * S + i, y * S + j, c, a);
+  };
+  const ftint = (X, Y, c, a = 1) => {
+    if (hasP(X, Y)) px(X, Y, c, a);
+  };
+  const has = (xi, yi) => {
+    const x = Math.round(xi);
+    const y = Math.round(yi);
+    if (!inb(x, y)) return false;
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) if (data[((y * S + j) * PW + x * S + i) * 4 + 3] > 0) return true;
+    return false;
+  };
   const get = (x, y) => {
-    const i = (y * w + x) * 4;
+    const i = ((y * S + (S >> 1)) * PW + x * S + (S >> 1)) * 4;
+    return [data[i], data[i + 1], data[i + 2]];
+  };
+  const getP = (X, Y) => {
+    const i = (Y * PW + X) * 4;
     return [data[i], data[i + 1], data[i + 2]];
   };
   const erase = (x, y) => {
-    if (inb(x, y)) data[(y * w + x) * 4 + 3] = 0;
+    if (!inb(x, y)) return;
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) data[((y * S + j) * PW + x * S + i) * 4 + 3] = 0;
   };
   /**
    * Uma forma: `test(x, y)` diz quem é dela; `tone(x, y)` devolve o tom (fracionário) na rampa
    * `R`. A borda cai para o tom `edge` (a de cima e da esquerda, que pega luz, para `rim` se
-   * dado). `noise`: quanto o tom varia em manchas. Devolve a máscara (`has`).
+   * dado). `noise`: quanto o tom varia em manchas. `dither`: a mistura em xadrez entre dois tons
+   * vizinhos (só na HD). `fine`: true lê o teste só no fino, false só no inteiro (blocos).
+   * Devolve a máscara (`has`, lógico; `hasP`, fino).
    */
-  const form = (test, tone, R, { edge = 1, rim = null, noise = 0.3, seed = 1, x0, y0, x1, y1 } = {}) => {
-    const mask = new Uint8Array(w * h);
+  const form = (test, tone, R, { edge = 1, rim = null, noise = 0.3, seed = 1, x0, y0, x1, y1, fine = null, dither = 0 } = {}) => {
     // a caixa: a dada, a do teste (ell, poly, box...) ou a da prancheta (`limit`, se marcada)
     const bb = test.box ?? limit;
     const ax = Math.max(0, x0 ?? bb?.[0] ?? 0);
     const ay = Math.max(0, y0 ?? bb?.[1] ?? 0);
     const bx = Math.min(w - 1, x1 ?? bb?.[2] ?? w - 1);
     const by = Math.min(h - 1, y1 ?? bb?.[3] ?? h - 1);
-    for (let y = ay; y <= by; y += 1) for (let x = ax; x <= bx; x += 1) if (test(x, y)) mask[y * w + x] = 1;
-    const m = (x, y) => inb(x, y) && mask[y * w + x] === 1;
+    const mask = new Uint8Array(PW * PH);
+    const toneOf = typeof tone === 'function' ? tone : () => tone;
     const top = R.length - 1;
-    for (let y = ay; y <= by; y += 1) {
-      for (let x = ax; x <= bx; x += 1) {
-        if (!mask[y * w + x]) continue;
-        let t = (typeof tone === 'function' ? tone(x, y) : tone) + (noise ? vnoise(x, y, 2.7, seed) * noise * 2 : 0);
+    if (S === 1) {
+      for (let y = ay; y <= by; y += 1) for (let x = ax; x <= bx; x += 1) if (test(x, y)) mask[y * w + x] = 1;
+    } else {
+      // o teste no inteiro (o desenho de sempre) e no fino
+      const lw = bx - ax + 1;
+      const ints = new Uint8Array(lw * (by - ay + 1));
+      if (fine !== true) for (let y = ay; y <= by; y += 1) for (let x = ax; x <= bx; x += 1) if (test(x, y)) ints[(y - ay) * lw + x - ax] = 1;
+      let added = 0;
+      let lost = 0;
+      if (fine !== false) {
+        for (let Y = ay * S; Y < (by + 1) * S; Y += 1) {
+          const yc = (Y + 0.5) / S - 0.5;
+          for (let X = ax * S; X < (bx + 1) * S; X += 1) {
+            if (!test((X + 0.5) / S - 0.5, yc)) continue;
+            mask[Y * PW + X] = 1;
+            if (fine !== true && !ints[(Math.floor(Y / S) - ay) * lw + Math.floor(X / S) - ax]) added += 1;
+          }
+        }
+      }
+      if (fine === false) {
+        for (let Y = ay * S; Y < (by + 1) * S; Y += 1) for (let X = ax * S; X < (bx + 1) * S; X += 1) mask[Y * PW + X] = ints[(Math.floor(Y / S) - ay) * lw + Math.floor(X / S) - ax];
+      } else if (fine !== true) {
+        // o fino só perdeu pixels de dentro do inteiro (nenhum de fora): o teste é de limites
+        // inteiros e o fino só comeu a borda; vale o inteiro, em blocos
+        const blockCount = new Uint8Array(lw * (by - ay + 1));
+        for (let Y = ay * S; Y < (by + 1) * S; Y += 1) {
+          for (let X = ax * S; X < (bx + 1) * S; X += 1) {
+            const bi = (Math.floor(Y / S) - ay) * lw + Math.floor(X / S) - ax;
+            if (mask[Y * PW + X]) blockCount[bi] += 1;
+            else if (ints[bi]) lost += 1;
+          }
+        }
+        const blocky = added === 0 && lost > 0;
+        if (globalThis.__FORMDBG) globalThis.__FORMDBG.push({ added, lost, blocky, stack: new Error().stack.split('\n')[3]?.trim() });
+        for (let y = ay; y <= by; y += 1) {
+          for (let x = ax; x <= bx; x += 1) {
+            const bi = (y - ay) * lw + x - ax;
+            // o bloco inteiro: no teste de limites, ou o detalhe fino que sumiria (1 px)
+            if (!ints[bi] || !(blocky || blockCount[bi] === 0)) continue;
+            for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) mask[(y * S + j) * PW + x * S + i] = 1;
+          }
+        }
+      }
+    }
+    const m = (X, Y) => X >= 0 && Y >= 0 && X < PW && Y < PH && mask[Y * PW + X] === 1;
+    // o tom de cada bloco no inteiro (para os tons de listra), lido só quando preciso
+    const tint0 = S > 1 ? new Float32Array((bx - ax + 1) * (by - ay + 1)).fill(NaN) : null;
+    const tInt = (x, y) => {
+      const bi = (y - ay) * (bx - ax + 1) + x - ax;
+      if (Number.isNaN(tint0[bi])) tint0[bi] = toneOf(x, y);
+      return tint0[bi];
+    };
+    for (let Y = ay * S; Y < (by + 1) * S; Y += 1) {
+      for (let X = ax * S; X < (bx + 1) * S; X += 1) {
+        if (!mask[Y * PW + X]) continue;
+        let t;
+        let nx;
+        let ny;
+        if (S === 1) {
+          nx = X;
+          ny = Y;
+          t = toneOf(X, Y);
+        } else {
+          nx = (X + 0.5) / S - 0.5;
+          ny = (Y + 0.5) / S - 0.5;
+          t = toneOf(nx, ny);
+          // o tom fino diverge do inteiro do bloco (listra, costura, `y === 58`): vale o inteiro
+          const ti = tInt(Math.floor(X / S), Math.floor(Y / S));
+          if (!(Math.abs(t - ti) <= 0.75)) t = ti;
+          // o fino que a curva ganhou fora do desenho inteiro pode não ter tom nenhum (tabela que
+          // só vale dentro): fica no tom do meio, e a borda escurece ele
+          if (Number.isNaN(t) || t == null) t = 3;
+        }
+        if (noise) t += vnoise(nx, ny, 2.7, seed) * noise * 2;
         if (edge != null) {
-          const lit = !m(x - 1, y) || !m(x, y - 1);
-          const dim = !m(x + 1, y) || !m(x, y + 1);
+          const lit = !m(X - 1, Y) || !m(X, Y - 1);
+          const dim = !m(X + 1, Y) || !m(X, Y + 1);
           if (lit && !dim && rim != null) t = Math.min(t, rim);
           else if (lit || dim) t = Math.min(t, edge);
         }
-        put(x, y, R[clamp(Math.round(t), 0, top)]);
+        if (dither && S > 1) t += (((X + Y) & 1) - 0.5) * dither;
+        px(X, Y, R[clamp(Math.round(t), 0, top)]);
       }
     }
-    return { has: m, mask };
+    const hasL = (xi, yi) => {
+      const x = Math.round(xi);
+      const y = Math.round(yi);
+      if (!inb(x, y)) return false;
+      for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) if (mask[(y * S + j) * PW + x * S + i]) return true;
+      return false;
+    };
+    return { has: hasL, hasP: m, mask };
   };
   const rect = (x, y, rw, rh, c, a = 1) => {
     for (let yy = y; yy < y + rh; yy += 1) for (let xx = x; xx < x + rw; xx += 1) put(xx, yy, c, a);
   };
   const line = (x0, y0, x1, y1, c, a = 1) => {
     const n = Math.max(Math.abs(Math.round(x1) - Math.round(x0)), Math.abs(Math.round(y1) - Math.round(y0)), 1);
-    for (let i = 0; i <= n; i += 1) put(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, c, a);
+    for (let i = 0; i < n + 1; i += 1) put(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, c, a);
+  };
+  /** A linha fina (1 pixel fino de largura), entre pontos lógicos. */
+  const fline = (x0, y0, x1, y1, c, a = 1) => {
+    const X0 = x0 * S + (S - 1) / 2;
+    const Y0 = y0 * S + (S - 1) / 2;
+    const X1 = x1 * S + (S - 1) / 2;
+    const Y1 = y1 * S + (S - 1) / 2;
+    const n = Math.max(Math.abs(Math.round(X1) - Math.round(X0)), Math.abs(Math.round(Y1) - Math.round(Y0)), 1);
+    for (let i = 0; i <= n; i += 1) px(Math.round(X0 + ((X1 - X0) * i) / n), Math.round(Y0 + ((Y1 - Y0) * i) / n), c, a);
   };
   /** Carimba um mapa de caracteres: `pal[ch]` é a cor (falta = transparente). `flip` espelha. */
   const stamp = (rows, x, y, pal, flip = false) => {
@@ -250,11 +391,35 @@ export function board(w, h) {
       }
     });
   };
-  /** O contorno de tinta: 1 px em volta de tudo que está pintado. */
-  const ink = (color) => {
-    const marks = [];
-    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (!has(x, y) && (has(x - 1, y) || has(x + 1, y) || has(x, y - 1) || has(x, y + 1))) marks.push(x, y);
-    for (let i = 0; i < marks.length; i += 2) put(marks[i], marks[i + 1], color);
+  /** O carimbo no fino: (X, Y) em pixels finos; `flip` espelha em volta de X. */
+  const fstamp = (rows, X, Y, pal, flip = false) => {
+    rows.forEach((row, j) => {
+      for (let i = 0; i < row.length; i += 1) {
+        const c = pal[row[i]];
+        if (c) px(flip ? X - i : X + i, Y + j, c);
+      }
+    });
   };
-  return { data, w, h, put, tint, has, get, erase, form, rect, line, stamp, ink, setLimit };
+  /**
+   * O contorno de tinta em volta de tudo que está pintado. Na HD são 2 finos (a largura de
+   * sempre): o de dentro sólido e o de fora um pouco transparente, para a silhueta ficar firme sem
+   * pesar nas curvas.
+   */
+  const ink = (color, outer = S > 1 ? 0.7 : 0) => {
+    const ring = () => {
+      const marks = [];
+      for (let Y = 0; Y < PH; Y += 1) for (let X = 0; X < PW; X += 1) if (!hasP(X, Y) && (hasP(X - 1, Y) || hasP(X + 1, Y) || hasP(X, Y - 1) || hasP(X, Y + 1))) marks.push(X, Y);
+      return marks;
+    };
+    const first = ring();
+    for (let i = 0; i < first.length; i += 2) px(first[i], first[i + 1], color);
+    if (!outer) return;
+    const second = ring();
+    for (let i = 0; i < second.length; i += 2) {
+      const p = second[i + 1] * PW + second[i];
+      px(second[i], second[i + 1], color);
+      data[p * 4 + 3] = Math.round(255 * outer);
+    }
+  };
+  return { data, w: PW, h: PH, lw: w, lh: h, S, zbuf, layer, put, px, fput, tint, ftint, has, hasP, get, getP, erase, form, rect, line, fline, stamp, fstamp, ink, setLimit };
 }

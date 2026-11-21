@@ -37,7 +37,7 @@ function silhouetteOf(b) {
       if (a < 200) continue;
       const edge = !alphaAt(b, x - 1, y) || !alphaAt(b, x, y - 1);
       const lum = (colorAt(b, x, y).reduce((s, v) => s + v, 0) / 765) * 0.12;
-      out.put(x, y, edge && y < b.h - 8 ? mix(dark, rim, 0.55) : mix(dark, hex('#3a2a20'), lum));
+      out.put(x, y, edge && y < b.h - 8 * (b.S ?? 1) ? mix(dark, rim, 0.55) : mix(dark, hex('#3a2a20'), lum));
     }
   }
   return out;
@@ -52,10 +52,12 @@ export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = 
   let out = profile ? paintProfile(spec, mood, speaking, profile) : paintFigure(spec, mood, speaking);
   // versão 2.45: o emote feito com a mão dele (só de frente)
   if (gesture && !profile) out = gestureFront(out, spec, gesture, frame);
-  // a beirada da mesa faz sombra no peito: o pé do busto escurece
-  for (let y = BUST_RAIL - 8; y < BUST_H; y += 1) {
-    const k = ((y - (BUST_RAIL - 8)) / (BUST_H - (BUST_RAIL - 8))) * 0.42;
-    for (let x = 0; x < BUST_W; x += 1) if (alphaAt(out, x, y)) out.put(x, y, [8, 5, 3], k);
+  // a beirada da mesa faz sombra no peito: o pé do busto escurece (versão 2.46: nos finos)
+  const S = out.S ?? 1;
+  const paint = out.px ?? out.put;
+  for (let y = (BUST_RAIL - 8) * S; y < BUST_H * S; y += 1) {
+    const k = ((y / S - (BUST_RAIL - 8)) / (BUST_H - (BUST_RAIL - 8))) * 0.42;
+    for (let x = 0; x < BUST_W * S; x += 1) if (alphaAt(out, x, y)) paint(x, y, [8, 5, 3], k);
   }
   return silhouette ? silhouetteOf(out) : out;
 }

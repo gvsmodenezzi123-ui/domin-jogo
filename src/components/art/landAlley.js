@@ -9,7 +9,7 @@
  *     teto por onde desce o facho de luz, a prateleira de tralha e o chão de pedra.
  */
 import { paintKit } from './botecoScene.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 import { pixelText, textWidth } from './pixelFont.js';
 
 const { hex, mixRgb, shift, rngOf, bayer, buffer, plank } = paintKit;
@@ -246,11 +246,13 @@ export function paintAlleyBack(seed = 7, atmosphere = 'boteco', kind = 'market')
   }
   if (atmosphere === 'neon') lights.push({ x: 500, y: 60, r: 220, c: [0.6, 0.3, 1], k: 0.5 });
   if (atmosphere === 'bicho') lights.push({ x: 250, y: 260, r: 280, c: [1, 0.2, 0.1], k: 0.4 });
-  relight(raw, lights, { ambient: [0.12, 0.13, 0.22], mask: G.mask, ox: PX, oy: PY });
-  if (kind === 'market') halo(raw, 92 + PX, 34 + PY, 70, glow, 0.35, 1.6);
-  else halo(raw, 164 + PX, 25 + PY, 46, glow, 0.6, 1.4);
-  vignetteBox(raw, PX, PY, ALLEY_W, ALLEY_H, 0.6, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient: [0.12, 0.13, 0.22], mask: FINE.mask, ox: PX, oy: PY });
+  if (kind === 'market') halo(FINE, 92 + PX, 34 + PY, 70, glow, 0.35, 1.6);
+  else halo(FINE, 164 + PX, 25 + PY, 46, glow, 0.6, 1.4);
+  vignetteBox(FINE, PX, PY, ALLEY_W, ALLEY_H, 0.6, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 /** O porão do Seu Tião. */
@@ -308,8 +310,10 @@ export function paintCellarBack(seed = 9, atmosphere = 'boteco') {
   ];
   if (atmosphere === 'neon') lights.push({ x: 520, y: 100, r: 240, c: [0.6, 0.3, 1], k: 0.45 });
   if (atmosphere === 'bicho') lights.push({ x: 250, y: 260, r: 260, c: [1, 0.2, 0.1], k: 0.45 });
-  relight(raw, lights, { ambient: [0.16, 0.15, 0.19], mask: G.mask, ox: PX, oy: PY });
-  halo(raw, gx + PX, 12 + PY, 40, [220, 236, 255], 0.5, 1.8);
-  vignetteBox(raw, PX, PY, ALLEY_W, ALLEY_H, 0.65, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient: [0.16, 0.15, 0.19], mask: FINE.mask, ox: PX, oy: PY });
+  halo(FINE, gx + PX, 12 + PY, 40, [220, 236, 255], 0.5, 1.8);
+  vignetteBox(FINE, PX, PY, ALLEY_W, ALLEY_H, 0.65, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

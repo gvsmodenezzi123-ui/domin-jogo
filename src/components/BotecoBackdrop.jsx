@@ -43,9 +43,11 @@ function StillBackdrop({ scene, seed, className, style }) {
       const key = `${w}x${h}`;
       if (key === last) return;
       last = key;
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d')?.putImageData(sceneImage(scene, w, h, seed), 0, 0);
+      // versão 2.46: as salas da noite vêm em alta (o canvas tem o tamanho da pintura)
+      const img = sceneImage(scene, w, h, seed);
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d')?.putImageData(img, 0, 0);
     };
     paint();
     if (typeof ResizeObserver === 'undefined') return undefined;

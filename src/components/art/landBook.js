@@ -7,7 +7,7 @@
  *                        as argolas no meio e as cantoneiras de lata.
  */
 import { paintKit } from './botecoScene.js';
-import { relight, shifted, vignetteBox } from './lightPass.js';
+import { relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 
 const { hex, mixRgb, shift, rngOf, buffer, plank } = paintKit;
 
@@ -103,9 +103,11 @@ export function paintAlbumSpread(seed = 37) {
   b.light(R.x0, R.y0, 10, R.y1 - R.y0, BLACK, (x) => 0.5 - (x - R.x0) * 0.05);
   // o canto de página dobrado
   for (let k = 0; k < 9; k += 1) b.rect(R.x1 - 9 + k, R.y1 - 9 + k, 9 - k, 1, hex('#d8c8a0'));
-  relight(raw, LIGHTS, { ambient: [0.36, 0.34, 0.34], ox: PX, oy: PY });
-  vignetteBox(raw, PX, PY, W, H, 0.3, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD);
+  relight(FINE, LIGHTS, { ambient: [0.36, 0.34, 0.34], ox: PX, oy: PY });
+  vignetteBox(FINE, PX, PY, W, H, 0.3, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 export function paintNotebookSpread(seed = 43) {
@@ -150,7 +152,9 @@ export function paintNotebookSpread(seed = 43) {
   }
   // uma marca de copo no pé da folha da esquerda
   for (let a = 0; a < Math.PI * 1.7; a += 0.03) b.put(L.x1 - 34 + Math.cos(a) * 12, L.y1 - 26 + Math.sin(a) * 10, hex('#8a6a3a'), 0.35);
-  relight(raw, LIGHTS, { ambient: [0.36, 0.34, 0.34], ox: PX, oy: PY });
-  vignetteBox(raw, PX, PY, W, H, 0.3, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD);
+  relight(FINE, LIGHTS, { ambient: [0.36, 0.34, 0.34], ox: PX, oy: PY });
+  vignetteBox(FINE, PX, PY, W, H, 0.3, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

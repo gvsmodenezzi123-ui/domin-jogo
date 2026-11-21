@@ -12,7 +12,7 @@
  */
 import { paintKit } from './botecoScene.js';
 import { landKit } from './landScenes.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 import { pixelText, textWidth } from './pixelFont.js';
 
 const { hex, mixRgb, shift, rngOf, bayer, buffer, plank, felt, beerGlass, ashtray, bottle, mug, rainyWindow } = paintKit;
@@ -424,14 +424,16 @@ export function paintTitleBack(seed = 5) {
   // a janela com chuva, cortada pela borda
   rainyWindow(G, r, 468, 20, 44, 100);
   // a luz da noite
-  relight(raw, LIGHTS, { ambient: AMBIENT, mask: G.mask, ox: PX, oy: PY });
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, LIGHTS, { ambient: AMBIENT, mask: FINE.mask, ox: PX, oy: PY });
   // os halos de quem brilha
-  halo(raw, 292 + PX, 15 + PY, 46, hex('#ff4f86'), 0.55, 1.3);
-  halo(raw, 424 + PX, 25 + PY, 40, hex('#7ac8ff'), 0.4);
-  halo(raw, 112 + PX, 15 + PY, 30, hex('#ffd98a'), 0.6, 1.6);
-  halo(raw, 360 + PX, 44 + PY, 70, hex('#ffd98a'), 0.35, 1.1);
-  vignetteBox(raw, PX, PY, TITLE_W, TITLE_H, 0.55, 0.42);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  halo(FINE, 292 + PX, 15 + PY, 46, hex('#ff4f86'), 0.55, 1.3);
+  halo(FINE, 424 + PX, 25 + PY, 40, hex('#7ac8ff'), 0.4);
+  halo(FINE, 112 + PX, 15 + PY, 30, hex('#ffd98a'), 0.6, 1.6);
+  halo(FINE, 360 + PX, 44 + PY, 70, hex('#ffd98a'), 0.35, 1.1);
+  vignetteBox(FINE, PX, PY, TITLE_W, TITLE_H, 0.55, 0.42);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 /** A mesa, por cima do busto do rival. */
@@ -492,6 +494,8 @@ export function paintTitleFront(seed = 9) {
   ashtray(b, r, 452, 205, 1.2);
   G.put(TITLE_GEO.ember[0], TITLE_GEO.ember[1], hex('#ff8a32'));
   G.put(TITLE_GEO.ember[0] + 1, TITLE_GEO.ember[1], hex('#ffd27a'));
-  relight(raw, LIGHTS, { ambient: AMBIENT, mask: G.mask, ox: PX, oy: PY, bands: 9 });
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, LIGHTS, { ambient: AMBIENT, mask: FINE.mask, ox: PX, oy: PY, bands: 9 });
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

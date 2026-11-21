@@ -8,7 +8,7 @@
  *   paintMapPage: uma folha (350 × 184 px; ×2 no palco).
  */
 import { paintKit } from './botecoScene.js';
-import { glowLayer, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 import { pixelText } from './pixelFont.js';
 
 const { hex, mixRgb, shift, rngOf, buffer, plank } = paintKit;
@@ -105,9 +105,11 @@ export function paintMapBack(seed = 31) {
   b.put(cx - 18, by0 + 5, hex('#2a2e30'));
   b.put(cx + 17, by0 + 5, hex('#2a2e30'));
   // a luz
-  relight(raw, LIGHTS, { ambient: AMBIENT, mask: G.mask, ox: PX, oy: PY });
-  vignetteBox(raw, PX, PY, MAP_W, MAP_H, 0.5, 0.4);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, LIGHTS, { ambient: AMBIENT, mask: FINE.mask, ox: PX, oy: PY });
+  vignetteBox(FINE, PX, PY, MAP_W, MAP_H, 0.5, 0.4);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }
 
 const PAPERS = {

@@ -15,7 +15,7 @@
  *   o caixote vermelho do Seu Tião e os três pacotes lacrados em 128×128.
  */
 import { paintKit } from './botecoScene.js';
-import { spriteKit } from './relicPixels.js';
+import { bufferHD, spriteKit } from './relicPixels.js';
 
 const { hex, rngOf, buffer } = paintKit;
 const { kit, mat, outline } = spriteKit;
@@ -465,7 +465,8 @@ export function paintCellar(w, h, seed = 91) {
 
 /** Pinta um objeto num buffer novo com o kit e contorna (fundo transparente). */
 function sprite(w, h, draw, { ink = null, k = 0.78 } = {}) {
-  const b = buffer(w, h);
+  // versão 2.46: os objetos do kit saem em alta (as formas lidas no fino)
+  const b = bufferHD(w, h, 2);
   draw(kit(b), b);
   outline(b, ink ?? hex('#120a06'), k);
   return b;

@@ -5,6 +5,7 @@
  * O eixo passa ENTRE as colunas 43 e 44: o espelho de x é 87 − x.
  */
 import { ball, clamp, ell, hash, hex, mix, rampOf, vnoise } from './figKit.js';
+import { blushHD, browHD, earringsHD, earsHD, eyeHD, glassesHD, handlebarHD, headToneHD, hurtMarksHD, mouthHD, noseHD, scarHD, stubbleHD, thinMustacheHD, wrinklesHD } from './figFaceHD.js';
 
 export const mir = (x) => 87 - x;
 export const INK = hex('#0b0507');
@@ -32,9 +33,10 @@ export function geoOf(spec) {
     const t = (y - j.ty) / (j.by - j.ty);
     return j.ch + (cw + bulge - j.ch) * (1 - t ** j.p);
   };
+  // versão 2.46: o teste é contínuo (no inteiro dá o mesmo de antes; na HD a borda sai lisa)
   const inFace = (x, y) => {
-    const h = Math.round(half(y));
-    return h > 0 && x >= 44 - h && x <= 43 + h;
+    const h = half(y);
+    return h > 0.5 && x + 0.5 >= 44 - h && x + 0.5 <= 44 + h;
   };
   const bigStache = ['big', 'gold', 'handlebar'].includes(spec.facial?.mustache);
   // quantos pixels cada ponto do rosto está da borda (a volta do queixo escurece por ela)
@@ -44,7 +46,11 @@ export function geoOf(spec) {
   for (let y = 0; y < H; y += 1) for (let x = 0; x < W; x += 1) far[y * W + x] = inFace(x, y) ? 99 : 0;
   for (let y = 1; y < H; y += 1) for (let x = 1; x < W; x += 1) far[y * W + x] = Math.min(far[y * W + x], far[y * W + x - 1] + 1, far[(y - 1) * W + x] + 1);
   for (let y = H - 2; y >= 0; y -= 1) for (let x = W - 2; x >= 0; x -= 1) far[y * W + x] = Math.min(far[y * W + x], far[y * W + x + 1] + 1, far[(y + 1) * W + x] + 1);
-  const depth = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : far[y * W + x]);
+  const depth = (xf, yf) => {
+    const x = Math.round(xf);
+    const y = Math.round(yf);
+    return x < 0 || y < 0 || x >= W || y >= H ? 0 : far[y * W + x];
+  };
   return { ...j, cw, half, inFace, depth, my: bigStache ? 47 : 46, neck: spec.broad ? 9.5 : spec.fem ? 5 : j.cw >= 14 ? 7 : 6 };
 }
 
@@ -61,7 +67,7 @@ export function paintNeck(k, S, geo, bottom = 62) {
       return t;
     },
     S,
-    { edge: 2, noise: 0.2, seed: 5 },
+    { edge: 2, noise: k.S > 1 ? 0.1 : 0.2, seed: 5 },
   );
 }
 
@@ -73,6 +79,10 @@ const EAR = ['.665', '6414', '5131', '5243', '4231', '2424', '.232', '..23'];
  */
 export function paintEars(k, S, geo) {
   const x0 = 44 - Math.round(geo.half(36)) - 4;
+  if (k.S > 1) {
+    earsHD(k, S, x0);
+    return x0;
+  }
   for (const side of [-1, 1]) {
     EAR.forEach((row, j) => {
       for (let i = 0; i < 4; i += 1) {
@@ -92,6 +102,11 @@ export function paintEars(k, S, geo) {
  */
 export function paintSkull(k, S, geo, spec) {
   const dark = spec.shade ?? 0;
+  if (k.S > 1) {
+    // versão 2.46: a cabeça esculpida (o relevo iluminado pela lâmpada, art/figFaceHD.js)
+    k.form(geo.inFace, headToneHD(spec, geo), S, { edge: 1, noise: 0.1, seed: spec.seed ?? 1, fine: true });
+    return;
+  }
   k.form(
     geo.inFace,
     (x, y) => {
@@ -116,7 +131,7 @@ export function paintSkull(k, S, geo, spec) {
       return t;
     },
     S,
-    { edge: 1, noise: 0.3, seed: spec.seed ?? 1 },
+    { edge: 1, noise: k.S > 1 ? 0.13 : 0.3, seed: spec.seed ?? 1 },
   );
   // a luz do queixo
   k.put(42, geo.by - 1, S[6]);
@@ -528,6 +543,28 @@ function paintWrinkles(k, S) {
 
 /** O rosto inteiro por cima da cabeça já pintada. */
 export function paintFace(k, spec, mood, speaking, S, geo, browColor) {
+  if (k.S > 1) {
+    // versão 2.46: o rosto em alta (art/figFaceHD.js)
+    if (spec.blush) blushHD(k, geo, spec.blush);
+    if (spec.wrinkles) wrinklesHD(k, S);
+    noseHD(k, spec, S);
+    const irHD = rampOf(spec.iris ?? '#6a3a22');
+    eyeHD(k, -1, spec, mood, S, irHD);
+    eyeHD(k, 1, spec, mood, S, irHD);
+    const shape = mood === 'hurt' ? BROWS.pain : spec.fem ? BROWS.fem : (BROWS[spec.browShape] ?? BROWS.flat);
+    browHD(k, spec, mood, browColor, S, shape, -1);
+    browHD(k, spec, mood, browColor, S, shape, 1);
+    if (mood === 'hurt') {
+      k.px(85, 56, S[2]);
+      k.px(85, 57, S[2], 0.7);
+      k.px(90, 56, S[2]);
+      k.px(90, 57, S[2], 0.7);
+    }
+    mouthHD(k, spec, mood, speaking, S, geo);
+    if (spec.scar) scarHD(k, S);
+    if (mood === 'hurt') hurtMarksHD(k);
+    return;
+  }
   if (spec.blush) {
     const b = hex(spec.blush);
     for (const cx of [34.5, 53.5]) for (let y = 38; y <= 42; y += 1) for (let x = Math.floor(cx - 4); x <= cx + 4; x += 1) if (geo.inFace(x, y) && ((x + 0.5 - cx) / 3.6) ** 2 + ((y + 0.5 - 40.6) / 2) ** 2 <= 1) k.tint(x, y, b, 0.3);
@@ -614,7 +651,8 @@ function paintMustache(k, kind, F, geo) {
     F,
     { edge: 1, noise: 0.2, seed: 11 },
   );
-  if (kind === 'handlebar') {
+  if (kind === 'handlebar' && k.S > 1) handlebarHD(k, F, geo);
+  else if (kind === 'handlebar') {
     for (const side of [-1, 1]) {
       const X = (u) => (side < 0 ? 44 - 11 - u : 43 + 11 + u);
       k.put(X(0), y0 - 1, F[2]);
@@ -664,15 +702,21 @@ export function paintFacialHair(k, spec, geo) {
   const f = spec.facial;
   if (!f) return;
   const F = rampOf(f.color ?? '#2a1a12', 'hair');
-  if (f.stubble) paintStubble(k, F, geo);
+  const hd = k.S > 1;
+  if (f.stubble) (hd ? stubbleHD : paintStubble)(k, F, geo);
   if (f.beard) paintBeard(k, f.beard, F, geo, Boolean(f.mustache));
-  if (f.mustache) paintMustache(k, f.mustache, F, geo);
+  if (f.mustache === 'thin' && hd) thinMustacheHD(k, F, geo);
+  else if (f.mustache) paintMustache(k, f.mustache, F, geo);
 }
 
 /** Os óculos por cima de tudo: a armação no tom da ficha, com os cantos acesos e o reflexo. */
 export function paintGlasses(k, spec, earX) {
   const gl = spec.glasses;
   if (!gl) return;
+  if (k.S > 1) {
+    glassesHD(k, spec, earX);
+    return;
+  }
   const G = rampOf(gl.color ?? '#3a3a3a', gl.type === 'gold' || gl.type === 'monocle' ? 'metal' : 'cloth');
   const shine = mix(G[6], WHITE, 0.4);
   const lens = (x, y, a = 0.05) => k.tint(x, y, hex('#fff0e8'), a);
@@ -742,6 +786,10 @@ export function paintGlasses(k, spec, earX) {
 
 /** Brincos: pérola (com o contorno escuro) ou argola de ouro, embaixo de cada orelha. */
 export function paintEarrings(k, kind, earX, color) {
+  if (k.S > 1) {
+    earringsHD(k, kind, earX, color);
+    return;
+  }
   for (const side of [-1, 1]) {
     const x0 = side < 0 ? earX + 2 : mir(earX + 2) - 1;
     if (kind === 'pearl') {

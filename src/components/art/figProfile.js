@@ -10,6 +10,8 @@
  */
 import { any, ball, board, box, ell, hash, hex, mix, poly, rampOf, tube } from './figKit.js';
 import { INK } from './figHead.js';
+import { FIG_HD } from './figurePixels.js';
+import { finishHD, LAYER } from './figFinish.js';
 import { gestureSide } from './figGesture.js';
 
 const W = 88;
@@ -31,7 +33,16 @@ const CHIN = { round: 0, square: 1, heavy: 1, long: 2, thin: 1 };
 function profileGeo(spec) {
   const drop = spec.fem ? 0 : (CHIN[spec.jaw] ?? 0);
   const nose = spec.nose ?? 'plain';
-  const front = (y) => {
+  // versão 2.46: entre duas linhas da tabela, a frente do rosto desliza (o perfil sai liso na HD)
+  const front = (yf) => {
+    if (!Number.isInteger(yf)) {
+      const y0 = Math.floor(yf);
+      const a = front(y0);
+      const b = front(y0 + 1);
+      if (a < 0 || b < 0) return a < 0 ? b : a;
+      return a + (b - a) * (yf - y0);
+    }
+    const y = yf;
     let f = FRONT[y];
     if (y > 44 && drop) f = FRONT[Math.max(45, y - drop)] ?? FRONT[52];
     if (f == null) return -1;
@@ -787,22 +798,31 @@ export const PROFILE_SPOTS = Object.freeze({ eye: Object.freeze({ x: 50.5, y: 32
  * do lado direito da mesa). 88×84, fundo transparente.
  */
 export function paintProfile(spec, mood = 'idle', speaking = false, facing = 'right') {
-  const k = board(W, H);
+  const k = board(W, H, FIG_HD);
   const g = profileGeo(spec);
   const S = rampOf(spec.skin ?? '#d8a070', 'skin');
   const hairColor = spec.hair?.color ?? spec.facial?.color;
+  k.layer(LAYER.hatBack);
   paintHat(k, spec, g, true);
+  k.layer(LAYER.hairBack);
   paintHairBack(k, spec);
+  k.layer(LAYER.body);
   paintBody(k, spec, S, g);
+  k.layer(LAYER.head);
   paintHead(k, { ...spec, __mood: mood }, S, g, hairColor);
   paintEye(k, spec, mood, S);
   paintMouth(k, spec, mood, speaking, S, g);
+  k.layer(LAYER.facial);
   paintFacialHair(k, spec, g);
+  k.layer(LAYER.hair);
   paintHairFront(k, spec, g);
   paintEar(k, spec, S);
+  k.layer(LAYER.hat);
   paintHat(k, spec, g, false);
+  k.layer(LAYER.glasses);
   paintGlasses(k, spec);
   if (spec.earrings && spec.hat?.type !== 'hood') paintEarrings(k, spec.earrings, spec.earringColor);
+  k.layer(LAYER.front);
   paintSmoke(k, spec, mood, g);
   return finish(k, spec, facing);
 }
@@ -810,11 +830,12 @@ export function paintProfile(spec, mood = 'idle', speaking = false, facing = 'ri
 /** O recorte de luz (`spec.rim`), o contorno de tinta e o espelho para quem olha para a esquerda. */
 function finish(k, spec, facing) {
   const { w, h } = k;
+  if (k.S > 1) finishHD(k, { rim: false });
   if (spec.rim) {
     const rim = hex(spec.rim);
     const marks = [];
-    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (k.has(x, y) && (!k.has(x + 1, y) || !k.has(x, y - 1))) marks.push(x, y);
-    for (let i = 0; i < marks.length; i += 2) k.put(marks[i], marks[i + 1], rim, 0.55);
+    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) if (k.hasP(x, y) && (!k.hasP(x + 1, y) || !k.hasP(x, y - 1))) marks.push(x, y);
+    for (let i = 0; i < marks.length; i += 2) k.px(marks[i], marks[i + 1], rim, 0.55);
   }
   k.ink(INK);
   if (facing === 'left') {
@@ -1078,7 +1099,7 @@ function paintSeatedBody(k, spec, S, chair, part = 'all') {
  * (do quadril para cima, com a cabeça): a cadeira fica parada e o corpo respira por cima dela.
  */
 export function paintSeatedProfile(spec, mood = 'idle', speaking = false, facing = 'right', chair = 'madeira', part = 'all') {
-  const k = board(SEATED_W, SEATED_H);
+  const k = board(SEATED_W, SEATED_H, FIG_HD);
   // versão 2.32.3: em camadas (a cadeira parada, as pernas e o corpo de cima, que respira)
   if (part === 'chair') {
     paintChair(k, chair, true);

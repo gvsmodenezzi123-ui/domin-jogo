@@ -22,7 +22,7 @@
  * esquerda, o dorme em cima à direita, a coluna dos consumíveis) e do busto do rival.
  */
 import { paintKit } from './botecoScene.js';
-import { glowLayer, halo, relight } from './lightPass.js';
+import { fineBayer, glowLayer, halo, logicalView, relight, relightHD, upscale } from './lightPass.js';
 import { pixelText, textWidth } from './pixelFont.js';
 import { landCandleSpots, landCorners } from '../seatGeometry.js';
 import { CANDLE_FLAME } from './candleArt.js';
@@ -54,7 +54,7 @@ function ramp(pal, t, x, y) {
   const n = pal.length - 1;
   const v = Math.max(0, Math.min(1, t)) * n;
   const i = Math.floor(v);
-  return pal[Math.min(n, v - i > bayer(x, y) ? i + 1 : i)];
+  return pal[Math.min(n, v - i > fineBayer(x, y) ? i + 1 : i)];
 }
 
 const PALS = new Map();
@@ -210,7 +210,7 @@ function haze(b, x0, y0, x1, y1, color, amount, seed = 0) {
   b.light(x0, y0, x1 - x0, y1 - y0, hex(color), (x, y) => {
     const n = Math.sin(x * 0.045 + seed) * 0.5 + Math.sin(x * 0.013 - y * 0.08 + seed * 2) * 0.5 + Math.sin((x + y * 2) * 0.021 + seed) * 0.4;
     const t = Math.max(0, n) * amount;
-    return t > bayer(x, y) * 0.35 ? t : 0;
+    return t > fineBayer(x, y) * 0.35 ? t : 0;
   });
 }
 
@@ -904,7 +904,7 @@ function finishSinuca(raw, g) {
     raw.light(lx - 60 * u, ly, 120 * u, 50 * u, hex('#fff2c8'), (x, y) => {
       const spread = 20 * u + (y - ly) * 0.7;
       const d = Math.abs(x - lx) / spread;
-      return d < 1 ? (1 - d) * 0.16 * (1 - (y - ly) / (50 * u)) + (bayer(x, y) < 0.2 ? 0.03 : 0) : 0;
+      return d < 1 ? (1 - d) * 0.16 * (1 - (y - ly) / (50 * u)) + (fineBayer(x, y) < 0.2 ? 0.03 : 0) : 0;
     });
   }
   halo(raw, M(258) + (textWidth('SINUCA') * ns) / 2, Y(20), 70 * u, hex('#ff3d9e'), 0.5, 1.7);
@@ -1781,7 +1781,7 @@ function finishNoite(raw, g) {
     const n = Math.sin(x * 0.05 + y * 0.2) * 0.5 + Math.sin(x * 0.017 - y * 0.05) * 0.5;
     const band = Math.max(0, 1 - Math.abs(y - g.floor - 6 * u) / (16 * u));
     const t = Math.max(0, n) * band * 0.3;
-    return t > bayer(x, y) * 0.12 ? t : 0;
+    return t > fineBayer(x, y) * 0.12 ? t : 0;
   });
 }
 
@@ -2546,7 +2546,10 @@ const ROOMS = {
 export const LAND_ROOM_IDS = Object.freeze(Object.keys(ROOMS));
 
 /** Pinta a sala `name` numa grade de `w` × `h` pixels (a cena da mesa deitada). */
-export function paintLandRoom(name, w, h, seed = 1955) {
+/** Versão 2.46: as salas da noite saem em alta (a luz no fino, veja lightPass.upscale). */
+export const ROOM_HD = 2;
+
+export function paintLandRoom(name, w, h, seed = 1955, S = DAY_ROOMS.includes(name) ? 1 : ROOM_HD) {
   const room = ROOMS[name];
   const width = Math.max(8, Math.round(w));
   const height = Math.max(8, Math.round(h));
@@ -2555,6 +2558,17 @@ export function paintLandRoom(name, w, h, seed = 1955) {
   const g = geometry(width, height);
   const r = rngOf(seed);
   room.paint(b, G, r, g);
+  if (S > 1) {
+    // a pintura na grade de sempre, ampliada; a névoa, a luz, os halos e a vinheta no fino
+    const B = upscale(b, S, G.mask);
+    const v = logicalView(B);
+    if (room.haze) haze(v, 0, 0, width, Math.round(height * 0.6), room.haze[0], room.haze[1], seed % 7);
+    const { ambient, lights } = room.lights(g);
+    relightHD(B, lights, { ambient, mask: B.mask, bands: room.bands });
+    room.finish?.(v, g);
+    v.light(0, 0, width, height, BLACK, (x, y) => vignetteAt(x, y, width, height));
+    return { w: B.w, h: B.h, data: B.data };
+  }
   if (room.haze) haze(b, 0, 0, width, Math.round(height * 0.6), room.haze[0], room.haze[1], seed % 7);
   const { ambient, lights } = room.lights(g);
   relight(b, lights, { ambient, mask: G.mask, bands: room.bands });
@@ -2569,7 +2583,7 @@ function vignetteAt(x, y, width, height) {
   const dx = (x - width / 2) / (width * 0.62);
   const dy = (y - height * 0.4) / (height * 0.85);
   const t = Math.max(0, Math.hypot(dx, dy) - 0.5) * 1.5;
-  return t > bayer(x, y) * 0.2 ? t : 0;
+  return t > fineBayer(x, y) * 0.2 ? t : 0;
 }
 
 // ---------------------------------------------------------------------------

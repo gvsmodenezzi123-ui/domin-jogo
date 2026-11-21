@@ -7,7 +7,7 @@
  * entrar (em HTML, na ardósia).
  */
 import { paintKit } from './botecoScene.js';
-import { glowLayer, halo, relight, shifted, vignetteBox } from './lightPass.js';
+import { glowLayer, halo, relight, shifted, vignetteBox, LAND_HD, upscale } from './lightPass.js';
 import { pixelText, textWidth } from './pixelFont.js';
 
 const { hex, mixRgb, shift, rngOf, bayer, buffer, plank } = paintKit;
@@ -218,8 +218,10 @@ export function paintStreetBack(seed = 17) {
     { x: 254, y: 82, r: 70, c: [1, 0.95, 0.85], k: 0.5 },
     { x: 397, y: 2, r: 110, c: [1, 0.9, 0.7], k: 0.7, cone: 1.1, out: 0.2 },
   ];
-  relight(raw, lights, { ambient: [0.13, 0.15, 0.24], mask: G.mask, ox: PX, oy: PY });
-  halo(raw, 221 + PX, 13 + PY, 40, [255, 210, 130], 0.55, 1.5);
-  vignetteBox(raw, PX, PY, W, H, 0.55, 0.45);
-  return { w: raw.w, h: raw.h, data: raw.data };
+  // versão 2.46: a luz, os halos e a vinheta no fino (a pintura ampliada, veja lightPass.upscale)
+  const FINE = upscale(raw, LAND_HD, G.mask);
+  relight(FINE, lights, { ambient: [0.13, 0.15, 0.24], mask: FINE.mask, ox: PX, oy: PY });
+  halo(FINE, 221 + PX, 13 + PY, 40, [255, 210, 130], 0.55, 1.5);
+  vignetteBox(FINE, PX, PY, W, H, 0.55, 0.45);
+  return { w: FINE.w, h: FINE.h, data: FINE.data };
 }

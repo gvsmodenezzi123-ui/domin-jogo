@@ -16,6 +16,7 @@ import { ball, board, box, ell, hex, mix, poly, rampOf, tube } from './figKit.js
 import { geoOf, INK, mir, paintEarrings, paintEars, paintFace, paintFacialHair, paintGlasses, paintNeck, paintSkull } from './figHead.js';
 import { paintHairBack, paintHairFront, paintHat, paintHatBack } from './figHair.js';
 import { paintBody } from './figBody.js';
+import { finishHD, LAYER } from './figFinish.js';
 
 export const FIG_W = 88;
 export const FIG_H = 84;
@@ -24,6 +25,8 @@ export const FIG_OX = 12;
 /** A linha dos ombros e a da boca (para sentar o busto atrás da mesa e soltar o balão da fala). */
 export const FIG_SHOULDER = 60;
 export const FIG_MOUTH = 46;
+/** Versão 2.46: a figura é pintada no dobro da resolução (cada pixel lógico vira 2×2 finos). */
+export const FIG_HD = 2;
 
 const EARLESS = new Set(['curly', 'bob']);
 
@@ -32,31 +35,47 @@ const EARLESS = new Set(['curly', 'bob']);
  * `speaking`. Devolve a prancheta FIG_W×FIG_H (data RGBA, w, h, put), de fundo transparente.
  */
 export function paintFigure(spec, mood = 'idle', speaking = false) {
-  const k = board(FIG_W, FIG_H);
+  const k = board(FIG_W, FIG_H, FIG_HD);
   const geo = geoOf(spec);
   const S = rampOf(spec.skin ?? '#d8a070', 'skin');
   const ctx = { hex, mix, rampOf, ball, tube, ell, box, poly, mir, mood, speaking, geo, S, INK };
+  k.layer(LAYER.behind);
   spec.behind?.(k, ctx);
+  k.layer(LAYER.hatBack);
   paintHatBack(k, spec);
+  k.layer(LAYER.hairBack);
   paintHairBack(k, spec);
-  paintBody(k, spec, geo, S, (bottom) => paintNeck(k, S, geo, bottom));
+  k.layer(LAYER.body);
+  paintBody(k, spec, geo, S, (bottom) => {
+    k.layer(LAYER.neck);
+    paintNeck(k, S, geo, bottom);
+    k.layer(LAYER.body);
+  });
   const hooded = spec.hat?.type === 'hood';
+  k.layer(LAYER.ears);
   const earX = hooded || EARLESS.has(spec.hair?.style) ? 44 - geo.cw - 4 : paintEars(k, S, geo);
+  k.layer(LAYER.head);
   paintSkull(k, S, geo, spec);
   const browOf = spec.hair?.color ?? spec.facial?.color;
   paintFace(k, spec, mood, speaking, S, geo, browOf ? rampOf(browOf, 'hair')[1] : S[0]);
+  k.layer(LAYER.facial);
   paintFacialHair(k, spec, geo);
+  k.layer(LAYER.hair);
   paintHairFront(k, spec, geo);
+  k.layer(LAYER.hat);
   paintHat(k, spec, geo);
+  k.layer(LAYER.glasses);
   paintGlasses(k, spec, earX);
   if (spec.earrings) paintEarrings(k, spec.earrings, earX, spec.earringColor);
+  k.layer(LAYER.front);
   spec.front?.(k, ctx);
+  if (k.S > 1) finishHD(k);
   if (spec.rim) {
     // a luz de trás recorta a borda de cima e da esquerda
     const rim = hex(spec.rim);
     const marks = [];
-    for (let y = 0; y < FIG_H; y += 1) for (let x = 0; x < FIG_W; x += 1) if (k.has(x, y) && (!k.has(x - 1, y) || !k.has(x, y - 1))) marks.push(x, y);
-    for (let i = 0; i < marks.length; i += 2) k.put(marks[i], marks[i + 1], rim, 0.55);
+    for (let Y = 0; Y < k.h; Y += 1) for (let X = 0; X < k.w; X += 1) if (k.hasP(X, Y) && (!k.hasP(X - 1, Y) || !k.hasP(X, Y - 1))) marks.push(X, Y);
+    for (let i = 0; i < marks.length; i += 2) k.px(marks[i], marks[i + 1], rim, 0.55);
   }
   k.ink(INK);
   return k;

@@ -75,26 +75,124 @@ const M = {
   felt: mat('#2f6a3a'),
 };
 
+/**
+ * Versão 2.46: o pixel fino que está sendo pintado agora (o pontilhado fica na grade fina; fora
+ * da HD, null: vale o pixel lógico).
+ */
+let FINE = null;
+
 /** Escolhe o tom pela luz (-1 escuro .. 1 claro), com pontilhado nas transições. */
 function shade(m, light, x, y) {
-  const v = light + (dither(x, y) - 0.5) * 0.22;
+  const v = light + ((FINE ? dither(FINE[0], FINE[1]) : dither(x, y)) - 0.5) * 0.22;
   if (v > 0.45) return m.hi;
   if (v > -0.1) return m.mid;
   if (v > -0.5) return m.lo;
   return m.deep;
 }
 
+/**
+ * Versão 2.46: o buffer em alta dos talismãs. O desenho continua na grade lógica (`put`, `rect`
+ * e `line` pintam blocos S×S); a `ellipse` e as formas do kit são lidas no meio de cada pixel
+ * fino. `w`/`h` são os finos (o canvas), `lw`/`lh` os lógicos.
+ */
+export function bufferHD(w, h, S = 2) {
+  const base = buffer(w * S, h * S);
+  const put = (x, y, c, a = 1) => {
+    const X = (x | 0) * S;
+    const Y = (y | 0) * S;
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) base.put(X + i, Y + j, c, a);
+  };
+  const rect = (x, y, rw, rh, c, a = 1) => {
+    for (let yy = Math.max(0, y | 0); yy < Math.min(h, (y + rh) | 0); yy += 1) for (let xx = Math.max(0, x | 0); xx < Math.min(w, (x + rw) | 0); xx += 1) put(xx, yy, c, a);
+  };
+  const ellipse = (cx, cy, rx, ry, c, a = 1) => {
+    for (let Y = Math.floor((cy - ry) * S) - 1; Y <= Math.ceil((cy + ry) * S) + 1; Y += 1) {
+      for (let X = Math.floor((cx - rx) * S) - 1; X <= Math.ceil((cx + rx) * S) + 1; X += 1) {
+        const dx = ((X + 0.5) / S - cx) / rx;
+        const dy = ((Y + 0.5) / S - cy) / ry;
+        if (dx * dx + dy * dy <= 1) base.put(X, Y, c, a);
+      }
+    }
+  };
+  const line = (x0, y0, x1, y1, c, a = 1) => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let i = 0; i <= n; i += 1) put(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), c, a);
+  };
+  const get = (x, y) => base.get((x | 0) * S + (S >> 1), (y | 0) * S + (S >> 1));
+  return { data: base.data, w: base.w, h: base.h, lw: w, lh: h, S, put, px: base.put, get, rect, ellipse, line };
+}
+
 /** As ferramentas de desenho sobre um buffer (32×32 nos talismãs; a loja usa até 128×128). */
 function kit(b) {
-  const W = b.w;
-  const H = b.h;
-  const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < H && b.data[(y * W + x) * 4 + 3] > 200;
+  const S = b.S ?? 1;
+  const W = b.lw ?? b.w;
+  const H = b.lh ?? b.h;
+  const PW = b.w;
+  const solid = (xf, yf) => {
+    const x = S === 1 ? xf : Math.round(xf);
+    const y = S === 1 ? yf : Math.round(yf);
+    if (x < 0 || y < 0 || x >= W || y >= H) return false;
+    if (S === 1) return b.data[(y * W + x) * 4 + 3] > 200;
+    for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) if (b.data[((y * S + j) * PW + x * S + i) * 4 + 3] > 200) return true;
+    return false;
+  };
   const px = (x, y, c, a = 1) => b.put(Math.round(x), Math.round(y), c, a);
   const each = (x0, y0, x1, y1, fn) => {
-    for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(H - 1, Math.ceil(y1)); y += 1) {
-      for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(W - 1, Math.ceil(x1)); x += 1) {
-        const c = fn(x, y);
-        if (c) b.put(x, y, c);
+    const ax = Math.max(0, Math.floor(x0));
+    const ay = Math.max(0, Math.floor(y0));
+    const bx = Math.min(W - 1, Math.ceil(x1));
+    const by = Math.min(H - 1, Math.ceil(y1));
+    if (S === 1) {
+      for (let y = ay; y <= by; y += 1) {
+        for (let x = ax; x <= bx; x += 1) {
+          const c = fn(x, y);
+          if (c) b.put(x, y, c);
+        }
+      }
+      return;
+    }
+    // na HD: a forma lida no inteiro (o desenho de sempre) e no meio de cada fino; se o fino só
+    // come a borda do inteiro (limites inteiros), valem os blocos; senão vale o fino (a curva
+    // lisa), sem deixar sumir o detalhe de 1 pixel
+    const lw = bx - ax + 1;
+    const lh = by - ay + 1;
+    if (lw <= 0 || lh <= 0) return;
+    const ints = new Array(lw * lh);
+    for (let y = ay; y <= by; y += 1) {
+      for (let x = ax; x <= bx; x += 1) {
+        FINE = [x * S, y * S];
+        ints[(y - ay) * lw + x - ax] = fn(x, y) || null;
+      }
+    }
+    const fines = new Array(lw * lh * S * S);
+    let added = 0;
+    let lost = 0;
+    for (let Y = ay * S; Y < (by + 1) * S; Y += 1) {
+      for (let X = ax * S; X < (bx + 1) * S; X += 1) {
+        FINE = [X, Y];
+        const c = fn((X + 0.5) / S - 0.5, (Y + 0.5) / S - 0.5) || null;
+        const bi = (Math.floor(Y / S) - ay) * lw + Math.floor(X / S) - ax;
+        fines[(Y - ay * S) * lw * S + X - ax * S] = c;
+        if (c && !ints[bi]) added += 1;
+        else if (!c && ints[bi]) lost += 1;
+      }
+    }
+    FINE = null;
+    const blocky = added === 0 && lost > 0;
+    for (let y = ay; y <= by; y += 1) {
+      for (let x = ax; x <= bx; x += 1) {
+        const bi = (y - ay) * lw + x - ax;
+        let any = false;
+        for (let j = 0; j < S; j += 1) for (let i = 0; i < S; i += 1) if (fines[(y * S + j - ay * S) * lw * S + x * S + i - ax * S]) any = true;
+        for (let j = 0; j < S; j += 1) {
+          for (let i = 0; i < S; i += 1) {
+            const X = x * S + i;
+            const Y = y * S + j;
+            let c = fines[(Y - ay * S) * lw * S + X - ax * S];
+            if (!c && ints[bi] && (blocky || !any)) c = ints[bi];
+            if (c) b.px(X, Y, c);
+          }
+        }
       }
     }
   };
@@ -281,6 +379,15 @@ function kit(b) {
 
   /** Sombrinha no chão (bem transparente, não ganha contorno). */
   const shadow = (cx, cy, rx, ry = 1.6) => {
+    if (S > 1) {
+      for (let Y = Math.floor((cy - ry) * S) - 1; Y <= Math.ceil((cy + ry) * S) + 1; Y += 1) {
+        for (let X = Math.floor((cx - rx) * S) - 1; X <= Math.ceil((cx + rx) * S) + 1; X += 1) {
+          const d = (((X + 0.5) / S - cx) / rx) ** 2 + (((Y + 0.5) / S - cy) / ry) ** 2;
+          if (d <= 1) b.px(X, Y, [10, 6, 4], 0.32 * (1 - d * 0.5));
+        }
+      }
+      return;
+    }
     for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y += 1) {
       for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x += 1) {
         const d = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2;
@@ -310,8 +417,19 @@ function kit(b) {
 
 /** Contorno colorido: a borda é a cor do vizinho escurecida (fica mais bonito que preto chapado). */
 function outline(b, ink = INK, k = 0.78) {
+  if ((b.S ?? 1) > 1) {
+    // na HD, dois anéis finos: o de dentro na cor do vizinho escurecida, o de fora quase tinta
+    ring(b, ink, k, 1);
+    ring(b, ink, 0.92, 0.85);
+    return;
+  }
+  ring(b, ink, k, 1);
+}
+
+function ring(b, ink, k, alpha) {
   const W = b.w;
   const H = b.h;
+  const put = b.px ?? b.put;
   const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < H && b.data[(y * W + x) * 4 + 3] > 200;
   const marks = [];
   for (let y = 0; y < H; y += 1) {
@@ -337,23 +455,27 @@ function outline(b, ink = INK, k = 0.78) {
       if (best) marks.push([x, y, rgb(mix(best, ink, k))]);
     }
   }
-  for (const [x, y, c] of marks) b.put(x, y, c);
+  for (const [x, y, c] of marks) put(x, y, c, alpha);
 }
 
 /** Névoa dos necróticos: um halo roxo-escuro bem fraco em volta do contorno. */
 function miasma(b) {
-  const solid = (x, y) => x >= 0 && y >= 0 && x < N && y < N && b.data[(y * N + x) * 4 + 3] > 200;
+  const S = b.S ?? 1;
+  const n = N * S;
+  const put = b.px ?? b.put;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < n && y < n && b.data[(y * n + x) * 4 + 3] > 200;
   const tint = hex('#6a2a9a');
   const marks = [];
-  for (let y = 0; y < N; y += 1) {
-    for (let x = 0; x < N; x += 1) {
+  const R = 2 * S;
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
       if (solid(x, y)) continue;
       let near = 0;
-      for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) if (solid(x + dx, y + dy)) near += 1;
-      if (near) marks.push([x, y, Math.min(0.42, near * 0.045)]);
+      for (let dy = -R; dy <= R; dy += 1) for (let dx = -R; dx <= R; dx += 1) if (solid(x + dx, y + dy)) near += 1;
+      if (near) marks.push([x, y, Math.min(0.42, (near / (S * S)) * 0.045)]);
     }
   }
-  for (const [x, y, a] of marks) b.put(x, y, tint, a);
+  for (const [x, y, a] of marks) put(x, y, tint, a);
 }
 
 // ---------------------------------------------------------------------------
@@ -2002,10 +2124,13 @@ export const RELIC_ICON_KEYS = Object.freeze(Object.keys(ICONS));
  * Pinta o talismã `art` em 32×32. `rarity` acrescenta o toque da raridade: faísca no mítico,
  * névoa roxa no necrótico. Devolve null se não houver desenho para essa chave.
  */
+/** Versão 2.46: os talismãs são pintados no dobro da resolução. */
+export const RELIC_HD = 2;
+
 export function paintRelic(art, rarity) {
   const draw = ICONS[art];
   if (!draw) return null;
-  const b = buffer(N, N);
+  const b = bufferHD(N, N, RELIC_HD);
   const k = kit(b);
   draw(k);
   outline(b);

@@ -15,10 +15,15 @@ export function bodyOf(spec, geo) {
     const i = y - 57 + up;
     if (i < -3) return 0;
     if (i < 0) return geo.neck + 2 + (i + 3) * 2.6;
-    return Math.min(43.6, HALF[Math.min(i, HALF.length - 1)] + add);
+    // versão 2.46: entre duas linhas da tabela, a meia-largura desliza (o ombro sai liso na HD)
+    const i0 = Math.min(Math.floor(i), HALF.length - 1);
+    const i1 = Math.min(i0 + 1, HALF.length - 1);
+    const f = Math.min(1, i - Math.floor(i));
+    return Math.min(43.6, HALF[i0] + (HALF[i1] - HALF[i0]) * f + add);
   };
   const seam = 25.5 + add * 0.5;
-  return { half, seam, top: 54 - up, inBody: (x, y) => y >= 54 - up && y <= BOTTOM && Math.abs(x + 0.5 - 44) <= half(y) };
+  // (o teste é contínuo: na HD o pé do busto chega até a última linha fina)
+  return { half, seam, top: 54 - up, inBody: (x, y) => y >= 53.5 - up && y < BOTTOM + 0.5 && Math.abs(x + 0.5 - 44) <= half(y) };
 }
 
 const DIG = {
@@ -47,6 +52,73 @@ const bodyTone = (b) => (x, y) => {
   return tube(44 - b.seam - 4, 44 + b.seam + 7, 1.8, 5.2)(x) - (y < 60 ? 0 : 0.2);
 };
 
+// ---------------------------------------------------------------------------------------------
+// Versão 2.46 (HD): o tronco esculpido. Um relevo (o tronco é um cilindro largo, os ombros
+// arredondados, o peito, a costura funda das mangas e as dobras do pano que descem da axila
+// para o meio) iluminado pela lâmpada de cima e da esquerda, com a luz fria de trás na borda.
+// ---------------------------------------------------------------------------------------------
+
+const G1 = (v, sg) => Math.exp(-(v * v) / (2 * sg * sg));
+const c01 = (v) => Math.max(0, Math.min(1, v));
+const norm3 = (x, y, z) => {
+  const l = Math.hypot(x, y, z) || 1;
+  return [x / l, y / l, z / l];
+};
+const LAMP = norm3(-0.5, -0.66, 0.58);
+
+/** Uma dobra do pano: a crista ao longo do segmento A→B, com o vinco escuro logo abaixo. */
+const fold = (ax, ay, bx, by, amp, wide = 0.75) => {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  return (x, y) => {
+    const px = x - ax;
+    const py = y - ay;
+    const along = px * ux + py * uy;
+    if (along < -2 || along > len + 2) return 0;
+    const across = px * -uy + py * ux;
+    const fade = Math.sin(Math.PI * c01((along + 1) / (len + 2)));
+    return amp * fade * (G1(across, wide) - 0.7 * G1(across - wide * 1.6, wide * 0.8));
+  };
+};
+
+export function bodyToneHD(b, { lo = 1.1, hi = 5.6, folds = true, broadFolds = 1 } = {}) {
+  const F = folds
+    ? [
+        fold(44 - b.seam + 1.5, 69, 36.5, 82, 1.1 * broadFolds),
+        fold(44 - b.seam + 3.5, 66.5, 39.5, 75, 0.8 * broadFolds),
+        fold(44 + b.seam - 1.5, 69, 51.5, 82, 1.1 * broadFolds),
+        fold(44 + b.seam - 3.5, 66.5, 48.5, 75, 0.8 * broadFolds),
+        // as mangas: duas rugas quase deitadas perto do pé do quadro
+        fold(44 - b.seam - 3, 77, 44 - b.seam - 11, 79.5, 0.9),
+        fold(44 + b.seam + 3, 77, 44 + b.seam + 11, 79.5, 0.9),
+      ]
+    : [];
+  const z = (x, y) => {
+    const dx = x + 0.5 - 44;
+    const yy = y + 0.5;
+    const hw = Math.max(2, b.half(Math.max(y, b.top)) + 1.2);
+    const u = dx / hw;
+    let h = 9 * Math.sqrt(Math.max(0, 1 - u * u));
+    // o ombro arredondado (a bola do alto da manga) e o peito
+    h += 2.6 * G1(Math.abs(dx) - (b.seam + 5.5), 5.2) * G1(yy - 63, 5.5);
+    h += 0.9 * G1(Math.abs(dx) - 8.5, 5) * G1(yy - 67.5, 4);
+    // a costura das mangas afunda o pano
+    h -= 0.9 * G1(Math.abs(dx) - b.seam, 0.85) * c01((yy - 58) / 3);
+    for (const f of F) h += f(x + 0.5, yy);
+    return h;
+  };
+  return (x, y) => {
+    const e = 0.3;
+    const n = norm3(-(z(x + e, y) - z(x - e, y)) / (2 * e), -(z(x, y + e) - z(x, y - e)) / (2 * e), 1);
+    const lam = c01((n[0] * LAMP[0] + n[1] * LAMP[1] + n[2] * LAMP[2] + 0.2) / 1.2);
+    const back = c01(n[0] * 1.3 - 0.6) * 0.8;
+    return lo + (hi - lo) * lam ** 1.15 + back - (y > 78 ? (y - 78) * 0.06 : 0);
+  };
+}
+
 function mirrored(k, pts, tone, R, opt = {}) {
   k.form(poly(pts.map(([x, y]) => [88 - x, y])), (x, y) => tone(x, y) - 1.3, R, { edge: 1, noise: 0.15, ...opt });
   k.form(poly(pts), tone, R, { edge: 1, noise: 0.15, ...opt });
@@ -54,6 +126,23 @@ function mirrored(k, pts, tone, R, opt = {}) {
 
 /** A costura das mangas: o risco escuro do ombro para baixo. */
 function seams(k, b, c) {
+  if (k.S > 1) {
+    // na HD: o risco fino (1 px), com os pontos da linha clara ao lado
+    for (let Y = 116; Y <= BOTTOM * 2 + 1; Y += 1) {
+      const y = (Y + 0.5) / 2 - 0.5;
+      if (b.half(y) < b.seam + 3.5) continue;
+      const xl = Math.round((44 - b.seam) * 2) - 1;
+      const xr = Math.round((44 + b.seam) * 2);
+      const curve = Math.max(0, 122 - Y) * 0.9;
+      k.px(Math.round(xl + curve), Y, c);
+      k.px(Math.round(xr - curve), Y, c);
+      if (Y % 3 === 0) {
+        k.px(Math.round(xl + curve) + 1, Y, c, 0.35);
+        k.px(Math.round(xr - curve) - 1, Y, c, 0.35);
+      }
+    }
+    return;
+  }
   let first = true;
   for (let y = 58; y <= BOTTOM; y += 1) {
     if (b.half(y) < b.seam + 3.5) continue;
@@ -73,6 +162,16 @@ function seams(k, b, c) {
 }
 
 const button = (k, x, y, R) => {
+  if (k.S > 1) {
+    // o botão redondo (3×3 finos com a borda), com o brilho em cima e a sombra embaixo
+    const X = x * 2 + 1;
+    const Y = y * 2;
+    const pal = { a: R[1], b: R[3], c: R[5], d: R[6], e: R[2] };
+    ['.aa.', 'acdb', 'acbe', '.ae.'].forEach((row, j) => {
+      for (let i = 0; i < 4; i += 1) if (pal[row[i]]) k.px(X - 1 + i, Y + j, pal[row[i]]);
+    });
+    return;
+  }
   k.put(x, y, R[6]);
   k.put(x + 1, y, R[4]);
   k.put(x, y + 1, R[4]);
@@ -142,7 +241,8 @@ export function paintBody(k, spec, geo, S, paintNeck) {
 
   if (type === 'tank') {
     // o corpo é pele: ombros e braços de fora
-    k.form(b.inBody, (x, y) => tone(x, y) - 0.4, S, { edge: 2, rim: 5, noise: 0.25, seed: 31 });
+    if (k.S > 1) k.form(b.inBody, bodyToneHD(b, { folds: false, lo: 1.4, hi: 5.4 }), S, { edge: 2, rim: 5, noise: 0.06, seed: 31, fine: true });
+    else k.form(b.inBody, (x, y) => tone(x, y) - 0.4, S, { edge: 2, rim: 5, noise: 0.25, seed: 31 });
     paintNeck(64);
     seams(k, b, S[1]);
     for (let x = 30; x <= 38; x += 1) {
@@ -166,7 +266,10 @@ export function paintBody(k, spec, geo, S, paintNeck) {
     return b;
   }
 
-  const body = k.form(b.inBody, tone, R, { edge: 1, rim: 4, noise: type === 'cardigan' ? 0.75 : 0.3, seed: 33 });
+  const body =
+    k.S > 1
+      ? k.form(b.inBody, bodyToneHD(b, { folds: type !== 'cardigan' }), R, { edge: 1, rim: 4, noise: type === 'cardigan' ? 0.4 : 0.08, seed: 33, fine: true })
+      : k.form(b.inBody, tone, R, { edge: 1, rim: 4, noise: type === 'cardigan' ? 0.75 : 0.3, seed: 33 });
   pattern(k, body, o);
 
   if (type === 'cardigan') {
