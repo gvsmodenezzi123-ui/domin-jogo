@@ -10,7 +10,7 @@ export const GESTURE_N = { joinha: 2, negativo: 2, dedo: 2, aceno: 3, palmas: 3,
 
 const ELBOW = (s) => [88 + s * 62, 160, 22];
 const K = 1.32;
-const one = (s, wrist, fwd, palm, pose, k = K, elbow = ELBOW(s)) => ({ s, elbow, wrist, hand: { frame: handFrame(wrist, fwd, palm), pose, k, mirror: s > 0 } });
+const one = (s, wrist, fwd, palm, pose, k = K, elbow = ELBOW(s)) => ({ s, elbow, wrist, fwd, palm, hand: { frame: handFrame(wrist, fwd, palm), pose, k, mirror: s > 0 } });
 
 /** Os braços do gesto `id` no quadro `f`, de frente (s = 1: o braço à direita da tela). */
 export function frontGesture(id, f = 0) {
@@ -35,7 +35,7 @@ export function frontGesture(id, f = 0) {
     case 'palmas': {
       const gap = [9, 5, 0][f % 3];
       return {
-        arms: [one(1, [95 + gap, 152, 30], [-0.22, -1, 0.2], [-1, 0, -0.15], 'open', 1.2, [118, 190, 18]), one(-1, [81 - gap, 152, 30], [0.22, -1, 0.2], [1, 0, -0.15], 'open', 1.2, [58, 190, 18])],
+        arms: [one(1, [95 + gap, 148, 31], [-0.2, -1, 0.5], [-1, 0, -0.1], 'open', 1.2, [120, 188, 16]), one(-1, [81 - gap, 148, 31], [0.2, -1, 0.5], [1, 0, -0.1], 'open', 1.2, [56, 188, 16])],
       };
     }
     case 'calma': {
@@ -56,7 +56,7 @@ export function frontGesture(id, f = 0) {
 /** De lado (sentado, olhando para a direita): o braço de cá erguido; nas palmas a mão de lá também. */
 export function sideGesture(id, f = 0) {
   const K2 = 1.12;
-  const H = (wrist, fwd, palm, pose, mirror = false, k = K2) => ({ frame: handFrame(wrist, fwd, palm), pose, k, mirror });
+  const H = (wrist, fwd, palm, pose, mirror = false, k = K2) => ({ frame: handFrame(wrist, fwd, palm), pose, k, mirror, wrist, fwd, palm });
   const arm = (elbow, wrist, hands) => ({ elbow, wrist, hands });
   switch (id) {
     case 'joinha': {
@@ -72,10 +72,11 @@ export function sideGesture(id, f = 0) {
       return arm([54, 176, 4], [56, 142 + dy, 32], [H([56, 142 + dy, 32], [0, 0.3, 1], [-1, 0, 0], 'thumbsUp')]);
     }
     case 'aceno': {
-      // de lado, a mão abana para a frente e volta (sem tapar a boca)
-      const z = [26, 26.6, 28.4][f % 3];
-      const tilt = [0.2, -0.04, 0.62][f % 3];
-      return arm([54, 168, 8], [56, 124 + (f % 3 ? 1 : 0), z], [H([56, 124 + (f % 3 ? 1 : 0), z], [0, -1, tilt], [-1, 0, 0.2], 'wave')]);
+      // de lado, a mão abana um palmo à frente do rosto (sem tapar a cara), para a frente e de volta
+      const z = [46, 45, 48][f % 3];
+      const y = 117 + (f % 3 ? 1 : 0);
+      const tilt = [0.25, -0.05, 0.6][f % 3];
+      return arm([55, 170, 16], [57, y, z], [H([57, y, z], [0, -1, tilt], [-1, 0, 0.2], 'wave')]);
     }
     case 'palmas': {
       const gap = [8, 4, 0][f % 3];
@@ -92,4 +93,47 @@ export function sideGesture(id, f = 0) {
     default:
       return null;
   }
+}
+
+// ------------------------------------------------------------------ o braço subindo (e descendo)
+// Versão 2.46: antes do gesto, o braço sobe do descanso em dois quadros (e desce pelos mesmos, ao
+// contrário, no fim): a mão passa pela beirada da mesa, o cotovelo abre e a mão vai tomando a forma.
+export const RAISE_T = [0.55, 0.82];
+const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const unit = (v) => {
+  const l = Math.hypot(...v) || 1;
+  return v.map((c) => c / l);
+};
+
+/** De frente: os braços do gesto `id` no quadro `i` da subida (0: saindo de baixo da mesa, 1: quase lá). */
+export function frontRaise(id, i) {
+  const g = frontGesture(id, 0);
+  const t = RAISE_T[i];
+  return {
+    arms: g.arms.map((a) => {
+      const s = a.s;
+      // o descanso: o braço caído do lado, o antebraço deitado para a frente embaixo da mesa
+      const elbow = lerp([88 + s * 44.6, 200, -2.5], a.elbow, t);
+      const wrist = lerp([88 + s * 38, 206, 24], a.wrist, t);
+      const fwd = unit(lerp([0, 0.15, 1], a.fwd, t));
+      const palm = unit(lerp([-s, 0, 0], a.palm, t));
+      return { s, elbow, wrist, fwd, palm, hand: { frame: handFrame(wrist, fwd, palm), pose: i === 0 ? 'relaxed' : a.hand.pose, k: a.hand.k, mirror: s > 0 } };
+    }),
+  };
+}
+
+/** Sentado de lado: o braço de cá saindo da coxa até o gesto `id` (quadro `i` da subida). */
+export function sideRaise(id, i) {
+  const g = sideGesture(id, 0);
+  const t = RAISE_T[i];
+  const REST_W = [61.5, 202.4, 30.5];
+  const elbow = lerp([52, 177, -13], g.elbow, t);
+  const wrist = lerp(REST_W, g.wrist, t);
+  const hands = g.hands.map((h, j) => {
+    const hw = j === 0 ? wrist : lerp([80, 204, 38], h.wrist, t);
+    const fwd = unit(lerp([0.12, 0.3, 1], h.fwd, t));
+    const palm = unit(lerp([0.18, 1, -0.12], h.palm, t));
+    return { frame: handFrame(hw, fwd, palm), pose: i === 0 ? 'relaxed' : h.pose, k: 0.86 + (h.k - 0.86) * t, mirror: h.mirror, wrist: hw, fwd, palm };
+  });
+  return { elbow, wrist, hands };
 }

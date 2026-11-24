@@ -1,7 +1,7 @@
 // node bake.mjs <outDir> <keys...> — renderiza todos os quadros de cada personagem e grava o módulo
 // de dados dele (<outDir>/<key>.js): de frente (parado, humores e emotes) e de lado sentado (as
 // pernas, o corpo parado, os humores e os emotes). Humores e emotes vão como recortes do parado.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { cleanup, compose, pixelize, render } from './r3d.mjs';
 import { FH, FW, frontCfg } from './front.mjs';
 import { SH, SW, seatCfg } from './seat.mjs';
@@ -9,7 +9,10 @@ import { paramsOf } from './cast.mjs';
 import { frontDecals } from './fdecals.mjs';
 import { sideDecals } from './sdecals2.mjs';
 import { EYE_Y, EYE_Z } from './head.mjs';
-import { GESTURE_FACE, GESTURE_N, frontGesture, sideGesture } from './gestures.mjs';
+import { GESTURE_FACE, GESTURE_N, RAISE_T, frontGesture, frontRaise, sideGesture, sideRaise } from './gestures.mjs';
+import { PROPS } from './props.mjs';
+import { readCast, writeCast } from './castio.mjs';
+const C = await import(new URL('../../src/components/art/castHD.js', import.meta.url).href);
 
 const A = new URL('../../src/components/art/', import.meta.url).href;
 const { PORTRAITS, NPC_PORTRAITS } = await import(A + 'portraitSpecs.js');
@@ -20,6 +23,8 @@ const SS_BASE = Number(process.env.SS_BASE ?? 2);
 const SS = Number(process.env.SS ?? 2);
 const SS_G = Number(process.env.SS_G ?? 1);
 const MOODS = ['blink', 'talk', 'thinking', 'smug', 'hurt'];
+// FRONT_ONLY=1: refaz só a frente; o corpo sentado vem do arquivo que já existe
+const FRONT_ONLY = process.env.FRONT_ONLY === '1';
 
 function run(cfg, ss) {
   const R = render(cfg, ss);
@@ -123,17 +128,28 @@ const GEST_S = [20, 40, 200, 250];
 for (const key of keys) {
   const t0 = performance.now();
   const P = paramsOf(key, all[key]);
-  const data = { front: {}, frontG: {}, side: {}, sideG: {}, spots: {} };
+  const old = FRONT_ONLY ? await readCast(outDir, key) : null;
+  if (FRONT_ONLY && !old) throw new Error(`${key}: sem o arquivo para reaproveitar o lado`);
+  const data = { front: {}, frontG: {}, frontR: {}, side: old ? old.side : {}, sideG: old ? old.sideG : {}, sideR: {}, spots: {} };
   // ---------------------------------------------------------------- de frente
-  const fBaseCfg = frontCfg(P, 'idle');
-  const fb = run(fBaseCfg, SS_BASE);
-  frontDecals(fb.img, fb.Px, P, fBaseCfg.ramps, 'idle', 7);
-  data.front.idle = full(fb.img, FW, FH);
-  for (const mood of MOODS) {
-    const cfg = { ...frontCfg(P, mood), region: FACE_F };
-    const r = run(cfg, SS);
-    frontDecals(r.img, r.Px, P, cfg.ramps, mood, 7);
-    data.front[mood] = delta(fb.img, patch(fb.img, r.img, FW, FACE_F), FW, FH);
+  // (refazendo só a frente: o parado e os humores de quem não segura nada com a mão ficam como estão)
+  const keepFront = Boolean(old) && !(PROPS[key]?.arms ?? []).length;
+  let fbImg;
+  if (keepFront) {
+    for (const k of ['idle', ...MOODS]) data.front[k] = old.front[k];
+    fbImg = C.castFront(old, 'idle', false).data;
+  } else {
+    const fBaseCfg = frontCfg(P, 'idle');
+    const fb = run(fBaseCfg, SS_BASE);
+    frontDecals(fb.img, fb.Px, P, fBaseCfg.ramps, 'idle', 7);
+    fbImg = fb.img;
+    data.front.idle = full(fbImg, FW, FH);
+    for (const mood of MOODS) {
+      const cfg = { ...frontCfg(P, mood), region: FACE_F };
+      const r = run(cfg, SS);
+      frontDecals(r.img, r.Px, P, cfg.ramps, mood, 7);
+      data.front[mood] = delta(fbImg, patch(fbImg, r.img, FW, FACE_F), FW, FH);
+    }
   }
   // os emotes: só o braço (e o rosto da risada) por cima do rosto do gesto
   const fRef = {};
@@ -143,64 +159,84 @@ for (const key of keys) {
     const r = run(c, SS_G);
     frontDecals(r.img, r.Px, P, c.ramps, face, 7);
     fRef[face] = r.img;
-    fTop[face] = face === 'idle' ? fb.img : patch(fb.img, (() => {
+    if (face === 'idle') fTop.idle = fbImg;
+    else if (keepFront) fTop.smug = C.castFront(old, 'smug', false).data;
+    else {
       const c2 = { ...frontCfg(P, face), region: FACE_F };
       const r2 = run(c2, SS);
       frontDecals(r2.img, r2.Px, P, c2.ramps, face, 7);
-      return r2.img;
-    })(), FW, FACE_F);
-  }
-  for (const [id, n] of Object.entries(GESTURE_N)) {
-    data.frontG[id] = [];
-    const mood = GESTURE_FACE[id];
-    const base = mood === 'smug' ? 'smug' : 'idle';
-    for (let f = 0; f < n; f += 1) {
-      const cfg = frontCfg(P, mood, frontGesture(id, f));
-      const r = run(cfg, SS_G);
-      frontDecals(r.img, r.Px, P, cfg.ramps, mood, 7);
-      data.frontG[id].push(maskDelta(fTop[base], fRef[base], r.img, FW, FH));
+      fTop.smug = patch(fbImg, r2.img, FW, FACE_F);
     }
   }
-  // ---------------------------------------------------------------- de lado, sentado
-  const legsCfg = seatCfg(P, 'legs', 'idle');
-  const lg = run(legsCfg, SS);
-  sideDecals(lg.img, lg.Px, P, legsCfg.ramps, 'idle', 'legs', 11);
-  data.side.legs = full(lg.img, SW, SH);
-  const upCfg = seatCfg(P, 'upper', 'idle');
-  const up = run(upCfg, SS_BASE);
-  sideDecals(up.img, up.Px, P, upCfg.ramps, 'idle', 'upper', 11);
-  data.side.idle = full(up.img, SW, SH);
-  for (const mood of MOODS) {
-    const cfg = { ...seatCfg(P, 'upper', mood), region: FACE_S };
-    const r = run(cfg, SS);
-    sideDecals(r.img, r.Px, P, cfg.ramps, mood, 'upper', 11);
-    data.side[mood] = delta(up.img, patch(up.img, r.img, SW, FACE_S), SW, SH);
+  const frontFrame = (id, g) => {
+    const mood = GESTURE_FACE[id];
+    const base = mood === 'smug' ? 'smug' : 'idle';
+    // o gesto de uma mão só (à direita da tela) só precisa da metade de cá do quadro (a risada leva o rosto)
+    const oneHand = g.arms.every((a) => a.s === 1);
+    const reg = oneHand ? [id === 'risada' ? 40 : 76, 20, FW, FH] : null;
+    const cfg = { ...frontCfg(P, mood, g), ...(reg ? { region: reg } : {}) };
+    const r = run(cfg, SS_G);
+    frontDecals(r.img, r.Px, P, cfg.ramps, mood, 7);
+    const img = reg ? patch(fRef[base], r.img, FW, reg) : r.img;
+    return maskDelta(fTop[base], fRef[base], img, FW, FH);
+  };
+  for (const [id, n] of Object.entries(GESTURE_N)) {
+    data.frontG[id] = [];
+    for (let f = 0; f < n; f += 1) data.frontG[id].push(frontFrame(id, frontGesture(id, f)));
+    data.frontR[id] = RAISE_T.map((t, i) => frontFrame(id, frontRaise(id, i)));
   }
+  // ---------------------------------------------------------------- de lado, sentado
   const sRef = {};
   const sTop = {};
+  let upImg;
+  if (!old) {
+    const legsCfg = seatCfg(P, 'legs', 'idle');
+    const lg = run(legsCfg, SS);
+    sideDecals(lg.img, lg.Px, P, legsCfg.ramps, 'idle', 'legs', 11);
+    data.side.legs = full(lg.img, SW, SH);
+    const upCfg = seatCfg(P, 'upper', 'idle');
+    const up = run(upCfg, SS_BASE);
+    sideDecals(up.img, up.Px, P, upCfg.ramps, 'idle', 'upper', 11);
+    upImg = up.img;
+    data.side.idle = full(upImg, SW, SH);
+    for (const mood of MOODS) {
+      const cfg = { ...seatCfg(P, 'upper', mood), region: FACE_S };
+      const r = run(cfg, SS);
+      sideDecals(r.img, r.Px, P, cfg.ramps, mood, 'upper', 11);
+      data.side[mood] = delta(upImg, patch(upImg, r.img, SW, FACE_S), SW, SH);
+    }
+  } else {
+    upImg = C.castSeated(old, 'idle', false, 'right', 'madeira', 'upper').data;
+    for (const [id, n] of Object.entries(GESTURE_N)) if ((data.sideG[id] ?? []).length !== n) throw new Error(`${key}: o lado de ${id} tem ${data.sideG[id]?.length} quadros, e não ${n}`);
+  }
   for (const face of ['idle', 'smug']) {
     const c = { ...seatCfg(P, 'upper', face), region: GEST_S };
     const r = run(c, SS_G);
     sideDecals(r.img, r.Px, P, c.ramps, face, 'upper', 11);
-    sRef[face] = patch(up.img, r.img, SW, GEST_S);
-    if (face === 'idle') sTop[face] = up.img;
+    sRef[face] = patch(upImg, r.img, SW, GEST_S);
+    if (face === 'idle') sTop.idle = upImg;
+    else if (old) sTop.smug = C.castSeated(old, 'smug', false, 'right', 'madeira', 'upper').data;
     else {
       const c2 = { ...seatCfg(P, 'upper', face), region: FACE_S };
       const r2 = run(c2, SS);
       sideDecals(r2.img, r2.Px, P, c2.ramps, face, 'upper', 11);
-      sTop[face] = patch(up.img, r2.img, SW, FACE_S);
+      sTop.smug = patch(upImg, r2.img, SW, FACE_S);
     }
   }
-  for (const [id, n] of Object.entries(GESTURE_N)) {
-    data.sideG[id] = [];
+  const sideFrame = (id, g) => {
     const mood = GESTURE_FACE[id];
     const base = mood === 'smug' ? 'smug' : 'idle';
-    for (let f = 0; f < n; f += 1) {
-      const cfg = { ...seatCfg(P, 'upper', mood, 'madeira', sideGesture(id, f)), region: GEST_S };
-      const r = run(cfg, SS_G);
-      sideDecals(r.img, r.Px, P, cfg.ramps, mood, 'upper', 11);
-      data.sideG[id].push(maskDelta(sTop[base], sRef[base], patch(up.img, r.img, SW, GEST_S), SW, SH));
+    const cfg = { ...seatCfg(P, 'upper', mood, 'madeira', g), region: GEST_S };
+    const r = run(cfg, SS_G);
+    sideDecals(r.img, r.Px, P, cfg.ramps, mood, 'upper', 11);
+    return maskDelta(sTop[base], sRef[base], patch(upImg, r.img, SW, GEST_S), SW, SH);
+  };
+  for (const [id, n] of Object.entries(GESTURE_N)) {
+    if (!old) {
+      data.sideG[id] = [];
+      for (let f = 0; f < n; f += 1) data.sideG[id].push(sideFrame(id, sideGesture(id, f)));
     }
+    data.sideR[id] = RAISE_T.map((t, i) => sideFrame(id, sideRaise(id, i)));
   }
   // ---------------------------------------------------------------- os pontos (fumaça, brilho dos olhos)
   if (P.smokes) {
@@ -214,7 +250,6 @@ for (const key of keys) {
     [49.75 - 12, EYE_Y / 2],
   ];
   data.spots.sideEye = [+((EYE_Z + 6 + 81) / 2).toFixed(1), +((EYE_Y + 1) / 2).toFixed(1)];
-  const js = `// gerado por tools/volume (não editar à mão): o ${key} em volume, de frente e sentado.\nexport default ${JSON.stringify(data)};\n`;
-  writeFileSync(`${outDir}/${key}.js`, js);
-  console.log(key, ((performance.now() - t0) / 1000).toFixed(0) + 's', (js.length / 1024).toFixed(0) + 'KB');
+  const size = writeCast(outDir, key, data);
+  console.log(key, ((performance.now() - t0) / 1000).toFixed(0) + 's', (size / 1024).toFixed(0) + 'KB');
 }

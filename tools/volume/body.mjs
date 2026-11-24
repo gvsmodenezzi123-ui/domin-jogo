@@ -58,8 +58,9 @@ export function makeFrontBody(P, poses = {}) {
     return d;
   }
   function armsD(x, y, z) {
+    // s = 1: o braço à direita da tela; s = −1: à esquerda (o mesmo lado dos gestos e dos objetos)
     const arm = (s) => {
-      const X = (v) => 88 + s * (v - 88);
+      const X = (v) => 88 - s * (v - 88);
       let d = sdEllipsoid(x, y, z, X(G.shX), 131, -5.5, G.shR, G.shR + 1.6, G.shR);
       const pose = poses[s];
       if (pose) d = smin(d, sdRoundCone(x, y, z, X(G.shX - 0.6), 133, -5.5, ...pose.elbow, G.armR, G.armR - 2.4), 6);

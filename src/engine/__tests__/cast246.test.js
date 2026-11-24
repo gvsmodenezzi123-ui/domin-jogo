@@ -141,6 +141,6 @@ describe('Versão 2.46: os personagens em volume', () => {
     expect(light).toBeLessThan(2.5 * 1024 * 1024);
     expect(total).toBeLessThan(12 * 1024 * 1024);
     // castFront sem emote nem humor é o quadro parado inteiro
-    expect(castFront).toBeTypeOf('function');
+    expect(typeof castFront).toBe('function');
   });
 });
