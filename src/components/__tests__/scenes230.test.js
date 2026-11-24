@@ -95,15 +95,16 @@ describe('versão 2.30: os cenários de dia', () => {
   it('as três mesas (plástico, concreto, tábua) e as saias pintam inteiras e diferentes', () => {
     const planes = TABLE_KINDS.map((k) => paintTablePlane({ w: 160, h: 80, material: k }));
     const plain = paintTablePlane({ w: 160, h: 80 });
+    // (versão 2.47: as mesas de dia em volume saem no dobro da resolução, S = 2)
     for (const p of planes) {
-      expect([p.w, p.h]).toEqual([160, 80]);
+      expect([p.w, p.h, p.S]).toEqual([320, 160, 2]);
       expect(p.data).not.toEqual(plain.data);
     }
     expect(planes[0].data).not.toEqual(planes[1].data);
     expect(planes[1].data).not.toEqual(planes[2].data);
     for (const k of TABLE_KINDS) {
       const a = paintApron(160, { material: k });
-      expect(a.w).toBe(160);
+      expect(a.w).toBe(320);
       expect(paintApron(160, { material: k }).data).toEqual(a.data);
     }
   });

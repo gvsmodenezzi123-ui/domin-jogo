@@ -2797,3 +2797,7 @@ export function roomFx(name, w, h, { candles = false } = {}) {
   }
   return fx;
 }
+
+// o retrato do patrão e a tabela do bicho, como eram: tools/volume/cena cola os dois no quadro e na
+// tabela da sala do bicho em volume
+export { bichoChart, patronPortrait };

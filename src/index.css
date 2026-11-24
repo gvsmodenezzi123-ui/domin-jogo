@@ -29041,3 +29041,200 @@ html[data-topview] .emote-pick {
 .death-on #root .felt-table:not(.screen-break *) {
   visibility: hidden;
 }
+
+/* ==========================================================================================
+   Versão 2.47: o HUD em volume (as peças renderizadas em art/hudVolume.js; .hud-vol no :root).
+   A caixa de nogueira com as cantoneiras de latão, as bandejas de veludo (vermelha da vida,
+   verde do dorme), a lousa das pontas, a plaquinha de ouro do dinheiro, as teclas estufadas
+   (ouro e vermelha acesas, apagadas foscas) e a placa de tábua do rival.
+   ========================================================================================== */
+.hud-px {
+  image-rendering: pixelated;
+}
+.hud-vol .nv-box,
+.hud-vol .nv-sign {
+  background: none;
+  border-radius: 0;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.55);
+  isolation: isolate;
+}
+.hud-vol .nv-box::before,
+.hud-vol .nv-sign::before {
+  inset: 0;
+  border: 12px solid transparent;
+  border-image: var(--hud-case) 12 fill / 12px / 0 round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  z-index: -1;
+}
+.hud-vol .nv-sign::before {
+  border-width: 10px;
+  border-image: var(--hud-plank) 10 fill / 10px / 0 round;
+}
+.hud-vol .nv-kc {
+  display: none;
+}
+.hud-vol .nv-felt,
+.hud-vol .nv-pile,
+.hud-vol .nv-slate,
+.hud-vol .nv-pouch,
+.hud-vol .nv-key {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.hud-vol .nv-felt::before,
+.hud-vol .nv-pile::before,
+.hud-vol .nv-slate::before,
+.hud-vol .nv-pouch::before,
+.hud-vol .nv-key::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 8px solid transparent;
+  border-image: var(--hud-tray-red) 8 fill / 8px / 0 round;
+  image-rendering: pixelated;
+  z-index: -1;
+  pointer-events: none;
+}
+.hud-vol .nv-felt {
+  padding: 4px 10px;
+}
+.hud-vol .nv-pile::before {
+  border-image-source: var(--hud-tray-green);
+}
+.hud-vol .nv-slate::before {
+  border-image-source: var(--hud-slate);
+}
+.hud-vol .nv-pouch {
+  color: #3a1c04;
+}
+.hud-vol .nv-pouch::before {
+  border-image-source: var(--hud-key-gold-on);
+}
+.hud-vol .nv-pouch .nv-pouch-count {
+  color: #3a1c04;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6);
+}
+.hud-vol .nv-key {
+  height: 26px;
+}
+.hud-vol .nv-key::before {
+  border-image-source: var(--hud-key-dark-off);
+}
+.hud-vol .nv-key.is-gold {
+  color: rgba(255, 236, 190, 0.6);
+}
+.hud-vol .nv-key.is-gold::before {
+  border-image-source: var(--hud-key-gold-off);
+}
+.hud-vol .nv-key.is-on.is-gold {
+  color: #3a1c04;
+  filter: drop-shadow(0 0 6px rgba(255, 170, 40, 0.5));
+}
+.hud-vol .nv-key.is-on.is-gold::before {
+  border-image-source: var(--hud-key-gold-on);
+}
+.hud-vol .nv-key.is-on.is-gold:not(:disabled):active::before {
+  border-image-source: var(--hud-key-gold-down);
+}
+.hud-vol .nv-key.is-dark {
+  color: rgba(246, 226, 184, 0.5);
+}
+.hud-vol .nv-key.is-on.is-dark {
+  color: #fff3d0;
+  text-shadow: 0 1px 0 #4a060c;
+}
+.hud-vol .nv-key.is-on.is-dark::before {
+  border-image-source: var(--hud-key-red-on);
+}
+.hud-vol .nv-key:not(:disabled):active {
+  transform: translateY(1px);
+}
+/* a faixa dos corações dos rivais (a roda e o banco) vira a bandejinha escura */
+.hud-vol .rival-stats {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 3px 7px 3px 5px;
+}
+.hud-vol .rival-stats::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 6px solid transparent;
+  border-image: var(--hud-slate) 8 fill / 6px / 0 round;
+  image-rendering: pixelated;
+  z-index: -1;
+  pointer-events: none;
+}
+/* as plaquinhas de nome penduradas (a roda, o banco, o duelo) */
+.hud-vol .rival-nameplate {
+  border-image: var(--hud-plank) 10 fill / 9px / 0 round;
+}
+
+/* os adversários na roda online: a vida numa bandejinha de lousa embaixo da plaquinha */
+.hud-vol .chair-life {
+  position: relative;
+  isolation: isolate;
+  padding: 3px 6px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+}
+.hud-vol .chair-life::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 6px solid transparent;
+  border-image: var(--hud-slate) 8 fill / 6px / 0 round;
+  image-rendering: pixelated;
+  z-index: -1;
+  pointer-events: none;
+}
+.hud-vol .chair.is-danger .chair-life {
+  filter: drop-shadow(0 0 4px rgba(255, 50, 36, 0.9));
+}
+.hud-vol .seat-tag {
+  padding: 2px 3px 1px;
+  color: #3a1c04;
+  background: none;
+  box-shadow: none;
+  border: 3px solid transparent;
+  border-image: var(--hud-key-gold-on) 8 fill / 3px / 0 stretch;
+  image-rendering: pixelated;
+}
+/* o duelo 1×1: a faixa do outro jogador no mapa e na loja, na placa de tábua */
+.hud-vol .pvp-opp {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  border-color: transparent;
+}
+.hud-vol .pvp-opp::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 10px solid transparent;
+  border-image: var(--hud-plank) 10 fill / 10px / 0 round;
+  image-rendering: pixelated;
+  z-index: -1;
+  pointer-events: none;
+}
+.hud-vol .pvp-opp-stats {
+  position: relative;
+  isolation: isolate;
+  padding: 3px 6px;
+}
+.hud-vol .pvp-opp-stats::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 6px solid transparent;
+  border-image: var(--hud-slate) 8 fill / 6px / 0 round;
+  image-rendering: pixelated;
+  z-index: -1;
+  pointer-events: none;
+}

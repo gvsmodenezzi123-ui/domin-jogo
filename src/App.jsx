@@ -48,6 +48,7 @@ import { getRelic } from './data/relics.js';
 import { SECRET_BOSS, TUTOR, getRival, rivalFor, rivalOf } from './data/rivals.js';
 import { LAND_ROOMS } from './components/art/landRooms.js';
 import { sceneOfRival } from './data/scenes.js';
+import { preloadRoomHD } from './components/art/roomHD.js';
 import { TUTORIAL_STEPS } from './data/tutorial.js';
 import { modeOf } from './data/difficulty.js';
 import {
@@ -592,6 +593,9 @@ export default function App() {
   // versão 2.30: quem joga de dia (data/scenes.js) troca a sala, a mesa e a luz
   const scene = sceneOfRival(state.rivalId);
   const rival = scene ? { ...rivalOf(state), room: scene.room, table: scene.table, light: scene.light } : rivalOf(state);
+  // versão 2.47: a sala em volume da mesa do rival da vez já vai chegando (desde o mapa)
+  const rivalRoom = rival.room ?? LAND_ROOMS[REGIONS[rival.region - 1]?.atmosphere ?? 'boteco'] ?? 'landroom';
+  useEffect(() => preloadRoomHD(rivalRoom), [rivalRoom]);
   // Patch 0.8.0: Peças Pretas liberadas (no aparelho) e a moldura equipada; `blackSeen` segura
   // a tela de recompensa até você tocar em continuar
   const blackUnlocked = useSyncExternalStore(subscribeMeta, isBlackTilesUnlocked, () => false);

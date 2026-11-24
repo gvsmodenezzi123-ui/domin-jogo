@@ -172,6 +172,25 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.47.0: as salas, as mesas e o HUD em volume
+
+- As 7 salas da mesa deitada (o Boteco da Esquina, a sinuca, o escritório do bicho, a sala da
+  noite, a calçada, a praia e a praça) refeitas em volume, no mesmo encanamento dos personagens
+  (`tools/volume/cena`): modeladas em 3D, iluminadas pelas luzes de cada uma e passadas para pixel
+  art. A câmera agora está na mesma perspectiva do tampo: o chão e a mesa ficam paralelos e a mesa
+  não parece mais em pé.
+- Cada sala é uma imagem larga (1040 × 414, em 256 cores) num módulo à parte
+  (`art/rooms/<sala>.js`, por `art/roomHD.js`), que só chega quando precisa; a do rival da vez já
+  vem desde o mapa. O jogo corta o meio que cabe na tela, com a altura inteira (nas telas mais
+  compridas aparece a sobra dos lados). Enquanto não chega, fica a pintura de antes.
+- Nas salas de dia, o céu e o mar continuam os de antes, com as nuvens e as ondas andando atrás da
+  sala nova; as árvores agora fazem parte da sala.
+- As mesas em volume, no dobro da resolução: o feltro (`art/tableVolume.js`) e as mesas de dia
+  (`art/tableKindsVolume.js`). A mesa das velas segue a de antes.
+- O HUD em volume (`art/hudVolume.js`): os corações, os nichos dos talismãs, a caixa de nogueira com
+  as cantoneiras de latão, as bandejas de veludo, a lousa das pontas, as teclas de comprar e passar
+  e as placas de tábua dos assentos no online.
+
 ### 2.46.0: os personagens em volume
 
 - Os 33 personagens (os 30 rivais, o Valtinho, o Seu Tião e o Corvo) refeitos do zero: cada um

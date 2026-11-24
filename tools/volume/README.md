@@ -20,3 +20,25 @@ emote tem os quadros do gesto e os dois do braço subindo (`gestures.mjs`: `fron
 Cada personagem fica em dois pedaços (`castio.mjs`): `<chave>.js` (o parado, os humores e os pontos
 da brasa e dos olhos) e `<chave>.g.js` (os emotes), que o jogo carrega depois. O jogo lê os quadros
 por `src/components/art/castHD.js`.
+
+# Salas e HUD em volume (versão 2.47)
+
+O mesmo encanamento, para o cenário: `cena/common.mjs` tem a câmera (alta, na perspectiva do tampo
+da mesa: o chão e a mesa dividem a linha do horizonte) e a mesa em 3D que faz sombra; cada sala é
+um módulo em `cena/rooms/` (a cena por distância com sinal, as luzes, as cores e os desenhos por
+cima). `cena/render.mjs` ilumina, `cena/pixelpass.mjs` passa para pixel art e `cena/decals.mjs`
+tem os letreiros, o neon e as juntas do chão.
+
+    node tools/volume/cena/runroom.mjs sinuca /tmp/sinuca.png 3        # a sala inteira (1040 × 414)
+    node tools/volume/cena/runroom.mjs sinuca /tmp/teste.png 1 500,0,900,200   # só um pedaço
+    python3 tools/volume/cena/tomodule.py /tmp/sinuca.png src/components/art/rooms/landsinuca.js still
+    python3 tools/volume/cena/tomodule.py /tmp/praia.png src/components/art/rooms/landpraia.js day
+    node tools/volume/cena/daycomp.mjs landpraia /tmp/praia.png /tmp/comp.png  # a de dia com o céu
+    node tools/volume/cena/ui.mjs [pasta]                               # as peças do HUD
+
+As salas: `boteco` (landroom), `sinuca` (landsinuca), `bicho` (landbicho), `noite` (landnoite),
+`calcada` (landcalcada), `praia` (landpraia) e `praca` (landpraca). Cada uma leva de 1 a 7 minutos
+em supersampling 3×. A imagem é larga: a tela de referência (896 × 414) no meio e 72 px de sobra de
+cada lado; o jogo corta o meio que cabe (`roomCrop`). `tomodule.py` passa o PNG para 256 cores
+(conferindo o erro) e escreve o módulo; nas salas de dia (`day`) o céu e o mar ficam
+transparentes, para a camada de trás de `landRooms.js` aparecer.

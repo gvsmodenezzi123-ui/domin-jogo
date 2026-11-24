@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { getRarity } from '../data/rarities.js';
 import { RELIC_SLOTS, getRelic } from '../data/relics.js';
 import RelicIcon from './RelicIcon.jsx';
-import { ShopSprite } from './ShopArt.jsx';
+import { nicheSprite } from './art/hudVolume.js';
 
 /**
  * Slots de talismã (4; a Maleta do Trapaceiro e o Bolso Fundo dão mais). A mesma barra serve para você (acima do leque), para o
@@ -50,7 +50,7 @@ function Hotbar({
           if (!relic) {
             return (
               <span key={`empty-${i}`} aria-hidden="true" className="relic-niche is-empty" style={{ width: size, height: h }}>
-                {!painted && <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />}
+                {!painted && <img src={nicheSprite(size).url} width={size} height={h} alt="" draggable={false} className="relic-niche-px hud-px" />}
               </span>
             );
           }
@@ -68,7 +68,7 @@ function Hotbar({
               onClick={onTap ? () => onTap(relic.id) : undefined}
               {...(press ? press({ kind: 'relic', id: relic.id, owner }) : {})}
             >
-              {!painted && <ShopSprite name="nicho" scale={scale} className="relic-niche-px" />}
+              {!painted && <img src={nicheSprite(size).url} width={size} height={h} alt="" draggable={false} className="relic-niche-px hud-px" />}
               <span key={flashes[relic.id] ?? 0} className={`relic-niche-icon ${flashes[relic.id] ? 'animate-relic-proc' : ''}`}>
                 <RelicIcon relic={relic} size={Math.round(size * 0.66)} />
               </span>

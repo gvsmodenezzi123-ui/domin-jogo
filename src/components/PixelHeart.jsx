@@ -1,4 +1,5 @@
 import { HeartGlyph } from './UiGlyphs.jsx';
+import { heartSprite } from './art/hudVolume.js';
 
 /**
  * Coração de vida (`size` em px; `pixel` é o tamanho antigo, 1 pixel = 9px de largura).
@@ -9,7 +10,12 @@ export function PixelHeart({ broken = false, pixel = 2, size, beat = true }) {
   return (
     <span className="relative inline-block leading-none" aria-hidden="true">
       <span key={broken ? 'broken' : 'full'} className={`inline-block ${broken ? 'animate-heart-crack' : beat ? 'heart-alive' : ''}`}>
-        <HeartGlyph broken={broken} size={px} className="block" />
+        {/* versão 2.47: o coração em volume (art/hudVolume.js, a arte pronta no tamanho mais perto) */}
+        {heartSprite(px, broken) ? (
+          <img src={heartSprite(px, broken).url} width={px} height={px} alt="" draggable={false} className="block hud-px" />
+        ) : (
+          <HeartGlyph broken={broken} size={px} className="block" />
+        )}
       </span>
     </span>
   );

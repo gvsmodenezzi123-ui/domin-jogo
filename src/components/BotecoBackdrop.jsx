@@ -1,6 +1,7 @@
 import { memo, useLayoutEffect, useRef } from 'react';
 import { SCENE_PX, paintProp, paintScene, propSize } from './art/botecoScene.js';
 import { DAY_ROOMS, LAND_ROOM_IDS, paintDayLayers, paintLandRoom } from './art/landRooms.js';
+import { HD_H, hasRoomHD, loadRoomHD, roomCrop, roomHD, subscribeRoomHD } from './art/roomHD.js';
 
 /** Cenas já pintadas, por nome e tamanho (trocar de tela e voltar não pinta de novo). */
 const cache = new Map();
@@ -38,6 +39,22 @@ function StillBackdrop({ scene, seed, className, style }) {
     let last = '';
     const paint = () => {
       const box = canvas.getBoundingClientRect();
+      // versão 2.47: a sala em volume (art/roomHD.js), o meio que cabe nesta tela, 1 pixel da arte
+      // por px de CSS na tela de referência; enquanto ela não chega, a pintura de sempre
+      const hd = roomHD(scene);
+      if (hd) {
+        const [x0, vis] = roomCrop(box.width, box.height);
+        const key = `hd:${vis}`;
+        if (key === last) return;
+        last = key;
+        canvas.width = vis;
+        canvas.height = HD_H;
+        const g = canvas.getContext('2d');
+        if (!g) return;
+        g.imageSmoothingEnabled = false;
+        g.drawImage(hd, x0, 0, vis, HD_H, 0, 0, vis, HD_H);
+        return;
+      }
       const w = Math.max(8, Math.ceil(box.width / SCENE_PX));
       const h = Math.max(8, Math.ceil(box.height / SCENE_PX));
       const key = `${w}x${h}`;
@@ -48,10 +65,22 @@ function StillBackdrop({ scene, seed, className, style }) {
       canvas.getContext('2d')?.putImageData(sceneImage(scene, w, h, seed), 0, 0);
     };
     paint();
-    if (typeof ResizeObserver === 'undefined') return undefined;
+    let off = null;
+    if (hasRoomHD(scene) && !roomHD(scene)) {
+      off = subscribeRoomHD((name) => {
+        if (name !== scene) return;
+        last = '';
+        paint();
+      });
+      void loadRoomHD(scene);
+    }
+    if (typeof ResizeObserver === 'undefined') return () => off?.();
     const observer = new ResizeObserver(paint);
     observer.observe(canvas);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      off?.();
+    };
   }, [scene, seed]);
   return <canvas ref={ref} aria-hidden="true" className={`boteco-backdrop ${className}`} style={style} data-scene={scene} />;
 }
@@ -101,6 +130,24 @@ const putLayer = (canvas, layer) => {
   canvas.getContext('2d')?.putImageData(new ImageData(layer.data, layer.w, layer.h), 0, 0);
 };
 
+/** Versão 2.47: a frente da sala de dia em volume, com a vinheta do céu (em meia resolução) embaixo. */
+function putHD(canvas, shade, hd, box) {
+  const [x0, vis] = roomCrop(box.width, box.height);
+  canvas.width = vis;
+  canvas.height = HD_H;
+  const g = canvas.getContext('2d');
+  if (!g) return;
+  g.imageSmoothingEnabled = false;
+  if (shade?.w) {
+    const sc = document.createElement('canvas');
+    sc.width = shade.w;
+    sc.height = shade.h;
+    sc.getContext('2d')?.putImageData(new ImageData(shade.data, shade.w, shade.h), 0, 0);
+    g.drawImage(sc, 0, 0, shade.w, shade.h, 0, 0, vis, HD_H);
+  }
+  g.drawImage(hd, x0, 0, vis, HD_H, 0, 0, vis, HD_H);
+}
+
 /**
  * Versão 2.31: a sala de dia em camadas (art/landRooms.js, paintDayLayers): o céu atrás, as
  * nuvens andando devagar, as cristas do mar indo e vindo, a vinheta e a sala por cima, com buraco
@@ -142,9 +189,13 @@ function DayBackdrop({ scene, seed, className, style }) {
       for (const a of anims) a.cancel();
       anims = [];
       putLayer(back, L.back);
+      // versão 2.47: a frente em volume (art/roomHD.js) por cima da vinheta do céu; com ela, as
+      // copas e as palmas já vêm na imagem (não balançam soltas)
+      const hd = roomHD(scene);
+      if (hd) putHD(front, L.shade, hd, box);
       // versão 2.45.1: a vinheta e a sala num canvas só (a sala por cima da vinheta, como era):
       // uma camada de tela cheia a menos para a placa de vídeo compor
-      putLayer(front, overlay(L.shade, L.front));
+      else putLayer(front, overlay(L.shade, L.front));
       const sx = box.width / w;
       const sy = box.height / h;
       putLayer(clouds, L.clouds);
@@ -152,7 +203,7 @@ function DayBackdrop({ scene, seed, className, style }) {
       // versão 2.41: as copas das árvores e as palmas dos coqueiros balançam com o vento, cada uma
       // presa no seu tronco (uma inclinação pequena, indo e voltando, cada árvore no seu tempo)
       for (const el of trees) el.remove();
-      trees = (L.trees ?? []).map((t, i) => {
+      trees = (hd ? [] : (L.trees ?? [])).map((t, i) => {
         const el = document.createElement('canvas');
         el.className = 'day-layer day-tree';
         putLayer(el, t);
@@ -182,10 +233,20 @@ function DayBackdrop({ scene, seed, className, style }) {
       });
     };
     paint();
+    let off = null;
+    if (hasRoomHD(scene) && !roomHD(scene)) {
+      off = subscribeRoomHD((name) => {
+        if (name !== scene) return;
+        last = '';
+        paint();
+      });
+      void loadRoomHD(scene);
+    }
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(paint);
     observer?.observe(root);
     return () => {
       observer?.disconnect();
+      off?.();
       for (const a of anims) a.cancel();
       for (const el of trees) el.remove();
     };

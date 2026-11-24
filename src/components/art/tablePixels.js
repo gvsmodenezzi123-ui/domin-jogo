@@ -12,7 +12,9 @@
  * Tudo puro e com semente: a mesma pilha sai sempre igual.
  */
 import { paintKit } from './botecoScene.js';
-import { TABLE_KINDS, paintApronKind, paintTableKind } from './tableKinds.js';
+import { TABLE_KINDS } from './tableKinds.js';
+import { paintApronKindVolume, paintTableKindVolume } from './tableKindsVolume.js';
+import { paintApronVolume, paintTableVolume } from './tableVolume.js';
 
 const { hex, shift, rngOf, buffer, bayer } = paintKit;
 
@@ -393,7 +395,10 @@ function paintFeltBase(data, w, h, L, M, D, seed) {
  */
 export function paintTablePlane({ w, h, light = '#3a4a2a', mid = '#2c3a20', dark = '#1f2a17', seed = 11, mahogany = false, candles = false, material = null }) {
   // versão 2.30: as mesas que não são de feltro (plástico, concreto pintado, tábua) moram em tableKinds.js
-  if (TABLE_KINDS.includes(material)) return paintTableKind(material, { w, h, seed });
+  // versão 2.47: as mesas em volume (no dobro da resolução): a de feltro (tableVolume.js) e as de
+  // dia (tableKindsVolume.js); a das velas, do Dono da Noite, continua a pintada aqui embaixo
+  if (TABLE_KINDS.includes(material)) return paintTableKindVolume(material, { w, h, seed });
+  if (!candles) return paintTableVolume({ w, h, light, mid, dark, seed, mahogany });
   const b = buffer(w, h);
   const r = rngOf(seed);
   const wood = mahogany ? RAIL_WOOD.mogno : RAIL_WOOD.pinho;
@@ -677,7 +682,8 @@ export const APRON_H = 12;
  */
 export function paintApron(w, { mahogany = false, seed = 5, candles = false, material = null } = {}) {
   const h = APRON_H;
-  if (TABLE_KINDS.includes(material)) return paintApronKind(material, w, h, seed);
+  if (TABLE_KINDS.includes(material)) return paintApronKindVolume(material, w, h, seed);
+  if (!candles) return paintApronVolume(w, { mahogany, seed });
   const b = buffer(w, h);
   const r = rngOf(seed);
   const wood = mahogany ? RAIL_WOOD.mogno : RAIL_WOOD.pinho;

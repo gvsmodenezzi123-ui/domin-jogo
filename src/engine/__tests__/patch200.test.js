@@ -77,8 +77,9 @@ const fullyPainted = (b) => {
 
 describe('Versão 2.0: a mesa inteira pintada (art/tablePixels.js)', () => {
   it('o plano da mesa pinta tudo (aro, tabela e feltro), do tamanho pedido, e a mesma semente sai igual', () => {
+    // (versão 2.47: a mesa de feltro em volume sai no dobro da resolução, S = 2)
     const a = paintTablePlane({ w: 120, h: 200 });
-    expect([a.w, a.h, a.data.length]).toEqual([120, 200, 120 * 200 * 4]);
+    expect([a.w, a.h, a.S, a.data.length]).toEqual([240, 400, 2, 240 * 400 * 4]);
     expect(fullyPainted(a)).toBe(true);
     expect(paintTablePlane({ w: 120, h: 200 }).data).toEqual(a.data);
     // outra cor de feltro e o mogno mudam a pintura
@@ -91,9 +92,9 @@ describe('Versão 2.0: a mesa inteira pintada (art/tablePixels.js)', () => {
   it('o aro é madeira (quente) e o miolo é o feltro (da cor da mesa)', () => {
     const b = paintTablePlane({ w: 100, h: 160 });
     const px = (x, y) => Array.from(b.data.slice((y * b.w + x) * 4, (y * b.w + x) * 4 + 3));
-    const [rr, , bb] = px(36, 5); // no aro de cima (longe dos losangos)
+    const [rr, , bb] = px(72, 10); // no aro de cima (longe dos losangos)
     expect(rr).toBeGreaterThan(bb);
-    const [fr, fg] = px(50, 96); // feltro verde padrão
+    const [fr, fg] = px(100, 192); // feltro verde padrão
     expect(fg).toBeGreaterThanOrEqual(fr);
   });
 
@@ -124,7 +125,7 @@ describe('Versão 2.0: a mesa inteira pintada (art/tablePixels.js)', () => {
       expect(opaque(b)).toBeGreaterThan(10);
     }
     const apron = paintApron(80);
-    expect([apron.w, apron.h]).toEqual([80, APRON_H]);
+    expect([apron.w, apron.h]).toEqual([160, APRON_H * 2]);
   });
 });
 
