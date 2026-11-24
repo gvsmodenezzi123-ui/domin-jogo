@@ -23,10 +23,19 @@ export const GESTURE_FACE = Object.freeze({
   risada: ['blink', true],
 });
 
-/** Os gestos que mexem: a ordem dos quadros e quanto dura cada um (ms). */
+/**
+ * Os gestos que mexem: a ordem dos quadros e quanto dura cada um (ms). Versão 2.46: com os
+ * personagens em volume, todos mexem (o joinha e o negativo bombeiam, o dedo treme, o aceno abana
+ * e a risada sacode); no desenho antigo esses quadros são iguais.
+ */
 export const GESTURE_FRAMES = Object.freeze({
+  joinha: Object.freeze({ seq: Object.freeze([0, 1]), ms: 260 }),
+  negativo: Object.freeze({ seq: Object.freeze([0, 1]), ms: 260 }),
+  dedo: Object.freeze({ seq: Object.freeze([0, 1]), ms: 110 }),
+  aceno: Object.freeze({ seq: Object.freeze([0, 1, 0, 2]), ms: 170 }),
   palmas: Object.freeze({ seq: Object.freeze([0, 1, 2, 1]), ms: 90 }),
   calma: Object.freeze({ seq: Object.freeze([0, 1, 2, 3, 2, 1]), ms: 180 }),
+  risada: Object.freeze({ seq: Object.freeze([0, 1]), ms: 150 }),
 });
 const HH = 20;
 

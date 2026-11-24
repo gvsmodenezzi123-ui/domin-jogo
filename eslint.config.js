@@ -5,7 +5,8 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 
 export default defineConfig([
-  globalIgnores(['dist', 'public/sw.js', 'public/vendor']),
+  // (tools/volume: o gerador dos personagens em volume, que roda fora do jogo; art/cast: o que ele gera)
+  globalIgnores(['dist', 'public/sw.js', 'public/vendor', 'tools', 'src/components/art/cast']),
   {
     files: ['**/*.{js,jsx,mjs}'],
     extends: [js.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite()],

@@ -26,6 +26,7 @@ import { FLIGHT_PLAYER, FLIGHT_RIVAL, flyTile, landTime } from './components/til
 import { kickLamp } from './components/lampKick.js';
 import TitleScreen from './components/TitleScreen.jsx';
 import AccessGate from './opening/AccessGate.jsx';
+import SplashScene from './opening/SplashScene.jsx';
 import DangerFx from './components/DangerFx.jsx';
 import { cancelSweep, dealRivalsFromDorme, sweepToDorme } from './components/tableSweep.js';
 import { FINALE_TITLE, finaleLines, lastPlacedOf, leavingTileOf } from './components/finale.js';
@@ -123,7 +124,6 @@ import HurtBlink from './components/HurtBlink.jsx';
 // versão 2.45.1: em pedaços à parte (lazyIdle.js)
 const DevPanel = lazyIdle(() => import('./components/DevPanel.jsx'));
 const SecretBoss = lazyIdle(() => import('./components/SecretBoss.jsx'));
-const OpeningScene = lazyIdle(() => import('./opening/OpeningScene.jsx'));
 const PvpApp = lazyIdle(() => import('./pvp/PvpApp.jsx'));
 const ScreenBreak = lazyIdle(() => import('./components/ScreenBreak.jsx'));
 
@@ -1469,11 +1469,8 @@ export default function App() {
         />
       </div>
       {!entered && <AccessGate onEnter={enter} />}
-      {entered && opening.on && (
-        <Suspense fallback={<div className="fixed inset-0 z-[90] bg-black" />}>
-          <OpeningScene skippable={opening.skippable} onDone={openingDone} />
-        </Suspense>
-      )}
+      {/* versão 2.46: a abertura é só a tela preta com o BUXARIA (acende e apaga) */}
+      {entered && opening.on && <SplashScene skippable={opening.skippable} onDone={openingDone} />}
       {veil}
       </TileSkinContext.Provider>
     );

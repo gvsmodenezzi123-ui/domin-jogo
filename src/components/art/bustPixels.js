@@ -10,6 +10,7 @@ import { paintKit } from './botecoScene.js';
 import { FIG_H, FIG_MOUTH, FIG_SHOULDER, FIG_W, paintFigure } from './figurePixels.js';
 import { SEATED_H, SEATED_W, paintProfile, paintSeatedProfile } from './figProfile.js';
 import { gestureFront } from './figGesture.js';
+import { castFront, castOf, castProfile, castSeated } from './castHD.js';
 
 const { hex, buffer } = paintKit;
 
@@ -29,6 +30,7 @@ const colorAt = (b, x, y) => {
 /** Só a silhueta: tudo escuro, com o recorte quente da lâmpada na borda esquerda e no alto. */
 function silhouetteOf(b) {
   const out = buffer(b.w, b.h);
+  out.S = b.S;
   const dark = hex('#0d0907');
   const rim = hex('#c99a5a');
   for (let y = 0; y < b.h; y += 1) {
@@ -37,7 +39,7 @@ function silhouetteOf(b) {
       if (a < 200) continue;
       const edge = !alphaAt(b, x - 1, y) || !alphaAt(b, x, y - 1);
       const lum = (colorAt(b, x, y).reduce((s, v) => s + v, 0) / 765) * 0.12;
-      out.put(x, y, edge && y < b.h - 8 ? mix(dark, rim, 0.55) : mix(dark, hex('#3a2a20'), lum));
+      out.put(x, y, edge && y < b.h - 8 * (b.S ?? 1) ? mix(dark, rim, 0.55) : mix(dark, hex('#3a2a20'), lum));
     }
   }
   return out;
@@ -47,7 +49,18 @@ function silhouetteOf(b) {
  * O busto de `spec` no humor `mood` (os mesmos do retrato: idle, thinking, smug, hurt, blink) e
  * com a boca aberta enquanto fala (`speaking`). BUST_W×BUST_H, fundo transparente.
  */
-export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false, profile = null, gesture = null, frame = 0 } = {}) {
+export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false, profile = null, gesture = null, frame = 0, raise = null } = {}) {
+  // versão 2.46: o personagem em volume (art/castHD.js), quando os quadros dele já chegaram
+  // (`raise` 0 ou 1: o braço do emote ainda subindo)
+  const hd = castOf(spec);
+  if (hd) {
+    const out = profile ? castProfile(hd, mood, speaking, profile) : castFront(hd, mood, speaking, gesture, frame, raise);
+    for (let y = (BUST_RAIL - 8) * 2; y < BUST_H * 2; y += 1) {
+      const k = ((y - (BUST_RAIL - 8) * 2) / ((BUST_H - (BUST_RAIL - 8)) * 2)) * 0.42;
+      for (let x = 0; x < BUST_W * 2; x += 1) if (alphaAt(out, x, y)) out.put(x, y, [8, 5, 3], k);
+    }
+    return silhouette ? silhouetteOf(out) : out;
+  }
   // versão 2.18: `profile` ('right' | 'left'): de lado, olhando para esse lado (quem senta nas laterais)
   let out = profile ? paintProfile(spec, mood, speaking, profile) : paintFigure(spec, mood, speaking);
   // versão 2.45: o emote feito com a mão dele (só de frente)
@@ -68,7 +81,13 @@ export { SEATED_H, SEATED_W };
  * 'plastico'), olhando para `facing`. Sem a sombra da beirada (a mesa não cobre o peito: as
  * pernas é que entram embaixo dela). SEATED_W×SEATED_H.
  */
-export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira', part = 'all', gesture = null, frame = 0 } = {}) {
+export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira', part = 'all', gesture = null, frame = 0, raise = null } = {}) {
+  // versão 2.46: o personagem em volume (a cadeira nova vem com ele)
+  const hd = castOf(spec);
+  if (hd) {
+    const out = castSeated(hd, mood, speaking, facing, chair, part, gesture, frame, raise);
+    return silhouette && part !== 'chair' ? silhouetteOf(out) : out;
+  }
   // versão 2.45: o emote feito com a mão dele (o braço de cá erguido)
   const out = paintSeatedProfile(gesture ? { ...spec, __gesture: gesture, __frame: frame } : spec, mood, speaking, facing, chair, part);
   // (a cadeira não vira sombra: só quem senta nela)

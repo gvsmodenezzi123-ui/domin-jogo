@@ -14,6 +14,7 @@
  */
 import { paintKit } from './botecoScene.js';
 import { FIG_OX, paintFigure } from './figurePixels.js';
+import { castFront, castOf } from './castHD.js';
 
 const { hex, rngOf, buffer } = paintKit;
 
@@ -96,7 +97,37 @@ function paintBackground(b, spec, r) {
  * cabelo de trás, cabeça, rosto, pelos, cabelo da frente, chapéu, óculos e os objetos (o
  * `extra` de cada rival, que desenha atrás e/ou na frente). O personagem ganha contorno.
  */
+/** Versão 2.46: o retrato do personagem em volume: o recorte do busto novo, no dobro (128×128). */
+function portraitHD(hd, spec, mood, speaking, bare) {
+  const full = castFront(hd, mood, speaking);
+  const N = G * 2;
+  const fig = buffer(N, N);
+  for (let y = 0; y < N; y += 1) {
+    for (let x = 0; x < N; x += 1) {
+      const i = (y * full.w + x + FIG_OX * 2) * 4;
+      if (full.data[i + 3]) fig.put(x, y, [full.data[i], full.data[i + 1], full.data[i + 2]], full.data[i + 3] / 255);
+    }
+  }
+  if (bare) return fig;
+  const small = buffer(G, G);
+  paintBackground(small, spec, rngOf(spec.seed ?? 7));
+  const bg = buffer(N, N);
+  for (let y = 0; y < N; y += 1) for (let x = 0; x < N; x += 1) bg.data.set(small.data.subarray(((y >> 1) * G + (x >> 1)) * 4, ((y >> 1) * G + (x >> 1)) * 4 + 4), (y * N + x) * 4);
+  for (let y = N - 1; y >= 0; y -= 1) {
+    for (let x = N - 1; x >= 0; x -= 1) {
+      const sx = x - 6;
+      const sy = y - 4;
+      if (sx < 0 || sy < 0) continue;
+      if (fig.data[(sy * N + sx) * 4 + 3] > 200) bg.put(x, y, [0, 0, 0], 0.35);
+    }
+  }
+  over(bg, fig);
+  return bg;
+}
+
 export function paintPortrait(spec, mood = 'idle', speaking = false, bare = false) {
+  const hd = castOf(spec);
+  if (hd) return portraitHD(hd, spec, mood, speaking, bare);
   // versão 2.17: a figura é a nova (art/figurePixels.js), pintada no tamanho do busto; o retrato
   // é o recorte do meio dela
   const full = paintFigure(spec, mood, speaking);

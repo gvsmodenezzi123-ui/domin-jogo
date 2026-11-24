@@ -172,6 +172,26 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.46.0: os personagens em volume
+
+- Os 33 personagens (os 30 rivais, o Valtinho, o Seu Tião e o Corvo) refeitos do zero: cada um
+  foi modelado em 3D (cabeça, rosto, cabelo, chapéu, roupa, mãos e o objeto dele), iluminado e
+  passado para pixel art fora do jogo (`tools/volume`), com contorno, tons por material e os
+  detalhes à mão por cima. No jogo ficam só os quadros prontos, no dobro da resolução de antes,
+  em dois pedaços por personagem que chegam em segundo plano na abertura: `art/cast/<personagem>.js`
+  (o parado e os humores, leve) e `<personagem>.g.js` (os emotes, o grosso, que só aparecem na
+  roda). Enquanto não chegam, vale o desenho antigo.
+- De frente (o busto atrás da mesa, braços para baixo) e sentado de lado, de corpo inteiro (a
+  cadeira, as pernas e o corpo de cima em camadas), com os humores (piscando, falando, pensando,
+  convencido, apanhando). O retrato da lista e da loja é o recorte do busto novo.
+- Os 7 emotes feitos com as mãos, em movimento: o braço sobe do descanso (dois quadros), o gesto
+  mexe no seu ritmo (o joinha e o negativo bombeiam, o dedo treme, o aceno abana, as palmas batem,
+  o "calma aí" desce devagar e a risada sacode) e o braço desce no fim, de frente e sentado de
+  lado. A troca de quadros é do `RivalBust.jsx` (`useGestureMotion`), não mais do CSS.
+- A abertura é só a tela preta com o BUXARIA, que acende e apaga.
+- O `PixelCanvas` tem o tamanho da pintura (o CSS segue o mesmo) e guarda as pinturas grandes
+  por orçamento de pixels.
+
 ### 2.45.2: a tela quebrando sem derrubar o celular (campanha)
 
 - A morte da campanha às vezes fechava o jogo no celular: cada caco é uma cópia da tela, e a

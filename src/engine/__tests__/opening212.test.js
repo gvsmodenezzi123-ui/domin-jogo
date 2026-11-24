@@ -120,7 +120,8 @@ describe('Versão 2.12: a abertura deitada (Efeito Dominó)', () => {
   it('o jogo começa pelo toque de entrada, que deita a tela; a abertura antiga saiu', () => {
     const app = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
     expect(app).toContain('{!entered && <AccessGate onEnter={enter} />}');
-    expect(app).toMatch(/\{entered && opening.on && [\s\S]{0,160}<OpeningScene/); // versão 2.45.1: a abertura vem num pedaço à parte (Suspense)
+    expect(app).toMatch(/\{entered && opening.on && <SplashScene /); // versão 2.46: só a tela preta com o BUXARIA
+    expect(app).not.toContain('<OpeningScene');
     expect(app).not.toContain('IntroScene');
     const gate = readFileSync(new URL('../../opening/AccessGate.jsx', import.meta.url), 'utf8');
     expect(gate).toContain('enterLandscape();');

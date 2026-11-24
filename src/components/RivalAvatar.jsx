@@ -1,6 +1,8 @@
+import { useSyncExternalStore } from 'react';
 import PixelCanvas from './PixelCanvas.jsx';
 import { PORTRAIT_PX, paintPortrait } from './art/portraitPixels.js';
 import { PORTRAIT_EMBER, PORTRAIT_GLOW, PORTRAITS } from './art/portraitSpecs.js';
+import { castSpot, castVersion, subscribeCast } from './art/castHD.js';
 
 /** Atraso de cada baforada (s): três defasadas fazem a fumaça subir sem parar. */
 const PUFF_DELAYS = [0, 0.7, 1.4];
@@ -9,7 +11,9 @@ const PUFF_DELAYS = [0, 0.7, 1.4];
 function emberSpot(rival, mood, size) {
   const ember = PORTRAIT_EMBER[rival.art];
   if (!ember || !ember.moods.includes(mood)) return null;
-  return { x: (ember.x / ember.grid) * size, y: (ember.y / ember.grid) * size };
+  // versão 2.46: a ponta do cigarro do personagem em volume, se ele já chegou
+  const at = castSpot(PORTRAITS[rival.art], 'ember') ?? ember;
+  return { x: (at.x / at.grid) * size, y: (at.y / at.grid) * size };
 }
 
 /** Ampliado menos de 1,5× na tela (em pixels do aparelho), o retrato fica suave em vez de serrilhado. */
@@ -27,6 +31,8 @@ function crisp(px) {
  */
 export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hurtKey, smoke = true, speaking = false, bare = false }) {
   const px = size ?? pixel * 16;
+  // (versão 2.46: os quadros em volume chegam depois; a brasa e o brilho dos olhos vão junto)
+  useSyncExternalStore(subscribeCast, castVersion, castVersion);
   const spec = PORTRAITS[rival.art] ?? PORTRAITS.tioZe;
   const ember = smoke ? emberSpot(rival, mood, px) : null;
   const open = Boolean(speaking) && mood !== 'hurt';
@@ -40,6 +46,7 @@ export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hur
       style={{ width: px, height: px }}
     >
       <PixelCanvas
+          live
           cacheKey={`retrato-${rival.art}-${mood}-${open ? 1 : 0}${bare ? '-so' : ''}`}
           paint={() => paintPortrait(spec, mood, open, bare)}
           w={PORTRAIT_PX}
@@ -58,7 +65,7 @@ export default function RivalAvatar({ rival, mood = 'idle', pixel = 4, size, hur
           />
         ))}
       {glow &&
-        glow.eyes.map((eye) => (
+        (castSpot(spec, 'eyes')?.map(([x, y]) => ({ x, y })) ?? glow.eyes).map((eye) => (
           <span
             key={eye.x}
             aria-hidden="true"

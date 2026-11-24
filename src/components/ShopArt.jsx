@@ -68,6 +68,7 @@ export const NpcPortrait = memo(function NpcPortrait({ who, size = 128, speaking
   const open = speaking && !blink;
   return (
     <PixelCanvas
+      live
       cacheKey={`npc-${who}-${m}-${open ? 1 : 0}`}
       paint={() => paintPortrait(spec, m, open, true)}
       w={PORTRAIT_PX}
