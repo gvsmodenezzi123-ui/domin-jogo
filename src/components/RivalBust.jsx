@@ -151,6 +151,9 @@ function RivalBust({ rival, mood = 'idle', speaking = false, profile = null, sea
 
 export default memo(RivalBust);
 
+/** PRÉVIA: a brasa do cigarro do Tio Zé novo sentado de lado (na grade do quadro). */
+const TIOZE_SEATED_EMBER = Object.freeze({ x: 62.2, y: 51 });
+
 /**
  * Versão 2.32: quem senta nas laterais da roda, de corpo inteiro na cadeira (`chair`), de lado.
  * O mesmo humor, a boca, a fumaça e o brilho do olho do perfil, no quadro maior.
@@ -199,7 +202,7 @@ function SeatedBust({ rival, mood, speaking, facing, chair, talking = false, ges
   // se inclina e treme como o busto de frente (com a fumaça e o brilho do olho junto)
   return (
     <>
-      {layer(`sentado-cadeira-${chair}-${facing}`, 'chair')}
+      {layer(`sentado-cadeira-${chair}-${facing}${art === 'tioZe' ? '-hd' : ''}`, 'chair')}
       {layer(`sentado-pernas-${art}${shade}-${facing}`, 'legs')}
       <span className="seated-upper">
         {gestureLayers ?? layer(`sentado-${art}-${mood}-${open ? 1 : 0}${shade}-${facing}`, 'upper', mood, open)}
@@ -212,7 +215,7 @@ function SeatedBust({ rival, mood, speaking, facing, chair, talking = false, ges
               key={delay}
               aria-hidden="true"
               className="smoke-puff seat-smoke pointer-events-none absolute rounded-full bg-zinc-400 blur-[1px]"
-              style={{ ...at(PROFILE_SPOTS.ember), animationDelay: `${delay}s` }}
+              style={{ ...at(art === 'tioZe' ? TIOZE_SEATED_EMBER : PROFILE_SPOTS.ember), animationDelay: `${delay}s` }}
             />
           ))}
         {glow && (

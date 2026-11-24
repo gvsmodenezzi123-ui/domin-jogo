@@ -14,6 +14,8 @@
  */
 import { paintKit } from './botecoScene.js';
 import { FIG_OX, paintFigure } from './figurePixels.js';
+import { PORTRAITS } from './portraitSpecs.js';
+import { tioZeFront } from './tioZeFrames.js';
 
 const { hex, rngOf, buffer } = paintKit;
 
@@ -106,7 +108,7 @@ function lightOf(b, spec, S) {
 export function paintPortrait(spec, mood = 'idle', speaking = false, bare = false) {
   // versão 2.17: a figura é a nova (art/figurePixels.js), pintada no tamanho do busto; o retrato
   // é o recorte do meio dela
-  const full = paintFigure(spec, mood, speaking);
+  const full = spec === PORTRAITS.tioZe ? tioZeFront(mood, speaking) : paintFigure(spec, mood, speaking);
   // versão 2.46: a figura vem em alta (S finos por pixel lógico); o retrato sai do mesmo tamanho
   const S = full.S ?? 1;
   const n = G * S;

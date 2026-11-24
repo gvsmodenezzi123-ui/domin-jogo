@@ -1,0 +1,21 @@
+// node frun.mjs <prefix> [ss] [mood] — o busto de frente: render, pixel art, detalhes
+import { writeFileSync } from 'node:fs';
+import { encodePNG } from './png.mjs';
+import { cleanup, compose, pixelize, render } from './r3d.mjs';
+import { CFG, H, W } from './front.mjs';
+import { setMood } from './model.mjs';
+import { decals } from './decals.mjs';
+const prefix = process.argv[2] ?? 'out';
+const ss = Number(process.argv[3] ?? 2);
+const mood = process.argv[4] ?? 'idle';
+const nodec = process.argv[5] === 'nodec';
+setMood(mood);
+const t0 = performance.now();
+const R = render(CFG, ss);
+const P = pixelize(CFG, R);
+cleanup(CFG, P);
+const img = compose(CFG, P);
+if (!nodec) decals(img, P, { mood });
+writeFileSync(`${prefix}.png`, encodePNG(W, H, img));
+writeFileSync(`${prefix}.rgba`, Buffer.from(img.buffer));
+console.log('ok', ((performance.now() - t0) / 1000).toFixed(1), 's');

@@ -720,7 +720,7 @@ export const PORTRAITS = {
 
 /** De onde sai a fumaça (na grade do retrato, 64) de quem fuma; no hurt o cigarro cai. */
 export const PORTRAIT_EMBER = Object.freeze({
-  tioZe: Object.freeze({ x: 46, y: 47, grid: 64, moods: ['idle', 'thinking', 'smug'] }),
+  tioZe: Object.freeze({ x: 45, y: 49.5, grid: 64, moods: ['idle', 'thinking', 'smug'] }),
   comendador: Object.freeze({ x: 48, y: 47, grid: 64, moods: ['idle', 'thinking', 'smug'] }),
 });
 

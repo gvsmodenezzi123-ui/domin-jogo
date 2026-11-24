@@ -10,6 +10,8 @@ import { paintKit } from './botecoScene.js';
 import { FIG_H, FIG_MOUTH, FIG_SHOULDER, FIG_W, paintFigure } from './figurePixels.js';
 import { SEATED_H, SEATED_W, paintProfile, paintSeatedProfile } from './figProfile.js';
 import { gestureFront } from './figGesture.js';
+import { PORTRAITS } from './portraitSpecs.js';
+import { tioZeFront, tioZeSeated } from './tioZeFrames.js';
 
 const { hex, buffer } = paintKit;
 
@@ -49,7 +51,7 @@ function silhouetteOf(b) {
  */
 export function paintBust(spec, mood = 'idle', speaking = false, { silhouette = false, profile = null, gesture = null, frame = 0 } = {}) {
   // versão 2.18: `profile` ('right' | 'left'): de lado, olhando para esse lado (quem senta nas laterais)
-  let out = profile ? paintProfile(spec, mood, speaking, profile) : paintFigure(spec, mood, speaking);
+  let out = profile ? paintProfile(spec, mood, speaking, profile) : spec === PORTRAITS.tioZe && !gesture ? tioZeFront(mood, speaking) : paintFigure(spec, mood, speaking);
   // versão 2.45: o emote feito com a mão dele (só de frente)
   if (gesture && !profile) out = gestureFront(out, spec, gesture, frame);
   // a beirada da mesa faz sombra no peito: o pé do busto escurece (versão 2.46: nos finos)
@@ -72,7 +74,8 @@ export { SEATED_H, SEATED_W };
  */
 export function paintSeatedBust(spec, mood = 'idle', speaking = false, { silhouette = false, facing = 'right', chair = 'madeira', part = 'all', gesture = null, frame = 0 } = {}) {
   // versão 2.45: o emote feito com a mão dele (o braço de cá erguido)
-  const out = paintSeatedProfile(gesture ? { ...spec, __gesture: gesture, __frame: frame } : spec, mood, speaking, facing, chair, part);
+  const out =
+    spec === PORTRAITS.tioZe && !gesture ? tioZeSeated(mood, speaking, facing, part) : paintSeatedProfile(gesture ? { ...spec, __gesture: gesture, __frame: frame } : spec, mood, speaking, facing, chair, part);
   // (a cadeira não vira sombra: só quem senta nela)
   return silhouette && part !== 'chair' ? silhouetteOf(out) : out;
 }
