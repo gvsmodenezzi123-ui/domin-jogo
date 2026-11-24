@@ -151,7 +151,7 @@ export function castSpot(spec, name) {
 
 // ------------------------------------------------------------------ a decodificação
 const bytesOf = (s) => {
-  const bin = typeof atob === 'function' ? atob(s) : Buffer.from(s, 'base64').toString('binary');
+  const bin = atob(s);
   const u = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i += 1) u[i] = bin.charCodeAt(i);
   return u;

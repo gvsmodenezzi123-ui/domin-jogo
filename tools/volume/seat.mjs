@@ -255,14 +255,19 @@ export function makeSeat(P) {
     const nearA = 82;
     const farA = 66;
     if (low.kind === 'robe') {
-      // a túnica cai do quadril por cima das coxas até o tornozelo
+      // a túnica cai do quadril por cima das coxas até o tornozelo; embaixo da barra, os tornozelos
+      // ligam a túnica aos sapatos
       let r = hipsD(x, y, z);
       r = smin(r, thighD(x, y, z, 70), 6);
       r = smin(r, thighD(x, y, z, 106), 6);
       r = smin(r, smax(sdRoundBox(x, y, z, 88, 262, 80, 34, 40, 13, 6), y - 304 + 0, 1), 8);
       add(smax(r - 2.4, beltY(z) - 1.5 - y, 1), M.PANTS);
+      add(shinD(x, y, z, 70, nearA), M.SKIN);
+      add(shinD(x, y, z, 106, farA), M.SKIN2);
       add(shoeD(x, y, z, 70, nearA), M.SHOE);
+      add(shoeD(x, y, z, 106, farA), M.SHOED);
       add(soleD(x, y, z, 70, nearA), M.SOLE);
+      add(soleD(x, y, z, 106, farA), M.SOLE);
       return;
     }
     let near = hipsD(x, y, z);
@@ -270,8 +275,9 @@ export function makeSeat(P) {
     near = smin(near, thighD(x, y, z, 70), 6);
     const far = thighD(x, y, z, 106);
     if (low.kind === 'skirt') {
-      // a saia até o joelho; as canelas de fora
-      add(smax(smin(near, far, 4) - 2.4, y - 226 + Math.max(0, z - 90) * 0.4, 1), M.PANTS);
+      // a saia até o joelho, sentada no assento (embaixo das coxas ela desce até ele); as canelas de fora
+      const hemY = SEAT + 3 - (SEAT + 3 - 227) * Math.max(0, Math.min(1, (z - 78) / 10));
+      add(smax(smin(near, far, 4) - 2.4, y - hemY + Math.max(0, z - 90) * 0.4, 1), M.PANTS);
       add(shinD(x, y, z, 70, nearA), M.SKIN);
       add(shinD(x, y, z, 106, farA), M.SKIN2);
     } else {

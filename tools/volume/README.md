@@ -10,6 +10,7 @@ objetos (`props.mjs`) e os emotes (`gestures.mjs`). `r3d.mjs` ilumina, passa par
     node tools/volume/bake.mjs src/components/art/cast tioZe neide ...   # os quadros de cada um
     FRONT_ONLY=1 node tools/volume/bake.mjs src/components/art/cast tioZe  # refaz só a frente e a subida dos braços
     node tools/volume/bakeside.mjs src/components/art/cast aceno tioZe ...  # refaz um emote sentado de lado
+    node tools/volume/bakelegs.mjs src/components/art/cast neide ...        # refaz só as pernas (sentado)
     node tools/volume/bakechairs.mjs src/components/art/cast             # as duas cadeiras
     node tools/volume/fsheet.mjs frente.png 1 [chaves...]               # folha de contato de frente
     node tools/volume/ssheet.mjs lado.png 1 [chaves...]                 # folha de contato sentado
