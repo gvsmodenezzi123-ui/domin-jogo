@@ -245,11 +245,11 @@ function tabua(W, H, put, seed) {
     for (let x = 0; x < W; x += 1) {
       const e = edge(x, y, W, H);
       const { d } = e;
-      let slope = 0;
+      let slope;
       let gap = false;
       let along;
       let across;
-      let nail = false;
+      let nail;
       if (d < FRAME) {
         // a moldura: a tábua de cada lado, a quina boleada, a meia-esquadria nos cantos
         const u = (d - FRAME / 2) / (FRAME / 2);
