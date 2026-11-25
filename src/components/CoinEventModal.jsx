@@ -14,6 +14,9 @@ import DominoKey from './DominoKey.jsx';
 import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
 import { ALLEY_PAD, paintCellarBack } from './art/landAlley.js';
+import { useNovo } from './useVisual.js';
+import { useNovoBack } from './novo/useNovoBack.js';
+import { NOVO_PX } from './art/novoVolume.js';
 
 /** Espera a cena clarear, voo de cada moeda e intervalo entre elas (ms). */
 const START_MS = 1350; // depois da entrada (a luz acende, o caixote cai, o Seu Tião sobe)
@@ -59,6 +62,9 @@ export default function CoinEventModal({ state, onLeave }) {
   const pocketRef = useRef(null);
   const countRef = useRef(null);
   const landscape = useLandscape();
+  // versão 2.49: o porão em volume (o fundo, a caixa de ferramentas e as moedas), no visual novo
+  const novo = useNovo();
+  const back = useNovoBack(landscape && novo ? 'tiao' : null);
 
   // de onde a moeda sai (a mão dele) e onde chega (o bolso), em px de layout do palco
   useLayoutEffect(() => {
@@ -112,8 +118,8 @@ export default function CoinEventModal({ state, onLeave }) {
 
   if (landscape) {
     return (
-      <div className={`tiao-v22 tiao-land map-atmo-${region.atmosphere}`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
-        <LandStage paint={() => paintCellarBack(9, region.atmosphere)} cacheKey={`land-porao-${region.atmosphere}`} pad={ALLEY_PAD} bleed="#060505" label="Seu Tião das Moedas" role="presentation">
+      <div className={`tiao-v22 tiao-land map-atmo-${region.atmosphere} ${back ? 'q-vol' : ''}`} role="dialog" aria-modal="true" aria-labelledby="tiao-title">
+        <LandStage paint={() => paintCellarBack(9, region.atmosphere)} image={back} cacheKey={`land-porao-${region.atmosphere}`} pad={ALLEY_PAD} bleed="#060505" label="Seu Tião das Moedas" role="presentation">
           <section ref={stageRef} className="ti-stage" aria-label="Gorjeta do Seu Tião">
             <span className="ti-beam" aria-hidden="true" />
             <span className="ti-fog" aria-hidden="true" />
@@ -134,7 +140,7 @@ export default function CoinEventModal({ state, onLeave }) {
             <div ref={tiaoRef} className="ti-npc" aria-hidden="true">
               <NpcPortrait who="seuTiao" size={208} speaking={talking} />
             </div>
-            <ShopSprite name="caixote" scale={3.2} className="ti-crate" />
+            {back ? <img src={NOVO_PX.toolbox.url} width={NOVO_PX.toolbox.w} height={NOVO_PX.toolbox.h} alt="" draggable={false} className="ti-crate q-px" /> : <ShopSprite name="caixote" scale={3.2} className="ti-crate" />}
             <RivalSpeech text={line} voice="seuTiao" tail="left" linger={false} onMouth={setTalking} className="ti-speech" />
 
             {path && (
@@ -142,7 +148,7 @@ export default function CoinEventModal({ state, onLeave }) {
                 {Array.from({ length: reward }, (_, i) => (
                   <span key={i} className={`tiao-coin-x ${i < landed ? 'is-landed' : ''}`} style={{ animationDelay: `${START_MS + i * GAP_MS}ms`, animationDuration: `${FLIGHT_MS}ms` }}>
                     <span className="tiao-coin-y" style={{ animationDelay: `${START_MS + i * GAP_MS}ms`, animationDuration: `${FLIGHT_MS}ms` }}>
-                      <ShopSprite name="moeda" scale={2} className="tiao-coin-px" />
+                      {back ? <img src={NOVO_PX.coin24.url} width={24} height={24} alt="" draggable={false} className="tiao-coin-px q-px" /> : <ShopSprite name="moeda" scale={2} className="tiao-coin-px" />}
                     </span>
                   </span>
                 ))}

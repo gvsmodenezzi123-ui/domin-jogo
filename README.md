@@ -172,6 +172,26 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.49.0: as lojas em volume
+
+- A Loja do Valtinho refeita em volume (`tools/volume/cena/novo`): a parede verde com as
+  prateleiras de garrafa, a lâmpada, o neon ABERTO, o quadro-negro, o mostruário com o toldo
+  listrado e as lampadinhas, e o balcão de ponta a ponta com o vaso de planta e o copo de dados,
+  que agora passam na frente do Valtinho (a faixa do balcão vem à parte, por cima dele). As peças
+  da prateleira têm o nicho escuro, a almofada e a etiqueta de preço de papel; o painel de
+  detalhe, a tábua com as cantoneiras de latão e a vitrine de veludo.
+- O Mercado Negro em volume: o beco de tijolo molhado com a lanterna vermelha, os canos e a janela
+  gradeada de luz roxa, o quadro de veludo capitonê com o trilho de ferro e o balcão por cima do
+  Corvo; a madeira roxa, o vão quase preto, a tábua de cantoneira vermelha, o botão de sangue e as
+  peças penduradas na correntinha, com o nicho e a etiqueta de papel.
+- O porão do Seu Tião em volume, no palco deitado (`LandStage` recebe agora uma imagem pronta): o
+  tijolo úmido, a calha de luz fria em cima dele, os canos, as prateleiras de tralha, a caixa de
+  ferramentas vermelha na frente e as moedas em volume voando até o bolso.
+- Nas outras regiões, a luz da região por cima do mesmo fundo, como na pintura: o roxo do neon da
+  sinuca e o vermelho do submundo do bicho (no Mercado Negro e no porão).
+- Os fundos chegam à parte (`art/novoBacks.js`); enquanto não chegam, fica o desenho de antes.
+  O visual clássico não mudou.
+
 ### 2.48.0: o mapa da campanha em volume
 
 - O mapa do visual novo refeito em volume (`tools/volume/cena/novo`): a mesa de tábuas escuras

@@ -7,9 +7,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { acc, add, reset } from '../../kit.mjs';
 import { encodePNG } from '../../png.mjs';
-import { sdCapsule, sdRoundBox, sdRoundCone, sdSphere, smax, smin } from '../../sdf.mjs';
+import { sdCapsule, sdEllipsoid, sdRoundBox, sdRoundCone, sdSphere, smax, smin } from '../../sdf.mjs';
 import { renderScene } from '../render.mjs';
-import { bayer, pixelPass } from '../pixelpass.mjs';
+import { bayer, halo, pixelPass } from '../pixelpass.mjs';
 import { hash2 } from '../decals.mjs';
 
 const DIR = process.argv[2] ? process.argv[2].replace(/\/?$/, '/') : null;
@@ -21,7 +21,7 @@ const M = {
   NAIL: 69, TAPE: 70, PIN: 71, STEEL: 72, GREY: 73, PLASTER: 74, SHELF: 75, GLASS_G: 76, GLASS_A: 77,
   GLASS_B: 78, AWN_R: 79, AWN_W: 80, BRICK: 81, NEON: 82, FELT: 83, NIGHT: 84, CRATE: 85, CRATE_D: 86,
   COIN: 87, DOOR: 88, IVORY: 89, PIP: 90, LAMP: 91, GROUND: 92, FRAME: 93, JEWEL: 94, CAP: 95, COIN_B: 96,
-  NEON2: 97, CUE: 98, DAMASK: 99,
+  NEON2: 97, CUE: 98, DAMASK: 99, WOOD_BM: 100, POCKET_BM: 101, BLOOD: 102, IRON_R: 103, GREEN_GLOW: 104,
 };
 const COLORS = {
   [M.WOOD]: ['#7a4520'], [M.WOOD_D]: ['#45250f'], [M.POCKET]: ['#2a150a'], [M.GOLD]: ['#f0a41e', 'metal'],
@@ -34,9 +34,10 @@ const COLORS = {
   [M.COIN]: ['#f0b830', 'metal'], [M.DOOR]: ['#3a2a30'], [M.IVORY]: ['#f6ead0'], [M.PIP]: ['#2a1206'],
   [M.LAMP]: ['#ffe9a0', 'glow'], [M.GROUND]: ['#2a2630'], [M.FRAME]: ['#8a5426'], [M.JEWEL]: ['#e0303a', 'metal'],
   [M.CAP]: ['#c8281c', 'metal'], [M.COIN_B]: ['#c88a1c', 'metal'], [M.NEON2]: ['#ff7ac8', 'glow'],
-  [M.CUE]: ['#c8a46a'], [M.DAMASK]: ['#6a1420'],
+  [M.CUE]: ['#c8a46a'], [M.DAMASK]: ['#6a1420'], [M.WOOD_BM]: ['#3e2234'], [M.POCKET_BM]: ['#140810'],
+  [M.BLOOD]: ['#c41c26', 'metal'], [M.IRON_R]: ['#c8141c', 'metal'], [M.GREEN_GLOW]: ['#7af08a', 'glow'],
 };
-const SPEC = new Set([M.GOLD, M.BRASS, M.NAIL, M.PIN, M.STEEL, M.GLASS_G, M.GLASS_A, M.GLASS_B, M.COIN, M.COIN_B, M.JEWEL, M.CAP, M.IVORY]);
+const SPEC = new Set([M.BLOOD, M.IRON_R, M.GOLD, M.BRASS, M.NAIL, M.PIN, M.STEEL, M.GLASS_G, M.GLASS_A, M.GLASS_B, M.COIN, M.COIN_B, M.JEWEL, M.CAP, M.IVORY]);
 
 const sprites = {};
 /**
@@ -154,6 +155,221 @@ sprite('tag', 20, 16, paperScene(20, 16, M.PAPER), { shadow: [0, 2, 0.5], ink: [
 sprite('ribbon', 32, 26, paperScene(32, 26, M.RIBBON, 2), { shadow: [0, 3, 0.5], ink: [106, 68, 16] });
 // a etiqueta do ponto escolhido (amarela, como a fita)
 sprite('tag-pick', 20, 16, paperScene(20, 16, M.RIBBON), { shadow: [0, 2, 0.5], ink: [106, 68, 16] });
+
+// a tábua com as cantoneiras de latão (9 fatias, canto de 12): o painel de detalhe da loja
+function woodBrassScene(x, y, z) {
+  reset();
+  const W = 48;
+  const H = 48;
+  add(sdRoundBox(x, y, z, W / 2, (H - 3) / 2, 0, W / 2 - 0.5, (H - 3) / 2 - 0.5, 3, 3), M.WOOD);
+  for (const sx of [-1, 1])
+    for (const sy of [-1, 1]) {
+      const ox = W / 2 + sx * (W / 2 - 1.5);
+      const oy = (H - 3) / 2 + sy * ((H - 3) / 2 - 1.5);
+      const armA = sdRoundBox(x, y, z, ox - sx * 5, oy - sy * 1.6, 3.2, 5, 1.8, 0.7, 0.5);
+      const armB = sdRoundBox(x, y, z, ox - sx * 1.6, oy - sy * 5, 3.2, 1.8, 5, 0.7, 0.5);
+      add(Math.min(armA, armB), M.BRASS);
+      add(sdSphere(x, y, z, ox - sx * 7, oy - sy * 1.6, 3.9, 1.05), M.NAIL);
+      add(sdSphere(x, y, z, ox - sx * 1.6, oy - sy * 7, 3.9, 1.05), M.NAIL);
+    }
+  return acc.D;
+}
+sprite('woodbrass', 48, 48, woodBrassScene, { decals: (c) => grainTile(c, [M.WOOD]), shadow: [0, 3, 0.85] });
+
+// o nicho do mostruário (9 fatias, canto de 10): a caixinha funda e escura
+function nicheScene(W, H) {
+  return (x, y, z) => {
+    reset();
+    const plate = sdRoundBox(x, y, z, W / 2, H / 2, -1, W / 2 - 0.2, H / 2 - 0.2, 1.4, 1);
+    const hole = sdRoundBox(x, y, z, W / 2, H / 2, 1, W / 2 - 3, H / 2 - 3, 4, 1.4);
+    add(smax(plate, -hole, 1.4), M.WOOD_D);
+    add(sdRoundBox(x, y, z, W / 2, H / 2, -4.4, W / 2 - 1, H / 2 - 1, 0.4, 1), M.POCKET);
+    return acc.D;
+  };
+}
+sprite('niche', 32, 32, nicheScene(32, 32), { edge: false, lights: [{ p: [16, -30, 40], c: [1, 0.86, 0.6], k: 1.1, R: 60, shadow: true }], amb: [0.3, 0.26, 0.24] });
+
+/** A almofada de veludo vermelho onde a peça descansa. */
+sprite('cushion', 44, 12, (x, y, z) => {
+  reset();
+  add(sdEllipsoid(x, y, z, 22, 6, 0, 21.4, 5.4, 6), M.VELVET);
+  // os botões da almofada
+  for (const bx of [13, 22, 31]) add(sdSphere(x, y, z, bx, 5, 5.2, 1), M.BRASS);
+  return acc.D;
+}, { shadow: [0, 1, 0.5], dither: [] });
+
+/** A vitrine grande do detalhe: o veludo com o sol de ouro e a moldura dourada. */
+sprite('showcase', 140, 136, (x, y, z) => {
+  reset();
+  add(z + 3 - Math.sin(x * 0.3) * 0.5, M.VELVET);
+  const e = Math.max(Math.abs(x - 70) - 64, Math.abs(y - 68) - 62);
+  add(Math.max(Math.hypot(e - 3, z - 1) - 3.2, -z - 2) * 0.9, M.GOLD);
+  return acc.D;
+}, {
+  lights: [{ p: [70, 40, 90], c: [1, 0.86, 0.6], k: 1.3, R: 120, shadow: false }],
+  amb: [0.3, 0.2, 0.2],
+  edge: false,
+  decals: (c) => {
+    const { W, H, mat } = c;
+    for (let y = 0; y < H; y += 1)
+      for (let x = 0; x < W; x += 1) {
+        const p = y * W + x;
+        if (mat[p] !== M.VELVET) continue;
+        const a = Math.atan2(y - 68, x - 70);
+        const r = Math.hypot(x - 70, y - 68);
+        if (Math.sin(a * 18) > 0.6 && bayer(x, y) < 0.55 - r / 120) c.set(p, c.colorOf(p, c.RAMP[M.GOLD], 4));
+      }
+  },
+});
+
+// ------------------------------------------------------------------ o Mercado Negro
+// a madeira roxa do beco, o vão quase preto, a tábua com as cantoneiras de ferro vermelho e o botão de sangue
+sprite('wood-bm', 48, 48, boardScene(48, 48, M.WOOD_BM), { decals: (c) => grainTile(c, [M.WOOD_BM]), shadow: [0, 3, 0.85] });
+function pocketBm(W, H) {
+  return (x, y, z) => {
+    reset();
+    const plate = sdRoundBox(x, y, z, W / 2, H / 2, -1, W / 2 - 0.2, H / 2 - 0.2, 1.4, 1);
+    const hole = sdRoundBox(x, y, z, W / 2, H / 2, 0.8, W / 2 - 2.6, H / 2 - 2.6, 2.6, 1.6);
+    add(smax(plate, -hole, 1.2), M.WOOD_BM);
+    add(sdRoundBox(x, y, z, W / 2, H / 2, -2.8, W / 2 - 1, H / 2 - 1, 0.4, 1), M.POCKET_BM);
+    return acc.D;
+  };
+}
+sprite('inset-bm', 32, 32, pocketBm(32, 32), { edge: false, lights: [{ p: [-40000, -60000, 70000], c: [1, 0.9, 0.95], k: 0.55, R: 1e9, shadow: true }], amb: [0.22, 0.2, 0.22] });
+sprite('woodred-bm', 48, 48, (x, y, z) => {
+  reset();
+  const W = 48;
+  const H = 48;
+  add(sdRoundBox(x, y, z, W / 2, (H - 3) / 2, 0, W / 2 - 0.5, (H - 3) / 2 - 0.5, 3, 3), M.WOOD_BM);
+  for (const sx of [-1, 1])
+    for (const sy of [-1, 1]) {
+      const ox = W / 2 + sx * (W / 2 - 1.5);
+      const oy = (H - 3) / 2 + sy * ((H - 3) / 2 - 1.5);
+      add(Math.min(sdRoundBox(x, y, z, ox - sx * 5, oy - sy * 1.6, 3.2, 5, 1.8, 0.7, 0.5), sdRoundBox(x, y, z, ox - sx * 1.6, oy - sy * 5, 3.2, 1.8, 5, 0.7, 0.5)), M.IRON_R);
+      add(sdSphere(x, y, z, ox - sx * 7, oy - sy * 1.6, 3.9, 1.05), M.NAIL);
+      add(sdSphere(x, y, z, ox - sx * 1.6, oy - sy * 7, 3.9, 1.05), M.NAIL);
+    }
+  return acc.D;
+}, { decals: (c) => grainTile(c, [M.WOOD_BM]), shadow: [0, 3, 0.85] });
+sprite('blood', 40, 40, (x, y, z) => {
+  reset();
+  add(sdRoundBox(x, y, z, 20, 18, 0, 19.4, 17.4, 3, 4), M.BLOOD);
+  return acc.D;
+}, { shadow: [0, 4, 0.85], lights: [{ p: [-40000, -60000, 70000], c: [1, 0.92, 0.9], k: 0.8, R: 1e9, shadow: true }], amb: [0.26, 0.22, 0.22] });
+
+/** O nicho de onde cada talismã pende (74 × 70): a caixinha preta com a moldura vinho e a luz verde. */
+sprite('niche-bm', 74, 70, (x, y, z) => {
+  reset();
+  const outer = sdRoundBox(x, y, z, 37, 35, 0, 36.5, 34.5, 2.4, 1.6);
+  const inner = sdRoundBox(x, y, z, 37, 35, 2, 31, 29, 4, 1);
+  add(smax(outer, -inner, 0.8), M.DAMASK);
+  add(sdRoundBox(x, y, z, 37, 35, -3, 32, 30, 0.6, 1), M.POCKET_BM);
+  return acc.D;
+}, {
+  lights: [
+    { p: [37, 30, 10], c: [0.5, 1, 0.55], k: 1.2, R: 34, shadow: false },
+    { p: [-40000, -60000, 70000], c: [1, 0.8, 0.85], k: 0.6, R: 1e9, shadow: true },
+  ],
+  amb: [0.18, 0.12, 0.16],
+  dither: [M.POCKET_BM],
+  post: (c) => halo(c, 37, 33, 30, [110, 255, 130], 0.32),
+});
+
+/** A vitrine grande do Mercado Negro: o fundo preto, os raios vermelhos e a luz verde no meio. */
+sprite('showcase-bm', 140, 136, (x, y, z) => {
+  reset();
+  add(z + 3, M.POCKET_BM);
+  const e = Math.max(Math.abs(x - 70) - 64, Math.abs(y - 68) - 62);
+  add(Math.max(Math.hypot(e - 3, z - 1) - 3.2, -z - 2) * 0.9, M.DAMASK);
+  return acc.D;
+}, {
+  lights: [
+    { p: [70, 64, 40], c: [0.5, 1, 0.55], k: 1.4, R: 70, shadow: false },
+    { p: [-40000, -60000, 70000], c: [1, 0.7, 0.7], k: 0.6, R: 1e9, shadow: true },
+  ],
+  amb: [0.2, 0.12, 0.14],
+  edge: false,
+  dither: [M.POCKET_BM],
+  post: (c) => halo(c, 70, 66, 64, [110, 255, 130], 0.34),
+  decals: (c) => {
+    const { W, H, mat } = c;
+    for (let y = 0; y < H; y += 1)
+      for (let x = 0; x < W; x += 1) {
+        const p = y * W + x;
+        if (mat[p] !== M.POCKET_BM) continue;
+        const a = Math.atan2(y - 68, x - 70);
+        const r = Math.hypot(x - 70, y - 68);
+        if (Math.sin(a * 18) > 0.6 && bayer(x, y) < 0.5 - r / 140) c.set(p, c.colorOf(p, c.RAMP[M.IRON_R], 3));
+      }
+  },
+});
+
+/** A correntinha de onde a peça pende (6 × 20): os elos de aço. */
+sprite('chain', 6, 20, (x, y, z) => {
+  reset();
+  for (let i = 0; i < 5; i += 1) {
+    const cy = 2 + i * 4;
+    if (i % 2 === 0) add(Math.hypot(Math.hypot((x - 3) / 1.3, (y - cy) / 2.2) * 2.2 - 2.2, z) - 0.7, M.STEEL);
+    else add(Math.hypot(Math.hypot((y - cy) / 2.2, z / 1.3) * 2.2 - 2.2, x - 3) - 0.7, M.STEEL);
+  }
+  return acc.D;
+}, { edge: false });
+
+// ------------------------------------------------------------------ o Seu Tião
+/** A caixa de ferramentas vermelha na frente dele (243 × 141, vista um pouco de cima): as três
+ *  gavetas, a tampa com a alça e as ferramentas em cima (a chave inglesa e a chave grande). */
+sprite('toolbox', 243, 141, (x, y, z) => {
+  reset();
+  // o corpo, a tampa (com o tampo à mostra) e o friso entre os dois
+  add(sdRoundBox(x, y, z, 121.5, 88, 0, 113, 44, 21, 2.6), M.RED);
+  add(sdRoundBox(x, y, z, 121.5, 38, 0, 116, 7, 23, 3), M.RED);
+  add(sdRoundBox(x, y, z, 121.5, 45.5, 0, 114, 1.2, 22, 0.6), M.POCKET);
+  // as gavetas saltadas, com o puxador de cromo e a etiqueta
+  for (const gy of [62, 89, 116]) {
+    add(sdRoundBox(x, y, z, 121.5, gy, 21.6, 104, 11.4, 1.4, 1.2), M.RED);
+    add(sdRoundBox(x, y, z, 121.5, gy + 2, 23.6, 22, 2, 1.6, 1), M.STEEL);
+    add(sdRoundBox(x, y, z, 64, gy - 2, 23.2, 9, 4, 0.6, 0.5), M.PAPER);
+  }
+  // os fechos de latão e a alça de cima
+  for (const lx of [28, 215]) add(sdRoundBox(x, y, z, lx, 44, 23.6, 5, 5, 1.4, 1), M.BRASS);
+  for (const hx of [84, 159]) add(sdCapsule(x, y, z, hx, 31, 0, hx, 22, 0, 2.4), M.STEEL);
+  add(sdCapsule(x, y, z, 84, 21, 0, 159, 21, 0, 3), M.STEEL);
+  // as ferramentas deitadas no tampo: a chave inglesa e a chave grande de latão
+  add(sdCapsule(x, y, z, 26, 29, 8, 66, 30, 14, 3), M.STEEL);
+  add(smax(sdSphere(x, y, z, 21, 29, 7, 7), -sdRoundBox(x, y, z, 15, 29, 7, 5, 2.4, 9, 0.5), 0.6), M.STEEL);
+  add(sdCapsule(x, y, z, 176, 29, 10, 210, 29, 14, 2.2), M.GOLD);
+  add(Math.hypot(Math.hypot(x - 220, y - 29) - 6.6, z - 14) - 2.2, M.GOLD);
+  for (const tx of [181, 188]) add(sdRoundBox(x, y, z, tx, 33, 10, 2, 4.4, 2, 0.6), M.GOLD);
+  return acc.D;
+}, {
+  ss: 3,
+  cam: [121.5, 70.5 - 36000, 1e5],
+  lights: [
+    { p: [121, -200, 160], c: [0.86, 0.92, 1], k: 1.15, R: 1e9, shadow: true },
+    { p: [-40000, -20000, 70000], c: [1, 0.8, 0.6], k: 0.35, R: 1e9, shadow: true },
+  ],
+  amb: [0.14, 0.13, 0.16],
+  dither: [M.RED],
+  decals: (c) => {
+    // a tinta lascada: uns pontinhos de metal
+    const { W, H, mat } = c;
+    for (let y = 0; y < H; y += 1)
+      for (let x = 0; x < W; x += 1) {
+        const p = y * W + x;
+        if (mat[p] === M.RED && hash2(Math.floor(x / 2), Math.floor(y / 2)) > 0.993) c.set(p, c.colorOf(p, c.RAMP[M.STEEL], c.tone[p]));
+      }
+  },
+  shadow: [0, 4, 0.55],
+});
+
+/** A moeda que voa do Seu Tião para o bolso (24 × 24). */
+sprite('coin24', 24, 24, (x, y, z) => {
+  reset();
+  const r = Math.hypot(x - 12, y - 12);
+  add(smax(Math.max(r - 11, Math.abs(z) - 2), -Math.max(r - 7.4, z - 2.6), 0.6) - 0.1, M.COIN);
+  add(Math.max(r - 8, Math.abs(z - 0.8) - 1), M.COIN);
+  return acc.D;
+}, { shadow: [1, 1, 0.5] });
 
 // ------------------------------------------------------------------ as molduras dos pontos do mapa
 // a moldura de 7 px em volta da foto (54 × 46; a do chefe, 86 × 80): o friso boleado, a meia-esquadria

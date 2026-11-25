@@ -29265,22 +29265,50 @@ html[data-topview] .emote-pick {
 .nv-vol .nvs.q-vol .nvs-map .q-side::before,
 .nv-vol .nvs.q-vol .nvs-map .q-topbar .q-info::before {display: none;}
 
-/* as tábuas, o vão e o ouro em 9 fatias */
+/* as tábuas, o vão e o ouro em 9 fatias (no mapa e nas lojas; as outras telas ficam como estão) */
 .nv-vol .nvs .nvs-map .q-wood,
+.nv-vol .nvs .nvs-shop .q-wood,
+.nv-vol .nvs .nvs-black .q-wood,
 .nv-vol .nvs .nvs-map .q-inset,
-.nv-vol .nvs .nvs-map .q-gold {background: none; box-shadow: none; isolation: isolate;}
-.nv-vol .nvs .nvs-map .q-inset {position: relative;}
+.nv-vol .nvs .nvs-shop .q-inset,
+.nv-vol .nvs .nvs-black .q-inset,
+.nv-vol .nvs .nvs-map .q-gold,
+.nv-vol .nvs .nvs-shop .q-gold,
+.nv-vol .nvs .nvs-black .q-gold {background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-map .q-inset,
+.nv-vol .nvs .nvs-shop .q-inset,
+.nv-vol .nvs .nvs-black .q-inset {position: relative;}
 .nv-vol .nvs .nvs-map .q-wood::before,
+.nv-vol .nvs .nvs-shop .q-wood::before,
+.nv-vol .nvs .nvs-black .q-wood::before,
 .nv-vol .nvs .nvs-map .q-inset::before,
+.nv-vol .nvs .nvs-shop .q-inset::before,
+.nv-vol .nvs .nvs-black .q-inset::before,
 .nv-vol .nvs .nvs-map .q-gold::before,
+.nv-vol .nvs .nvs-shop .q-gold::before,
+.nv-vol .nvs .nvs-black .q-gold::before,
 .nv-vol .nvs .nvs-map .q-node .q-tag::before,
 .nv-vol .nvs .nvs-map .q-ribbon::before,
 .nv-vol .nvs .nvs-map .q-rhead::before {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; image-rendering: pixelated;}
-.nv-vol .nvs .nvs-map .q-wood::before {border-width: 10px; border-image: var(--nv-wood) 10 fill / 10px repeat;}
-.nv-vol .nvs .nvs-map .q-wood.q-dark::before {border-image-source: var(--nv-dark);}
-.nv-vol .nvs .nvs-map .q-inset::before {border-width: 8px; border-image: var(--nv-inset) 8 fill / 8px repeat;}
-.nv-vol .nvs .nvs-map .q-gold::before {border-width: 12px; border-image: var(--nv-gold) 12 fill / 12px repeat;}
+.nv-vol .nvs .nvs-map .q-wood::before,
+.nv-vol .nvs .nvs-shop .q-wood::before,
+.nv-vol .nvs .nvs-black .q-wood::before {border-width: 10px; border-image: var(--nv-wood) 10 fill / 10px repeat;}
+.nv-vol .nvs .nvs-map .q-wood.q-dark::before,
+.nv-vol .nvs .nvs-shop .q-wood.q-dark::before,
+.nv-vol .nvs .nvs-black .q-wood.q-dark::before {border-image-source: var(--nv-dark);}
+.nv-vol .nvs .nvs-map .q-inset::before,
+.nv-vol .nvs .nvs-shop .q-inset::before,
+.nv-vol .nvs .nvs-black .q-inset::before {border-width: 8px; border-image: var(--nv-inset) 8 fill / 8px repeat;}
+.nv-vol .nvs .nvs-map .q-gold::before,
+.nv-vol .nvs .nvs-shop .q-gold::before,
+.nv-vol .nvs .nvs-black .q-gold::before {border-width: 12px; border-image: var(--nv-gold) 12 fill / 12px repeat;}
 .nv-vol .nvs .nvs-map .q-side .q-go {box-shadow: 0 0 20px 3px rgba(255, 170, 40, 0.45);}
+/* (a bolsa já usa o ::before para o tracejado: a tábua dela vai no ::after) */
+.nv-vol .nvs .nvs-shop .q-bag::after,
+.nv-vol .nvs .nvs-black .q-bag::after {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; border-width: 10px; border-image: var(--nv-wood) 10 fill / 10px repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-shop .q-wood.q-bag::before,
+.nv-vol .nvs .nvs-black .q-wood.q-bag::before {content: ''; inset: 5px; z-index: auto; border: 2px dashed rgba(240, 200, 130, 0.45); border-image: none;}
+.nv-vol .nvs .nvs-black .q-wood.q-bag::before {border-color: rgba(220, 150, 170, 0.35);}
 
 /* o papel das etiquetas e a fita amarela das regiões */
 .nv-vol .nvs .nvs-map .q-node .q-tag,
@@ -29317,9 +29345,15 @@ html[data-topview] .emote-pick {
 .nv-vol .nvs .nvs-map .q-dom {background: var(--nv-dom) 0 0 / 20px 38px no-repeat; box-shadow: none; image-rendering: pixelated;}
 .nv-vol .nvs .nvs-map .q-dom::before,
 .nv-vol .nvs .nvs-map .q-dom::after {display: none;}
-.nv-vol .nvs .nvs-map .q-heart {background: var(--nv-heart) center / contain no-repeat; image-rendering: pixelated;}
-.nv-vol .nvs .nvs-map .q-heart.q-off {background-image: var(--nv-heartx); filter: none;}
-.nv-vol .nvs .nvs-map .q-coin {background: var(--nv-coin) center / 100% 100% no-repeat; box-shadow: none; border-radius: 0; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-heart,
+.nv-vol .nvs .nvs-shop .q-heart,
+.nv-vol .nvs .nvs-black .q-heart {background: var(--nv-heart) center / contain no-repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-heart.q-off,
+.nv-vol .nvs .nvs-shop .q-heart.q-off,
+.nv-vol .nvs .nvs-black .q-heart.q-off {background-image: var(--nv-heartx); filter: none;}
+.nv-vol .nvs .nvs-map .q-coin,
+.nv-vol .nvs .nvs-shop .q-coin,
+.nv-vol .nvs .nvs-black .q-coin {background: var(--nv-coin) center / 100% 100% no-repeat; box-shadow: none; border-radius: 0; image-rendering: pixelated;}
 
 /* o painel da direita sempre cabe: o botão fica preso no pé da tábua e, com regra de mesa, o
    cartão aperta (a foto menor, a regra em letra menor, sem o "ao vencer") */
@@ -29330,3 +29364,79 @@ html[data-topview] .emote-pick {
 .nvs .nvs-map .q-side .q-card.q-has-rule .q-rule {margin-top: 5px; padding: 4px 6px; font-size: 13px; line-height: 0.9;}
 .nvs .nvs-map .q-side .q-card.q-has-rule .q-rew {display: none;}
 .nvs .nvs-map .q-side .q-card.q-has-rule .q-chips {margin-top: 5px;}
+
+/* ==========================================================================
+   Versão 2.49: a Loja do Valtinho em volume (o fundo em art/stages/shop.js; a faixa do balcão,
+   da planta e do copo, por cima do Valtinho, em art/stages/shopFront.js)
+   ========================================================================== */
+.nv-vol .nvs.q-vol .nvs-shop > .q-bg,
+.nv-vol .nvs.q-vol .nvs-shop > .q-glowlayer,
+.nv-vol .nvs.q-vol .nvs-shop > .q-lamp,
+.nv-vol .nvs.q-vol .nvs-shop > .q-cone,
+.nv-vol .nvs.q-vol .nvs-shop > .q-plant,
+.nv-vol .nvs.q-vol .nvs-shop > .q-neon,
+.nv-vol .nvs.q-vol .nvs-shop > .q-floor,
+.nv-vol .nvs.q-vol .nvs-shop > .q-awning,
+.nv-vol .nvs.q-vol .nvs-shop > .q-onc {display: none;}
+.nv-vol .nvs.q-vol .nvs-shop > .q-board {background: none; box-shadow: none; text-shadow: 0 0 1px rgba(232, 240, 224, 0.6);}
+.nv-vol .nvs.q-vol .nvs-shop > .q-counter {top: 176px; height: 70px; background-color: transparent; background-position: 0 0; background-size: 896px 70px; background-repeat: no-repeat; box-shadow: none; image-rendering: pixelated; pointer-events: none;}
+/* as peças da prateleira: a tábua, o nicho escuro, a almofada e a etiqueta de preço de papel */
+.nv-vol .nvs .nvs-shop .q-it.q-sel {box-shadow: 0 0 0 2px #ffc23a, 0 0 14px 4px rgba(255, 170, 40, 0.7);}
+.nv-vol .nvs .nvs-shop .q-it .q-art {background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-shop .q-it .q-art::before {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; border-width: 10px; border-image: var(--nv-niche) 10 fill / 10px repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-shop .q-it .q-art::after {left: 50%; right: auto; bottom: 3px; width: 44px; height: 12px; margin-left: -22px; border-radius: 0; background: var(--nv-cushion) 0 0 / 44px 12px no-repeat; box-shadow: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-shop .q-it .q-price {background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-shop .q-it .q-price::after {content: ''; position: absolute; inset: -1px; z-index: -1; pointer-events: none; border-style: solid; border-width: 4px; border-image: var(--nv-tag) 4 fill / 4px repeat; image-rendering: pixelated;}
+/* o painel de detalhe: a tábua com as cantoneiras de latão e a vitrine de veludo */
+.nv-vol .nvs .nvs-shop .q-detail::before,
+.nv-vol .nvs .nvs-black .q-detail::before {border-width: 12px; border-image: var(--nv-woodbrass) 12 fill / 12px repeat;}
+.nv-vol .nvs .nvs-shop .q-detail > .q-brass,
+.nv-vol .nvs .nvs-black .q-detail > .q-brass {display: none;}
+.nv-vol .nvs .nvs-shop .q-detail .q-big {background: var(--nv-showcase) center / 140px 136px no-repeat; box-shadow: none; image-rendering: pixelated;}
+
+/* ==========================================================================
+   Versão 2.49: o Mercado Negro em volume (o fundo em art/stages/black.js; a faixa do balcão, por
+   cima do Corvo, em art/stages/blackFront.js). A chuva (.q-rain) segue por cima de tudo.
+   ========================================================================== */
+.nv-vol .nvs.q-vol .nvs-black > .q-bg,
+.nv-vol .nvs.q-vol .nvs-black > .q-glowlayer,
+.nv-vol .nvs.q-vol .nvs-black > .q-floor {display: none;}
+.nv-vol .nvs.q-vol .nvs-black > .q-counter {top: 218px; height: 28px; background-color: transparent; background-position: 0 0; background-size: 896px 28px; background-repeat: no-repeat; box-shadow: none; image-rendering: pixelated; pointer-events: none;}
+.nv-vol .nvs.q-vol .nvs-black .q-velvet {background: none; box-shadow: none;}
+.nv-vol .nvs.q-vol .nvs-black .q-velvet::before {display: none;}
+/* a madeira roxa, o vão quase preto, a tábua de cantoneira vermelha e o botão de sangue */
+.nv-vol .nvs .nvs-black .q-wood::before,
+.nv-vol .nvs .nvs-black .q-bag::after {border-image-source: var(--nv-wood-bm);}
+.nv-vol .nvs .nvs-black .q-inset::before {border-image-source: var(--nv-inset-bm);}
+.nv-vol .nvs .nvs-black .q-detail::before {border-image-source: var(--nv-woodred-bm);}
+.nv-vol .nvs .nvs-black .q-detail .q-big {background: var(--nv-showcase-bm) center / 140px 136px no-repeat; box-shadow: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-black .q-blood {position: relative; background: none; box-shadow: 0 0 18px rgba(255, 42, 26, 0.45); isolation: isolate;}
+.nv-vol .nvs .nvs-black .q-blood::before {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; border-width: 12px; border-image: var(--nv-blood) 12 fill / 12px repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-black .q-blood:disabled {filter: grayscale(0.8) brightness(0.7);}
+/* as peças penduradas: a correntinha, o nicho e a etiqueta de papel */
+.nv-vol .nvs .nvs-black .q-hang::before {width: 6px; margin-left: -3px; background: var(--nv-chain) 0 0 / 6px 20px no-repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-black .q-hang .q-niche {background: var(--nv-niche-bm) 0 0 / 74px 70px no-repeat; box-shadow: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-black .q-hang.q-sel .q-niche {box-shadow: 0 0 0 2px #ff3a2a, 0 0 18px 6px rgba(255, 42, 26, 0.65);}
+.nv-vol .nvs .nvs-black .q-hang .q-price {position: relative; background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-black .q-hang .q-price::after {content: ''; position: absolute; inset: -1px; z-index: -1; pointer-events: none; border-style: solid; border-width: 4px; border-image: var(--nv-tag) 4 fill / 4px repeat; image-rendering: pixelated;}
+
+/* ==========================================================================
+   Versão 2.49: o porão do Seu Tião em volume (o fundo em art/stages/tiao.js, no palco deitado; a
+   caixa de ferramentas e as moedas, peças do novo/kit.mjs). O facho e a neblina seguem por cima.
+   ========================================================================== */
+.land-stage-img {background-size: 100% 100%; background-repeat: no-repeat;}
+.tiao-land .q-px {image-rendering: pixelated;}
+.nv-vol .tiao-land.q-vol .ti-crate {filter: none;}
+.nv-vol .tiao-land.q-vol .ti-pocket {background: none; border: 0; isolation: isolate;}
+.nv-vol .tiao-land.q-vol .ti-pocket::before {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; border-width: 12px; border-image: var(--hud-case) 12 fill / 12px repeat; image-rendering: pixelated;}
+/* as luzes de cada região por cima do mesmo fundo, como na pintura: o roxo do neon da sinuca e o
+   vermelho do submundo do bicho (no Mercado Negro e no porão do Seu Tião). Mistura normal, sem
+   mix-blend-mode: a chuva anima por cima e o iPhone não precisa refazer a mistura a cada quadro. */
+.nv-vol .nvs.q-vol.map-atmo-neon .nvs-black > .q-volbg::after,
+.nv-vol .nvs.q-vol.map-atmo-bicho .nvs-black > .q-volbg::after,
+.tiao-land.q-vol.map-atmo-neon .land-stage-img::after,
+.tiao-land.q-vol.map-atmo-bicho .land-stage-img::after {content: ''; position: absolute; inset: 0; pointer-events: none;}
+.nv-vol .nvs.q-vol.map-atmo-neon .nvs-black > .q-volbg::after {background: radial-gradient(ellipse 330px 300px at 860px 140px, rgba(150, 75, 255, 0.3), transparent 75%);}
+.nv-vol .nvs.q-vol.map-atmo-bicho .nvs-black > .q-volbg::after {background: radial-gradient(ellipse 520px 300px at 448px 470px, rgba(255, 50, 25, 0.3), transparent 75%);}
+.tiao-land.q-vol.map-atmo-neon .land-stage-img::after {background: radial-gradient(ellipse 480px 420px at 1088px 288px, rgba(150, 75, 255, 0.28), transparent 75%);}
+.tiao-land.q-vol.map-atmo-bicho .land-stage-img::after {background: radial-gradient(ellipse 560px 400px at 548px 608px, rgba(255, 50, 25, 0.28), transparent 75%);}

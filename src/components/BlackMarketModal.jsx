@@ -17,6 +17,7 @@ import { useFitScale } from './useFitScale.js';
 import DominoKey from './DominoKey.jsx';
 import { useNovo } from './useVisual.js';
 import { NovoHearts, NovoLogo, NovoStage, PaintBack } from './novo/NovoKit.jsx';
+import { useNovoBack } from './novo/useNovoBack.js';
 import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
 import { ALLEY_PAD, paintAlleyBack } from './art/landAlley.js';
@@ -92,6 +93,9 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTi
   };
 
   const landscape = useLandscape();
+  // versão 2.49: o Mercado Negro em volume (o fundo e a faixa do balcão, por cima do Corvo)
+  const back = useNovoBack(landscape && novo ? 'black' : null);
+  const front = useNovoBack(landscape && novo ? 'blackFront' : null);
   if (landscape && novo) {
     const slots = relicSlotsFor(state);
     const offers = market.offers;
@@ -100,15 +104,16 @@ export default function BlackMarketModal({ state, onBuy, onLeave, press, leaveTi
     const selRelic = selOffer ? getRelic(selOffer.id) : null;
     const step = offers.length > 1 ? Math.min(162, Math.floor(420 / offers.length)) : 0;
     return (
-      <NovoStage kind="black" bleed="#07060a" label="Mercado Negro" className={`map-atmo-${region.atmosphere}`}>
+      <NovoStage kind="black" bleed="#07060a" label="Mercado Negro" className={`map-atmo-${region.atmosphere} ${back && front ? 'q-vol' : ''}`}>
         <PaintBack paint={() => paintAlleyBack(7, region.atmosphere, 'market')} cacheKey={`land-beco-${region.atmosphere}`} pad={ALLEY_PAD} size={896} y={-30} filter="brightness(1.25) saturate(1.3)" />
+        {back && front && <div className="q-volbg" aria-hidden="true" style={{ backgroundImage: `url(${back})` }} />}
         <div className="q-glowlayer" style={{ background: 'radial-gradient(circle at 130px 120px, rgba(255, 40, 30, 0.38), transparent 210px), radial-gradient(circle at 650px 60px, rgba(150, 60, 255, 0.22), transparent 260px)' }} />
         <div className="q-rain" />
         <div className="q-floor" />
         <div className="q-keeper" aria-hidden="true">
           <NpcPortrait who="corvo" size={184} speaking={talking} />
         </div>
-        <div className="q-counter" />
+        <div className="q-counter" style={back && front ? { backgroundImage: `url(${front})` } : undefined} />
         <RivalSpeech key={line.key} text={line.text} voice="corvo" tail="left" linger={false} onMouth={setTalking} className="q-bubble" />
 
         <div className="q-topbar">

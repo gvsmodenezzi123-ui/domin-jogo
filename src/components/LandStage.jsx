@@ -16,9 +16,11 @@ export const STAGE_PX = 2;
  * paint/cacheKey: a pintura de fundo (500 × 225 pixels), opcional
  * pad:            a sobra pintada em volta (px da pintura: o teto e o chão das telas mais altas que
  *                 16:9, as paredes das mais largas); a pintura tem então 500 + 2x por 225 + 2y
+ * image:          versão 2.49: um fundo pronto (data URL do mesmo tamanho da pintura, com a sobra, a
+ *                 1 pixel por unidade); quando vem, fica no lugar da pintura
  * children:       as coisas da cena, em unidades do palco (position absolute)
  */
-export default function LandStage({ paint, cacheKey, pad = null, bleed = '#0b0907', className = '', children, label, role = 'main' }) {
+export default function LandStage({ paint, image = null, cacheKey, pad = null, bleed = '#0b0907', className = '', children, label, role = 'main' }) {
   const px = pad?.x ?? 0;
   const py = pad?.y ?? 0;
   const ref = useRef(null);
@@ -39,7 +41,14 @@ export default function LandStage({ paint, cacheKey, pad = null, bleed = '#0b090
   return (
     <div ref={ref} className={`land-stage-wrap fixed inset-0 ${className}`} style={{ background: bleed }} role={role} aria-label={label}>
       <div className="land-stage" style={{ '--stage-s': scale, width: STAGE_W, height: STAGE_H, transform: `translate(-50%, -50%) scale(${scale || 0.0001})` }}>
-        {paint && (
+        {image && (
+          <div
+            className="land-stage-art land-stage-img"
+            style={{ left: -px * STAGE_PX, top: -py * STAGE_PX, width: STAGE_W + px * 2 * STAGE_PX, height: STAGE_H + py * 2 * STAGE_PX, backgroundImage: `url(${image})` }}
+            aria-hidden="true"
+          />
+        )}
+        {paint && !image && (
           <PixelCanvas
             cacheKey={cacheKey}
             paint={paint}

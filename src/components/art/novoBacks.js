@@ -1,9 +1,16 @@
 /**
  * Versão 2.48: os fundos das telas do visual novo em volume (896 × 414, 256 cores), um módulo por
- * tela, que só chega quando a tela abre. Enquanto não chega, fica o fundo de sempre (o CSS).
+ * tela, que só chega quando a tela abre. Enquanto não chega, fica o fundo de sempre (o CSS). Versão
+ * 2.49: as lojas (a faixa do balcão vem à parte, por cima de quem atende) e o porão do Seu Tião, no
+ * palco deitado (1096 × 626: os 1000 × 450 do palco e a sobra).
  */
 const LOADERS = {
   map: () => import('./stages/map.js'),
+  shop: () => import('./stages/shop.js'),
+  shopFront: () => import('./stages/shopFront.js'),
+  black: () => import('./stages/black.js'),
+  blackFront: () => import('./stages/blackFront.js'),
+  tiao: () => import('./stages/tiao.js'),
 };
 
 const ready = new Map();

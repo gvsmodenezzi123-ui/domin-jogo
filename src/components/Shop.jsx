@@ -25,6 +25,7 @@ import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
 import { useNovo } from './useVisual.js';
 import { NovoLamp, NovoLogo, NovoStage, NovoStatus, SaloonBack } from './novo/NovoKit.jsx';
+import { useNovoBack } from './novo/useNovoBack.js';
 import { SHOP_PAD, paintShopBack } from './art/landShop.js';
 
 /** Falas do Valtinho ao abrir a loja (uma por visita) e reagindo ao que você faz. */
@@ -209,6 +210,9 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
   };
 
   const landscape = useLandscape();
+  // versão 2.49: a loja em volume (o fundo e a faixa do balcão, por cima do Valtinho)
+  const back = useNovoBack(landscape && novo ? 'shop' : null);
+  const front = useNovoBack(landscape && novo ? 'shopFront' : null);
   const sellModal = selling && (
     <div className="overlay-backdrop fixed inset-0 z-[70] flex items-center justify-center px-8" role="dialog" aria-modal="true" aria-labelledby="sell-title">
       <div className="shop-receipt w-full max-w-[280px] px-4 py-4 text-center">
@@ -256,8 +260,9 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
     const free = shop.rerollCost === 0 && (state.run?.freeRerolls ?? 0) > 0;
     return (
       <>
-        <NovoStage kind="shop" label="Loja do Valtinho" className={`map-atmo-${region.atmosphere}`}>
+        <NovoStage kind="shop" label="Loja do Valtinho" className={`map-atmo-${region.atmosphere} ${back && front ? 'q-vol' : ''}`}>
           <SaloonBack />
+          {back && front && <div className="q-volbg" aria-hidden="true" style={{ backgroundImage: `url(${back})` }} />}
           <div className="q-glowlayer" style={{ background: 'radial-gradient(circle at 150px 40px, rgba(255, 190, 90, 0.5), transparent 220px)' }} />
           <NovoLamp left={104} top={24} />
           <div className="q-cone" style={{ left: 20, top: 44, width: 214, height: 190 }} />
@@ -276,7 +281,7 @@ export default function Shop({ state, onBuyRelic, onBuyTile, onSell, onReroll, o
           <div className="q-keeper" aria-hidden="true">
             <NpcPortrait who="valtinho" size={184} speaking={talking} />
           </div>
-          <div className="q-counter" />
+          <div className="q-counter" style={back && front ? { backgroundImage: `url(${front})` } : undefined} />
           <span className="q-onc" style={{ left: 224, top: 196 }} aria-hidden="true">
             <ShopSprite name="copo" scale={1} />
           </span>

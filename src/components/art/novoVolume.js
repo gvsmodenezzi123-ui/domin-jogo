@@ -11,7 +11,7 @@ import { HUD_PX } from './hudVolumePx.js';
 export { NOVO_PX };
 
 /** As peças que viram variáveis do CSS (`--nv-<nome>`). */
-export const NOVO_VARS = Object.freeze(['wood', 'dark', 'inset', 'gold', 'tag', 'tag-pick', 'ribbon', 'frame-wood', 'frame-gold', 'frame-grey', 'frame-boss', 'sc-combat', 'sc-combat2', 'sc-combat3', 'sc-shop', 'sc-black', 'sc-coins', 'sc-event', 'sc-lock', 'sc-boss', 'tape', 'pin', 'crown', 'banner', 'dom', 'coin']);
+export const NOVO_VARS = Object.freeze(['wood', 'dark', 'inset', 'gold', 'tag', 'tag-pick', 'ribbon', 'frame-wood', 'frame-gold', 'frame-grey', 'frame-boss', 'sc-combat', 'sc-combat2', 'sc-combat3', 'sc-shop', 'sc-black', 'sc-coins', 'sc-event', 'sc-lock', 'sc-boss', 'tape', 'pin', 'crown', 'banner', 'dom', 'coin', 'woodbrass', 'niche', 'cushion', 'showcase', 'wood-bm', 'inset-bm', 'woodred-bm', 'blood', 'niche-bm', 'showcase-bm', 'chain']);
 
 /** O objeto de cada desvio do mapa (o engradado da loja, o beco, as moedas, a porta). */
 export const NOVO_OBJ = Object.freeze({ shop: 'obj-crate', event: 'obj-alley', coins: 'obj-coins', black: 'obj-door' });
