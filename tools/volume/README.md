@@ -42,3 +42,17 @@ em supersampling 3×. A imagem é larga: a tela de referência (896 × 414) no m
 cada lado; o jogo corta o meio que cabe (`roomCrop`). `tomodule.py` passa o PNG para 256 cores
 (conferindo o erro) e escreve o módulo; nas salas de dia (`day`) o céu e o mar ficam
 transparentes, para a camada de trás de `landRooms.js` aparecer.
+
+# O visual novo em volume (versão 2.48)
+
+As telas do visual novo são um palco fixo de 896 × 414 visto de frente (`cena/novo/stage.mjs`):
+cada fundo é uma cena em `cena/novo/` (o mapa: `mapback.mjs`), renderizada pelo
+`cena/runstage.mjs`; as peças (as tábuas e os botões em 9 fatias, as molduras e os fundinhos dos
+pontos, os objetos) saem do `cena/novo/kit.mjs` direto em `src/components/art/novoVolumePx.js`.
+
+    node tools/volume/cena/runstage.mjs ./novo/mapback.mjs /tmp/map.png 3
+    python3 tools/volume/cena/tomodule.py /tmp/map.png src/components/art/stages/map.js still
+    node tools/volume/cena/novo/kit.mjs [pasta]
+
+Uma cena pode exportar `FRONT` (os materiais e a faixa de linhas que o jogo põe por cima de quem
+fica atrás de um balcão): o `runstage` escreve também `<saída>-front.png`.

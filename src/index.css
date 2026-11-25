@@ -29238,3 +29238,95 @@ html[data-topview] .emote-pick {
   z-index: -1;
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Versão 2.48: o mapa do visual novo em volume (art/novoVolume.js e o fundo em art/stages/map.js).
+   As tábuas, o vão, o ouro, o papel e a fita em 9 fatias; as molduras e os fundinhos dos pontos;
+   o fundo (a mesa, o caderno, a tábua da direita e a do topo) chega à parte (.q-vol).
+   ========================================================================== */
+.nvs .q-volbg {position: absolute; inset: 0; background-size: 896px 414px; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none;}
+.nvs .q-px {image-rendering: pixelated;}
+
+/* o que o fundo em volume já traz pintado */
+.nv-vol .nvs.q-vol .nvs-map .q-book {background: none; box-shadow: none; filter: none;}
+.nv-vol .nvs.q-vol .nvs-map .q-paper {background: none; clip-path: none;}
+.nv-vol .nvs.q-vol .nvs-map .q-paper::after,
+.nv-vol .nvs.q-vol .nvs-map .q-spiral,
+.nv-vol .nvs.q-vol .nvs-map .q-book > .q-tape,
+.nv-vol .nvs.q-vol .nvs-map .q-book > .q-clip,
+.nv-vol .nvs.q-vol .nvs-map > .q-cap,
+.nv-vol .nvs.q-vol .nvs-map > .q-pencil,
+.nv-vol .nvs.q-vol .nvs-map > .q-lamp,
+.nv-vol .nvs.q-vol .nvs-map > .q-cone,
+.nv-vol .nvs.q-vol .nvs-map .q-side > .q-chain,
+.nv-vol .nvs.q-vol .nvs-map .q-topbar .q-info > .q-nail {display: none;}
+.nv-vol .nvs.q-vol .nvs-map .q-side,
+.nv-vol .nvs.q-vol .nvs-map .q-topbar .q-info {background: none; box-shadow: none;}
+.nv-vol .nvs.q-vol .nvs-map .q-side::before,
+.nv-vol .nvs.q-vol .nvs-map .q-topbar .q-info::before {display: none;}
+
+/* as tábuas, o vão e o ouro em 9 fatias */
+.nv-vol .nvs .nvs-map .q-wood,
+.nv-vol .nvs .nvs-map .q-inset,
+.nv-vol .nvs .nvs-map .q-gold {background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-map .q-inset {position: relative;}
+.nv-vol .nvs .nvs-map .q-wood::before,
+.nv-vol .nvs .nvs-map .q-inset::before,
+.nv-vol .nvs .nvs-map .q-gold::before,
+.nv-vol .nvs .nvs-map .q-node .q-tag::before,
+.nv-vol .nvs .nvs-map .q-ribbon::before,
+.nv-vol .nvs .nvs-map .q-rhead::before {content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-style: solid; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-wood::before {border-width: 10px; border-image: var(--nv-wood) 10 fill / 10px repeat;}
+.nv-vol .nvs .nvs-map .q-wood.q-dark::before {border-image-source: var(--nv-dark);}
+.nv-vol .nvs .nvs-map .q-inset::before {border-width: 8px; border-image: var(--nv-inset) 8 fill / 8px repeat;}
+.nv-vol .nvs .nvs-map .q-gold::before {border-width: 12px; border-image: var(--nv-gold) 12 fill / 12px repeat;}
+.nv-vol .nvs .nvs-map .q-side .q-go {box-shadow: 0 0 20px 3px rgba(255, 170, 40, 0.45);}
+
+/* o papel das etiquetas e a fita amarela das regiões */
+.nv-vol .nvs .nvs-map .q-node .q-tag,
+.nv-vol .nvs .nvs-map .q-ribbon,
+.nv-vol .nvs .nvs-map .q-rhead {background: none; box-shadow: none; isolation: isolate;}
+.nv-vol .nvs .nvs-map .q-node .q-tag {position: relative;}
+.nv-vol .nvs .nvs-map .q-node .q-tag::before {border-width: 4px; border-image: var(--nv-tag) 4 fill / 4px repeat;}
+.nv-vol .nvs .nvs-map .q-node.q-pick .q-tag::before {border-image-source: var(--nv-tag-pick);}
+.nv-vol .nvs .nvs-map .q-ribbon::before,
+.nv-vol .nvs .nvs-map .q-rhead::before {border-width: 6px; border-image: var(--nv-ribbon) 6 fill / 6px repeat;}
+
+/* os pontos: a moldura por fora da foto, o fundinho de cada tipo, a fita, o alfinete, a coroa */
+.nv-vol .nvs .nvs-map .q-node .q-scene {display: none;}
+.nv-vol .nvs .nvs-map .q-node .q-pic {box-shadow: none; background: var(--nv-sc-combat) 0 0 / 54px 46px no-repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-node.q-t-combat.q-reg-2 .q-pic {background-image: var(--nv-sc-combat2);}
+.nv-vol .nvs .nvs-map .q-node.q-t-combat.q-reg-3 .q-pic {background-image: var(--nv-sc-combat3);}
+.nv-vol .nvs .nvs-map .q-node.q-t-shop .q-pic {background-image: var(--nv-sc-shop);}
+.nv-vol .nvs .nvs-map .q-node.q-t-black .q-pic {background-image: var(--nv-sc-black);}
+.nv-vol .nvs .nvs-map .q-node.q-t-coins .q-pic {background-image: var(--nv-sc-coins);}
+.nv-vol .nvs .nvs-map .q-node.q-t-event .q-pic {background-image: var(--nv-sc-event);}
+.nv-vol .nvs .nvs-map .q-node.q-lock.q-t-combat .q-pic {background-image: var(--nv-sc-lock);}
+.nv-vol .nvs .nvs-map .q-node.q-boss .q-pic {background: var(--nv-sc-boss) 0 0 / 86px 80px no-repeat; box-shadow: 0 0 20px 5px rgba(232, 58, 68, 0.4);}
+.nv-vol .nvs .nvs-map .q-node.q-now .q-pic {box-shadow: 0 0 16px 6px rgba(255, 180, 50, 0.65);}
+.nv-vol .nvs .nvs-map .q-node::before {content: ''; position: absolute; left: 50%; top: -7px; width: 68px; height: 60px; margin-left: -34px; background: var(--nv-frame-wood) 0 0 / 68px 60px no-repeat; image-rendering: pixelated; pointer-events: none;}
+.nv-vol .nvs .nvs-map .q-node.q-now::before {background-image: var(--nv-frame-gold);}
+.nv-vol .nvs .nvs-map .q-node.q-lock::before {background-image: var(--nv-frame-grey);}
+.nv-vol .nvs .nvs-map .q-node.q-boss::before {width: 100px; height: 94px; margin-left: -50px; background: var(--nv-frame-boss) 0 0 / 100px 94px no-repeat;}
+.nv-vol .nvs .nvs-map .q-ntape {background: var(--nv-tape) 0 0 / 26px 9px no-repeat; box-shadow: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-pin {background: var(--nv-pin) 0 0 / 14px 14px no-repeat; box-shadow: none; border-radius: 0; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-node.q-boss .q-crown {top: -22px; height: 18px; background: var(--nv-crown) 0 0 / 32px 18px no-repeat; clip-path: none; filter: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-node.q-boss .q-banner {height: 20px; padding: 0; line-height: 21px; background: var(--nv-banner) 0 0 / 96px 20px no-repeat; box-shadow: none; image-rendering: pixelated;}
+
+/* na mesa: as pedras; no topo: os corações e a moeda */
+.nv-vol .nvs .nvs-map .q-dom {background: var(--nv-dom) 0 0 / 20px 38px no-repeat; box-shadow: none; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-dom::before,
+.nv-vol .nvs .nvs-map .q-dom::after {display: none;}
+.nv-vol .nvs .nvs-map .q-heart {background: var(--nv-heart) center / contain no-repeat; image-rendering: pixelated;}
+.nv-vol .nvs .nvs-map .q-heart.q-off {background-image: var(--nv-heartx); filter: none;}
+.nv-vol .nvs .nvs-map .q-coin {background: var(--nv-coin) center / 100% 100% no-repeat; box-shadow: none; border-radius: 0; image-rendering: pixelated;}
+
+/* o painel da direita sempre cabe: o botão fica preso no pé da tábua e, com regra de mesa, o
+   cartão aperta (a foto menor, a regra em letra menor, sem o "ao vencer") */
+.nvs .nvs-map .q-side .q-go {position: absolute; left: 12px; right: 12px; bottom: -26px; width: auto; margin: 0;}
+.nvs .nvs-map .q-side .q-hint {position: absolute; left: 12px; right: 12px; bottom: 8px; margin: 0;}
+.nvs .nvs-map .q-side .q-card.q-has-rule .q-row {margin-top: 5px;}
+.nvs .nvs-map .q-side .q-card.q-has-rule .q-photo {width: 50px; height: 50px; margin: 3px 0 3px 5px;}
+.nvs .nvs-map .q-side .q-card.q-has-rule .q-rule {margin-top: 5px; padding: 4px 6px; font-size: 13px; line-height: 0.9;}
+.nvs .nvs-map .q-side .q-card.q-has-rule .q-rew {display: none;}
+.nvs .nvs-map .q-side .q-card.q-has-rule .q-chips {margin-top: 5px;}

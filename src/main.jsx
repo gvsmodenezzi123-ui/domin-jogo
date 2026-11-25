@@ -13,6 +13,7 @@ import { installBoneGrain } from './components/art/boneTexture.js';
 import { canForceLandscape, enterLandscape } from './components/landscapeLock.js';
 import { installPixelSkins } from './components/art/uiPixels.js';
 import { installHudVolume } from './components/art/hudVolume.js';
+import { installNovoVolume } from './components/art/novoVolume.js';
 import { preloadCast } from './components/art/castHD.js';
 
 installTouchGuards();
@@ -20,6 +21,7 @@ installViewportFit();
 installBoneGrain();
 installPixelSkins();
 installHudVolume();
+installNovoVolume();
 registerServiceWorker();
 // versão 2.46: os personagens em volume chegam em segundo plano (enquanto isso, o desenho antigo)
 preloadCast();

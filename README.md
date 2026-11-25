@@ -172,6 +172,24 @@ baixada: cada peça é pintada por código num buffer de pixels (`paintKit` de
 (`PixelCanvas.jsx`, que guarda cada pintura por chave). Na mesa, 1 pixel vale 1,5 px de CSS, mais
 denso que o cenário (2 px). As regras, a teia, as sementes e o save não mudaram.
 
+### 2.48.0: o mapa da campanha em volume
+
+- O mapa do visual novo refeito em volume (`tools/volume/cena/novo`): a mesa de tábuas escuras
+  debaixo da lâmpada, o caderno de fiado (a capa, o maço de folhas, a espiral de arame, a fita
+  crepe e o clipe), a tábua da direita pendurada nas correntes, a tábua do topo, as tampinhas e o
+  lápis. O fundo (896 × 414, em 256 cores) chega à parte (`art/novoBacks.js`, `art/stages/map.js`);
+  enquanto não chega, fica o desenho de antes.
+- Os pontos do mapa em volume (`art/novoVolume.js`): as molduras (madeira, ouro no ponto aberto,
+  ferro nas mesas trancadas e a dourada do chefe, com a coroa e a faixa), o fundinho de cada tipo
+  de ponto (as garrafas do boteco, a parede de tijolo e o neon da sinuca, o damasco do escritório
+  do bicho, o toldo da loja, o tijolo do beco, o feltro do Seu Tião, a chuva do imprevisto) e os
+  obstáculos: o engradado da loja, o beco do ???, as moedas do Seu Tião e a porta do beco.
+- As tábuas, os vãos, o botão de ouro, as etiquetas de papel e a fita amarela das regiões em
+  volume, em 9 fatias; as pedras e as moedas da mesa também.
+- O painel da direita sempre cabe: o JOGAR fica preso no pé da tábua e, quando a mesa tem regra,
+  o cartão aperta (antes o botão sumia para fora da tela).
+- O caderno não usa mais o filtro de sombra (mais leve no iPhone).
+
 ### 2.47.0: as salas, as mesas e o HUD em volume
 
 - As 7 salas da mesa deitada (o Boteco da Esquina, a sinuca, o escritório do bicho, a sala da

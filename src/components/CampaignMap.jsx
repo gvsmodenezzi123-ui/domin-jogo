@@ -32,6 +32,8 @@ import LandStage from './LandStage.jsx';
 import { useLandscape } from './useLandscape.js';
 import { useNovo } from './useVisual.js';
 import { NovoHearts, NovoLamp, NovoLogo, NovoStage } from './novo/NovoKit.jsx';
+import { useNovoBack } from './novo/useNovoBack.js';
+import { NOVO_OBJ, NOVO_PX } from './art/novoVolume.js';
 import { ROSE_SVG, TOWN_SVG } from './novo/mapArt.js';
 import RelicIcon from './RelicIcon.jsx';
 import { getRelic } from '../data/relics.js';
@@ -69,6 +71,24 @@ const STOP_OBJ = {
   coins: (s) => <PixelCanvas cacheKey="mapa-moedas" paint={paintCoinStack} w={COINS_SIZE.w} h={COINS_SIZE.h} scale={s} />,
   black: (s) => <PixelCanvas cacheKey="mapa-porta" paint={paintBlackDoor} w={DOOR_SIZE.w} h={DOOR_SIZE.h} scale={s} />,
 };
+
+/** Versão 2.48: uma peça do visual novo em volume (art/novoVolume.js), na escala do palco. */
+const VolSprite = ({ name, className = '' }) => {
+  const s = NOVO_PX[name];
+  return <img src={s.url} width={s.w} height={s.h} alt="" draggable={false} className={`q-px ${className}`} />;
+};
+
+/** O objeto em volume de cada desvio (o beco leva a chuva e a neblina por cima, como antes). */
+const novoObj = (type) =>
+  NOVO_OBJ[type] ? (
+    <>
+      <VolSprite name={NOVO_OBJ[type]} />
+      {type === 'event' && <span aria-hidden="true" className="web-obj-rain" />}
+      {type === 'event' && <span aria-hidden="true" className="web-obj-fog" />}
+    </>
+  ) : (
+    STOP_OBJ[type]?.(1)
+  );
 
 /** O grampo enferrujado da polaroide do chefe. */
 const Staple = ({ side, s = OBJ_PX }) => (
@@ -595,7 +615,7 @@ const NovoNode = memo(function NovoNode({ point, status, known, selected, here, 
   const fight = node.type === 'combat' || node.type === 'boss';
   const rival = fight ? getRival(node.rivalId) : null;
   const label = fight ? (known ? shortRivalName(rival.name) : node.boss ? 'CHEFE' : 'MESA ???') : STOP_CAPTION[node.type];
-  const cls = `q-node q-t-${node.boss ? 'boss' : node.type} ${node.boss ? 'q-boss' : ''} ${status === 'done' ? 'q-done' : ''} ${status === 'open' ? 'q-now' : ''} ${fight && !known && !node.boss ? 'q-lock' : ''} ${status === 'gone' ? 'q-gone' : ''} ${selected ? 'q-pick' : ''}`;
+  const cls = `q-node q-t-${node.boss ? 'boss' : node.type} q-reg-${node.region} ${node.boss ? 'q-boss' : ''} ${status === 'done' ? 'q-done' : ''} ${status === 'open' ? 'q-now' : ''} ${fight && !known && !node.boss ? 'q-lock' : ''} ${status === 'gone' ? 'q-gone' : ''} ${selected ? 'q-pick' : ''}`;
   return (
     <button type="button" className={cls} style={{ left: point.x, top: point.y - (node.boss ? 60 : 38) }} onClick={() => onSelect(node.id)} aria-pressed={selected} aria-label={`${label}, andar ${node.floor} (${STATUS_LABEL[status].toLowerCase()})`}>
       {node.boss && <span className="q-crown" aria-hidden="true" />}
@@ -611,7 +631,7 @@ const NovoNode = memo(function NovoNode({ point, status, known, selected, here, 
             '?'
           )
         ) : (
-          <span className="q-obj">{STOP_OBJ[node.type]?.(1)}</span>
+          <span className="q-obj">{novoObj(node.type)}</span>
         )}
       </span>
       {node.boss && <span className="q-banner">CHEFE</span>}
@@ -651,10 +671,13 @@ function MapNovo({ state, campaign, status, open, onEnter, onMenu, press }) {
   const perTable = modeOf(state.mode).healPerTable;
   const slots = relicSlotsFor(state);
   const badge = modeBadge(state.mode);
+  // versão 2.48: a mesa, o caderno e as tábuas em volume (enquanto não chega, o fundo de sempre)
+  const back = useNovoBack('map');
   return (
-    <NovoStage kind="map" bleed="#1c0d05" label="Mapa da campanha" className={`map-atmo-${region.atmosphere}`}>
+    <NovoStage kind="map" bleed="#1c0d05" label="Mapa da campanha" className={`map-atmo-${region.atmosphere} ${back ? 'q-vol' : ''}`}>
+      {back && <div className="q-volbg" aria-hidden="true" style={{ backgroundImage: `url(${back})` }} />}
       <span className="q-deskcoins" aria-hidden="true">
-        {STOP_OBJ.coins(1)}
+        <VolSprite name="obj-coins" />
       </span>
       <span className="q-cap" style={{ left: 598, top: 382 }} aria-hidden="true" />
       <span className="q-cap q-cap-g" style={{ left: 626, top: 372 }} aria-hidden="true" />
@@ -767,7 +790,7 @@ function MapNovo({ state, campaign, status, open, onEnter, onMenu, press }) {
         <span className="q-chain" style={{ left: 46 }} />
         <span className="q-chain" style={{ right: 46 }} />
         <h3 className="q-wood q-dark">ANDAR {selected.floor}</h3>
-        <div className="q-inset q-card">
+        <div className={`q-inset q-card ${info.mod ? 'q-has-rule' : ''}`}>
           <span className={`q-chefe ${selected.boss ? '' : 'q-plain'}`}>
             {selected.boss ? '☠ ' : ''}
             {info.fight ? info.kind : 'DESVIO'}
